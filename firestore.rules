@@ -1,0 +1,87 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Helper function - checks if user is authenticated
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    // Helper function - checks if user owns the document
+    function isOwner(userId) {
+      return isAuthenticated() && request.auth.uid == userId;
+    }
+
+    // User Profiles - Los usuarios pueden leer y escribir sus propios perfiles
+    match /user_profiles/{profileId} {
+      // Permitir lectura y escritura para pruebas
+      // TODO: Cambiar esto cuando implementes autenticación adecuada
+      allow read, write: if true;
+
+      // IMPORTANTE: En producción, deberías usar reglas como estas:
+      // allow read: if isAuthenticated();
+      // allow create: if isAuthenticated();
+      // allow update: if resource.data.clerk_user_id == request.auth.uid;
+      // allow delete: if resource.data.clerk_user_id == request.auth.uid;
+    }
+
+    // Categories - Lectura pública, escritura autenticada
+    match /categories/{categoryId} {
+      allow read: if true;
+      allow write: if true;
+    }
+
+    // Suppliers - Solo usuarios autenticados
+    match /suppliers/{supplierId} {
+      allow read, write: if true;
+    }
+
+    // Products - Lectura pública, escritura autenticada
+    match /products/{productId} {
+      allow read: if true;
+      allow write: if true;
+    }
+
+    // Customers
+    match /customers/{customerId} {
+      allow read, write: if true;
+    }
+
+    // Sales
+    match /sales/{saleId} {
+      allow read, write: if true;
+    }
+
+    // Sale Items
+    match /sale_items/{itemId} {
+      allow read, write: if true;
+    }
+
+    // Inventory Movements
+    match /inventory_movements/{movementId} {
+      allow read, write: if true;
+    }
+
+    // Offers
+    match /offers/{offerId} {
+      allow read: if true;
+      allow write: if true;
+    }
+
+    // Shopping Carts
+    match /shopping_carts/{cartId} {
+      allow read, write: if true;
+    }
+
+    // Cart Items
+    match /cart_items/{itemId} {
+      allow read, write: if true;
+    }
+
+    // Payment Transactions
+    match /payment_transactions/{transactionId} {
+      allow read, write: if true;
+    }
+  }
+}
