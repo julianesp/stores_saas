@@ -4,17 +4,19 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
-    "build": "next build",
+    "build": "node scripts/build.js",
     "start": "next start",
     "lint": "eslint"
   },
   "dependencies": {
     "@clerk/nextjs": "^6.35.5",
+    "@ericblade/quagga2": "^1.10.2",
     "@hookform/resolvers": "^5.2.2",
     "clsx": "^2.1.1",
     "date-fns": "^4.1.0",
     "firebase": "^12.6.0",
     "lucide-react": "^0.555.0",
+    "ndarray-pixels": "^5.0.1",
     "next": "16.0.5",
     "next-pwa": "^5.6.0",
     "quagga": "^0.6.16",
@@ -23,6 +25,7 @@
     "react-hook-form": "^7.67.0",
     "recharts": "^3.5.1",
     "sonner": "^2.0.7",
+    "sweetalert2": "^11.26.3",
     "tailwind-merge": "^3.4.0",
     "zod": "^4.1.13"
   },

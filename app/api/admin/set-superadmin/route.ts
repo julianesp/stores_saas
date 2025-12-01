@@ -25,8 +25,9 @@ export async function POST(req: NextRequest) {
     const user = await currentUser();
     const currentUserEmail = user?.emailAddresses[0]?.emailAddress || '';
 
-    // Permitir solo si es superadmin o si es el primer admin (admin@neural.dev)
-    if (!currentUserProfile?.is_superadmin && currentUserEmail !== 'admin@neural.dev') {
+    // Permitir solo si es superadmin o si es el primer admin
+    const superAdminEmail = process.env.SUPER_ADMIN_EMAIL || 'admin@neurai.dev';
+    if (!currentUserProfile?.is_superadmin && currentUserEmail !== superAdminEmail) {
       return NextResponse.json(
         { error: 'No tienes permisos para realizar esta acción' },
         { status: 403 }

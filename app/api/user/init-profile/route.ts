@@ -26,7 +26,8 @@ export async function POST(req: NextRequest) {
     }
 
     const userEmail = user.emailAddresses[0]?.emailAddress || '';
-    const isSuperAdmin = userEmail === 'admin@neural.dev';
+    const superAdminEmail = process.env.SUPER_ADMIN_EMAIL || 'admin@neurai.dev';
+    const isSuperAdmin = userEmail === superAdminEmail;
 
     // Verificar si el perfil ya existe
     const existingProfile = await getUserProfileByClerkId(userId);

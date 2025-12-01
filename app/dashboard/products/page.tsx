@@ -2,14 +2,14 @@
 
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { Plus, Search, Edit, Trash2, Package, Tag } from 'lucide-react';
+import { Plus, Search, Edit, Trash2, Package, Tag, Camera } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { getAllDocuments, deleteDocument, queryDocuments, getDocumentById } from '@/lib/firestore-helpers';
 import { Product, ProductWithRelations, Category, Supplier } from '@/lib/types';
 import { formatCurrency } from '@/lib/utils';
-import { toast } from 'sonner';
+import Swal from '@/lib/sweetalert';
 import { CategoryManagerModal } from '@/components/products/category-manager-modal';
 
 export default function ProductsPage() {
@@ -48,22 +48,33 @@ export default function ProductsPage() {
       setProducts(productsWithRelations);
     } catch (error) {
       console.error('Error fetching products:', error);
-      toast.error('Error al cargar productos');
+      Swal.error('Error al cargar productos', 'Intenta recargar la página');
     } finally {
       setLoading(false);
     }
   };
 
   const deleteProduct = async (id: string) => {
-    if (!confirm('¿Estás seguro de eliminar este producto?')) return;
+    const product = products.find(p => p.id === id);
+    const productName = product?.name || 'este producto';
+
+    const confirmed = await Swal.deleteConfirm(
+      productName,
+      'Esta acción no se puede deshacer'
+    );
+
+    if (!confirmed) return;
 
     try {
+      Swal.loading('Eliminando producto...');
       await deleteDocument('products', id);
-      toast.success('Producto eliminado');
+      Swal.closeLoading();
+      Swal.success('Producto eliminado correctamente');
       fetchProducts();
     } catch (error) {
       console.error('Error deleting product:', error);
-      toast.error('Error al eliminar producto');
+      Swal.closeLoading();
+      Swal.error('No se pudo eliminar el producto', 'Intenta de nuevo');
     }
   };
 
@@ -91,6 +102,12 @@ export default function ProductsPage() {
             <Tag className="mr-2 h-4 w-4" />
             Categorías
           </Button>
+          <Link href="/dashboard/products/quick-add">
+            <Button variant="outline">
+              <Camera className="mr-2 h-4 w-4" />
+              Agregar Rápido
+            </Button>
+          </Link>
           <Link href="/dashboard/products/new">
             <Button>
               <Plus className="mr-2 h-4 w-4" />
