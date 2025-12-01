@@ -154,19 +154,42 @@ El sistema incluye un panel de Super Administrador para gestionar el SaaS multi-
 
 ### Configuración de Super Admin
 
-Por defecto, el usuario con email `admin@neural.dev` es automáticamente promovido a Super Admin.
+El Super Admin se configura mediante la variable de entorno `SUPER_ADMIN_EMAIL` en tu archivo `.env.local`:
+
+```bash
+SUPER_ADMIN_EMAIL=admin@neurai.dev
+```
+
+⚠️ **IMPORTANTE**: Cambia este email por el tuyo antes de desplegar a producción.
 
 #### Promover manualmente a Super Admin
 
 Existen 3 formas de promover un usuario:
 
-1. **Automática**: El usuario con email `admin@neural.dev` es automáticamente Super Admin
+1. **Automática**: El usuario con el email configurado en `SUPER_ADMIN_EMAIL` es automáticamente Super Admin al registrarse
 2. **Desde el Panel**: Los Super Admins pueden promover otros usuarios desde el panel usando el botón con ícono de escudo
 3. **Por API**: Llamar a `/api/admin/set-superadmin` con el email del usuario
 
-#### Actualizar Perfil
+#### Si tu cuenta ya existía antes de configurar el email
 
-Si acabas de registrarte con el email de super admin, haz clic en el botón "Actualizar Perfil" en el header del dashboard para forzar la actualización de tu perfil.
+Si ya tenías una cuenta registrada y luego configuraste `SUPER_ADMIN_EMAIL`, necesitas forzar la actualización:
+
+**Opción 1: Usar la API directamente**
+```bash
+curl -X POST http://localhost:3001/api/user/force-superadmin-update \
+  -H "Content-Type: application/json" \
+  --cookie "tu-cookie-de-sesion"
+```
+
+**Opción 2: Desde el navegador**
+1. Abre la consola del navegador (F12)
+2. Pega y ejecuta:
+```javascript
+fetch('/api/user/force-superadmin-update', { method: 'POST' })
+  .then(r => r.json())
+  .then(console.log)
+```
+3. Recarga la página
 
 ### Beneficios del Super Admin
 

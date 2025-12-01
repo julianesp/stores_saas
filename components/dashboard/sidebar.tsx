@@ -18,6 +18,7 @@ import {
   CreditCard,
   Percent,
   Shield,
+  Banknote,
 } from 'lucide-react';
 import { getUserProfileByClerkId } from '@/lib/subscription-helpers';
 
@@ -42,6 +43,11 @@ const superAdminMenuItems = [
     title: 'Suscripciones',
     href: '/dashboard/admin/subscriptions',
     icon: CreditCard,
+  },
+  {
+    title: 'Historial de Cobros',
+    href: '/dashboard/admin/billing',
+    icon: Banknote,
   },
   {
     title: 'Reportes Globales',

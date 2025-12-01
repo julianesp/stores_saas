@@ -9,7 +9,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { queryDocuments, createDocument, generateSaleNumber } from '@/lib/firestore-helpers';
 import { Product } from '@/lib/types';
 import { formatCurrency } from '@/lib/utils';
-import { toast } from 'sonner';
+import Swal from '@/lib/sweetalert';
 
 interface CartItem {
   product: Product;
@@ -53,9 +53,9 @@ export default function POSPage() {
     if (product) {
       addToCart(product);
       setBarcodeInput('');
-      toast.success(`${product.name} agregado al carrito`);
+      Swal.productAdded(product.name, 1);
     } else {
-      toast.error('Producto no encontrado');
+      Swal.error('Producto no encontrado', 'Código no registrado');
     }
     barcodeRef.current?.focus();
   };
@@ -65,7 +65,7 @@ export default function POSPage() {
       const existing = prev.find(item => item.product.id === product.id);
       if (existing) {
         if (existing.quantity >= product.stock) {
-          toast.error('No hay suficiente stock');
+          Swal.warning('Stock insuficiente', 'No hay más unidades disponibles');
           return prev;
         }
         return prev.map(item =>
@@ -85,7 +85,7 @@ export default function POSPage() {
           const newQuantity = item.quantity + delta;
           if (newQuantity <= 0) return item;
           if (newQuantity > item.product.stock) {
-            toast.error('No hay suficiente stock');
+            Swal.warning('Stock insuficiente', 'No hay más unidades disponibles');
             return item;
           }
           return { ...item, quantity: newQuantity };
@@ -105,11 +105,12 @@ export default function POSPage() {
 
   const processSale = async () => {
     if (cart.length === 0) {
-      toast.error('El carrito está vacío');
+      Swal.warning('El carrito está vacío', 'Agrega productos antes de procesar la venta');
       return;
     }
 
     setProcessing(true);
+    Swal.loading('Procesando venta...');
     try {
       // Obtener o crear user_profile
       let userProfile = null;
@@ -166,14 +167,16 @@ export default function POSPage() {
         await createDocument('sale_items', item);
       }
 
-      toast.success(`Venta ${saleNumber} procesada correctamente`);
+      Swal.closeLoading();
+      Swal.saleCompleted(saleNumber, total);
       setCart([]);
       fetchProducts(); // Actualizar inventario
       barcodeRef.current?.focus();
     } catch (error) {
       console.error('Error processing sale:', error);
       const errorMessage = error instanceof Error ? error.message : 'Error al procesar la venta';
-      toast.error(errorMessage);
+      Swal.closeLoading();
+      Swal.error(errorMessage, 'Error en la venta');
     } finally {
       setProcessing(false);
     }
