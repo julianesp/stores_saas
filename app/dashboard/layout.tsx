@@ -69,14 +69,14 @@ export default function DashboardLayout({
       {/* Mobile sidebar overlay */}
       {sidebarOpen && (
         <div
-          className="fixed inset-0 z-40 bg-black bg-opacity-50 md:hidden"
+          className="fixed inset-0 z-50 bg-black bg-opacity-50 md:hidden"
           onClick={() => setSidebarOpen(false)}
         >
           <div
-            className="w-64 h-full bg-gray-900"
+            className="w-64 h-full"
             onClick={(e) => e.stopPropagation()}
           >
-            <Sidebar />
+            <Sidebar isMobile onLinkClick={() => setSidebarOpen(false)} />
           </div>
         </div>
       )}
@@ -91,7 +91,7 @@ export default function DashboardLayout({
           )}
 
         <Header onMenuClick={() => setSidebarOpen(!sidebarOpen)} />
-        <main className="flex-1 overflow-y-auto bg-gray-50 p-6">
+        <main className="flex-1 overflow-y-auto bg-gray-50 p-4 md:p-6">
           {children}
         </main>
       </div>

@@ -56,7 +56,8 @@ export interface Product {
   stock: number;
   min_stock: number;
   expiration_date?: string;
-  image_url?: string;
+  image_url?: string; // Deprecated: mantener por compatibilidad
+  images?: string[]; // Array de URLs de imágenes (máximo 3)
   created_at: string;
   updated_at: string;
 }

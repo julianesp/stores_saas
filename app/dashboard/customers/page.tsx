@@ -26,14 +26,14 @@ export default function CustomersPage() {
   }, []);
 
   return (
-    <div className="space-y-6">
-      <div className="flex justify-between items-center">
+    <div className="space-y-4 md:space-y-6">
+      <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4">
         <div>
-          <h1 className="text-3xl font-bold">Clientes</h1>
-          <p className="text-gray-500">Gestiona tu base de clientes</p>
+          <h1 className="text-2xl md:text-3xl font-bold">Clientes</h1>
+          <p className="text-gray-500 text-sm md:text-base">Gestiona tu base de clientes</p>
         </div>
-        <Link href="/dashboard/customers/new">
-          <Button><Plus className="mr-2 h-4 w-4" />Nuevo Cliente</Button>
+        <Link href="/dashboard/customers/new" className="w-full sm:w-auto">
+          <Button className="w-full sm:w-auto"><Plus className="mr-2 h-4 w-4" />Nuevo Cliente</Button>
         </Link>
       </div>
 
@@ -45,26 +45,56 @@ export default function CustomersPage() {
               <p className="text-gray-500">No hay clientes registrados</p>
             </div>
           ) : (
-            <table className="w-full">
-              <thead>
-                <tr className="border-b">
-                  <th className="text-left py-3 px-4">Nombre</th>
-                  <th className="text-left py-3 px-4">Email</th>
-                  <th className="text-left py-3 px-4">Teléfono</th>
-                  <th className="text-right py-3 px-4">Puntos</th>
-                </tr>
-              </thead>
-              <tbody>
+            <>
+              {/* Vista de tabla para desktop */}
+              <div className="hidden md:block overflow-x-auto">
+                <table className="w-full">
+                  <thead>
+                    <tr className="border-b">
+                      <th className="text-left py-3 px-4">Nombre</th>
+                      <th className="text-left py-3 px-4">Email</th>
+                      <th className="text-left py-3 px-4">Teléfono</th>
+                      <th className="text-right py-3 px-4">Puntos</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {customers.map((c) => (
+                      <tr key={c.id} className="border-b hover:bg-gray-50">
+                        <td className="py-3 px-4">{c.name}</td>
+                        <td className="py-3 px-4">{c.email || '-'}</td>
+                        <td className="py-3 px-4">{c.phone || '-'}</td>
+                        <td className="py-3 px-4 text-right">{c.loyalty_points}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+
+              {/* Vista de cards para móvil */}
+              <div className="md:hidden space-y-3">
                 {customers.map((c) => (
-                  <tr key={c.id} className="border-b hover:bg-gray-50">
-                    <td className="py-3 px-4">{c.name}</td>
-                    <td className="py-3 px-4">{c.email || '-'}</td>
-                    <td className="py-3 px-4">{c.phone || '-'}</td>
-                    <td className="py-3 px-4 text-right">{c.loyalty_points}</td>
-                  </tr>
+                  <Card key={c.id}>
+                    <CardContent className="p-4">
+                      <h3 className="font-semibold text-base mb-2">{c.name}</h3>
+                      <div className="space-y-1 text-sm">
+                        <div className="flex justify-between">
+                          <span className="text-gray-500">Email:</span>
+                          <span className="truncate ml-2">{c.email || '-'}</span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span className="text-gray-500">Teléfono:</span>
+                          <span>{c.phone || '-'}</span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span className="text-gray-500">Puntos:</span>
+                          <span className="font-semibold text-blue-600">{c.loyalty_points}</span>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
                 ))}
-              </tbody>
-            </table>
+              </div>
+            </>
           )}
         </CardContent>
       </Card>

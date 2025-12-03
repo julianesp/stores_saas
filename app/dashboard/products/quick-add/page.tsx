@@ -47,6 +47,7 @@ export default function QuickAddProductPage() {
           sale_price: 0,
           stock: 0,
           min_stock: 5,
+          images: [], // Array vacío de imágenes
         });
 
         Swal.success('¡Producto creado!', 'Ahora completa los detalles');

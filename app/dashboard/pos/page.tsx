@@ -187,16 +187,16 @@ export default function POSPage() {
   );
 
   return (
-    <div className="space-y-6">
-      <h1 className="text-3xl font-bold">Punto de Venta</h1>
+    <div className="space-y-4 md:space-y-6">
+      <h1 className="text-2xl md:text-3xl font-bold">Punto de Venta</h1>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 md:gap-6">
         {/* Panel izquierdo - Productos */}
-        <div className="lg:col-span-2 space-y-4">
+        <div className="lg:col-span-2 space-y-4 order-2 lg:order-1">
           {/* Búsqueda por código de barras */}
           <Card>
-            <CardHeader>
-              <CardTitle className="text-lg">Escanear Código de Barras</CardTitle>
+            <CardHeader className="pb-3">
+              <CardTitle className="text-base md:text-lg">Escanear Código de Barras</CardTitle>
             </CardHeader>
             <CardContent>
               <form onSubmit={handleBarcodeSearch} className="flex gap-2">
@@ -204,38 +204,38 @@ export default function POSPage() {
                   ref={barcodeRef}
                   value={barcodeInput}
                   onChange={(e) => setBarcodeInput(e.target.value)}
-                  placeholder="Escanea o ingresa código de barras..."
-                  className="flex-1"
+                  placeholder="Código de barras..."
+                  className="flex-1 text-sm md:text-base"
                 />
-                <Button type="submit">Buscar</Button>
+                <Button type="submit" className="flex-shrink-0">Buscar</Button>
               </form>
             </CardContent>
           </Card>
 
           {/* Búsqueda de productos */}
           <Card>
-            <CardHeader>
+            <CardHeader className="pb-3">
               <div className="relative">
                 <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
                 <Input
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
                   placeholder="Buscar productos..."
-                  className="pl-10"
+                  className="pl-10 text-sm md:text-base"
                 />
               </div>
             </CardHeader>
             <CardContent>
-              <div className="grid grid-cols-2 md:grid-cols-3 gap-3 max-h-[500px] overflow-y-auto">
+              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-3 xl:grid-cols-4 gap-2 md:gap-3 max-h-[400px] md:max-h-[500px] overflow-y-auto">
                 {filteredProducts.map(product => (
                   <Card
                     key={product.id}
                     className="cursor-pointer hover:border-blue-500 transition-colors"
                     onClick={() => addToCart(product)}
                   >
-                    <CardContent className="p-4">
-                      <h4 className="font-medium text-sm mb-1">{product.name}</h4>
-                      <p className="text-lg font-bold text-blue-600">
+                    <CardContent className="p-2 md:p-4">
+                      <h4 className="font-medium text-xs md:text-sm mb-1 line-clamp-2">{product.name}</h4>
+                      <p className="text-sm md:text-lg font-bold text-blue-600">
                         {formatCurrency(product.sale_price)}
                       </p>
                       <p className="text-xs text-gray-500">Stock: {product.stock}</p>
@@ -248,40 +248,42 @@ export default function POSPage() {
         </div>
 
         {/* Panel derecho - Carrito */}
-        <div className="space-y-4">
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <ShoppingCart className="h-5 w-5" />
+        <div className="space-y-4 order-1 lg:order-2">
+          <Card className="lg:sticky lg:top-20">
+            <CardHeader className="pb-3">
+              <CardTitle className="flex items-center gap-2 text-base md:text-lg">
+                <ShoppingCart className="h-4 w-4 md:h-5 md:w-5" />
                 Carrito ({cart.length})
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="space-y-3 max-h-[400px] overflow-y-auto mb-4">
+              <div className="space-y-2 md:space-y-3 max-h-[300px] md:max-h-[400px] overflow-y-auto mb-4">
                 {cart.length === 0 ? (
-                  <p className="text-center text-gray-500 py-8">Carrito vacío</p>
+                  <p className="text-center text-gray-500 py-6 md:py-8 text-sm">Carrito vacío</p>
                 ) : (
                   cart.map(item => (
-                    <div key={item.product.id} className="flex items-center gap-2 p-2 border rounded">
-                      <div className="flex-1">
-                        <p className="font-medium text-sm">{item.product.name}</p>
-                        <p className="text-sm text-gray-500">
+                    <div key={item.product.id} className="flex items-center gap-1 md:gap-2 p-2 border rounded">
+                      <div className="flex-1 min-w-0">
+                        <p className="font-medium text-xs md:text-sm truncate">{item.product.name}</p>
+                        <p className="text-xs md:text-sm text-gray-500">
                           {formatCurrency(item.product.sale_price)} x {item.quantity}
                         </p>
                       </div>
-                      <div className="flex items-center gap-1">
+                      <div className="flex items-center gap-0.5 md:gap-1 flex-shrink-0">
                         <Button
                           size="sm"
                           variant="outline"
                           onClick={() => updateQuantity(item.product.id, -1)}
+                          className="h-7 w-7 p-0 md:h-8 md:w-8"
                         >
                           <Minus className="h-3 w-3" />
                         </Button>
-                        <span className="w-8 text-center text-sm">{item.quantity}</span>
+                        <span className="w-6 md:w-8 text-center text-xs md:text-sm">{item.quantity}</span>
                         <Button
                           size="sm"
                           variant="outline"
                           onClick={() => updateQuantity(item.product.id, 1)}
+                          className="h-7 w-7 p-0 md:h-8 md:w-8"
                         >
                           <Plus className="h-3 w-3" />
                         </Button>
@@ -290,8 +292,9 @@ export default function POSPage() {
                         size="sm"
                         variant="ghost"
                         onClick={() => removeFromCart(item.product.id)}
+                        className="h-7 w-7 p-0 md:h-8 md:w-8 flex-shrink-0"
                       >
-                        <Trash2 className="h-4 w-4 text-red-600" />
+                        <Trash2 className="h-3 w-3 md:h-4 md:w-4 text-red-600" />
                       </Button>
                     </div>
                   ))
@@ -300,18 +303,18 @@ export default function POSPage() {
 
               {cart.length > 0 && (
                 <>
-                  <div className="border-t pt-4 space-y-3">
-                    <div className="flex justify-between text-lg font-bold">
+                  <div className="border-t pt-3 md:pt-4 space-y-2 md:space-y-3">
+                    <div className="flex justify-between text-base md:text-lg font-bold">
                       <span>Total:</span>
                       <span className="text-blue-600">{formatCurrency(calculateTotal())}</span>
                     </div>
 
-                    <div className="space-y-2">
-                      <label className="text-sm font-medium">Método de Pago:</label>
+                    <div className="space-y-1.5 md:space-y-2">
+                      <label className="text-xs md:text-sm font-medium">Método de Pago:</label>
                       <select
                         value={paymentMethod}
                         onChange={(e: React.ChangeEvent<HTMLSelectElement>) => setPaymentMethod(e.target.value as 'efectivo' | 'tarjeta' | 'transferencia')}
-                        className="w-full h-9 rounded-md border border-gray-300 px-3 text-sm"
+                        className="w-full h-9 md:h-10 rounded-md border border-gray-300 px-3 text-sm"
                       >
                         <option value="efectivo">Efectivo</option>
                         <option value="tarjeta">Tarjeta</option>
@@ -320,12 +323,12 @@ export default function POSPage() {
                     </div>
 
                     <Button
-                      className="w-full"
+                      className="w-full text-sm md:text-base"
                       size="lg"
                       onClick={processSale}
                       disabled={processing}
                     >
-                      <DollarSign className="mr-2 h-5 w-5" />
+                      <DollarSign className="mr-2 h-4 w-4 md:h-5 md:w-5" />
                       {processing ? 'Procesando...' : 'Procesar Venta'}
                     </Button>
                   </div>
