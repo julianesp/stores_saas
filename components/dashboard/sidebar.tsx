@@ -108,7 +108,12 @@ const storeMenuItems = [
   },
 ];
 
-export function Sidebar() {
+interface SidebarProps {
+  isMobile?: boolean;
+  onLinkClick?: () => void;
+}
+
+export function Sidebar({ isMobile = false, onLinkClick }: SidebarProps) {
   const pathname = usePathname();
   const { user } = useUser();
   const [isSuperAdmin, setIsSuperAdmin] = useState(false);
@@ -126,14 +131,18 @@ export function Sidebar() {
   // Seleccionar el menú correcto según el tipo de usuario
   const menuItems = isSuperAdmin ? superAdminMenuItems : storeMenuItems;
 
+  const sidebarClasses = isMobile
+    ? "flex w-full md:w-64 flex-col bg-gray-900 text-white h-full"
+    : "hidden md:flex md:w-64 md:flex-col bg-gray-900 text-white";
+
   return (
-    <aside className="hidden md:flex md:w-64 md:flex-col bg-gray-900 text-white">
+    <aside className={sidebarClasses}>
       <div className="flex h-16 items-center px-6 border-b border-gray-800">
         <h1 className="text-xl font-bold">
           {isSuperAdmin ? 'Admin Panel' : 'Sistema POS'}
         </h1>
       </div>
-      <nav className="flex-1 space-y-1 px-3 py-4">
+      <nav className="flex-1 space-y-1 px-3 py-4 overflow-y-auto">
         {menuItems.map((item) => {
           const Icon = item.icon;
           const isActive = pathname === item.href || pathname?.startsWith(item.href + '/');
@@ -142,6 +151,7 @@ export function Sidebar() {
             <Link
               key={item.href}
               href={item.href}
+              onClick={onLinkClick}
               className={cn(
                 'flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors',
                 isActive
@@ -159,6 +169,7 @@ export function Sidebar() {
         {!isSuperAdmin && (
           <Link
             href="/dashboard/subscription"
+            onClick={onLinkClick}
             className={cn(
               'flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors',
               pathname === '/dashboard/subscription' || pathname?.startsWith('/dashboard/subscription/')
@@ -172,6 +183,7 @@ export function Sidebar() {
         )}
         <Link
           href="/dashboard/settings"
+          onClick={onLinkClick}
           className="flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium text-gray-300 hover:bg-gray-800 hover:text-white transition-colors"
         >
           <Settings className="h-5 w-5" />

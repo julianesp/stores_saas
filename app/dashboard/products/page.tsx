@@ -92,26 +92,28 @@ export default function ProductsPage() {
       />
 
       <div className="space-y-6">
-        <div className="flex justify-between items-center">
+        <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4">
         <div>
-          <h1 className="text-3xl font-bold">Productos</h1>
-          <p className="text-gray-500">Gestiona el inventario de productos</p>
+          <h1 className="text-2xl md:text-3xl font-bold">Productos</h1>
+          <p className="text-gray-500 text-sm md:text-base">Gestiona el inventario de productos</p>
         </div>
-        <div className="flex gap-2">
-          <Button variant="outline" onClick={() => setShowCategoryModal(true)}>
+        <div className="flex flex-wrap gap-2">
+          <Button variant="outline" onClick={() => setShowCategoryModal(true)} className="flex-1 sm:flex-none">
             <Tag className="mr-2 h-4 w-4" />
-            Categorías
+            <span className="hidden sm:inline">Categorías</span>
+            <span className="sm:hidden">Cat.</span>
           </Button>
-          <Link href="/dashboard/products/quick-add">
-            <Button variant="outline">
+          <Link href="/dashboard/products/quick-add" className="flex-1 sm:flex-none">
+            <Button variant="outline" className="w-full">
               <Camera className="mr-2 h-4 w-4" />
-              Agregar Rápido
+              <span className="hidden sm:inline">Agregar Rápido</span>
+              <span className="sm:hidden">Rápido</span>
             </Button>
           </Link>
-          <Link href="/dashboard/products/new">
-            <Button>
+          <Link href="/dashboard/products/new" className="flex-1 sm:flex-none">
+            <Button className="w-full">
               <Plus className="mr-2 h-4 w-4" />
-              Nuevo Producto
+              Nuevo
             </Button>
           </Link>
         </div>
@@ -140,61 +142,151 @@ export default function ProductsPage() {
               <p>No se encontraron productos</p>
             </div>
           ) : (
-            <div className="overflow-x-auto">
-              <table className="w-full">
-                <thead>
-                  <tr className="border-b">
-                    <th className="text-left py-3 px-4">Código</th>
-                    <th className="text-left py-3 px-4">Nombre</th>
-                    <th className="text-left py-3 px-4">Categoría</th>
-                    <th className="text-left py-3 px-4">Proveedor</th>
-                    <th className="text-right py-3 px-4">Precio Compra</th>
-                    <th className="text-right py-3 px-4">Precio Venta</th>
-                    <th className="text-right py-3 px-4">Stock</th>
-                    <th className="text-right py-3 px-4">Acciones</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {filteredProducts.map((product) => (
-                    <tr key={product.id} className="border-b hover:bg-gray-50">
-                      <td className="py-3 px-4 font-mono text-sm">{product.barcode || 'N/A'}</td>
-                      <td className="py-3 px-4 font-medium">{product.name}</td>
-                      <td className="py-3 px-4">{product.category?.name || '-'}</td>
-                      <td className="py-3 px-4">{product.supplier?.name || '-'}</td>
-                      <td className="py-3 px-4 text-right">{formatCurrency(product.cost_price)}</td>
-                      <td className="py-3 px-4 text-right">{formatCurrency(product.sale_price)}</td>
-                      <td className="py-3 px-4 text-right">
-                        <span
-                          className={`inline-block px-2 py-1 rounded text-sm ${
-                            product.stock <= product.min_stock
-                              ? 'bg-red-100 text-red-800'
-                              : 'bg-green-100 text-green-800'
-                          }`}
-                        >
-                          {product.stock}
-                        </span>
-                      </td>
-                      <td className="py-3 px-4">
-                        <div className="flex gap-2 justify-end">
-                          <Link href={`/dashboard/products/${product.id}`}>
-                            <Button variant="ghost" size="sm">
-                              <Edit className="h-4 w-4" />
-                            </Button>
-                          </Link>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => deleteProduct(product.id)}
-                          >
-                            <Trash2 className="h-4 w-4 text-red-600" />
-                          </Button>
-                        </div>
-                      </td>
+            <>
+              {/* Vista de tabla para desktop */}
+              <div className="hidden lg:block overflow-x-auto">
+                <table className="w-full">
+                  <thead>
+                    <tr className="border-b">
+                      <th className="text-left py-3 px-4">Imagen</th>
+                      <th className="text-left py-3 px-4">Código</th>
+                      <th className="text-left py-3 px-4">Nombre</th>
+                      <th className="text-left py-3 px-4">Categoría</th>
+                      <th className="text-left py-3 px-4">Proveedor</th>
+                      <th className="text-right py-3 px-4">Precio Compra</th>
+                      <th className="text-right py-3 px-4">Precio Venta</th>
+                      <th className="text-right py-3 px-4">Stock</th>
+                      <th className="text-right py-3 px-4">Acciones</th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+                  </thead>
+                  <tbody>
+                    {filteredProducts.map((product) => (
+                      <tr key={product.id} className="border-b hover:bg-gray-50">
+                        <td className="py-3 px-4">
+                          {product.images && product.images.length > 0 ? (
+                            <img
+                              src={product.images[0]}
+                              alt={product.name}
+                              className="w-12 h-12 object-cover rounded border"
+                            />
+                          ) : (
+                            <div className="w-12 h-12 bg-gray-100 rounded border flex items-center justify-center">
+                              <Package className="h-6 w-6 text-gray-400" />
+                            </div>
+                          )}
+                        </td>
+                        <td className="py-3 px-4 font-mono text-sm">{product.barcode || 'N/A'}</td>
+                        <td className="py-3 px-4 font-medium">{product.name}</td>
+                        <td className="py-3 px-4">{product.category?.name || '-'}</td>
+                        <td className="py-3 px-4">{product.supplier?.name || '-'}</td>
+                        <td className="py-3 px-4 text-right">{formatCurrency(product.cost_price)}</td>
+                        <td className="py-3 px-4 text-right">{formatCurrency(product.sale_price)}</td>
+                        <td className="py-3 px-4 text-right">
+                          <span
+                            className={`inline-block px-2 py-1 rounded text-sm ${
+                              product.stock <= product.min_stock
+                                ? 'bg-red-100 text-red-800'
+                                : 'bg-green-100 text-green-800'
+                            }`}
+                          >
+                            {product.stock}
+                          </span>
+                        </td>
+                        <td className="py-3 px-4">
+                          <div className="flex gap-2 justify-end">
+                            <Link href={`/dashboard/products/${product.id}`}>
+                              <Button variant="ghost" size="sm">
+                                <Edit className="h-4 w-4" />
+                              </Button>
+                            </Link>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => deleteProduct(product.id)}
+                            >
+                              <Trash2 className="h-4 w-4 text-red-600" />
+                            </Button>
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+
+              {/* Vista de cards para móvil y tablet */}
+              <div className="lg:hidden space-y-4">
+                {filteredProducts.map((product) => (
+                  <Card key={product.id} className="overflow-hidden">
+                    <CardContent className="p-4">
+                      <div className="flex gap-4">
+                        <div className="flex-shrink-0">
+                          {product.images && product.images.length > 0 ? (
+                            <img
+                              src={product.images[0]}
+                              alt={product.name}
+                              className="w-20 h-20 object-cover rounded border"
+                            />
+                          ) : (
+                            <div className="w-20 h-20 bg-gray-100 rounded border flex items-center justify-center">
+                              <Package className="h-8 w-8 text-gray-400" />
+                            </div>
+                          )}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <h3 className="font-semibold text-lg mb-1 truncate">{product.name}</h3>
+                          <p className="text-xs text-gray-500 mb-2 font-mono">{product.barcode || 'Sin código'}</p>
+                          <div className="grid grid-cols-2 gap-2 text-sm">
+                            <div>
+                              <span className="text-gray-500">Categoría:</span>
+                              <p className="font-medium truncate">{product.category?.name || '-'}</p>
+                            </div>
+                            <div>
+                              <span className="text-gray-500">Stock:</span>
+                              <p>
+                                <span
+                                  className={`inline-block px-2 py-1 rounded text-xs ${
+                                    product.stock <= product.min_stock
+                                      ? 'bg-red-100 text-red-800'
+                                      : 'bg-green-100 text-green-800'
+                                  }`}
+                                >
+                                  {product.stock}
+                                </span>
+                              </p>
+                            </div>
+                            <div>
+                              <span className="text-gray-500">P. Compra:</span>
+                              <p className="font-medium">{formatCurrency(product.cost_price)}</p>
+                            </div>
+                            <div>
+                              <span className="text-gray-500">P. Venta:</span>
+                              <p className="font-medium text-blue-600">{formatCurrency(product.sale_price)}</p>
+                            </div>
+                          </div>
+                          <div className="flex gap-2 mt-3">
+                            <Link href={`/dashboard/products/${product.id}`} className="flex-1">
+                              <Button variant="outline" size="sm" className="w-full">
+                                <Edit className="h-4 w-4 mr-1" />
+                                Editar
+                              </Button>
+                            </Link>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => deleteProduct(product.id)}
+                              className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          </div>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+            </>
           )}
         </CardContent>
       </Card>

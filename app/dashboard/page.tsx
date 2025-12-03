@@ -8,6 +8,14 @@ import { getUserProfileByClerkId } from '@/lib/subscription-helpers';
 import { getAllDocuments } from '@/lib/firestore-helpers';
 import { UserProfile } from '@/lib/types';
 import { formatCurrency } from '@/lib/utils';
+import {
+  getDashboardMetrics,
+  getTopProducts,
+  getInventoryAlerts,
+  getExpiringProducts,
+  DashboardMetrics,
+  TopProduct
+} from '@/lib/dashboard-helpers';
 
 export default function DashboardPage() {
   const { user } = useUser();
@@ -21,6 +29,16 @@ export default function DashboardPage() {
     newStoresToday: 0,
     conversionRate: 0,
   });
+  const [metrics, setMetrics] = useState<DashboardMetrics>({
+    dailySales: 0,
+    todayOrders: 0,
+    totalProducts: 0,
+    lowStockProducts: 0,
+    activeCustomers: 0,
+    monthlyGrowth: 0,
+  });
+  const [topProducts, setTopProducts] = useState<TopProduct[]>([]);
+  const [expiringProductsCount, setExpiringProductsCount] = useState(0);
 
   useEffect(() => {
     async function checkUserAndFetchMetrics() {
@@ -52,6 +70,17 @@ export default function DashboardPage() {
             newStoresToday,
             conversionRate,
           });
+        } else {
+          // Fetch store metrics for regular users
+          const [dashboardMetrics, products, expiringCount] = await Promise.all([
+            getDashboardMetrics(),
+            getTopProducts(4),
+            getExpiringProducts(),
+          ]);
+
+          setMetrics(dashboardMetrics);
+          setTopProducts(products);
+          setExpiringProductsCount(expiringCount);
         }
 
         setLoading(false);
@@ -59,16 +88,6 @@ export default function DashboardPage() {
     }
     checkUserAndFetchMetrics();
   }, [user]);
-
-  // TODO: Fetch real data from Firestore for store owners
-  const metrics = {
-    dailySales: 1250000,
-    todayOrders: 45,
-    totalProducts: 350,
-    lowStockProducts: 12,
-    activeCustomers: 120,
-    monthlyGrowth: 12.5,
-  };
 
   if (loading) {
     return (
@@ -81,19 +100,19 @@ export default function DashboardPage() {
   // Super Admin Dashboard
   if (isSuperAdmin) {
     return (
-      <div className="space-y-6">
+      <div className="space-y-4 md:space-y-6">
         <div>
-          <div className="flex items-center gap-3">
-            <Crown className="h-8 w-8 text-purple-600" />
+          <div className="flex items-center gap-2 md:gap-3">
+            <Crown className="h-6 w-6 md:h-8 md:w-8 text-purple-600" />
             <div>
-              <h1 className="text-3xl font-bold tracking-tight">Dashboard del SaaS</h1>
-              <p className="text-gray-500">Vista general del negocio multi-tenant</p>
+              <h1 className="text-2xl md:text-3xl font-bold tracking-tight">Dashboard del SaaS</h1>
+              <p className="text-gray-500 text-sm md:text-base">Vista general del negocio multi-tenant</p>
             </div>
           </div>
         </div>
 
         {/* Métricas principales del SaaS */}
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 md:gap-4">
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">Total Tiendas</CardTitle>
@@ -164,34 +183,34 @@ export default function DashboardPage() {
         </div>
 
         {/* Acceso rápido */}
-        <div className="grid gap-4 md:grid-cols-2">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-3 md:gap-4">
           <Card>
-            <CardHeader>
-              <CardTitle>Accesos Rápidos</CardTitle>
+            <CardHeader className="pb-3">
+              <CardTitle className="text-base md:text-lg">Accesos Rápidos</CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="space-y-3">
+              <div className="space-y-2 md:space-y-3">
                 <a
                   href="/dashboard/superadmin"
-                  className="flex items-center justify-between p-3 bg-blue-50 rounded-lg hover:bg-blue-100 transition-colors"
+                  className="flex items-center justify-between p-2 md:p-3 bg-blue-50 rounded-lg hover:bg-blue-100 transition-colors"
                 >
-                  <div className="flex items-center gap-3">
-                    <Store className="h-5 w-5 text-blue-600" />
+                  <div className="flex items-center gap-2 md:gap-3">
+                    <Store className="h-4 w-4 md:h-5 md:w-5 text-blue-600 flex-shrink-0" />
                     <div>
-                      <p className="font-medium text-sm">Gestión de Tiendas</p>
-                      <p className="text-xs text-gray-500">Ver y administrar todas las tiendas</p>
+                      <p className="font-medium text-xs md:text-sm">Gestión de Tiendas</p>
+                      <p className="text-xs text-gray-500 hidden sm:block">Ver y administrar todas las tiendas</p>
                     </div>
                   </div>
                 </a>
                 <a
                   href="/dashboard/admin/users"
-                  className="flex items-center justify-between p-3 bg-purple-50 rounded-lg hover:bg-purple-100 transition-colors"
+                  className="flex items-center justify-between p-2 md:p-3 bg-purple-50 rounded-lg hover:bg-purple-100 transition-colors"
                 >
-                  <div className="flex items-center gap-3">
-                    <Users className="h-5 w-5 text-purple-600" />
+                  <div className="flex items-center gap-2 md:gap-3">
+                    <Users className="h-4 w-4 md:h-5 md:w-5 text-purple-600 flex-shrink-0" />
                     <div>
-                      <p className="font-medium text-sm">Usuarios del Sistema</p>
-                      <p className="text-xs text-gray-500">Gestionar usuarios y roles</p>
+                      <p className="font-medium text-xs md:text-sm">Usuarios del Sistema</p>
+                      <p className="text-xs text-gray-500 hidden sm:block">Gestionar usuarios y roles</p>
                     </div>
                   </div>
                 </a>
@@ -200,27 +219,27 @@ export default function DashboardPage() {
           </Card>
 
           <Card>
-            <CardHeader>
-              <CardTitle>Estado del Sistema</CardTitle>
+            <CardHeader className="pb-3">
+              <CardTitle className="text-base md:text-lg">Estado del Sistema</CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="space-y-3">
-                <div className="flex items-center justify-between p-3 bg-green-50 rounded-lg">
-                  <div className="flex items-center gap-3">
-                    <Activity className="h-5 w-5 text-green-600" />
+              <div className="space-y-2 md:space-y-3">
+                <div className="flex items-center justify-between p-2 md:p-3 bg-green-50 rounded-lg">
+                  <div className="flex items-center gap-2 md:gap-3">
+                    <Activity className="h-4 w-4 md:h-5 md:w-5 text-green-600 flex-shrink-0" />
                     <div>
-                      <p className="font-medium text-sm">Sistema Operativo</p>
-                      <p className="text-xs text-gray-500">Todos los servicios funcionando</p>
+                      <p className="font-medium text-xs md:text-sm">Sistema Operativo</p>
+                      <p className="text-xs text-gray-500 hidden sm:block">Todos los servicios funcionando</p>
                     </div>
                   </div>
                 </div>
                 {saasMetrics.trialStores > 0 && (
-                  <div className="flex items-center justify-between p-3 bg-yellow-50 rounded-lg">
-                    <div className="flex items-center gap-3">
-                      <AlertTriangle className="h-5 w-5 text-yellow-600" />
+                  <div className="flex items-center justify-between p-2 md:p-3 bg-yellow-50 rounded-lg">
+                    <div className="flex items-center gap-2 md:gap-3">
+                      <AlertTriangle className="h-4 w-4 md:h-5 md:w-5 text-yellow-600 flex-shrink-0" />
                       <div>
-                        <p className="font-medium text-sm">{saasMetrics.trialStores} tiendas en trial</p>
-                        <p className="text-xs text-gray-500">Enviar seguimiento para conversión</p>
+                        <p className="font-medium text-xs md:text-sm">{saasMetrics.trialStores} tiendas en trial</p>
+                        <p className="text-xs text-gray-500 hidden sm:block">Enviar seguimiento para conversión</p>
                       </div>
                     </div>
                   </div>
@@ -234,14 +253,14 @@ export default function DashboardPage() {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4 md:space-y-6">
       <div>
-        <h1 className="text-3xl font-bold tracking-tight">Dashboard</h1>
-        <p className="text-gray-500">Resumen general de tu tienda</p>
+        <h1 className="text-2xl md:text-3xl font-bold tracking-tight">Dashboard</h1>
+        <p className="text-gray-500 text-sm md:text-base">Resumen general de tu tienda</p>
       </div>
 
       {/* Métricas principales */}
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 md:gap-4">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Ventas de Hoy</CardTitle>
@@ -255,7 +274,9 @@ export default function DashboardPage() {
                 minimumFractionDigits: 0,
               }).format(metrics.dailySales)}
             </div>
-            <p className="text-xs text-gray-500 mt-1">+20.1% desde ayer</p>
+            <p className="text-xs text-gray-500 mt-1">
+              {metrics.dailySales > 0 ? 'Ventas del día' : 'Sin ventas hoy'}
+            </p>
           </CardContent>
         </Card>
 
@@ -266,7 +287,9 @@ export default function DashboardPage() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{metrics.todayOrders}</div>
-            <p className="text-xs text-gray-500 mt-1">+15% desde ayer</p>
+            <p className="text-xs text-gray-500 mt-1">
+              {metrics.todayOrders > 0 ? 'Órdenes completadas' : 'Sin órdenes hoy'}
+            </p>
           </CardContent>
         </Card>
 
@@ -277,7 +300,11 @@ export default function DashboardPage() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{metrics.totalProducts}</div>
-            <p className="text-xs text-gray-500 mt-1">{metrics.lowStockProducts} con stock bajo</p>
+            <p className="text-xs text-gray-500 mt-1">
+              {metrics.lowStockProducts > 0
+                ? `${metrics.lowStockProducts} con stock bajo`
+                : 'Inventario saludable'}
+            </p>
           </CardContent>
         </Card>
 
@@ -309,57 +336,88 @@ export default function DashboardPage() {
             <TrendingUp className="h-4 w-4 text-green-600" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">+{metrics.monthlyGrowth}%</div>
+            <div className={`text-2xl font-bold ${metrics.monthlyGrowth >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+              {metrics.monthlyGrowth >= 0 ? '+' : ''}{metrics.monthlyGrowth}%
+            </div>
             <p className="text-xs text-gray-500 mt-1">Comparado al mes pasado</p>
           </CardContent>
         </Card>
       </div>
 
       {/* Alertas y acciones rápidas */}
-      <div className="grid gap-4 md:grid-cols-2">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-3 md:gap-4">
         <Card>
-          <CardHeader>
-            <CardTitle>Alertas de Inventario</CardTitle>
+          <CardHeader className="pb-3">
+            <CardTitle className="text-base md:text-lg">Alertas de Inventario</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="space-y-3">
-              <div className="flex items-center justify-between p-3 bg-orange-50 rounded-lg">
-                <div className="flex items-center gap-3">
-                  <AlertTriangle className="h-5 w-5 text-orange-600" />
-                  <div>
-                    <p className="font-medium text-sm">12 productos con stock bajo</p>
-                    <p className="text-xs text-gray-500">Revisar inventario</p>
+            <div className="space-y-2 md:space-y-3">
+              {metrics.lowStockProducts > 0 ? (
+                <div className="flex items-center justify-between p-2 md:p-3 bg-orange-50 rounded-lg">
+                  <div className="flex items-center gap-2 md:gap-3">
+                    <AlertTriangle className="h-4 w-4 md:h-5 md:w-5 text-orange-600 flex-shrink-0" />
+                    <div>
+                      <p className="font-medium text-xs md:text-sm">{metrics.lowStockProducts} productos con stock bajo</p>
+                      <p className="text-xs text-gray-500 hidden sm:block">Revisar inventario</p>
+                    </div>
                   </div>
                 </div>
-              </div>
-              <div className="flex items-center justify-between p-3 bg-red-50 rounded-lg">
-                <div className="flex items-center gap-3">
-                  <Package className="h-5 w-5 text-red-600" />
-                  <div>
-                    <p className="font-medium text-sm">5 productos próximos a vencer</p>
-                    <p className="text-xs text-gray-500">Crear ofertas</p>
+              ) : (
+                <div className="flex items-center justify-between p-2 md:p-3 bg-green-50 rounded-lg">
+                  <div className="flex items-center gap-2 md:gap-3">
+                    <Package className="h-4 w-4 md:h-5 md:w-5 text-green-600 flex-shrink-0" />
+                    <div>
+                      <p className="font-medium text-xs md:text-sm">Inventario saludable</p>
+                      <p className="text-xs text-gray-500 hidden sm:block">Sin alertas de stock</p>
+                    </div>
                   </div>
                 </div>
-              </div>
+              )}
+              {expiringProductsCount > 0 ? (
+                <div className="flex items-center justify-between p-2 md:p-3 bg-red-50 rounded-lg">
+                  <div className="flex items-center gap-2 md:gap-3">
+                    <Package className="h-4 w-4 md:h-5 md:w-5 text-red-600 flex-shrink-0" />
+                    <div>
+                      <p className="font-medium text-xs md:text-sm">{expiringProductsCount} productos próximos a vencer</p>
+                      <p className="text-xs text-gray-500 hidden sm:block">Crear ofertas</p>
+                    </div>
+                  </div>
+                </div>
+              ) : (
+                <div className="flex items-center justify-between p-2 md:p-3 bg-blue-50 rounded-lg">
+                  <div className="flex items-center gap-2 md:gap-3">
+                    <Package className="h-4 w-4 md:h-5 md:w-5 text-blue-600 flex-shrink-0" />
+                    <div>
+                      <p className="font-medium text-xs md:text-sm">Sin productos próximos a vencer</p>
+                      <p className="text-xs text-gray-500 hidden sm:block">Inventario fresco</p>
+                    </div>
+                  </div>
+                </div>
+              )}
             </div>
           </CardContent>
         </Card>
 
         <Card>
-          <CardHeader>
-            <CardTitle>Productos Más Vendidos</CardTitle>
+          <CardHeader className="pb-3">
+            <CardTitle className="text-base md:text-lg">Productos Más Vendidos</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="space-y-3">
-              {['Coca Cola 1.5L', 'Pan Tajado', 'Leche Entera 1L', 'Arroz Diana 500g'].map(
-                (product, i) => (
-                  <div key={product} className="flex items-center justify-between">
-                    <span className="text-sm">{product}</span>
-                    <span className="text-sm font-medium text-gray-500">
-                      {120 - i * 15} unidades
+            <div className="space-y-2 md:space-y-3">
+              {topProducts.length > 0 ? (
+                topProducts.map((product) => (
+                  <div key={product.name} className="flex items-center justify-between">
+                    <span className="text-xs md:text-sm truncate mr-2">{product.name}</span>
+                    <span className="text-xs md:text-sm font-medium text-gray-500 flex-shrink-0">
+                      {product.quantity} und
                     </span>
                   </div>
-                )
+                ))
+              ) : (
+                <div className="text-center py-4">
+                  <p className="text-xs md:text-sm text-gray-500">No hay ventas registradas</p>
+                  <p className="text-xs text-gray-400 mt-1">Los productos más vendidos aparecerán aquí</p>
+                </div>
               )}
             </div>
           </CardContent>

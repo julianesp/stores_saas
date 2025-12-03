@@ -13,6 +13,7 @@ import { getAllDocuments, createDocument, updateDocument } from '@/lib/firestore
 import { Category, Supplier } from '@/lib/types';
 import { toast } from 'sonner';
 import { Scan } from 'lucide-react';
+import { ImageUploader } from './image-uploader';
 
 const productSchema = z.object({
   barcode: z.string().optional(),
@@ -39,6 +40,7 @@ export function ProductForm({ initialData, productId }: ProductFormProps) {
   const [loading, setLoading] = useState(false);
   const [categories, setCategories] = useState<Category[]>([]);
   const [suppliers, setSuppliers] = useState<Supplier[]>([]);
+  const [productImages, setProductImages] = useState<string[]>(initialData?.images || []);
 
   const {
     register,
@@ -82,11 +84,17 @@ export function ProductForm({ initialData, productId }: ProductFormProps) {
   const onSubmit = async (data: ProductFormData) => {
     setLoading(true);
     try {
+      // Incluir las imágenes en los datos
+      const productData = {
+        ...data,
+        images: productImages,
+      };
+
       if (productId) {
-        await updateDocument('products', productId, data);
+        await updateDocument('products', productId, productData);
         toast.success('Producto actualizado correctamente');
       } else {
-        await createDocument('products', data);
+        await createDocument('products', productData);
         toast.success('Producto creado correctamente');
       }
 
@@ -265,6 +273,20 @@ export function ProductForm({ initialData, productId }: ProductFormProps) {
               {...register('expiration_date')}
             />
           </div>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Imágenes del Producto</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <ImageUploader
+            productId={productId}
+            initialImages={productImages}
+            onChange={setProductImages}
+            maxImages={3}
+          />
         </CardContent>
       </Card>
 
