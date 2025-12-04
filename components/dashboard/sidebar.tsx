@@ -19,6 +19,7 @@ import {
   Percent,
   Shield,
   Banknote,
+  Brain,
 } from 'lucide-react';
 import { getUserProfileByClerkId } from '@/lib/subscription-helpers';
 
@@ -104,6 +105,12 @@ const storeMenuItems = [
     title: 'Inventario',
     href: '/dashboard/inventory',
     icon: Scan,
+    roles: ['admin'],
+  },
+  {
+    title: 'Análisis IA',
+    href: '/dashboard/analytics',
+    icon: Brain,
     roles: ['admin'],
   },
 ];

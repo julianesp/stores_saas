@@ -22,6 +22,8 @@ export default function SalesPage() {
   const [customStartDate, setCustomStartDate] = useState('');
   const [customEndDate, setCustomEndDate] = useState('');
   const [showCustomDateRange, setShowCustomDateRange] = useState(false);
+  const [selectedSale, setSelectedSale] = useState<SaleWithRelations | null>(null);
+  const [showDetailModal, setShowDetailModal] = useState(false);
 
   useEffect(() => {
     fetchSales();
@@ -305,11 +307,13 @@ export default function SalesPage() {
                     <tr className="border-b">
                       <th className="text-left py-3 px-4">Número</th>
                       <th className="text-left py-3 px-4">Fecha</th>
+                      <th className="text-left py-3 px-4">Cliente</th>
                       <th className="text-left py-3 px-4">Cajero</th>
                       <th className="text-left py-3 px-4">Método de Pago</th>
                       <th className="text-right py-3 px-4">Items</th>
                       <th className="text-right py-3 px-4">Total</th>
                       <th className="text-center py-3 px-4">Estado</th>
+                      <th className="text-center py-3 px-4">Acciones</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -323,6 +327,18 @@ export default function SalesPage() {
                               : new Date(sale.created_at),
                             "dd MMM yyyy HH:mm",
                             { locale: es }
+                          )}
+                        </td>
+                        <td className="py-3 px-4">
+                          {sale.customer ? (
+                            <div>
+                              <p className="font-medium text-sm">{sale.customer.name}</p>
+                              {sale.customer.phone && (
+                                <p className="text-xs text-gray-500">{sale.customer.phone}</p>
+                              )}
+                            </div>
+                          ) : (
+                            <span className="text-gray-400 text-sm">Sin cliente</span>
                           )}
                         </td>
                         <td className="py-3 px-4">{sale.cashier?.full_name || 'N/A'}</td>
@@ -339,6 +355,19 @@ export default function SalesPage() {
                           }`}>
                             {sale.status}
                           </span>
+                        </td>
+                        <td className="py-3 px-4 text-center">
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => {
+                              setSelectedSale(sale);
+                              setShowDetailModal(true);
+                            }}
+                          >
+                            <Eye className="h-4 w-4 mr-1" />
+                            Ver Detalle
+                          </Button>
                         </td>
                       </tr>
                     ))}
@@ -372,7 +401,19 @@ export default function SalesPage() {
                           {sale.status}
                         </span>
                       </div>
-                      <div className="grid grid-cols-2 gap-2 text-sm mb-2">
+
+                      {/* Cliente */}
+                      {sale.customer && (
+                        <div className="mb-3 bg-blue-50 border border-blue-100 rounded p-2">
+                          <span className="text-xs text-gray-500">Cliente:</span>
+                          <p className="font-medium text-sm">{sale.customer.name}</p>
+                          {sale.customer.phone && (
+                            <p className="text-xs text-gray-500">{sale.customer.phone}</p>
+                          )}
+                        </div>
+                      )}
+
+                      <div className="grid grid-cols-2 gap-2 text-sm mb-3">
                         <div>
                           <span className="text-gray-500">Cajero:</span>
                           <p className="truncate">{sale.cashier?.full_name || 'N/A'}</p>
@@ -390,6 +431,19 @@ export default function SalesPage() {
                           <p className="font-semibold text-green-600">{formatCurrency(sale.total)}</p>
                         </div>
                       </div>
+
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="w-full"
+                        onClick={() => {
+                          setSelectedSale(sale);
+                          setShowDetailModal(true);
+                        }}
+                      >
+                        <Eye className="h-4 w-4 mr-1" />
+                        Ver Detalle de Productos
+                      </Button>
                     </CardContent>
                   </Card>
                 ))}
@@ -398,6 +452,152 @@ export default function SalesPage() {
           )}
         </CardContent>
       </Card>
+
+      {/* Modal de detalle de venta */}
+      {showDetailModal && selectedSale && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg max-w-3xl w-full max-h-[90vh] overflow-y-auto">
+            <div className="sticky top-0 bg-white border-b px-6 py-4 flex justify-between items-center">
+              <div>
+                <h2 className="text-xl font-bold">Detalle de Venta</h2>
+                <p className="text-sm text-gray-500">{selectedSale.sale_number}</p>
+              </div>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => {
+                  setShowDetailModal(false);
+                  setSelectedSale(null);
+                }}
+              >
+                ✕
+              </Button>
+            </div>
+
+            <div className="p-6 space-y-4">
+              {/* Información general */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <Card>
+                  <CardContent className="pt-4">
+                    <h3 className="font-semibold mb-2 text-sm text-gray-600">Fecha</h3>
+                    <p className="text-sm">
+                      {format(
+                        (selectedSale.created_at as any)?.toDate
+                          ? (selectedSale.created_at as any).toDate()
+                          : new Date(selectedSale.created_at),
+                        "dd 'de' MMMM 'de' yyyy, HH:mm",
+                        { locale: es }
+                      )}
+                    </p>
+                  </CardContent>
+                </Card>
+
+                {selectedSale.customer && (
+                  <Card>
+                    <CardContent className="pt-4">
+                      <h3 className="font-semibold mb-2 text-sm text-gray-600">Cliente</h3>
+                      <p className="font-medium">{selectedSale.customer.name}</p>
+                      {selectedSale.customer.phone && (
+                        <p className="text-sm text-gray-500">{selectedSale.customer.phone}</p>
+                      )}
+                      {selectedSale.customer.email && (
+                        <p className="text-sm text-gray-500">{selectedSale.customer.email}</p>
+                      )}
+                      <p className="text-xs text-blue-600 mt-1">
+                        {selectedSale.customer.loyalty_points} puntos de lealtad
+                      </p>
+                    </CardContent>
+                  </Card>
+                )}
+
+                <Card>
+                  <CardContent className="pt-4">
+                    <h3 className="font-semibold mb-2 text-sm text-gray-600">Cajero</h3>
+                    <p className="text-sm">{selectedSale.cashier?.full_name || 'N/A'}</p>
+                  </CardContent>
+                </Card>
+
+                <Card>
+                  <CardContent className="pt-4">
+                    <h3 className="font-semibold mb-2 text-sm text-gray-600">Método de Pago</h3>
+                    <p className="text-sm capitalize">{selectedSale.payment_method}</p>
+                  </CardContent>
+                </Card>
+              </div>
+
+              {/* Productos comprados */}
+              <div>
+                <h3 className="font-semibold mb-3 text-lg">Productos Comprados</h3>
+                <div className="border rounded-lg overflow-hidden">
+                  <table className="w-full">
+                    <thead className="bg-gray-50">
+                      <tr>
+                        <th className="text-left py-3 px-4 text-sm font-semibold">Producto</th>
+                        <th className="text-center py-3 px-4 text-sm font-semibold">Cantidad</th>
+                        <th className="text-right py-3 px-4 text-sm font-semibold">Precio Unit.</th>
+                        <th className="text-right py-3 px-4 text-sm font-semibold">Subtotal</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {selectedSale.items && selectedSale.items.length > 0 ? (
+                        selectedSale.items.map((item: any) => (
+                          <tr key={item.id} className="border-t">
+                            <td className="py-3 px-4">
+                              <p className="font-medium text-sm">
+                                {item.product?.name || 'Producto no disponible'}
+                              </p>
+                              {item.product?.barcode && (
+                                <p className="text-xs text-gray-500">Código: {item.product.barcode}</p>
+                              )}
+                            </td>
+                            <td className="py-3 px-4 text-center">{item.quantity}</td>
+                            <td className="py-3 px-4 text-right">{formatCurrency(item.unit_price)}</td>
+                            <td className="py-3 px-4 text-right font-semibold">
+                              {formatCurrency(item.subtotal)}
+                            </td>
+                          </tr>
+                        ))
+                      ) : (
+                        <tr>
+                          <td colSpan={4} className="py-4 text-center text-gray-500 text-sm">
+                            No hay productos en esta venta
+                          </td>
+                        </tr>
+                      )}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+
+              {/* Totales */}
+              <div className="border-t pt-4">
+                <div className="space-y-2">
+                  <div className="flex justify-between text-sm">
+                    <span className="text-gray-600">Subtotal:</span>
+                    <span>{formatCurrency(selectedSale.subtotal)}</span>
+                  </div>
+                  {selectedSale.discount > 0 && (
+                    <div className="flex justify-between text-sm text-green-600">
+                      <span>Descuento:</span>
+                      <span>-{formatCurrency(selectedSale.discount)}</span>
+                    </div>
+                  )}
+                  {selectedSale.points_earned && selectedSale.points_earned > 0 && (
+                    <div className="flex justify-between text-sm text-blue-600">
+                      <span>Puntos ganados:</span>
+                      <span className="font-semibold">+{selectedSale.points_earned} puntos</span>
+                    </div>
+                  )}
+                  <div className="flex justify-between text-lg font-bold pt-2 border-t">
+                    <span>Total:</span>
+                    <span className="text-green-600">{formatCurrency(selectedSale.total)}</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
