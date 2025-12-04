@@ -267,3 +267,43 @@ export interface Notification {
   timestamp: Date;
   read?: boolean;
 }
+
+// Tipos para Órdenes de Compra (Purchase Orders)
+export type PurchaseOrderStatus = 'pendiente' | 'recibida' | 'cancelada';
+
+export interface PurchaseOrder {
+  id: string;
+  user_profile_id: string;
+  supplier_id: string;
+  order_number: string;
+  status: PurchaseOrderStatus;
+  order_date: string;
+  expected_date?: string;
+  received_date?: string;
+  subtotal: number;
+  tax: number;
+  total: number;
+  notes?: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface PurchaseOrderItem {
+  id: string;
+  purchase_order_id: string;
+  product_id: string;
+  product_name: string; // Guardamos el nombre por si el producto se elimina
+  quantity: number;
+  unit_cost: number;
+  subtotal: number;
+  created_at: string;
+}
+
+export interface PurchaseOrderWithItems extends PurchaseOrder {
+  supplier?: Supplier;
+  items: PurchaseOrderItem[];
+}
+
+export interface PurchaseOrderItemWithProduct extends PurchaseOrderItem {
+  product?: Product;
+}
