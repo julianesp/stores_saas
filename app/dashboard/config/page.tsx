@@ -99,7 +99,7 @@ export default function ConfigPage() {
     setTiers(tiers.filter((_, i) => i !== index));
   };
 
-  const handleUpdateTier = (index: number, field: keyof LoyaltyTier, value: any) => {
+  const handleUpdateTier = (index: number, field: keyof LoyaltyTier, value: LoyaltyTier[keyof LoyaltyTier]) => {
     const newTiers = [...tiers];
     newTiers[index] = {
       ...newTiers[index],

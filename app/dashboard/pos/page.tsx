@@ -9,7 +9,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { queryDocuments, createDocument, generateSaleNumber, updateDocument, getAllDocuments } from '@/lib/firestore-helpers';
 import { Product, Customer, Category } from '@/lib/types';
 import { formatCurrency } from '@/lib/utils';
-import { calculatePointsForPurchase, addPointsToCustomer } from '@/lib/loyalty-helpers';
+import { calculatePointsForPurchase, addPointsToCustomer, canRedeemDiscount, redeemPointsForDiscount, getPointsMilestoneMessage, REWARD_CONSTANTS } from '@/lib/loyalty-helpers';
 import Swal from '@/lib/sweetalert';
 
 interface CartItem {
@@ -31,6 +31,9 @@ export default function POSPage() {
   const [showCustomerSearch, setShowCustomerSearch] = useState(false);
   const [categories, setCategories] = useState<Category[]>([]);
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
+  const [canRedeem, setCanRedeem] = useState(false);
+  const [applyDiscount, setApplyDiscount] = useState(false);
+  const [discountAmount, setDiscountAmount] = useState(0);
   const barcodeRef = useRef<HTMLInputElement>(null);
 
   const fetchProducts = useCallback(async () => {
@@ -148,7 +151,8 @@ export default function POSPage() {
   };
 
   const calculateTotal = () => {
-    return cart.reduce((sum, item) => sum + (item.product.sale_price * item.quantity), 0);
+    const subtotal = cart.reduce((sum, item) => sum + (item.product.sale_price * item.quantity), 0);
+    return subtotal - discountAmount;
   };
 
   const processSale = async () => {
@@ -185,10 +189,21 @@ export default function POSPage() {
         });
       }
 
-      const total = calculateTotal();
+      const subtotal = cart.reduce((sum, item) => sum + (item.product.sale_price * item.quantity), 0);
       const saleNumber = await generateSaleNumber();
 
-      // Calcular puntos si hay un cliente seleccionado
+      // Canjear puntos por descuento si aplica
+      let appliedDiscount = 0;
+      let pointsRedeemed = 0;
+      if (selectedCustomer && applyDiscount) {
+        const redeemResult = await redeemPointsForDiscount(selectedCustomer.id, subtotal);
+        appliedDiscount = redeemResult.discount;
+        pointsRedeemed = redeemResult.pointsRedeemed;
+      }
+
+      const total = subtotal - appliedDiscount;
+
+      // Calcular puntos si hay un cliente seleccionado (después de aplicar descuento)
       let pointsEarned = 0;
       if (selectedCustomer) {
         pointsEarned = await calculatePointsForPurchase(userProfile.id, total);
@@ -198,9 +213,9 @@ export default function POSPage() {
       const saleData: any = {
         sale_number: saleNumber,
         cashier_id: userProfile.id,
-        subtotal: total,
+        subtotal: subtotal,
         tax: 0,
-        discount: 0,
+        discount: appliedDiscount,
         total: total,
         payment_method: paymentMethod,
         status: 'completada',
@@ -253,18 +268,44 @@ export default function POSPage() {
 
       Swal.closeLoading();
 
-      // Mostrar mensaje personalizado si ganó puntos
-      if (selectedCustomer && pointsEarned > 0) {
+      // Mostrar mensaje personalizado
+      if (selectedCustomer) {
+        let htmlContent = `
+          <p class="text-lg mb-2">Venta #${saleNumber}</p>
+          ${appliedDiscount > 0 ? `
+            <div class="bg-gray-50 p-2 rounded mb-2 text-sm">
+              <p class="text-gray-600">Subtotal: ${formatCurrency(subtotal)}</p>
+              <p class="text-green-600 font-semibold">Descuento (${REWARD_CONSTANTS.DISCOUNT_PERCENTAGE}%): -${formatCurrency(appliedDiscount)}</p>
+              <p class="text-xs text-gray-500 mt-1">Se canjearon ${pointsRedeemed} puntos</p>
+            </div>
+          ` : ''}
+          <p class="text-2xl font-bold text-green-600 mb-3">Total: ${formatCurrency(total)}</p>
+          <div class="bg-blue-50 border border-blue-200 rounded-lg p-3 mb-2">
+            <p class="text-sm text-gray-600">Cliente: <strong>${selectedCustomer.name}</strong></p>
+          </div>
+        `;
+
+        if (pointsEarned > 0) {
+          htmlContent += `
+            <div class="bg-yellow-50 border border-yellow-200 rounded-lg p-3 mb-2">
+              <p class="text-lg font-bold text-yellow-600">+${pointsEarned} puntos ganados</p>
+            </div>
+          `;
+
+          // Agregar mensaje de hito si aplica
+          const milestoneMessage = getPointsMilestoneMessage(pointsEarned);
+          if (milestoneMessage) {
+            htmlContent += `
+              <div class="bg-green-50 border border-green-200 rounded-lg p-3 text-sm">
+                <p class="text-green-800">${milestoneMessage}</p>
+              </div>
+            `;
+          }
+        }
+
         await Swal.custom({
           title: 'Venta Completada',
-          html: `
-            <p class="text-lg mb-2">Venta #${saleNumber}</p>
-            <p class="text-2xl font-bold text-green-600 mb-3">${formatCurrency(total)}</p>
-            <div class="bg-yellow-50 border border-yellow-200 rounded-lg p-3">
-              <p class="text-sm text-gray-600">Cliente: <strong>${selectedCustomer.name}</strong></p>
-              <p class="text-lg font-bold text-yellow-600 mt-1">+${pointsEarned} puntos ganados</p>
-            </div>
-          `,
+          html: htmlContent,
           icon: 'success',
           confirmButtonText: 'Aceptar'
         });
@@ -274,6 +315,9 @@ export default function POSPage() {
 
       setCart([]);
       setSelectedCustomer(null);
+      setCanRedeem(false);
+      setApplyDiscount(false);
+      setDiscountAmount(0);
       fetchProducts(); // Actualizar inventario
       barcodeRef.current?.focus();
     } catch (error) {
@@ -393,24 +437,64 @@ export default function POSPage() {
               {/* Selector de Cliente */}
               <div className="mb-4 pb-4 border-b">
                 {selectedCustomer ? (
-                  <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-2">
-                        <User className="h-4 w-4 text-blue-600" />
-                        <div>
-                          <p className="text-sm font-medium text-blue-900">{selectedCustomer.name}</p>
-                          <p className="text-xs text-blue-600">{selectedCustomer.loyalty_points} puntos</p>
+                  <div className="space-y-2">
+                    <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <User className="h-4 w-4 text-blue-600" />
+                          <div>
+                            <p className="text-sm font-medium text-blue-900">{selectedCustomer.name}</p>
+                            <p className="text-xs text-blue-600">{selectedCustomer.loyalty_points} puntos</p>
+                          </div>
                         </div>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => {
+                            setSelectedCustomer(null);
+                            setCanRedeem(false);
+                            setApplyDiscount(false);
+                            setDiscountAmount(0);
+                          }}
+                          className="h-7 w-7 p-0"
+                        >
+                          <X className="h-4 w-4" />
+                        </Button>
                       </div>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => setSelectedCustomer(null)}
-                        className="h-7 w-7 p-0"
-                      >
-                        <X className="h-4 w-4" />
-                      </Button>
                     </div>
+
+                    {/* Opción de canjear puntos */}
+                    {canRedeem && (
+                      <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3">
+                        <label className="flex items-center gap-2 cursor-pointer">
+                          <input
+                            type="checkbox"
+                            checked={applyDiscount}
+                            onChange={(e) => {
+                              const checked = e.target.checked;
+                              setApplyDiscount(checked);
+
+                              if (checked) {
+                                const total = cart.reduce((sum, item) => sum + (item.product.sale_price * item.quantity), 0);
+                                const discount = Math.round(total * (REWARD_CONSTANTS.DISCOUNT_PERCENTAGE / 100));
+                                setDiscountAmount(discount);
+                              } else {
+                                setDiscountAmount(0);
+                              }
+                            }}
+                            className="w-4 h-4 text-yellow-600 rounded focus:ring-yellow-500"
+                          />
+                          <div className="flex-1">
+                            <p className="text-sm font-medium text-yellow-900">
+                              Canjear {REWARD_CONSTANTS.POINTS_FOR_DISCOUNT} puntos por {REWARD_CONSTANTS.DISCOUNT_PERCENTAGE}% de descuento
+                            </p>
+                            <p className="text-xs text-yellow-700">
+                              {applyDiscount ? `Descuento: ${formatCurrency(discountAmount)}` : 'Marca para aplicar descuento'}
+                            </p>
+                          </div>
+                        </label>
+                      </div>
+                    )}
                   </div>
                 ) : (
                   <div>
@@ -443,10 +527,16 @@ export default function POSPage() {
                             .map(customer => (
                               <button
                                 key={customer.id}
-                                onClick={() => {
+                                onClick={async () => {
                                   setSelectedCustomer(customer);
                                   setShowCustomerSearch(false);
                                   setCustomerSearchTerm('');
+
+                                  // Verificar si el cliente puede canjear puntos
+                                  const eligible = await canRedeemDiscount(customer.id);
+                                  setCanRedeem(eligible);
+                                  setApplyDiscount(false);
+                                  setDiscountAmount(0);
                                 }}
                                 className="w-full text-left p-2 hover:bg-gray-100 rounded text-xs"
                               >
@@ -548,6 +638,18 @@ export default function POSPage() {
               {cart.length > 0 && (
                 <>
                   <div className="border-t pt-3 md:pt-4 space-y-2 md:space-y-3">
+                    {discountAmount > 0 && (
+                      <div className="space-y-1">
+                        <div className="flex justify-between text-sm text-gray-600">
+                          <span>Subtotal:</span>
+                          <span>{formatCurrency(cart.reduce((sum, item) => sum + (item.product.sale_price * item.quantity), 0))}</span>
+                        </div>
+                        <div className="flex justify-between text-sm text-green-600 font-semibold">
+                          <span>Descuento ({REWARD_CONSTANTS.DISCOUNT_PERCENTAGE}%):</span>
+                          <span>-{formatCurrency(discountAmount)}</span>
+                        </div>
+                      </div>
+                    )}
                     <div className="flex justify-between text-base md:text-lg font-bold">
                       <span>Total:</span>
                       <span className="text-blue-600">{formatCurrency(calculateTotal())}</span>

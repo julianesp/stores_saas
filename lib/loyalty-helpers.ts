@@ -14,6 +14,14 @@ const DEFAULT_TIERS: LoyaltyTier[] = [
 ];
 
 /**
+ * Constantes para el sistema de recompensas
+ */
+export const REWARD_CONSTANTS = {
+  POINTS_FOR_DISCOUNT: 100, // Puntos necesarios para canjear descuento
+  DISCOUNT_PERCENTAGE: 10,   // Porcentaje de descuento (10%)
+};
+
+/**
  * Obtiene la configuración de lealtad del usuario actual
  */
 export async function getLoyaltySettings(userProfileId: string): Promise<LoyaltySettings> {
@@ -163,4 +171,76 @@ export async function getCustomerPurchaseHistory(customerId: string) {
     console.error('Error getting purchase history:', error);
     return [];
   }
+}
+
+/**
+ * Verifica si un cliente puede canjear puntos por descuento
+ */
+export async function canRedeemDiscount(customerId: string): Promise<boolean> {
+  try {
+    const customer = await getDocumentById('customers', customerId) as any;
+    if (!customer) return false;
+
+    const currentPoints = customer.loyalty_points || 0;
+    return currentPoints >= REWARD_CONSTANTS.POINTS_FOR_DISCOUNT;
+  } catch (error) {
+    console.error('Error checking discount eligibility:', error);
+    return false;
+  }
+}
+
+/**
+ * Canjea puntos por un descuento y devuelve el monto del descuento
+ */
+export async function redeemPointsForDiscount(
+  customerId: string,
+  purchaseAmount: number
+): Promise<{ discount: number; pointsRedeemed: number }> {
+  try {
+    const customer = await getDocumentById('customers', customerId) as any;
+    if (!customer) {
+      throw new Error('Cliente no encontrado');
+    }
+
+    const currentPoints = customer.loyalty_points || 0;
+
+    if (currentPoints < REWARD_CONSTANTS.POINTS_FOR_DISCOUNT) {
+      throw new Error('Puntos insuficientes para canjear descuento');
+    }
+
+    // Calcular descuento (10% del total)
+    const discount = Math.round(purchaseAmount * (REWARD_CONSTANTS.DISCOUNT_PERCENTAGE / 100));
+
+    // Descontar puntos
+    const newPoints = currentPoints - REWARD_CONSTANTS.POINTS_FOR_DISCOUNT;
+    await updateDocument('customers', customerId, {
+      loyalty_points: newPoints,
+    });
+
+    return {
+      discount,
+      pointsRedeemed: REWARD_CONSTANTS.POINTS_FOR_DISCOUNT,
+    };
+  } catch (error) {
+    console.error('Error redeeming points:', error);
+    throw error;
+  }
+}
+
+/**
+ * Obtiene el mensaje de notificación basado en los puntos ganados
+ */
+export function getPointsMilestoneMessage(pointsEarned: number): string | null {
+  if (pointsEarned >= 100) {
+    return '¡Felicidades! Ganaste 100 puntos o más. Ya puedes canjear un descuento del 10% en tu próxima compra.';
+  } else if (pointsEarned >= 50) {
+    return '¡Excelente compra! Ganaste 50 puntos o más. Sigue así para alcanzar 100 puntos y obtener un descuento del 10%.';
+  } else if (pointsEarned >= 25) {
+    return '¡Gran compra! Ganaste 25 puntos o más. Acumula 100 puntos para obtener un descuento del 10%.';
+  } else if (pointsEarned >= 10) {
+    return '¡Buen trabajo! Ganaste 10 puntos o más. Recuerda que con 100 puntos obtienes un descuento del 10%.';
+  } else if (pointsEarned >= 5) {
+    return '¡Genial! Ganaste puntos. Sigue comprando para acumular 100 puntos y obtener un descuento del 10%.';
+  }
+  return null;
 }
