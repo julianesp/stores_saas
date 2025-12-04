@@ -2,6 +2,7 @@ import * as XLSX from 'xlsx';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { SaleWithRelations, Sale } from './types';
+import { ProductAnalytics } from './analytics-helpers';
 
 /**
  * Exporta las ventas a un archivo Excel con múltiples hojas
@@ -279,5 +280,141 @@ export function exportSalesForPredictions(sales: SaleWithRelations[], filename?:
   XLSX.utils.book_append_sheet(workbook, ws, 'Datos para Predicciones');
 
   const defaultFilename = `datos_predicciones_${format(new Date(), 'yyyy-MM-dd')}.xlsx`;
+  XLSX.writeFile(workbook, filename || defaultFilename);
+}
+
+/**
+ * Exporta análisis de IA con recomendaciones de stock
+ */
+export function exportAnalyticsToExcel(analytics: ProductAnalytics[], filename?: string) {
+  // Hoja 1: Análisis Completo
+  const fullAnalysis = analytics.map(item => ({
+    'Producto': item.product_name,
+    'Código de Barras': item.product_barcode || 'N/A',
+    'Unidades Vendidas (Total)': item.total_quantity_sold,
+    'Ventas Últimos 7 Días': item.last_7_days_sales,
+    'Ventas Últimos 30 Días': item.last_30_days_sales,
+    'Ingresos Totales': `$${item.total_revenue.toLocaleString('es-CO')}`,
+    'Número de Ventas': item.sales_count,
+    'Promedio por Venta': item.average_sale_quantity,
+    'Velocidad de Venta (und/día)': item.sales_velocity,
+    'Stock Actual': item.current_stock,
+    'Stock Mínimo': item.min_stock,
+    'Días hasta Agotarse': item.days_until_stockout === 9999 ? 'Sin ventas' : item.days_until_stockout,
+    'Tendencia': item.trend === 'high' ? 'Alta' : item.trend === 'medium' ? 'Media' : 'Baja',
+    'Nivel de Riesgo': item.risk_level === 'critical' ? 'Crítico' : item.risk_level === 'warning' ? 'Advertencia' : 'Bien',
+    'Cantidad Recomendada a Pedir': item.recommended_order_quantity,
+  }));
+
+  // Hoja 2: Top 10 Productos Más Vendidos
+  const topSelling = analytics.slice(0, 10).map((item, index) => ({
+    'Posición': index + 1,
+    'Producto': item.product_name,
+    'Código': item.product_barcode || 'N/A',
+    'Unidades Vendidas': item.total_quantity_sold,
+    'Velocidad (und/día)': item.sales_velocity,
+    'Ingresos': `$${item.total_revenue.toLocaleString('es-CO')}`,
+    'Stock Actual': item.current_stock,
+    'Pedir': item.recommended_order_quantity,
+  }));
+
+  // Hoja 3: Productos Críticos (necesitan pedirse urgente)
+  const criticalProducts = analytics
+    .filter(item => item.risk_level === 'critical')
+    .map(item => ({
+      'Producto': item.product_name,
+      'Código': item.product_barcode || 'N/A',
+      'Stock Actual': item.current_stock,
+      'Stock Mínimo': item.min_stock,
+      'Velocidad de Venta': item.sales_velocity,
+      'Días hasta Agotarse': item.days_until_stockout,
+      '⚠️ Cantidad URGENTE a Pedir': item.recommended_order_quantity,
+      'Razón': item.current_stock <= item.min_stock
+        ? 'Stock por debajo del mínimo'
+        : 'Se agotará en menos de 3 días',
+    }));
+
+  // Hoja 4: Productos en Advertencia
+  const warningProducts = analytics
+    .filter(item => item.risk_level === 'warning')
+    .map(item => ({
+      'Producto': item.product_name,
+      'Código': item.product_barcode || 'N/A',
+      'Stock Actual': item.current_stock,
+      'Velocidad de Venta': item.sales_velocity,
+      'Días hasta Agotarse': item.days_until_stockout,
+      'Cantidad Recomendada a Pedir': item.recommended_order_quantity,
+    }));
+
+  // Hoja 5: Recomendaciones de Pedido (todos los que necesitan pedirse)
+  const orderRecommendations = analytics
+    .filter(item => item.recommended_order_quantity > 0)
+    .map(item => ({
+      'Producto': item.product_name,
+      'Código de Barras': item.product_barcode || 'N/A',
+      'Stock Actual': item.current_stock,
+      'Cantidad a Pedir': item.recommended_order_quantity,
+      'Prioridad': item.risk_level === 'critical'
+        ? '🔴 URGENTE'
+        : item.risk_level === 'warning'
+        ? '🟡 PRONTO'
+        : '🟢 NORMAL',
+      'Días hasta Agotarse': item.days_until_stockout === 9999 ? 'N/A' : item.days_until_stockout,
+      'Ventas Últimos 7 Días': item.last_7_days_sales,
+      'Ventas Últimos 30 Días': item.last_30_days_sales,
+    }))
+    .sort((a, b) => {
+      // Ordenar por prioridad
+      const priorityOrder = { '🔴 URGENTE': 0, '🟡 PRONTO': 1, '🟢 NORMAL': 2 };
+      return (priorityOrder[a.Prioridad as keyof typeof priorityOrder] || 3) -
+             (priorityOrder[b.Prioridad as keyof typeof priorityOrder] || 3);
+    });
+
+  // Hoja 6: Resumen Ejecutivo
+  const totalProducts = analytics.length;
+  const criticalCount = analytics.filter(a => a.risk_level === 'critical').length;
+  const warningCount = analytics.filter(a => a.risk_level === 'warning').length;
+  const goodCount = analytics.filter(a => a.risk_level === 'good').length;
+  const totalToOrder = analytics.filter(a => a.recommended_order_quantity > 0).length;
+  const highTrendCount = analytics.filter(a => a.trend === 'high').length;
+  const totalRevenue = analytics.reduce((sum, a) => sum + a.total_revenue, 0);
+
+  const executiveSummary = [
+    { 'Métrica': 'Total de Productos Analizados', 'Valor': totalProducts },
+    { 'Métrica': '---', 'Valor': '---' },
+    { 'Métrica': '🔴 Productos en Estado Crítico', 'Valor': criticalCount },
+    { 'Métrica': '🟡 Productos en Advertencia', 'Valor': warningCount },
+    { 'Métrica': '🟢 Productos en Buen Estado', 'Valor': goodCount },
+    { 'Métrica': '---', 'Valor': '---' },
+    { 'Métrica': 'Productos que Necesitan Pedirse', 'Valor': totalToOrder },
+    { 'Métrica': 'Productos con Tendencia Alta', 'Valor': highTrendCount },
+    { 'Métrica': '---', 'Valor': '---' },
+    { 'Métrica': 'Ingresos Totales Analizados', 'Valor': `$${totalRevenue.toLocaleString('es-CO')}` },
+  ];
+
+  // Crear libro de Excel
+  const workbook = XLSX.utils.book_new();
+
+  // Agregar hojas
+  const ws1 = XLSX.utils.json_to_sheet(executiveSummary);
+  XLSX.utils.book_append_sheet(workbook, ws1, 'Resumen Ejecutivo');
+
+  const ws2 = XLSX.utils.json_to_sheet(orderRecommendations);
+  XLSX.utils.book_append_sheet(workbook, ws2, 'Pedidos Recomendados');
+
+  const ws3 = XLSX.utils.json_to_sheet(criticalProducts);
+  XLSX.utils.book_append_sheet(workbook, ws3, 'Productos Críticos');
+
+  const ws4 = XLSX.utils.json_to_sheet(warningProducts);
+  XLSX.utils.book_append_sheet(workbook, ws4, 'Productos Advertencia');
+
+  const ws5 = XLSX.utils.json_to_sheet(topSelling);
+  XLSX.utils.book_append_sheet(workbook, ws5, 'Top 10 Más Vendidos');
+
+  const ws6 = XLSX.utils.json_to_sheet(fullAnalysis);
+  XLSX.utils.book_append_sheet(workbook, ws6, 'Análisis Completo');
+
+  // Generar archivo
+  const defaultFilename = `analisis_ia_${format(new Date(), 'yyyy-MM-dd_HHmmss')}.xlsx`;
   XLSX.writeFile(workbook, filename || defaultFilename);
 }

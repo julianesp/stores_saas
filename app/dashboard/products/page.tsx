@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { Plus, Search, Edit, Trash2, Package, Tag, Camera } from 'lucide-react';
+import { Plus, Search, Edit, Trash2, Package, Tag, Camera, AlertTriangle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -14,8 +14,11 @@ import { CategoryManagerModal } from '@/components/products/category-manager-mod
 
 export default function ProductsPage() {
   const [products, setProducts] = useState<ProductWithRelations[]>([]);
+  const [categories, setCategories] = useState<Category[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
+  const [selectedCategory, setSelectedCategory] = useState<string>('all');
+  const [showOutOfStock, setShowOutOfStock] = useState(false);
   const [showCategoryModal, setShowCategoryModal] = useState(false);
 
   useEffect(() => {
@@ -28,11 +31,14 @@ export default function ProductsPage() {
       const productsData = await getAllDocuments('products') as Product[];
 
       // Obtener categorías y proveedores para hacer el join manualmente
-      const categories = await getAllDocuments('categories') as Category[];
+      const categoriesData = await getAllDocuments('categories') as Category[];
       const suppliers = await getAllDocuments('suppliers') as Supplier[];
 
+      // Ordenar categorías por nombre
+      categoriesData.sort((a, b) => a.name.localeCompare(b.name));
+
       // Crear un mapa para acceso rápido
-      const categoriesMap = new Map(categories.map(c => [c.id, c]));
+      const categoriesMap = new Map(categoriesData.map(c => [c.id, c]));
       const suppliersMap = new Map(suppliers.map(s => [s.id, s]));
 
       // Combinar los datos
@@ -45,6 +51,7 @@ export default function ProductsPage() {
       // Ordenar por nombre
       productsWithRelations.sort((a, b) => a.name.localeCompare(b.name));
 
+      setCategories(categoriesData);
       setProducts(productsWithRelations);
     } catch (error) {
       console.error('Error fetching products:', error);
@@ -78,10 +85,16 @@ export default function ProductsPage() {
     }
   };
 
-  const filteredProducts = products.filter((product) =>
-    product.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    product.barcode?.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  const filteredProducts = products.filter((product) => {
+    const matchesSearch = product.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      product.barcode?.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesCategory = selectedCategory === 'all' || product.category_id === selectedCategory;
+    const matchesOutOfStock = !showOutOfStock || product.stock === 0;
+    return matchesSearch && matchesCategory && matchesOutOfStock;
+  });
+
+  // Calcular productos agotados (stock = 0)
+  const outOfStockCount = products.filter(p => p.stock === 0).length;
 
   return (
     <>
@@ -102,6 +115,25 @@ export default function ProductsPage() {
             <Tag className="mr-2 h-4 w-4" />
             <span className="hidden sm:inline">Categorías</span>
             <span className="sm:hidden">Cat.</span>
+          </Button>
+          <Button
+            variant={showOutOfStock ? "default" : "outline"}
+            onClick={() => {
+              setShowOutOfStock(!showOutOfStock);
+              if (!showOutOfStock) {
+                setSelectedCategory('all'); // Reset category filter when showing out of stock
+              }
+            }}
+            className="flex-1 sm:flex-none"
+          >
+            <AlertTriangle className="mr-2 h-4 w-4" />
+            <span className="hidden sm:inline">Agotados</span>
+            <span className="sm:hidden">Agot.</span>
+            {outOfStockCount > 0 && (
+              <span className="ml-1.5 bg-red-500 text-white text-xs rounded-full px-2 py-0.5">
+                {outOfStockCount}
+              </span>
+            )}
           </Button>
           <Link href="/dashboard/products/quick-add" className="flex-1 sm:flex-none">
             <Button variant="outline" className="w-full">
@@ -134,6 +166,37 @@ export default function ProductsPage() {
           </div>
         </CardHeader>
         <CardContent>
+          {/* Filtros de categoría */}
+          <div className="mb-6 pb-4 border-b">
+            <div className="flex flex-wrap gap-2">
+              <button
+                onClick={() => setSelectedCategory('all')}
+                className={`px-4 py-2 rounded-full text-sm font-medium transition-colors ${
+                  selectedCategory === 'all'
+                    ? 'bg-blue-600 text-white shadow-md'
+                    : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                }`}
+              >
+                Todos ({products.length})
+              </button>
+              {categories.map((category) => {
+                const categoryCount = products.filter(p => p.category_id === category.id).length;
+                return (
+                  <button
+                    key={category.id}
+                    onClick={() => setSelectedCategory(category.id)}
+                    className={`px-4 py-2 rounded-full text-sm font-medium transition-colors ${
+                      selectedCategory === category.id
+                        ? 'bg-blue-600 text-white shadow-md'
+                        : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                    }`}
+                  >
+                    {category.name} ({categoryCount})
+                  </button>
+                );
+              })}
+            </div>
+          </div>
           {loading ? (
             <div className="text-center py-8">Cargando productos...</div>
           ) : filteredProducts.length === 0 ? (

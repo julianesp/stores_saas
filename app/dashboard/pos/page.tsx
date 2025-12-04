@@ -34,7 +34,47 @@ export default function POSPage() {
   const [canRedeem, setCanRedeem] = useState(false);
   const [applyDiscount, setApplyDiscount] = useState(false);
   const [discountAmount, setDiscountAmount] = useState(0);
+  const [showNewCustomerForm, setShowNewCustomerForm] = useState(false);
+  const [newCustomerData, setNewCustomerData] = useState({
+    name: '',
+    phone: '',
+    email: '',
+  });
   const barcodeRef = useRef<HTMLInputElement>(null);
+
+  const handleCreateCustomer = async () => {
+    if (!newCustomerData.name.trim()) {
+      Swal.warning('Nombre requerido', 'Debes ingresar el nombre del cliente');
+      return;
+    }
+
+    try {
+      const customerData: any = {
+        name: newCustomerData.name.trim(),
+        phone: newCustomerData.phone.trim() || undefined,
+        email: newCustomerData.email.trim() || undefined,
+        loyalty_points: 0,
+      };
+
+      const newCustomer = await createDocument('customers', customerData) as any as Customer;
+
+      Swal.success('Cliente creado', `${newCustomer.name} ha sido agregado exitosamente`);
+
+      // Seleccionar automáticamente el nuevo cliente
+      setSelectedCustomer(newCustomer);
+
+      // Limpiar el formulario y cerrarlo
+      setNewCustomerData({ name: '', phone: '', email: '' });
+      setShowNewCustomerForm(false);
+      setShowCustomerSearch(false);
+
+      // Actualizar lista de clientes
+      await fetchCustomers();
+    } catch (error) {
+      console.error('Error creating customer:', error);
+      Swal.error('Error al crear cliente', 'Intenta nuevamente');
+    }
+  };
 
   const fetchProducts = useCallback(async () => {
     try {
@@ -516,14 +556,75 @@ export default function POSPage() {
                           onChange={(e) => setCustomerSearchTerm(e.target.value)}
                           className="text-sm"
                         />
-                        <div className="max-h-32 overflow-y-auto space-y-1">
+
+                        {/* Botón para crear nuevo cliente */}
+                        {!showNewCustomerForm && (
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            className="w-full text-xs"
+                            onClick={() => setShowNewCustomerForm(true)}
+                          >
+                            <Plus className="h-3 w-3 mr-1" />
+                            Crear Nuevo Cliente
+                          </Button>
+                        )}
+
+                        {/* Formulario de creación de cliente */}
+                        {showNewCustomerForm && (
+                          <div className="bg-gray-50 border border-gray-200 rounded-lg p-3 space-y-2">
+                            <div className="flex items-center justify-between mb-2">
+                              <p className="text-xs font-semibold text-gray-700">Nuevo Cliente</p>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => {
+                                  setShowNewCustomerForm(false);
+                                  setNewCustomerData({ name: '', phone: '', email: '' });
+                                }}
+                                className="h-6 w-6 p-0"
+                              >
+                                <X className="h-3 w-3" />
+                              </Button>
+                            </div>
+                            <Input
+                              placeholder="Nombre *"
+                              value={newCustomerData.name}
+                              onChange={(e) => setNewCustomerData({ ...newCustomerData, name: e.target.value })}
+                              className="text-xs h-8"
+                            />
+                            <Input
+                              placeholder="Teléfono"
+                              value={newCustomerData.phone}
+                              onChange={(e) => setNewCustomerData({ ...newCustomerData, phone: e.target.value })}
+                              className="text-xs h-8"
+                            />
+                            <Input
+                              placeholder="Email"
+                              type="email"
+                              value={newCustomerData.email}
+                              onChange={(e) => setNewCustomerData({ ...newCustomerData, email: e.target.value })}
+                              className="text-xs h-8"
+                            />
+                            <Button
+                              size="sm"
+                              className="w-full text-xs h-8"
+                              onClick={handleCreateCustomer}
+                            >
+                              Crear Cliente
+                            </Button>
+                          </div>
+                        )}
+
+                        {/* Lista de clientes con scroll mejorado */}
+                        <div className="max-h-48 overflow-y-auto space-y-1">
                           {customers
                             .filter(c =>
                               c.name.toLowerCase().includes(customerSearchTerm.toLowerCase()) ||
                               c.phone?.includes(customerSearchTerm) ||
                               c.email?.toLowerCase().includes(customerSearchTerm.toLowerCase())
                             )
-                            .slice(0, 5)
+                            .slice(0, 10)
                             .map(customer => (
                               <button
                                 key={customer.id}
@@ -531,6 +632,7 @@ export default function POSPage() {
                                   setSelectedCustomer(customer);
                                   setShowCustomerSearch(false);
                                   setCustomerSearchTerm('');
+                                  setShowNewCustomerForm(false);
 
                                   // Verificar si el cliente puede canjear puntos
                                   const eligible = await canRedeemDiscount(customer.id);
