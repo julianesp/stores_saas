@@ -1,0 +1,166 @@
+import { LoyaltySettings, LoyaltyTier } from './types';
+import { queryDocuments, createDocument, updateDocument, getDocumentById } from './firestore-helpers';
+
+/**
+ * Niveles de puntos por defecto
+ */
+const DEFAULT_TIERS: LoyaltyTier[] = [
+  { min_amount: 0, max_amount: 19999, points: 0, name: 'Sin puntos' },
+  { min_amount: 20000, max_amount: 49999, points: 5, name: 'Compra pequeña' },
+  { min_amount: 50000, max_amount: 99999, points: 10, name: 'Compra mediana' },
+  { min_amount: 100000, max_amount: 199999, points: 25, name: 'Compra grande' },
+  { min_amount: 200000, max_amount: 499999, points: 50, name: 'Compra muy grande' },
+  { min_amount: 500000, max_amount: Infinity, points: 100, name: 'Compra premium' },
+];
+
+/**
+ * Obtiene la configuración de lealtad del usuario actual
+ */
+export async function getLoyaltySettings(userProfileId: string): Promise<LoyaltySettings> {
+  try {
+    const settings = await queryDocuments('loyalty_settings', [
+      { field: 'user_profile_id', operator: '==', value: userProfileId }
+    ]);
+
+    if (settings.length > 0) {
+      return settings[0] as LoyaltySettings;
+    }
+
+    // Si no existe, crear configuración por defecto
+    const defaultSettings = await createDocument('loyalty_settings', {
+      user_profile_id: userProfileId,
+      enabled: true,
+      tiers: DEFAULT_TIERS,
+    });
+
+    return defaultSettings as any as LoyaltySettings;
+  } catch (error) {
+    console.error('Error getting loyalty settings:', error);
+    // TEMPORAL: Devolver configuración por defecto si falla
+    return {
+      id: 'default',
+      user_profile_id: userProfileId,
+      enabled: false, // Deshabilitado por defecto hasta configurar Firebase
+      tiers: DEFAULT_TIERS,
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    };
+  }
+}
+
+/**
+ * Actualiza la configuración de lealtad
+ */
+export async function updateLoyaltySettings(
+  settingsId: string,
+  data: Partial<LoyaltySettings>
+): Promise<void> {
+  try {
+    await updateDocument('loyalty_settings', settingsId, data);
+  } catch (error) {
+    console.error('Error updating loyalty settings:', error);
+    throw error;
+  }
+}
+
+/**
+ * Calcula los puntos que debería ganar un cliente según el monto de la compra
+ */
+export async function calculatePointsForPurchase(
+  userProfileId: string,
+  purchaseAmount: number
+): Promise<number> {
+  try {
+    const settings = await getLoyaltySettings(userProfileId);
+
+    // Si el sistema de puntos está deshabilitado
+    if (!settings.enabled) {
+      return 0;
+    }
+
+    // Buscar el tier correspondiente al monto
+    const tier = settings.tiers.find(
+      (t) => purchaseAmount >= t.min_amount && purchaseAmount <= t.max_amount
+    );
+
+    return tier ? tier.points : 0;
+  } catch (error) {
+    console.error('Error calculating points:', error);
+    return 0;
+  }
+}
+
+/**
+ * Asigna puntos a un cliente
+ */
+export async function addPointsToCustomer(
+  customerId: string,
+  pointsToAdd: number
+): Promise<void> {
+  try {
+    const customer = await getDocumentById('customers', customerId) as any;
+    if (!customer) {
+      throw new Error('Cliente no encontrado');
+    }
+
+    const currentPoints = customer.loyalty_points || 0;
+    const newPoints = currentPoints + pointsToAdd;
+
+    await updateDocument('customers', customerId, {
+      loyalty_points: newPoints,
+    });
+  } catch (error) {
+    console.error('Error adding points to customer:', error);
+    throw error;
+  }
+}
+
+/**
+ * Obtiene el historial de compras de un cliente con detalles
+ */
+export async function getCustomerPurchaseHistory(customerId: string) {
+  try {
+    // Obtener todas las ventas del cliente (sin ordenamiento en Firestore)
+    const sales = await queryDocuments('sales', [
+      { field: 'customer_id', operator: '==', value: customerId }
+    ]) as any[];
+
+    // Para cada venta, obtener los items
+    const salesWithItems = await Promise.all(
+      sales.map(async (sale: any) => {
+        const items = await queryDocuments('sale_items', [
+          { field: 'sale_id', operator: '==', value: sale.id }
+        ]) as any[];
+
+        // Para cada item, obtener el producto
+        const itemsWithProducts = await Promise.all(
+          items.map(async (item: any) => {
+            const product = await getDocumentById('products', item.product_id);
+            return {
+              ...item,
+              product,
+            };
+          })
+        );
+
+        return {
+          sale_id: sale.id,
+          sale_number: sale.sale_number,
+          date: sale.created_at,
+          items: itemsWithProducts,
+          total: sale.total,
+          points_earned: sale.points_earned || 0,
+          payment_method: sale.payment_method,
+        };
+      })
+    );
+
+    // Ordenar por fecha descendente (más reciente primero)
+    salesWithItems.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+
+    return salesWithItems;
+  } catch (error) {
+    console.error('Error getting purchase history:', error);
+    return [];
+  }
+}

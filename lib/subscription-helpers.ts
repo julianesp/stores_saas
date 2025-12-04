@@ -43,8 +43,12 @@ export async function checkSubscriptionStatus(
 
       const trialEnd = new Date(userProfile.trial_end_date);
 
+      // Normalizar ambas fechas a medianoche para comparación precisa de días
+      const nowMidnight = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+      const trialEndMidnight = new Date(trialEnd.getFullYear(), trialEnd.getMonth(), trialEnd.getDate());
+
       // Verificar si el trial ya expiró
-      if (now > trialEnd) {
+      if (nowMidnight > trialEndMidnight) {
         await updateDocument('user_profiles', userProfile.id, {
           subscription_status: 'expired'
         });
@@ -56,9 +60,9 @@ export async function checkSubscriptionStatus(
         };
       }
 
-      // Calcular días restantes
+      // Calcular días restantes (sin incluir horas)
       const daysLeft = Math.ceil(
-        (trialEnd.getTime() - now.getTime()) / (1000 * 60 * 60 * 24)
+        (trialEndMidnight.getTime() - nowMidnight.getTime()) / (1000 * 60 * 60 * 24)
       );
 
       return {

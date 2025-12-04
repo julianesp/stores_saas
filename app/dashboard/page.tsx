@@ -3,11 +3,13 @@
 import { useState, useEffect } from 'react';
 import { useUser } from '@clerk/nextjs';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { DollarSign, ShoppingCart, Package, TrendingUp, Users, AlertTriangle, Store, Activity, Crown, Calendar } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { DollarSign, ShoppingCart, Package, TrendingUp, Users, AlertTriangle, Store, Activity, Crown, Calendar, Database } from 'lucide-react';
 import { getUserProfileByClerkId } from '@/lib/subscription-helpers';
 import { getAllDocuments } from '@/lib/firestore-helpers';
 import { UserProfile } from '@/lib/types';
 import { formatCurrency } from '@/lib/utils';
+import { toast } from 'sonner';
 import {
   getDashboardMetrics,
   getTopProducts,
@@ -39,6 +41,7 @@ export default function DashboardPage() {
   });
   const [topProducts, setTopProducts] = useState<TopProduct[]>([]);
   const [expiringProductsCount, setExpiringProductsCount] = useState(0);
+  const [seeding, setSeeding] = useState(false);
 
   useEffect(() => {
     async function checkUserAndFetchMetrics() {
@@ -88,6 +91,44 @@ export default function DashboardPage() {
     }
     checkUserAndFetchMetrics();
   }, [user]);
+
+  const handleSeedProducts = async () => {
+    if (!confirm('¿Quieres crear productos de muestra para tu tienda? Esto creará aproximadamente 27 productos variados.')) {
+      return;
+    }
+
+    try {
+      setSeeding(true);
+      const response = await fetch('/api/seed-products', {
+        method: 'POST',
+      });
+
+      const data = await response.json();
+
+      if (response.ok) {
+        toast.success(data.message);
+        // Recargar métricas
+        if (!isSuperAdmin) {
+          const [dashboardMetrics, products, expiringCount] = await Promise.all([
+            getDashboardMetrics(),
+            getTopProducts(4),
+            getExpiringProducts(),
+          ]);
+
+          setMetrics(dashboardMetrics);
+          setTopProducts(products);
+          setExpiringProductsCount(expiringCount);
+        }
+      } else {
+        toast.error(data.error || 'Error al crear productos');
+      }
+    } catch (error) {
+      console.error('Error:', error);
+      toast.error('Error al crear productos de muestra');
+    } finally {
+      setSeeding(false);
+    }
+  };
 
   if (loading) {
     return (
@@ -254,9 +295,23 @@ export default function DashboardPage() {
 
   return (
     <div className="space-y-4 md:space-y-6">
-      <div>
-        <h1 className="text-2xl md:text-3xl font-bold tracking-tight">Dashboard</h1>
-        <p className="text-gray-500 text-sm md:text-base">Resumen general de tu tienda</p>
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-2xl md:text-3xl font-bold tracking-tight">Dashboard</h1>
+          <p className="text-gray-500 text-sm md:text-base">Resumen general de tu tienda</p>
+        </div>
+        {!isSuperAdmin && metrics.totalProducts === 0 && (
+          <Button
+            onClick={handleSeedProducts}
+            disabled={seeding}
+            variant="outline"
+            size="sm"
+            className="gap-2"
+          >
+            <Database className="h-4 w-4" />
+            {seeding ? 'Creando...' : 'Crear Productos Demo'}
+          </Button>
+        )}
       </div>
 
       {/* Métricas principales */}

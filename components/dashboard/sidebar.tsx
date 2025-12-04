@@ -182,9 +182,14 @@ export function Sidebar({ isMobile = false, onLinkClick }: SidebarProps) {
           </Link>
         )}
         <Link
-          href="/dashboard/settings"
+          href="/dashboard/config"
           onClick={onLinkClick}
-          className="flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium text-gray-300 hover:bg-gray-800 hover:text-white transition-colors"
+          className={cn(
+            'flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors',
+            pathname === '/dashboard/config' || pathname?.startsWith('/dashboard/config/')
+              ? 'bg-blue-600 text-white'
+              : 'text-gray-300 hover:bg-gray-800 hover:text-white'
+          )}
         >
           <Settings className="h-5 w-5" />
           Configuración
