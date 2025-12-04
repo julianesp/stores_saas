@@ -83,5 +83,10 @@ service cloud.firestore {
     match /payment_transactions/{transactionId} {
       allow read, write: if true;
     }
+
+    // Loyalty Settings
+    match /loyalty_settings/{settingsId} {
+      allow read, write: if true;
+    }
   }
 }

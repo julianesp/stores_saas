@@ -94,6 +94,7 @@ export interface Sale {
   payment_method: 'efectivo' | 'tarjeta' | 'transferencia';
   status: 'completada' | 'cancelada' | 'pendiente';
   notes?: string;
+  points_earned?: number; // Puntos ganados por el cliente en esta compra
   created_at: string;
   updated_at: string;
 }
@@ -224,4 +225,31 @@ export interface PaymentTransaction {
   payment_method_type?: string;
   reference?: string;
   created_at: string;
+}
+
+// Tipos para sistema de puntos de lealtad
+export interface LoyaltyTier {
+  min_amount: number;
+  max_amount: number;
+  points: number;
+  name: string;
+}
+
+export interface LoyaltySettings {
+  id: string;
+  user_profile_id: string; // ID del dueño de la tienda
+  enabled: boolean;
+  tiers: LoyaltyTier[];
+  created_at: string;
+  updated_at: string;
+}
+
+export interface CustomerPurchaseHistory {
+  sale_id: string;
+  sale_number: string;
+  date: string;
+  items: SaleItemWithProduct[];
+  total: number;
+  points_earned: number;
+  payment_method: string;
 }

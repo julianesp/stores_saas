@@ -30,7 +30,8 @@ export type CollectionName =
   | 'offers'
   | 'shopping_carts'
   | 'cart_items'
-  | 'payment_transactions';
+  | 'payment_transactions'
+  | 'loyalty_settings';
 
 // Helper para obtener todos los documentos de una colección
 export async function getAllDocuments(collectionName: CollectionName) {

@@ -2,13 +2,14 @@
 
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useUser } from '@clerk/nextjs';
-import { Search, ShoppingCart, Trash2, Plus, Minus, DollarSign } from 'lucide-react';
+import { Search, ShoppingCart, Trash2, Plus, Minus, DollarSign, User, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { queryDocuments, createDocument, generateSaleNumber } from '@/lib/firestore-helpers';
-import { Product } from '@/lib/types';
+import { queryDocuments, createDocument, generateSaleNumber, updateDocument, getAllDocuments } from '@/lib/firestore-helpers';
+import { Product, Customer, Category } from '@/lib/types';
 import { formatCurrency } from '@/lib/utils';
+import { calculatePointsForPurchase, addPointsToCustomer } from '@/lib/loyalty-helpers';
 import Swal from '@/lib/sweetalert';
 
 interface CartItem {
@@ -24,6 +25,12 @@ export default function POSPage() {
   const [barcodeInput, setBarcodeInput] = useState('');
   const [paymentMethod, setPaymentMethod] = useState<'efectivo' | 'tarjeta' | 'transferencia'>('efectivo');
   const [processing, setProcessing] = useState(false);
+  const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(null);
+  const [customers, setCustomers] = useState<Customer[]>([]);
+  const [customerSearchTerm, setCustomerSearchTerm] = useState('');
+  const [showCustomerSearch, setShowCustomerSearch] = useState(false);
+  const [categories, setCategories] = useState<Category[]>([]);
+  const [selectedCategory, setSelectedCategory] = useState<string>('all');
   const barcodeRef = useRef<HTMLInputElement>(null);
 
   const fetchProducts = useCallback(async () => {
@@ -39,11 +46,33 @@ export default function POSPage() {
     }
   }, []);
 
+  const fetchCustomers = useCallback(async () => {
+    try {
+      const data = (await getAllDocuments('customers')) as Customer[];
+      data.sort((a, b) => a.name.localeCompare(b.name));
+      setCustomers(data);
+    } catch (error) {
+      console.error('Error fetching customers:', error);
+    }
+  }, []);
+
+  const fetchCategories = useCallback(async () => {
+    try {
+      const data = (await getAllDocuments('categories')) as Category[];
+      data.sort((a, b) => a.name.localeCompare(b.name));
+      setCategories(data);
+    } catch (error) {
+      console.error('Error fetching categories:', error);
+    }
+  }, []);
+
   useEffect(() => {
     fetchProducts();
+    fetchCustomers();
+    fetchCategories();
     // Auto-focus en el input de código de barras
     barcodeRef.current?.focus();
-  }, [fetchProducts]);
+  }, [fetchProducts, fetchCustomers, fetchCategories]);
 
   const handleBarcodeSearch = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -95,6 +124,25 @@ export default function POSPage() {
     );
   };
 
+  const setDirectQuantity = (productId: string, quantity: number) => {
+    setCart(prev =>
+      prev.map(item => {
+        if (item.product.id === productId) {
+          if (quantity <= 0) {
+            Swal.warning('Cantidad inválida', 'La cantidad debe ser mayor a 0');
+            return item;
+          }
+          if (quantity > item.product.stock) {
+            Swal.warning('Stock insuficiente', `Solo hay ${item.product.stock} unidades disponibles`);
+            return { ...item, quantity: item.product.stock };
+          }
+          return { ...item, quantity };
+        }
+        return item;
+      })
+    );
+  };
+
   const removeFromCart = (productId: string) => {
     setCart(prev => prev.filter(item => item.product.id !== productId));
   };
@@ -140,8 +188,14 @@ export default function POSPage() {
       const total = calculateTotal();
       const saleNumber = await generateSaleNumber();
 
+      // Calcular puntos si hay un cliente seleccionado
+      let pointsEarned = 0;
+      if (selectedCustomer) {
+        pointsEarned = await calculatePointsForPurchase(userProfile.id, total);
+      }
+
       // Crear la venta
-      const sale = await createDocument('sales', {
+      const saleData: any = {
         sale_number: saleNumber,
         cashier_id: userProfile.id,
         subtotal: total,
@@ -149,27 +203,77 @@ export default function POSPage() {
         discount: 0,
         total: total,
         payment_method: paymentMethod,
-        status: 'completada'
-      });
+        status: 'completada',
+      };
 
-      // Crear items de venta
-      const saleItems = cart.map(item => ({
-        sale_id: sale.id,
-        product_id: item.product.id,
-        quantity: item.quantity,
-        unit_price: item.product.sale_price,
-        discount: 0,
-        subtotal: item.product.sale_price * item.quantity
-      }));
+      // Solo agregar customer_id si hay un cliente seleccionado
+      if (selectedCustomer && selectedCustomer.id) {
+        saleData.customer_id = selectedCustomer.id;
+        saleData.points_earned = pointsEarned;
+      }
 
-      // Crear cada item de venta
-      for (const item of saleItems) {
-        await createDocument('sale_items', item);
+      const sale = await createDocument('sales', saleData);
+
+      // Crear cada item de venta y actualizar el stock
+      for (const cartItem of cart) {
+        // Crear el item de venta
+        await createDocument('sale_items', {
+          sale_id: sale.id,
+          product_id: cartItem.product.id,
+          quantity: cartItem.quantity,
+          unit_price: cartItem.product.sale_price,
+          discount: 0,
+          subtotal: cartItem.product.sale_price * cartItem.quantity
+        });
+
+        // Actualizar el stock del producto
+        const newStock = cartItem.product.stock - cartItem.quantity;
+        await updateDocument('products', cartItem.product.id, {
+          stock: newStock
+        });
+
+        // Crear movimiento de inventario para auditoría
+        await createDocument('inventory_movements', {
+          product_id: cartItem.product.id,
+          type: 'salida',
+          quantity: cartItem.quantity,
+          previous_stock: cartItem.product.stock,
+          new_stock: newStock,
+          reference_type: 'venta',
+          reference_id: sale.id,
+          notes: `Venta ${saleNumber}`,
+          user_id: userProfile.id
+        });
+      }
+
+      // Asignar puntos al cliente si aplica
+      if (selectedCustomer && pointsEarned > 0) {
+        await addPointsToCustomer(selectedCustomer.id, pointsEarned);
       }
 
       Swal.closeLoading();
-      Swal.saleCompleted(saleNumber, total);
+
+      // Mostrar mensaje personalizado si ganó puntos
+      if (selectedCustomer && pointsEarned > 0) {
+        await Swal.custom({
+          title: 'Venta Completada',
+          html: `
+            <p class="text-lg mb-2">Venta #${saleNumber}</p>
+            <p class="text-2xl font-bold text-green-600 mb-3">${formatCurrency(total)}</p>
+            <div class="bg-yellow-50 border border-yellow-200 rounded-lg p-3">
+              <p class="text-sm text-gray-600">Cliente: <strong>${selectedCustomer.name}</strong></p>
+              <p class="text-lg font-bold text-yellow-600 mt-1">+${pointsEarned} puntos ganados</p>
+            </div>
+          `,
+          icon: 'success',
+          confirmButtonText: 'Aceptar'
+        });
+      } else {
+        Swal.saleCompleted(saleNumber, total);
+      }
+
       setCart([]);
+      setSelectedCustomer(null);
       fetchProducts(); // Actualizar inventario
       barcodeRef.current?.focus();
     } catch (error) {
@@ -182,9 +286,11 @@ export default function POSPage() {
     }
   };
 
-  const filteredProducts = products.filter(p =>
-    p.name.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  const filteredProducts = products.filter(p => {
+    const matchesSearch = p.name.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesCategory = selectedCategory === 'all' || p.category_id === selectedCategory;
+    return matchesSearch && matchesCategory;
+  });
 
   return (
     <div className="space-y-4 md:space-y-6">
@@ -226,6 +332,33 @@ export default function POSPage() {
               </div>
             </CardHeader>
             <CardContent>
+              {/* Filtros de categoría */}
+              <div className="mb-4 flex flex-wrap gap-2">
+                <button
+                  onClick={() => setSelectedCategory('all')}
+                  className={`px-3 py-1.5 rounded-full text-xs md:text-sm font-medium transition-colors ${
+                    selectedCategory === 'all'
+                      ? 'bg-blue-600 text-white'
+                      : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                  }`}
+                >
+                  Todos
+                </button>
+                {categories.map((category) => (
+                  <button
+                    key={category.id}
+                    onClick={() => setSelectedCategory(category.id)}
+                    className={`px-3 py-1.5 rounded-full text-xs md:text-sm font-medium transition-colors ${
+                      selectedCategory === category.id
+                        ? 'bg-blue-600 text-white'
+                        : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                    }`}
+                  >
+                    {category.name}
+                  </button>
+                ))}
+              </div>
+
               <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-3 xl:grid-cols-4 gap-2 md:gap-3 max-h-[400px] md:max-h-[500px] overflow-y-auto">
                 {filteredProducts.map(product => (
                   <Card
@@ -257,6 +390,77 @@ export default function POSPage() {
               </CardTitle>
             </CardHeader>
             <CardContent>
+              {/* Selector de Cliente */}
+              <div className="mb-4 pb-4 border-b">
+                {selectedCustomer ? (
+                  <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <User className="h-4 w-4 text-blue-600" />
+                        <div>
+                          <p className="text-sm font-medium text-blue-900">{selectedCustomer.name}</p>
+                          <p className="text-xs text-blue-600">{selectedCustomer.loyalty_points} puntos</p>
+                        </div>
+                      </div>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => setSelectedCustomer(null)}
+                        className="h-7 w-7 p-0"
+                      >
+                        <X className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  </div>
+                ) : (
+                  <div>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="w-full"
+                      onClick={() => setShowCustomerSearch(!showCustomerSearch)}
+                    >
+                      <User className="h-4 w-4 mr-2" />
+                      {showCustomerSearch ? 'Cerrar búsqueda' : 'Seleccionar Cliente'}
+                    </Button>
+
+                    {showCustomerSearch && (
+                      <div className="mt-2 space-y-2">
+                        <Input
+                          placeholder="Buscar cliente..."
+                          value={customerSearchTerm}
+                          onChange={(e) => setCustomerSearchTerm(e.target.value)}
+                          className="text-sm"
+                        />
+                        <div className="max-h-32 overflow-y-auto space-y-1">
+                          {customers
+                            .filter(c =>
+                              c.name.toLowerCase().includes(customerSearchTerm.toLowerCase()) ||
+                              c.phone?.includes(customerSearchTerm) ||
+                              c.email?.toLowerCase().includes(customerSearchTerm.toLowerCase())
+                            )
+                            .slice(0, 5)
+                            .map(customer => (
+                              <button
+                                key={customer.id}
+                                onClick={() => {
+                                  setSelectedCustomer(customer);
+                                  setShowCustomerSearch(false);
+                                  setCustomerSearchTerm('');
+                                }}
+                                className="w-full text-left p-2 hover:bg-gray-100 rounded text-xs"
+                              >
+                                <p className="font-medium">{customer.name}</p>
+                                <p className="text-gray-500">{customer.phone || customer.email}</p>
+                              </button>
+                            ))}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+
               <div className="space-y-2 md:space-y-3 max-h-[300px] md:max-h-[400px] overflow-y-auto mb-4">
                 {cart.length === 0 ? (
                   <p className="text-center text-gray-500 py-6 md:py-8 text-sm">Carrito vacío</p>
@@ -269,7 +473,7 @@ export default function POSPage() {
                           {formatCurrency(item.product.sale_price)} x {item.quantity}
                         </p>
                       </div>
-                      <div className="flex items-center gap-0.5 md:gap-1 flex-shrink-0">
+                      <div className="flex items-center gap-0.5 md:gap-1 shrink-0">
                         <Button
                           size="sm"
                           variant="outline"
@@ -278,7 +482,47 @@ export default function POSPage() {
                         >
                           <Minus className="h-3 w-3" />
                         </Button>
-                        <span className="w-6 md:w-8 text-center text-xs md:text-sm">{item.quantity}</span>
+                        <Input
+                          type="text"
+                          inputMode="numeric"
+                          value={item.quantity}
+                          onChange={(e) => {
+                            const value = e.target.value;
+                            // Permitir vacío o solo números
+                            if (value === '' || /^\d+$/.test(value)) {
+                              if (value === '') {
+                                // Permitir campo vacío temporalmente
+                                setCart(prev =>
+                                  prev.map(cartItem =>
+                                    cartItem.product.id === item.product.id
+                                      ? { ...cartItem, quantity: 0 }
+                                      : cartItem
+                                  )
+                                );
+                              } else {
+                                const val = parseInt(value);
+                                setDirectQuantity(item.product.id, val);
+                              }
+                            }
+                          }}
+                          onBlur={(e) => {
+                            // Al perder el foco, si está vacío o es 0, establecer en 1
+                            if (e.target.value === '' || parseInt(e.target.value) === 0) {
+                              setDirectQuantity(item.product.id, 1);
+                            }
+                          }}
+                          onKeyDown={(e) => {
+                            // Permitir borrar con backspace/delete
+                            if (e.key === 'Backspace' || e.key === 'Delete') {
+                              return;
+                            }
+                            // Solo permitir números y teclas de control
+                            if (!/\d/.test(e.key) && !['ArrowLeft', 'ArrowRight', 'Tab'].includes(e.key)) {
+                              e.preventDefault();
+                            }
+                          }}
+                          className="w-10 md:w-12 h-7 md:h-8 text-center text-xs md:text-sm p-1"
+                        />
                         <Button
                           size="sm"
                           variant="outline"

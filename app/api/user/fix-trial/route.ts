@@ -104,7 +104,13 @@ export async function POST(req: NextRequest) {
 
     // Si llegamos aquí, todo está bien
     const trialEnd = profile.trial_end_date ? new Date(profile.trial_end_date) : null;
-    const daysLeft = trialEnd ? Math.ceil((trialEnd.getTime() - now.getTime()) / (1000 * 60 * 60 * 24)) : 0;
+    let daysLeft = 0;
+    if (trialEnd) {
+      // Normalizar ambas fechas a medianoche para comparación precisa
+      const nowMidnight = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+      const trialEndMidnight = new Date(trialEnd.getFullYear(), trialEnd.getMonth(), trialEnd.getDate());
+      daysLeft = Math.ceil((trialEndMidnight.getTime() - nowMidnight.getTime()) / (1000 * 60 * 60 * 24));
+    }
 
     return NextResponse.json({
       message: 'Tu período de prueba está configurado correctamente',

@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { Plus, Users } from 'lucide-react';
+import { Plus, Users, Eye } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { getAllDocuments } from '@/lib/firestore-helpers';
@@ -55,6 +55,7 @@ export default function CustomersPage() {
                       <th className="text-left py-3 px-4">Email</th>
                       <th className="text-left py-3 px-4">Teléfono</th>
                       <th className="text-right py-3 px-4">Puntos</th>
+                      <th className="text-center py-3 px-4">Acciones</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -63,7 +64,19 @@ export default function CustomersPage() {
                         <td className="py-3 px-4">{c.name}</td>
                         <td className="py-3 px-4">{c.email || '-'}</td>
                         <td className="py-3 px-4">{c.phone || '-'}</td>
-                        <td className="py-3 px-4 text-right">{c.loyalty_points}</td>
+                        <td className="py-3 px-4 text-right">
+                          <span className="inline-flex items-center justify-center px-2 py-1 bg-yellow-100 text-yellow-800 rounded font-semibold">
+                            {c.loyalty_points}
+                          </span>
+                        </td>
+                        <td className="py-3 px-4 text-center">
+                          <Link href={`/dashboard/customers/${c.id}`}>
+                            <Button variant="outline" size="sm">
+                              <Eye className="h-4 w-4 mr-1" />
+                              Ver Detalles
+                            </Button>
+                          </Link>
+                        </td>
                       </tr>
                     ))}
                   </tbody>
@@ -76,7 +89,7 @@ export default function CustomersPage() {
                   <Card key={c.id}>
                     <CardContent className="p-4">
                       <h3 className="font-semibold text-base mb-2">{c.name}</h3>
-                      <div className="space-y-1 text-sm">
+                      <div className="space-y-1 text-sm mb-3">
                         <div className="flex justify-between">
                           <span className="text-gray-500">Email:</span>
                           <span className="truncate ml-2">{c.email || '-'}</span>
@@ -87,9 +100,17 @@ export default function CustomersPage() {
                         </div>
                         <div className="flex justify-between">
                           <span className="text-gray-500">Puntos:</span>
-                          <span className="font-semibold text-blue-600">{c.loyalty_points}</span>
+                          <span className="inline-flex items-center justify-center px-2 py-1 bg-yellow-100 text-yellow-800 rounded font-semibold">
+                            {c.loyalty_points}
+                          </span>
                         </div>
                       </div>
+                      <Link href={`/dashboard/customers/${c.id}`} className="block">
+                        <Button variant="outline" size="sm" className="w-full">
+                          <Eye className="h-4 w-4 mr-1" />
+                          Ver Historial de Compras
+                        </Button>
+                      </Link>
                     </CardContent>
                   </Card>
                 ))}

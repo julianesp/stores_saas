@@ -279,7 +279,11 @@ export default function SubscriptionsManagementPage() {
                       nextPaymentDate = new Date(sub.next_billing_date).toLocaleDateString('es-CO');
                     } else if (sub.subscription_status === 'trial' && sub.trial_end_date) {
                       const trialEnd = new Date(sub.trial_end_date);
-                      const daysLeft = Math.ceil((trialEnd.getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24));
+                      const now = new Date();
+                      // Normalizar ambas fechas a medianoche para comparación precisa
+                      const nowMidnight = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+                      const trialEndMidnight = new Date(trialEnd.getFullYear(), trialEnd.getMonth(), trialEnd.getDate());
+                      const daysLeft = Math.ceil((trialEndMidnight.getTime() - nowMidnight.getTime()) / (1000 * 60 * 60 * 24));
                       nextPaymentDate = `${daysLeft} días restantes`;
                     }
 
