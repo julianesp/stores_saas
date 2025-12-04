@@ -253,3 +253,17 @@ export interface CustomerPurchaseHistory {
   points_earned: number;
   payment_method: string;
 }
+
+// Tipos para sistema de notificaciones
+export type NotificationType = 'stock' | 'loyalty' | 'sale' | 'system';
+
+export interface Notification {
+  id: string;
+  type: NotificationType;
+  title: string;
+  message: string;
+  link?: string;
+  count?: number;
+  timestamp: Date;
+  read?: boolean;
+}

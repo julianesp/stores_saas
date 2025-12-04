@@ -1,9 +1,10 @@
 'use client';
 
 import { UserButton, useUser } from '@clerk/nextjs';
-import { Menu, Bell } from 'lucide-react';
+import { Menu } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { RefreshProfileButton } from './refresh-profile-button';
+import { NotificationPanel } from './notification-panel';
 
 interface HeaderProps {
   onMenuClick?: () => void;
@@ -30,10 +31,11 @@ export function Header({ onMenuClick }: HeaderProps) {
       </div>
 
       <div className="flex items-center gap-2 shrink-0">
-        <Button variant="ghost" size="icon" className="relative hidden sm:flex">
-          <Bell className="h-5 w-5" />
-          <span className="absolute top-1 right-1 h-2 w-2 rounded-full bg-red-600" />
-        </Button>
+        {user?.id && (
+          <div className="hidden sm:block">
+            <NotificationPanel userId={user.id} />
+          </div>
+        )}
 
         <div className="hidden sm:block">
           <RefreshProfileButton />
