@@ -12,8 +12,15 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { getAllDocuments, createDocument, updateDocument } from '@/lib/firestore-helpers';
 import { Category, Supplier } from '@/lib/types';
 import { toast } from 'sonner';
-import { Scan } from 'lucide-react';
+import { Scan, Camera, X } from 'lucide-react';
 import { ImageUploader } from './image-uploader';
+import dynamic from 'next/dynamic';
+
+// Importar el escáner de códigos de barras de forma dinámica (solo en cliente)
+const BarcodeScannerComponent = dynamic(
+  () => import('react-qr-barcode-scanner'),
+  { ssr: false }
+) as any;
 
 const productSchema = z.object({
   barcode: z.string().optional(),
@@ -41,10 +48,12 @@ export function ProductForm({ initialData, productId }: ProductFormProps) {
   const [categories, setCategories] = useState<Category[]>([]);
   const [suppliers, setSuppliers] = useState<Supplier[]>([]);
   const [productImages, setProductImages] = useState<string[]>(initialData?.images || []);
+  const [showScanner, setShowScanner] = useState(false);
 
   const {
     register,
     handleSubmit,
+    setValue,
     formState: { errors },
   } = useForm<ProductFormData>({
     resolver: zodResolver(productSchema),
@@ -53,6 +62,14 @@ export function ProductForm({ initialData, productId }: ProductFormProps) {
       min_stock: 10,
     },
   });
+
+  const handleBarcodeDetected = (data: string) => {
+    if (data) {
+      setValue('barcode', data);
+      setShowScanner(false);
+      toast.success('Código escaneado correctamente');
+    }
+  };
 
   useEffect(() => {
     fetchCategories();
@@ -121,22 +138,33 @@ export function ProductForm({ initialData, productId }: ProductFormProps) {
                 <Scan className="h-4 w-4 text-blue-600" />
                 Código de Barras
               </Label>
-              <div className="relative">
-                <Input
-                  id="barcode"
-                  {...register('barcode', {
-                    setValueAs: (value) => value?.trim() || undefined,
-                  })}
-                  placeholder="Escanea o escribe el código de barras"
-                  className="pr-10"
-                  autoFocus={!productId}
-                />
-                <div className="absolute right-2 top-1/2 transform -translate-y-1/2 pointer-events-none">
-                  <Scan className="h-5 w-5 text-blue-600" />
+              <div className="flex gap-2">
+                <div className="relative flex-1">
+                  <Input
+                    id="barcode"
+                    {...register('barcode', {
+                      setValueAs: (value) => value?.trim() || undefined,
+                    })}
+                    placeholder="Escanea o escribe el código"
+                    className="pr-10"
+                    autoFocus={!productId}
+                  />
+                  <div className="absolute right-2 top-1/2 transform -translate-y-1/2 pointer-events-none">
+                    <Scan className="h-5 w-5 text-blue-600" />
+                  </div>
                 </div>
+                <Button
+                  type="button"
+                  onClick={() => setShowScanner(true)}
+                  className="shrink-0 bg-blue-600 hover:bg-blue-700"
+                  size="default"
+                >
+                  <Camera className="h-5 w-5 md:mr-2" />
+                  <span className="hidden md:inline">Escanear</span>
+                </Button>
               </div>
               <p className="text-xs text-gray-500">
-                Usa un lector de códigos de barras o escribe manualmente
+                Toca el botón de la cámara para escanear con tu móvil
               </p>
               {errors.barcode && (
                 <p className="text-sm text-red-600">{errors.barcode.message}</p>
@@ -302,6 +330,55 @@ export function ProductForm({ initialData, productId }: ProductFormProps) {
           Cancelar
         </Button>
       </div>
+
+      {/* Modal del Escáner de Códigos de Barras */}
+      {showScanner && (
+        <div className="fixed inset-0 bg-black bg-opacity-75 z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-lg max-w-2xl w-full overflow-hidden">
+            <div className="bg-blue-600 text-white p-4 flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <Camera className="h-6 w-6" />
+                <h2 className="text-xl font-bold">Escanear Código de Barras</h2>
+              </div>
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                onClick={() => setShowScanner(false)}
+                className="text-white hover:bg-blue-700"
+              >
+                <X className="h-6 w-6" />
+              </Button>
+            </div>
+            <div className="p-4">
+              <p className="text-sm text-gray-600 mb-4 text-center">
+                Apunta la cámara hacia el código de barras del producto
+              </p>
+              <div className="aspect-video bg-gray-900 rounded-lg overflow-hidden relative">
+                {typeof window !== 'undefined' && (
+                  <BarcodeScannerComponent
+                    onUpdate={(err: any, result: any) => {
+                      if (result) {
+                        handleBarcodeDetected(result.getText());
+                      }
+                    }}
+                  />
+                )}
+              </div>
+              <div className="mt-4 text-center">
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => setShowScanner(false)}
+                  className="w-full sm:w-auto"
+                >
+                  Cancelar
+                </Button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </form>
   );
 }
