@@ -234,7 +234,7 @@ export default function ProductsPage() {
                                 alt={product.name}
                                 fill
                                 sizes="48px"
-                                className="object-cover"
+                                className="object-contain p-1"
                                 loading="lazy"
                               />
                             ) : (
@@ -297,7 +297,7 @@ export default function ProductsPage() {
                                 alt={product.name}
                                 fill
                                 sizes="80px"
-                                className="object-cover"
+                                className="object-contain p-1"
                                 loading="lazy"
                               />
                             ) : (
