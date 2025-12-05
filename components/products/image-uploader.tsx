@@ -57,7 +57,7 @@ export function ImageUploader({
         // Crear FormData para subir a Cloudinary
         const formData = new FormData();
         formData.append('file', file);
-        formData.append('upload_preset', 'tienda_pos'); // Preset configurado en Cloudinary
+        formData.append('upload_preset', 'tiendapos'); // Preset configurado en Cloudinary
         formData.append('folder', `products/${productId || 'temp'}`);
 
         // Subir a Cloudinary
