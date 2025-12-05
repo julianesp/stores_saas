@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Image from 'next/image';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
@@ -23,6 +23,11 @@ export function ImageUploader({
   const [images, setImages] = useState<string[]>(initialImages);
   const [uploading, setUploading] = useState(false);
   const [loadingIndex, setLoadingIndex] = useState<number | null>(null);
+
+  // Sincronizar estado interno con initialImages cuando cambien
+  useEffect(() => {
+    setImages(initialImages);
+  }, [initialImages]);
 
   const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
