@@ -149,6 +149,7 @@ export function Sidebar({ isMobile = false, onLinkClick }: SidebarProps) {
           {isSuperAdmin ? 'Admin Panel' : 'Sistema POS'}
         </h1>
       </div>
+      
       <nav className="flex-1 space-y-1 px-3 py-4 overflow-y-auto">
         {menuItems.map((item) => {
           const Icon = item.icon;
