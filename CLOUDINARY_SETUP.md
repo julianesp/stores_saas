@@ -27,7 +27,7 @@ Debes crear un **Upload Preset** en Cloudinary para que las imágenes se puedan 
    - Configura los siguientes campos:
 
    ```
-   Upload preset name: products
+   Upload preset name: tienda_pos
    Signing Mode: Unsigned (⚠️ MUY IMPORTANTE)
    Folder: products
 
