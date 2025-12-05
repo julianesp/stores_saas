@@ -2,8 +2,6 @@
 
 import { useState } from 'react';
 import Image from 'next/image';
-import { ref, uploadBytes, getDownloadURL, deleteObject } from 'firebase/storage';
-import { storage } from '@/lib/firebase';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Upload, X, Image as ImageIcon, Loader2 } from 'lucide-react';
@@ -56,22 +54,27 @@ export function ImageUploader({
 
         setLoadingIndex(images.length + index);
 
-        // Crear referencia única en Storage
-        const timestamp = Date.now();
-        const randomStr = Math.random().toString(36).substring(7);
-        const fileName = `${timestamp}_${randomStr}_${file.name}`;
-        const storageRef = ref(
-          storage,
-          `products/${productId || 'temp'}/${fileName}`
+        // Crear FormData para subir a Cloudinary
+        const formData = new FormData();
+        formData.append('file', file);
+        formData.append('upload_preset', 'products'); // Usaremos un preset sin firma
+        formData.append('folder', `products/${productId || 'temp'}`);
+
+        // Subir a Cloudinary
+        const response = await fetch(
+          `https://api.cloudinary.com/v1_1/${process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME}/image/upload`,
+          {
+            method: 'POST',
+            body: formData,
+          }
         );
 
-        // Subir archivo
-        await uploadBytes(storageRef, file);
+        if (!response.ok) {
+          throw new Error('Error al subir imagen a Cloudinary');
+        }
 
-        // Obtener URL de descarga
-        const downloadURL = await getDownloadURL(storageRef);
-
-        return downloadURL;
+        const data = await response.json();
+        return data.secure_url;
       });
 
       const uploadedUrls = (await Promise.all(uploadPromises)).filter(
@@ -100,14 +103,16 @@ export function ImageUploader({
     const imageUrl = images[index];
 
     try {
-      // Intentar eliminar de Storage (si es una URL de Firebase)
-      if (imageUrl.includes('firebase')) {
-        try {
-          const imageRef = ref(storage, imageUrl);
-          await deleteObject(imageRef);
-        } catch (error) {
-          console.log('No se pudo eliminar de Storage (posiblemente ya no existe):', error);
-        }
+      // Extraer public_id de la URL de Cloudinary
+      const urlParts = imageUrl.split('/');
+      const uploadIndex = urlParts.indexOf('upload');
+      if (uploadIndex !== -1) {
+        const pathAfterUpload = urlParts.slice(uploadIndex + 2).join('/');
+        const publicId = pathAfterUpload.split('.')[0];
+
+        // Intentar eliminar de Cloudinary (opcional, requiere endpoint backend)
+        // Por ahora solo removemos de la lista
+        console.log('Public ID to delete:', publicId);
       }
 
       const newImages = images.filter((_, i) => i !== index);
