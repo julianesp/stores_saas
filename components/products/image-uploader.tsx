@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import Image from 'next/image';
 import { ref, uploadBytes, getDownloadURL, deleteObject } from 'firebase/storage';
 import { storage } from '@/lib/firebase';
 import { Button } from '@/components/ui/button';
@@ -127,17 +128,20 @@ export function ImageUploader({
         {images.map((imageUrl, index) => (
           <Card key={index} className="relative group">
             <CardContent className="p-2">
-              <div className="relative aspect-square">
-                <img
+              <div className="relative aspect-square overflow-hidden rounded-md">
+                <Image
                   src={imageUrl}
                   alt={`Producto imagen ${index + 1}`}
-                  className="w-full h-full object-cover rounded-md"
+                  fill
+                  sizes="(max-width: 768px) 33vw, 200px"
+                  className="object-cover"
+                  loading="lazy"
                 />
                 <Button
                   type="button"
                   variant="destructive"
                   size="icon"
-                  className="absolute top-1 right-1 h-7 w-7 opacity-0 group-hover:opacity-100 transition-opacity"
+                  className="absolute top-1 right-1 h-7 w-7 opacity-0 group-hover:opacity-100 transition-opacity z-10"
                   onClick={() => handleRemoveImage(index)}
                 >
                   <X className="h-4 w-4" />

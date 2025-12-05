@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
+import Image from 'next/image';
 import { Plus, Search, Edit, Trash2, Package, Tag, Camera, AlertTriangle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -226,17 +227,22 @@ export default function ProductsPage() {
                     {filteredProducts.map((product) => (
                       <tr key={product.id} className="border-b hover:bg-gray-50">
                         <td className="py-3 px-4">
-                          {product.images && product.images.length > 0 ? (
-                            <img
-                              src={product.images[0]}
-                              alt={product.name}
-                              className="w-12 h-12 object-cover rounded border"
-                            />
-                          ) : (
-                            <div className="w-12 h-12 bg-gray-100 rounded border flex items-center justify-center">
-                              <Package className="h-6 w-6 text-gray-400" />
-                            </div>
-                          )}
+                          <div className="relative w-12 h-12 bg-gray-100 rounded border overflow-hidden">
+                            {product.images && product.images.length > 0 ? (
+                              <Image
+                                src={product.images[0]}
+                                alt={product.name}
+                                fill
+                                sizes="48px"
+                                className="object-cover"
+                                loading="lazy"
+                              />
+                            ) : (
+                              <div className="w-full h-full flex items-center justify-center">
+                                <Package className="h-6 w-6 text-gray-400" />
+                              </div>
+                            )}
+                          </div>
                         </td>
                         <td className="py-3 px-4 font-mono text-sm">{product.barcode || 'N/A'}</td>
                         <td className="py-3 px-4 font-medium">{product.name}</td>
@@ -283,18 +289,23 @@ export default function ProductsPage() {
                   <Card key={product.id} className="overflow-hidden">
                     <CardContent className="p-4">
                       <div className="flex gap-4">
-                        <div className="flex-shrink-0">
-                          {product.images && product.images.length > 0 ? (
-                            <img
-                              src={product.images[0]}
-                              alt={product.name}
-                              className="w-20 h-20 object-cover rounded border"
-                            />
-                          ) : (
-                            <div className="w-20 h-20 bg-gray-100 rounded border flex items-center justify-center">
-                              <Package className="h-8 w-8 text-gray-400" />
-                            </div>
-                          )}
+                        <div className="shrink-0">
+                          <div className="relative w-20 h-20 bg-gray-100 rounded border overflow-hidden">
+                            {product.images && product.images.length > 0 ? (
+                              <Image
+                                src={product.images[0]}
+                                alt={product.name}
+                                fill
+                                sizes="80px"
+                                className="object-cover"
+                                loading="lazy"
+                              />
+                            ) : (
+                              <div className="w-full h-full flex items-center justify-center">
+                                <Package className="h-8 w-8 text-gray-400" />
+                              </div>
+                            )}
+                          </div>
                         </div>
                         <div className="flex-1 min-w-0">
                           <h3 className="font-semibold text-lg mb-1 truncate">{product.name}</h3>

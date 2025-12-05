@@ -2,7 +2,8 @@
 
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useUser } from '@clerk/nextjs';
-import { Search, ShoppingCart, Trash2, Plus, Minus, DollarSign, User, X } from 'lucide-react';
+import Image from 'next/image';
+import { Search, ShoppingCart, Trash2, Plus, Minus, DollarSign, User, X, Package } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -384,7 +385,7 @@ export default function POSPage() {
         {/* Panel izquierdo - Productos */}
         <div className="lg:col-span-2 space-y-4 order-2 lg:order-1">
           {/* Búsqueda por código de barras */}
-          <Card>
+          {/* <Card>
             <CardHeader className="pb-3">
               <CardTitle className="text-base md:text-lg">Escanear Código de Barras</CardTitle>
             </CardHeader>
@@ -400,7 +401,7 @@ export default function POSPage() {
                 <Button type="submit" className="flex-shrink-0">Buscar</Button>
               </form>
             </CardContent>
-          </Card>
+          </Card> */}
 
           {/* Búsqueda de productos */}
           <Card>
@@ -451,6 +452,23 @@ export default function POSPage() {
                     onClick={() => addToCart(product)}
                   >
                     <CardContent className="p-2 md:p-4">
+                      {/* Imagen del producto */}
+                      <div className="relative w-full aspect-square mb-2 bg-gray-50 rounded-md overflow-hidden">
+                        {product.images && product.images.length > 0 ? (
+                          <Image
+                            src={product.images[0]}
+                            alt={product.name}
+                            fill
+                            sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 25vw"
+                            className="object-cover"
+                            loading="lazy"
+                          />
+                        ) : (
+                          <div className="w-full h-full flex items-center justify-center">
+                            <Package className="h-8 w-8 md:h-12 md:w-12 text-gray-300" />
+                          </div>
+                        )}
+                      </div>
                       <h4 className="font-medium text-xs md:text-sm mb-1 line-clamp-2">{product.name}</h4>
                       <p className="text-sm md:text-lg font-bold text-blue-600">
                         {formatCurrency(product.sale_price)}
