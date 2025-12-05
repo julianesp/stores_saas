@@ -7,18 +7,22 @@ Debes crear un **Upload Preset** en Cloudinary para que las imágenes se puedan 
 ### 📝 Pasos para Configurar el Upload Preset
 
 1. **Ir a Cloudinary Dashboard**
+
    - Ve a: https://console.cloudinary.com/
    - Inicia sesión con tu cuenta
 
 2. **Ir a Settings (Configuración)**
+
    - Haz clic en el ícono de engranaje ⚙️ en la parte superior derecha
    - O ve directamente a: https://console.cloudinary.com/settings
 
 3. **Ir a Upload Tab**
+
    - En el menú lateral, haz clic en **"Upload"**
    - Baja hasta la sección **"Upload presets"**
 
 4. **Agregar Upload Preset**
+
    - Haz clic en **"Add upload preset"**
    - Configura los siguientes campos:
 
@@ -43,6 +47,7 @@ Debes crear un **Upload Preset** en Cloudinary para que las imágenes se puedan 
 Después de crear el preset:
 
 1. Reinicia el servidor de desarrollo:
+
    ```bash
    npm run dev
    ```
@@ -54,6 +59,7 @@ Después de crear el preset:
 ### 🔧 Configuración Actual
 
 Las variables de entorno ya están configuradas:
+
 - ✅ NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME=tienda_pos
 - ✅ NEXT_PUBLIC_CLOUDINARY_API_KEY=491334679817122
 - ✅ CLOUDINARY_API_SECRET=N4JkKriorCBtFYE-7Copg2QLmXE
@@ -61,6 +67,7 @@ Las variables de entorno ya están configuradas:
 ### 📦 Estructura de Carpetas en Cloudinary
 
 Las imágenes se guardarán automáticamente en:
+
 ```
 /products/
   ├── {productId}/
@@ -83,20 +90,24 @@ Las imágenes se guardarán automáticamente en:
 ### 🐛 Solución de Problemas
 
 **Error: "Upload preset not found"**
+
 - Verifica que creaste el preset con el nombre exacto: `products`
 - Verifica que el modo sea **Unsigned**
 
 **Error: "Unauthorized"**
+
 - Verifica que las variables de entorno estén correctas
 - Reinicia el servidor: `npm run dev`
 
 **Las imágenes no se muestran**
+
 - Verifica que la URL empiece con `https://res.cloudinary.com/`
 - Verifica que next.config.ts tenga configurado el dominio de Cloudinary
 
 ### 📞 Soporte
 
 Si tienes problemas:
+
 1. Revisa la consola del navegador (F12)
 2. Verifica que el preset se creó correctamente
 3. Reinicia el servidor de desarrollo
