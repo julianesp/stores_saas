@@ -16,7 +16,7 @@ export async function POST(req: NextRequest) {
     }
 
     // Obtener datos del request
-    const { planId } = await req.json();
+    const { planId, paymentMethod } = await req.json();
 
     // Buscar el plan
     const plan = SUBSCRIPTION_PLANS.find(p => p.id === planId);
@@ -48,6 +48,7 @@ export async function POST(req: NextRequest) {
       reference,
       customerEmail: userProfile.email,
       redirectUrl: `${process.env.NEXT_PUBLIC_URL}/dashboard/subscription/success`,
+      paymentMethod: paymentMethod || undefined, // 'NEQUI', 'CARD', etc.
     });
 
     return NextResponse.json({

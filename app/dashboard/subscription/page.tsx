@@ -16,6 +16,7 @@ export default function SubscriptionPage() {
   const [loading, setLoading] = useState(false);
   const [subscriptionStatus, setSubscriptionStatus] = useState<SubscriptionStatus | null>(null);
   const [selectedPlan, setSelectedPlan] = useState<string | null>(null);
+  const [selectedMethod, setSelectedMethod] = useState<string | null>(null);
 
   useEffect(() => {
     async function fetchStatus() {
@@ -27,11 +28,12 @@ export default function SubscriptionPage() {
     fetchStatus();
   }, [user]);
 
-  const handleSubscribe = async (planId: string) => {
+  const handleSubscribe = async (planId: string, paymentMethod: 'NEQUI' | null = null) => {
     if (!user) return;
 
     setLoading(true);
     setSelectedPlan(planId);
+    setSelectedMethod(paymentMethod);
 
     try {
       // Llamar a la API para crear el enlace de pago
@@ -40,7 +42,10 @@ export default function SubscriptionPage() {
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ planId }),
+        body: JSON.stringify({
+          planId,
+          paymentMethod, // Enviar el método de pago
+        }),
       });
 
       if (!response.ok) {
@@ -61,7 +66,12 @@ export default function SubscriptionPage() {
       toast.error(errorMessage);
       setLoading(false);
       setSelectedPlan(null);
+      setSelectedMethod(null);
     }
+  };
+
+  const isButtonLoading = (planId: string, method: string | null) => {
+    return loading && selectedPlan === planId && selectedMethod === method;
   };
 
   return (
@@ -119,7 +129,7 @@ export default function SubscriptionPage() {
         </CardHeader>
         <CardContent>
           <div className="flex flex-wrap gap-4 items-center">
-            <div className="flex items-center gap-2 text-sm">
+            <div className="flex items-center gap-2 text-sm font-medium">
               <Smartphone className="h-5 w-5 text-purple-600" />
               <span>Nequi</span>
             </div>
@@ -174,13 +184,35 @@ export default function SubscriptionPage() {
                 ))}
               </ul>
 
+              {/* Botón de Nequi */}
+              <Button
+                className="w-full bg-purple-600 hover:bg-purple-700"
+                size="lg"
+                onClick={() => handleSubscribe(plan.id, 'NEQUI')}
+                disabled={loading || subscriptionStatus?.status === 'active'}
+              >
+                {isButtonLoading(plan.id, 'NEQUI') ? (
+                  <>
+                    <Loader2 className="mr-2 h-5 w-5 animate-spin" />
+                    Procesando...
+                  </>
+                ) : (
+                  <>
+                    <Smartphone className="mr-2 h-5 w-5" />
+                    Pagar con Nequi
+                  </>
+                )}
+              </Button>
+
+              {/* Botón de otros métodos */}
               <Button
                 className="w-full"
                 size="lg"
-                onClick={() => handleSubscribe(plan.id)}
-                disabled={(loading && selectedPlan === plan.id) || subscriptionStatus?.status === 'active'}
+                variant="outline"
+                onClick={() => handleSubscribe(plan.id, null)}
+                disabled={loading || subscriptionStatus?.status === 'active'}
               >
-                {loading && selectedPlan === plan.id ? (
+                {isButtonLoading(plan.id, null) ? (
                   <>
                     <Loader2 className="mr-2 h-5 w-5 animate-spin" />
                     Procesando...
@@ -188,7 +220,10 @@ export default function SubscriptionPage() {
                 ) : subscriptionStatus?.status === 'active' ? (
                   'Plan Actual'
                 ) : (
-                  'Suscribirse Ahora'
+                  <>
+                    <CreditCard className="mr-2 h-5 w-5" />
+                    Otros métodos (Tarjeta, PSE, etc.)
+                  </>
                 )}
               </Button>
             </CardContent>
@@ -202,6 +237,9 @@ export default function SubscriptionPage() {
           <div className="space-y-3 text-sm text-gray-600">
             <p>
               ✓ <strong>Pago seguro</strong> procesado por Wompi (Bancolombia)
+            </p>
+            <p>
+              ✓ <strong>Pago con Nequi</strong> - La forma más rápida y fácil de pagar
             </p>
             <p>
               ✓ <strong>Facturación mensual</strong> automática

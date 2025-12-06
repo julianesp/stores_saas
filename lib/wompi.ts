@@ -56,6 +56,7 @@ export async function createPaymentLink(params: {
   reference: string;
   customerEmail: string;
   redirectUrl: string;
+  paymentMethod?: 'NEQUI' | 'CARD' | 'PSE' | 'BANCOLOMBIA_TRANSFER';
 }) {
   try {
     console.log('Creating payment link with config:', {
@@ -63,9 +64,10 @@ export async function createPaymentLink(params: {
       hasPrivateKey: !!WOMPI_CONFIG.privateKey,
       amount: params.amount,
       reference: params.reference,
+      paymentMethod: params.paymentMethod,
     });
 
-    const body = {
+    const body: any = {
       name: 'Suscripción Sistema POS',
       description: 'Pago mensual Sistema POS',
       single_use: false,
@@ -75,6 +77,11 @@ export async function createPaymentLink(params: {
       redirect_url: params.redirectUrl,
       expiration_time: Math.floor(Date.now() / 1000) + (24 * 60 * 60), // 24 horas
     };
+
+    // Si se especifica un método de pago, agregarlo
+    if (params.paymentMethod) {
+      body.payment_method_types = [params.paymentMethod];
+    }
 
     console.log('Request body:', JSON.stringify(body, null, 2));
 
