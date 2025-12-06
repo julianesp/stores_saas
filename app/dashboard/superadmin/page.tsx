@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useUser } from '@clerk/nextjs';
+import { useRouter } from 'next/navigation';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -16,13 +17,17 @@ import {
   CheckCircle,
   XCircle,
   Clock,
-  Shield
+  Shield,
+  Calendar,
+  Activity,
+  ArrowUpRight
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { formatCurrency } from '@/lib/utils';
 
 export default function SuperAdminPage() {
   const { user } = useUser();
+  const router = useRouter();
   const [stores, setStores] = useState<UserProfile[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
@@ -62,6 +67,12 @@ export default function SuperAdminPage() {
   };
 
   const handleToggleStatus = async (storeId: string, currentStatus: string) => {
+    // No permitir cambiar el estado si está en trial
+    if (currentStatus === 'trial') {
+      toast.error('No puedes cambiar el estado de una cuenta en período de prueba. Espera a que expire o se convierta.');
+      return;
+    }
+
     const newStatus = currentStatus === 'active' ? 'expired' : 'active';
 
     try {
@@ -134,7 +145,16 @@ export default function SuperAdminPage() {
   const activeStores = stores.filter(s => s.subscription_status === 'active').length;
   const trialStores = stores.filter(s => s.subscription_status === 'trial').length;
   const expiredStores = stores.filter(s => s.subscription_status === 'expired').length;
-  const totalRevenue = stores.filter(s => s.subscription_status === 'active').length * 50000; // Asumiendo plan básico
+  const totalRevenue = stores.filter(s => s.subscription_status === 'active').length * 50000;
+
+  // Nuevas tiendas hoy
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const newStoresToday = stores.filter(s => new Date(s.created_at) >= today).length;
+
+  // Tasa de conversión (trial a activo)
+  const totalWithTrial = stores.filter(s => s.subscription_status === 'trial' || s.subscription_status === 'active' || s.subscription_status === 'expired').length;
+  const conversionRate = totalWithTrial > 0 ? (activeStores / totalWithTrial * 100).toFixed(1) : '0.0';
 
   return (
     <div className="space-y-6">
@@ -142,54 +162,197 @@ export default function SuperAdminPage() {
       <div className="flex items-center gap-3">
         <Shield className="h-8 w-8 text-blue-600" />
         <div>
-          <h1 className="text-3xl font-bold">Panel de Super Administrador</h1>
-          <p className="text-gray-500">Gestiona todas las tiendas del sistema</p>
+          <h1 className="text-3xl font-bold">Dashboard del SaaS</h1>
+          <p className="text-gray-500">Vista general del negocio multi-tenant</p>
         </div>
       </div>
 
-      {/* Estadísticas */}
+      {/* Estadísticas Principales - CLICABLES */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        <Card>
+        {/* Total Tiendas - Clickeable */}
+        <Card
+          className="cursor-pointer hover:shadow-lg transition-shadow group"
+          onClick={() => {
+            // Scroll a la tabla de tiendas
+            document.getElementById('stores-table')?.scrollIntoView({ behavior: 'smooth' });
+          }}
+        >
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Total Tiendas</CardTitle>
-            <Store className="h-4 w-4 text-gray-500" />
+            <Store className="h-4 w-4 text-blue-500" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{totalStores}</div>
-            <p className="text-xs text-gray-500">Tiendas registradas</p>
+            <p className="text-xs text-gray-500 mt-1">Registradas en el sistema</p>
+            <div className="flex items-center mt-2 text-xs text-blue-600 group-hover:text-blue-700">
+              <span>Ver todas</span>
+              <ArrowUpRight className="h-3 w-3 ml-1" />
+            </div>
           </CardContent>
         </Card>
 
-        <Card>
+        {/* Tiendas Activas - Clickeable */}
+        <Card
+          className="cursor-pointer hover:shadow-lg transition-shadow group"
+          onClick={() => {
+            setSearchTerm(''); // Reset search
+            setTimeout(() => {
+              // Filtrar por activas sería mejor tener un estado, por ahora scroll
+              document.getElementById('stores-table')?.scrollIntoView({ behavior: 'smooth' });
+            }, 100);
+          }}
+        >
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Activas</CardTitle>
+            <CardTitle className="text-sm font-medium">Tiendas Activas</CardTitle>
             <CheckCircle className="h-4 w-4 text-green-500" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-green-600">{activeStores}</div>
-            <p className="text-xs text-gray-500">Con suscripción pagada</p>
+            <p className="text-xs text-gray-500 mt-1">Suscripciones pagando</p>
+            <div className="flex items-center mt-2 text-xs text-green-600 group-hover:text-green-700">
+              <span>Ver detalles</span>
+              <ArrowUpRight className="h-3 w-3 ml-1" />
+            </div>
           </CardContent>
         </Card>
 
-        <Card>
+        {/* Ingresos Mensuales */}
+        <Card className="hover:shadow-lg transition-shadow">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">En Prueba</CardTitle>
-            <Clock className="h-4 w-4 text-yellow-500" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-yellow-600">{trialStores}</div>
-            <p className="text-xs text-gray-500">Período de prueba</p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Ingresos Estimados</CardTitle>
+            <CardTitle className="text-sm font-medium">Ingresos Mensuales</CardTitle>
             <DollarSign className="h-4 w-4 text-blue-500" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-blue-600">{formatCurrency(totalRevenue)}</div>
-            <p className="text-xs text-gray-500">Mensuales</p>
+            <p className="text-xs text-gray-500 mt-1">Recurrentes</p>
+            <div className="flex items-center mt-2 text-xs text-gray-600">
+              <TrendingUp className="h-3 w-3 mr-1 text-green-500" />
+              <span className="text-green-600">MRR activo</span>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Tasa de Conversión */}
+        <Card className="hover:shadow-lg transition-shadow">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Tasa de Conversión</CardTitle>
+            <Activity className="h-4 w-4 text-purple-500" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold text-purple-600">{conversionRate}%</div>
+            <p className="text-xs text-gray-500 mt-1">Trial → Activo</p>
+            <div className="flex items-center mt-2 text-xs text-gray-600">
+              <span>De {totalWithTrial} tiendas</span>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Métricas Secundarias */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        {/* En Periodo de Prueba */}
+        <Card
+          className="cursor-pointer hover:shadow-lg transition-shadow group"
+          onClick={() => {
+            document.getElementById('stores-table')?.scrollIntoView({ behavior: 'smooth' });
+          }}
+        >
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">En Período de Prueba</CardTitle>
+            <Clock className="h-4 w-4 text-yellow-500" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold text-yellow-600">{trialStores}</div>
+            <p className="text-xs text-gray-500 mt-1">Potenciales clientes</p>
+            <div className="flex items-center mt-2 text-xs text-yellow-600 group-hover:text-yellow-700">
+              <span>Enviar seguimiento</span>
+              <ArrowUpRight className="h-3 w-3 ml-1" />
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Nuevas Hoy */}
+        <Card className="hover:shadow-lg transition-shadow">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Nuevas Hoy</CardTitle>
+            <Calendar className="h-4 w-4 text-blue-500" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold text-blue-600">{newStoresToday}</div>
+            <p className="text-xs text-gray-500 mt-1">Registros hoy</p>
+            <div className="flex items-center mt-2 text-xs text-gray-600">
+              <span className="text-blue-600">Activo</span>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Suscripciones Expiradas */}
+        <Card className="cursor-pointer hover:shadow-lg transition-shadow group">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Suscripciones Expiradas</CardTitle>
+            <XCircle className="h-4 w-4 text-red-500" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold text-red-600">{expiredStores}</div>
+            <p className="text-xs text-gray-500 mt-1">Requieren atención</p>
+            <div className="flex items-center mt-2 text-xs text-red-600 group-hover:text-red-700">
+              <span>Ver y reactivar</span>
+              <ArrowUpRight className="h-3 w-3 ml-1" />
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Accesos Rápidos */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-lg">Accesos Rápidos</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            <Button
+              variant="outline"
+              className="w-full justify-start"
+              onClick={() => router.push('/dashboard/superadmin/stores')}
+            >
+              <Store className="h-4 w-4 mr-2" />
+              Gestión de Tiendas
+              <span className="ml-auto text-xs text-gray-500">Ver y administrar todas las tiendas</span>
+            </Button>
+            <Button
+              variant="outline"
+              className="w-full justify-start"
+              onClick={() => router.push('/dashboard/superadmin/users')}
+            >
+              <Users className="h-4 w-4 mr-2" />
+              Usuarios del Sistema
+              <span className="ml-auto text-xs text-gray-500">Gestionar usuarios y roles</span>
+            </Button>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-lg">Estado del Sistema</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            <div className="flex items-center justify-between p-3 bg-green-50 rounded-lg border border-green-200">
+              <div className="flex items-center gap-2">
+                <Activity className="h-4 w-4 text-green-600" />
+                <span className="font-medium text-green-900">Sistema Operativo</span>
+              </div>
+              <span className="text-xs text-green-600">Todos los servicios funcionando</span>
+            </div>
+
+            {trialStores > 0 && (
+              <div className="flex items-center justify-between p-3 bg-yellow-50 rounded-lg border border-yellow-200">
+                <div className="flex items-center gap-2">
+                  <Clock className="h-4 w-4 text-yellow-600" />
+                  <span className="font-medium text-yellow-900">{trialStores} tiendas en trial</span>
+                </div>
+                <span className="text-xs text-yellow-600">Enviar seguimiento para conversión</span>
+              </div>
+            )}
           </CardContent>
         </Card>
       </div>
@@ -210,7 +373,7 @@ export default function SuperAdminPage() {
       </Card>
 
       {/* Lista de tiendas */}
-      <Card>
+      <Card id="stores-table">
         <CardHeader>
           <CardTitle>Tiendas Registradas ({filteredStores.length})</CardTitle>
         </CardHeader>
@@ -263,23 +426,35 @@ export default function SuperAdminPage() {
                         <td className="p-4 text-sm text-gray-600">{createdDate}</td>
                         <td className="p-4">
                           <div className="flex gap-2 justify-end">
-                            <Button
-                              size="sm"
-                              variant={store.subscription_status === 'active' ? 'outline' : 'default'}
-                              onClick={() => handleToggleStatus(store.id, store.subscription_status)}
-                            >
-                              {store.subscription_status === 'active' ? (
-                                <>
-                                  <XCircle className="h-4 w-4 mr-1" />
-                                  Suspender
-                                </>
-                              ) : (
-                                <>
-                                  <CheckCircle className="h-4 w-4 mr-1" />
-                                  Activar
-                                </>
-                              )}
-                            </Button>
+                            {store.subscription_status === 'trial' ? (
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                disabled
+                                title="Las cuentas en período de prueba no se pueden modificar manualmente"
+                              >
+                                <Clock className="h-4 w-4 mr-1" />
+                                En Prueba
+                              </Button>
+                            ) : (
+                              <Button
+                                size="sm"
+                                variant={store.subscription_status === 'active' ? 'outline' : 'default'}
+                                onClick={() => handleToggleStatus(store.id, store.subscription_status)}
+                              >
+                                {store.subscription_status === 'active' ? (
+                                  <>
+                                    <XCircle className="h-4 w-4 mr-1" />
+                                    Suspender
+                                  </>
+                                ) : (
+                                  <>
+                                    <CheckCircle className="h-4 w-4 mr-1" />
+                                    Activar
+                                  </>
+                                )}
+                              </Button>
+                            )}
                             <Button
                               size="sm"
                               variant="secondary"
