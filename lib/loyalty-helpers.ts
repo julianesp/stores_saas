@@ -151,10 +151,19 @@ export async function getCustomerPurchaseHistory(customerId: string) {
           })
         );
 
+        // Convertir Timestamp de Firestore a string ISO si es necesario
+        let dateStr = sale.created_at;
+        if (sale.created_at && typeof sale.created_at === 'object' && 'toDate' in sale.created_at) {
+          dateStr = sale.created_at.toDate().toISOString();
+        } else if (sale.created_at && typeof sale.created_at === 'object' && 'seconds' in sale.created_at) {
+          // Si es un objeto plano con seconds y nanoseconds
+          dateStr = new Date(sale.created_at.seconds * 1000).toISOString();
+        }
+
         return {
           sale_id: sale.id,
           sale_number: sale.sale_number,
-          date: sale.created_at,
+          date: dateStr,
           items: itemsWithProducts,
           total: sale.total,
           points_earned: sale.points_earned || 0,
