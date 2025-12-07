@@ -6,10 +6,22 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Shield, CheckCircle, AlertCircle, Loader2, Clock } from 'lucide-react';
 
+interface FixTrialResult {
+  fixed?: boolean;
+  message?: string;
+  error?: string;
+  diagnostico?: {
+    subscription_status?: string;
+    email?: string;
+  };
+  daysRemaining?: number;
+  fixMessage?: string;
+}
+
 export default function FixTrialPage() {
   const { user } = useUser();
   const [status, setStatus] = useState<'idle' | 'loading' | 'success' | 'error'>('idle');
-  const [result, setResult] = useState<any>(null);
+  const [result, setResult] = useState<FixTrialResult | null>(null);
 
   const fixTrial = async () => {
     try {
