@@ -81,7 +81,7 @@ export default function DashboardLayout({
         </div>
       )}
 
-      <div className="flex flex-col flex-1 overflow-hidden">
+      <div className="flex flex-col flex-1 overflow-hidden text-black">
         {/* Mostrar banner de trial si aplica (excepto superadmin) */}
         {!loading &&
           !isSuperAdmin &&
