@@ -103,10 +103,13 @@ export async function calculatePointsForPurchase(
  */
 export async function addPointsToCustomer(
   customerId: string,
-  pointsToAdd: number
+  pointsToAdd: number,
+  getToken: any
 ): Promise<void> {
   try {
-    const customer = await getDocumentById('customers', customerId) as any;
+    const { getCustomerById, updateCustomer } = await import('./cloudflare-api');
+
+    const customer = await getCustomerById(customerId, getToken) as any;
     if (!customer) {
       throw new Error('Cliente no encontrado');
     }
@@ -114,9 +117,9 @@ export async function addPointsToCustomer(
     const currentPoints = customer.loyalty_points || 0;
     const newPoints = currentPoints + pointsToAdd;
 
-    await updateDocument('customers', customerId, {
+    await updateCustomer(customerId, {
       loyalty_points: newPoints,
-    });
+    }, getToken);
   } catch (error) {
     console.error('Error adding points to customer:', error);
     throw error;
@@ -172,9 +175,11 @@ export async function getCustomerPurchaseHistory(customerId: string, getToken: a
 /**
  * Verifica si un cliente puede canjear puntos por descuento
  */
-export async function canRedeemDiscount(customerId: string): Promise<boolean> {
+export async function canRedeemDiscount(customerId: string, getToken: any): Promise<boolean> {
   try {
-    const customer = await getDocumentById('customers', customerId) as any;
+    const { getCustomerById } = await import('./cloudflare-api');
+
+    const customer = await getCustomerById(customerId, getToken) as any;
     if (!customer) return false;
 
     const currentPoints = customer.loyalty_points || 0;
@@ -190,10 +195,13 @@ export async function canRedeemDiscount(customerId: string): Promise<boolean> {
  */
 export async function redeemPointsForDiscount(
   customerId: string,
-  purchaseAmount: number
+  purchaseAmount: number,
+  getToken: any
 ): Promise<{ discount: number; pointsRedeemed: number }> {
   try {
-    const customer = await getDocumentById('customers', customerId) as any;
+    const { getCustomerById, updateCustomer } = await import('./cloudflare-api');
+
+    const customer = await getCustomerById(customerId, getToken) as any;
     if (!customer) {
       throw new Error('Cliente no encontrado');
     }
@@ -209,9 +217,9 @@ export async function redeemPointsForDiscount(
 
     // Descontar puntos
     const newPoints = currentPoints - REWARD_CONSTANTS.POINTS_FOR_DISCOUNT;
-    await updateDocument('customers', customerId, {
+    await updateCustomer(customerId, {
       loyalty_points: newPoints,
-    });
+    }, getToken);
 
     return {
       discount,
