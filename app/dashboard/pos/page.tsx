@@ -251,7 +251,7 @@ export default function POSPage() {
       let appliedDiscount = 0;
       let pointsRedeemed = 0;
       if (selectedCustomer && applyDiscount) {
-        const redeemResult = await redeemPointsForDiscount(selectedCustomer.id, subtotal);
+        const redeemResult = await redeemPointsForDiscount(selectedCustomer.id, subtotal, getToken);
         appliedDiscount = redeemResult.discount;
         pointsRedeemed = redeemResult.pointsRedeemed;
       }
@@ -337,7 +337,7 @@ export default function POSPage() {
 
       // Asignar puntos al cliente si aplica
       if (selectedCustomer && pointsEarned > 0) {
-        await addPointsToCustomer(selectedCustomer.id, pointsEarned);
+        await addPointsToCustomer(selectedCustomer.id, pointsEarned, getToken);
       }
 
       // Actualizar deuda del cliente si es venta a crédito
@@ -764,7 +764,7 @@ export default function POSPage() {
                                   setShowNewCustomerForm(false);
 
                                   // Verificar si el cliente puede canjear puntos
-                                  const eligible = await canRedeemDiscount(customer.id);
+                                  const eligible = await canRedeemDiscount(customer.id, getToken);
                                   setCanRedeem(eligible);
                                   setApplyDiscount(false);
                                   setDiscountAmount(0);
