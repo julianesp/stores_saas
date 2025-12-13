@@ -26,8 +26,9 @@ export interface InventoryAlert {
 
 /**
  * Obtiene las métricas principales del dashboard para la tienda
+ * @param userProfileId - ID del perfil de usuario para filtrar datos (opcional para superadmin)
  */
-export async function getDashboardMetrics(): Promise<DashboardMetrics> {
+export async function getDashboardMetrics(userProfileId?: string): Promise<DashboardMetrics> {
   try {
     // Obtener fecha de hoy y comienzo del día
     const now = new Date();
@@ -36,8 +37,8 @@ export async function getDashboardMetrics(): Promise<DashboardMetrics> {
     const startOfLastMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1);
     const endOfLastMonth = new Date(now.getFullYear(), now.getMonth(), 0);
 
-    // Obtener todos los productos
-    const allProducts = await getAllDocuments('products') as Product[];
+    // Obtener todos los productos (filtrando por user_profile_id si se proporciona)
+    const allProducts = await getAllDocuments('products', userProfileId) as Product[];
     const totalProducts = allProducts.length;
 
     // Calcular productos con stock bajo
@@ -45,8 +46,8 @@ export async function getDashboardMetrics(): Promise<DashboardMetrics> {
       p => p.stock <= p.min_stock && p.stock > 0
     ).length;
 
-    // Obtener todas las ventas (para calcular las de hoy)
-    const allSales = await getAllDocuments('sales') as Sale[];
+    // Obtener todas las ventas (filtrando por user_profile_id si se proporciona)
+    const allSales = await getAllDocuments('sales', userProfileId) as Sale[];
 
     // Filtrar ventas de hoy que estén completadas
     const todaySales = allSales.filter(sale => {
@@ -83,8 +84,8 @@ export async function getDashboardMetrics(): Promise<DashboardMetrics> {
       monthlyGrowth = 100; // Si no había ventas el mes pasado pero hay este mes
     }
 
-    // Obtener clientes activos del mes
-    const allCustomers = await getAllDocuments('customers') as Customer[];
+    // Obtener clientes activos del mes (filtrando por user_profile_id si se proporciona)
+    const allCustomers = await getAllDocuments('customers', userProfileId) as Customer[];
     // Clientes que han comprado este mes (filtrando por customer_id en las ventas)
     const customerIdsThisMonth = new Set(
       thisMonthSales
@@ -117,12 +118,14 @@ export async function getDashboardMetrics(): Promise<DashboardMetrics> {
 
 /**
  * Obtiene los productos más vendidos
+ * @param limit - Número máximo de productos a retornar
+ * @param userProfileId - ID del perfil de usuario para filtrar datos (opcional para superadmin)
  */
-export async function getTopProducts(limit: number = 4): Promise<TopProduct[]> {
+export async function getTopProducts(limit: number = 4, userProfileId?: string): Promise<TopProduct[]> {
   try {
-    // Obtener todos los items de ventas
-    const allSaleItems = await getAllDocuments('sale_items') as SaleItem[];
-    const allProducts = await getAllDocuments('products') as Product[];
+    // Obtener todos los items de ventas (filtrando por user_profile_id si se proporciona)
+    const allSaleItems = await getAllDocuments('sale_items', userProfileId) as SaleItem[];
+    const allProducts = await getAllDocuments('products', userProfileId) as Product[];
 
     // Crear un mapa de productos por ID para búsqueda rápida
     const productsMap = new Map(allProducts.map(p => [p.id, p]));
@@ -161,10 +164,11 @@ export async function getTopProducts(limit: number = 4): Promise<TopProduct[]> {
 
 /**
  * Obtiene alertas de inventario
+ * @param userProfileId - ID del perfil de usuario para filtrar datos (opcional para superadmin)
  */
-export async function getInventoryAlerts(): Promise<InventoryAlert> {
+export async function getInventoryAlerts(userProfileId?: string): Promise<InventoryAlert> {
   try {
-    const allProducts = await getAllDocuments('products') as Product[];
+    const allProducts = await getAllDocuments('products', userProfileId) as Product[];
 
     // Productos con stock bajo
     const lowStockProducts = allProducts.filter(
@@ -190,10 +194,11 @@ export async function getInventoryAlerts(): Promise<InventoryAlert> {
 
 /**
  * Obtiene productos próximos a vencer
+ * @param userProfileId - ID del perfil de usuario para filtrar datos (opcional para superadmin)
  */
-export async function getExpiringProducts(): Promise<number> {
+export async function getExpiringProducts(userProfileId?: string): Promise<number> {
   try {
-    const allProducts = await getAllDocuments('products') as Product[];
+    const allProducts = await getAllDocuments('products', userProfileId) as Product[];
     const now = new Date();
     const thirtyDaysFromNow = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000);
 

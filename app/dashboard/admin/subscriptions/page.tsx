@@ -1,11 +1,11 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { useUser } from '@clerk/nextjs';
+import { useUser, useAuth } from '@clerk/nextjs';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
-import { getAllDocuments, updateDocument } from '@/lib/firestore-helpers';
+import { getAllUserProfiles, updateUserProfile } from '@/lib/cloudflare-api';
 import { UserProfile, PaymentTransaction } from '@/lib/types';
 import {
   CreditCard,
@@ -25,6 +25,7 @@ import { getUserProfileByClerkId } from '@/lib/subscription-helpers';
 
 export default function SubscriptionsManagementPage() {
   const { user } = useUser();
+  const { getToken } = useAuth();
   const [subscriptions, setSubscriptions] = useState<UserProfile[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
@@ -39,7 +40,7 @@ export default function SubscriptionsManagementPage() {
 
     try {
       setLoading(true);
-      const allProfiles = await getAllDocuments('user_profiles') as UserProfile[];
+      const allProfiles = await getAllUserProfiles(getToken);
 
       // Obtener perfil del usuario actual
       const myProfile = allProfiles.find(p => p.clerk_user_id === user.id);
@@ -73,11 +74,11 @@ export default function SubscriptionsManagementPage() {
       const nextBilling = new Date();
       nextBilling.setMonth(nextBilling.getMonth() + 1);
 
-      await updateDocument('user_profiles', profileId, {
+      await updateUserProfile(profileId, {
         subscription_status: 'active',
         last_payment_date: now.toISOString(),
         next_billing_date: nextBilling.toISOString(),
-      });
+      }, getToken);
 
       toast.success('Suscripción activada correctamente');
       fetchData();
@@ -97,10 +98,10 @@ export default function SubscriptionsManagementPage() {
       const trialEnd = new Date();
       trialEnd.setDate(trialEnd.getDate() + 15);
 
-      await updateDocument('user_profiles', profileId, {
+      await updateUserProfile(profileId, {
         subscription_status: 'trial',
         trial_end_date: trialEnd.toISOString(),
-      });
+      }, getToken);
 
       toast.success('Período de prueba extendido por 15 días');
       fetchData();
@@ -116,9 +117,9 @@ export default function SubscriptionsManagementPage() {
     }
 
     try {
-      await updateDocument('user_profiles', profileId, {
+      await updateUserProfile(profileId, {
         subscription_status: 'expired',
-      });
+      }, getToken);
 
       toast.success('Suscripción suspendida');
       fetchData();

@@ -26,9 +26,9 @@ export async function checkSubscriptionStatus(
     // Si está en período de prueba
     if (userProfile.subscription_status === 'trial') {
       if (!userProfile.trial_end_date) {
-        // Si no tiene fecha de fin de trial, crear una
+        // Si no tiene fecha de fin de trial, crear una con 15 días
         const trialEnd = new Date();
-        trialEnd.setDate(trialEnd.getDate() + 30);
+        trialEnd.setDate(trialEnd.getDate() + 15);
 
         await updateDocument('user_profiles', userProfile.id, {
           trial_end_date: trialEnd.toISOString()
@@ -37,7 +37,7 @@ export async function checkSubscriptionStatus(
         return {
           canAccess: true,
           status: 'trial',
-          daysLeft: 30,
+          daysLeft: 15,
         };
       }
 
@@ -120,7 +120,7 @@ export async function initializeTrialPeriod(userProfileId: string) {
   try {
     const now = new Date();
     const trialEnd = new Date();
-    trialEnd.setDate(trialEnd.getDate() + 30); // 30 días de prueba
+    trialEnd.setDate(trialEnd.getDate() + 15); // 15 días de prueba
 
     await updateDocument('user_profiles', userProfileId, {
       subscription_status: 'trial',
@@ -144,18 +144,27 @@ export async function initializeTrialPeriod(userProfileId: string) {
 export async function activateSubscription(
   userProfileId: string,
   transactionId: string,
+  planId: string,
   paymentDate: Date = new Date()
 ) {
   try {
     const nextBilling = new Date(paymentDate);
     nextBilling.setMonth(nextBilling.getMonth() + 1); // Próximo mes
 
-    await updateDocument('user_profiles', userProfileId, {
+    const updates: any = {
       subscription_status: 'active',
       subscription_id: transactionId,
       last_payment_date: paymentDate.toISOString(),
       next_billing_date: nextBilling.toISOString(),
-    });
+      plan_id: planId,
+    };
+
+    // Si es el addon de IA, activar la bandera
+    if (planId === 'ai-addon-monthly') {
+      updates.has_ai_addon = true;
+    }
+
+    await updateDocument('user_profiles', userProfileId, updates);
 
     return {
       success: true,
@@ -197,4 +206,24 @@ export async function getUserProfileByClerkId(clerkUserId: string) {
     console.error('Error getting user profile:', error);
     return null;
   }
+}
+
+/**
+ * Verifica si un usuario tiene acceso a las funcionalidades de IA
+ * Durante el período de prueba, todos tienen acceso gratis
+ * Después del trial, solo quienes paguen el addon
+ */
+export function hasAIAccess(userProfile: UserProfile): boolean {
+  // Durante el período de prueba, acceso gratis a IA
+  if (userProfile.subscription_status === 'trial') {
+    return true;
+  }
+
+  // Con suscripción activa, solo si tienen el addon
+  if (userProfile.subscription_status === 'active') {
+    return userProfile.has_ai_addon === true;
+  }
+
+  // Sin suscripción válida, sin acceso
+  return false;
 }

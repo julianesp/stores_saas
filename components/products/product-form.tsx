@@ -5,11 +5,12 @@ import { useRouter } from 'next/navigation';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
+import { useAuth } from '@clerk/nextjs';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { getAllDocuments, createDocument, updateDocument } from '@/lib/firestore-helpers';
+import { getCategories, getSuppliers, createProduct, updateProduct } from '@/lib/cloudflare-api';
 import { Category, Supplier } from '@/lib/types';
 import { toast } from 'sonner';
 import { Scan, Camera, X } from 'lucide-react';
@@ -30,8 +31,8 @@ const productSchema = z.object({
   supplier_id: z.string().optional(),
   cost_price: z.number().min(0, 'El precio de compra debe ser mayor a 0'),
   sale_price: z.number().min(0, 'El precio de venta debe ser mayor a 0'),
-  stock: z.number().int().min(0, 'El stock debe ser mayor o igual a 0'),
-  min_stock: z.number().int().min(0, 'El stock mínimo debe ser mayor o igual a 0'),
+  stock: z.number().int().min(0, 'La cantidad disponible debe ser mayor o igual a 0'),
+  min_stock: z.number().int().min(0, 'El mínimo disponible debe ser mayor o igual a 0'),
   expiration_date: z.string().optional(),
 });
 
@@ -43,6 +44,7 @@ interface ProductFormProps {
 }
 
 export function ProductForm({ initialData, productId }: ProductFormProps) {
+  const { getToken } = useAuth();
   const router = useRouter();
   const [loading, setLoading] = useState(false);
   const [categories, setCategories] = useState<Category[]>([]);
@@ -78,7 +80,7 @@ export function ProductForm({ initialData, productId }: ProductFormProps) {
 
   const fetchCategories = async () => {
     try {
-      const data = await getAllDocuments('categories') as Category[];
+      const data = await getCategories(getToken) as Category[];
       // Ordenar por nombre manualmente
       data.sort((a, b) => a.name.localeCompare(b.name));
       setCategories(data);
@@ -89,12 +91,12 @@ export function ProductForm({ initialData, productId }: ProductFormProps) {
 
   const fetchSuppliers = async () => {
     try {
-      const data = await getAllDocuments('suppliers') as Supplier[];
-      // Ordenar por nombre manualmente
+      const data = await getSuppliers(getToken) as Supplier[];
       data.sort((a, b) => a.name.localeCompare(b.name));
       setSuppliers(data);
     } catch (error) {
       console.error('Error fetching suppliers:', error);
+      toast.error('Error al cargar proveedores');
     }
   };
 
@@ -102,16 +104,16 @@ export function ProductForm({ initialData, productId }: ProductFormProps) {
     setLoading(true);
     try {
       // Incluir las imágenes en los datos
-      const productData = {
+      const productData: any = {
         ...data,
         images: productImages,
       };
 
       if (productId) {
-        await updateDocument('products', productId, productData);
+        await updateProduct(productId, productData, getToken);
         toast.success('Producto actualizado correctamente');
       } else {
-        await createDocument('products', productData);
+        await createProduct(productData, getToken);
         toast.success('Producto creado correctamente');
       }
 
@@ -267,7 +269,7 @@ export function ProductForm({ initialData, productId }: ProductFormProps) {
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="space-y-2">
-              <Label htmlFor="stock">Stock Actual *</Label>
+              <Label htmlFor="stock">Cantidad Disponible *</Label>
               <Input
                 id="stock"
                 type="number"
@@ -280,7 +282,7 @@ export function ProductForm({ initialData, productId }: ProductFormProps) {
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="min_stock">Stock Mínimo *</Label>
+              <Label htmlFor="min_stock">Mínimo Disponible *</Label>
               <Input
                 id="min_stock"
                 type="number"
@@ -306,14 +308,14 @@ export function ProductForm({ initialData, productId }: ProductFormProps) {
 
       <Card>
         <CardHeader>
-          <CardTitle>Imágenes del Producto</CardTitle>
+          <CardTitle>Imagen del Producto</CardTitle>
         </CardHeader>
         <CardContent>
           <ImageUploader
             productId={productId}
             initialImages={productImages}
             onChange={setProductImages}
-            maxImages={3}
+            maxImages={1}
           />
         </CardContent>
       </Card>

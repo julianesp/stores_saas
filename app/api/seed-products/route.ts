@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { auth } from '@clerk/nextjs/server';
 import { createDocument, queryDocuments } from '@/lib/firestore-helpers';
+import { getUserProfileByClerkId } from '@/lib/subscription-helpers';
 
 /**
  * API endpoint para crear productos de muestra
@@ -17,8 +18,19 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // Obtener categorías existentes
-    const categories = await queryDocuments('categories', []) as any[];
+    // Obtener el perfil de usuario para conseguir el user_profile_id
+    const userProfile = await getUserProfileByClerkId(userId);
+    if (!userProfile) {
+      return NextResponse.json(
+        { error: 'Perfil de usuario no encontrado' },
+        { status: 404 }
+      );
+    }
+
+    // Obtener categorías existentes del usuario
+    const categories = await queryDocuments('categories', [
+      { field: 'user_profile_id', operator: '==', value: userProfile.id }
+    ]) as any[];
 
     if (categories.length === 0) {
       return NextResponse.json(
@@ -340,7 +352,7 @@ export async function POST(req: NextRequest) {
           productData.expiration_date = product.expiration_date;
         }
 
-        const created = await createDocument('products', productData);
+        const created = await createDocument('products', productData, userProfile.id);
         createdProducts.push(created);
       } catch (error) {
         errors.push({

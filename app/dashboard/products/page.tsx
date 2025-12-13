@@ -7,13 +7,15 @@ import { Plus, Search, Edit, Trash2, Package, Tag, Camera, AlertTriangle } from 
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { getAllDocuments, deleteDocument, queryDocuments, getDocumentById } from '@/lib/firestore-helpers';
+import { useAuth } from '@clerk/nextjs';
+import { getProducts, deleteProduct as deleteProductAPI, getCategories } from '@/lib/cloudflare-api';
 import { Product, ProductWithRelations, Category, Supplier } from '@/lib/types';
 import { formatCurrency } from '@/lib/utils';
 import Swal from '@/lib/sweetalert';
 import { CategoryManagerModal } from '@/components/products/category-manager-modal';
 
 export default function ProductsPage() {
+  const { getToken } = useAuth();
   const [products, setProducts] = useState<ProductWithRelations[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
   const [loading, setLoading] = useState(true);
@@ -29,11 +31,11 @@ export default function ProductsPage() {
   const fetchProducts = async () => {
     try {
       // Obtener todos los productos
-      const productsData = await getAllDocuments('products') as Product[];
+      const productsData = await getProducts(getToken);
 
-      // Obtener categorías y proveedores para hacer el join manualmente
-      const categoriesData = await getAllDocuments('categories') as Category[];
-      const suppliers = await getAllDocuments('suppliers') as Supplier[];
+      // Obtener categorías
+      const categoriesData = await getCategories(getToken);
+      const suppliers: Supplier[] = []; // TODO: Implementar getSuppliers cuando esté disponible
 
       // Ordenar categorías por nombre
       categoriesData.sort((a, b) => a.name.localeCompare(b.name));
@@ -45,6 +47,14 @@ export default function ProductsPage() {
       // Combinar los datos
       const productsWithRelations: ProductWithRelations[] = productsData.map(product => ({
         ...product,
+        // Asegurar que images sea un array
+        images: Array.isArray(product.images)
+          ? product.images
+          : product.images
+            ? [product.images]
+            : product.image_url
+              ? [product.image_url]
+              : undefined,
         category: product.category_id ? categoriesMap.get(product.category_id) : undefined,
         supplier: product.supplier_id ? suppliersMap.get(product.supplier_id) : undefined,
       }));
@@ -75,7 +85,7 @@ export default function ProductsPage() {
 
     try {
       Swal.loading('Eliminando producto...');
-      await deleteDocument('products', id);
+      await deleteProductAPI(id, getToken);
       Swal.closeLoading();
       Swal.success('Producto eliminado correctamente');
       fetchProducts();
@@ -219,7 +229,7 @@ export default function ProductsPage() {
                       <th className="text-left py-3 px-4">Proveedor</th>
                       <th className="text-right py-3 px-4">Precio Compra</th>
                       <th className="text-right py-3 px-4">Precio Venta</th>
-                      <th className="text-right py-3 px-4">Stock</th>
+                      <th className="text-right py-3 px-4">Disponible</th>
                       <th className="text-right py-3 px-4">Acciones</th>
                     </tr>
                   </thead>
@@ -228,7 +238,7 @@ export default function ProductsPage() {
                       <tr key={product.id} className="border-b hover:bg-gray-50">
                         <td className="py-3 px-4">
                           <div className="relative w-12 h-12 bg-gray-100 rounded border overflow-hidden">
-                            {product.images && product.images.length > 0 ? (
+                            {product.images && Array.isArray(product.images) && product.images.length > 0 && product.images[0] ? (
                               <Image
                                 src={product.images[0]}
                                 alt={product.name}
@@ -316,7 +326,7 @@ export default function ProductsPage() {
                               <p className="font-medium truncate">{product.category?.name || '-'}</p>
                             </div>
                             <div>
-                              <span className="text-gray-500">Stock:</span>
+                              <span className="text-gray-500">Disponible:</span>
                               <p>
                                 <span
                                   className={`inline-block px-2 py-1 rounded text-xs ${

@@ -1,15 +1,18 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { useAuth } from '@clerk/nextjs';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { getAllDocuments } from '@/lib/firestore-helpers';
+import { getProducts, getCategories } from '@/lib/cloudflare-api';
 import { Product, Category } from '@/lib/types';
 import { Package, AlertTriangle, Search } from 'lucide-react';
 import { formatCurrency } from '@/lib/utils';
 
 export default function InventoryPage() {
+  const { getToken } = useAuth();
+
   const [products, setProducts] = useState<Product[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
   const [loading, setLoading] = useState(true);
@@ -24,8 +27,8 @@ export default function InventoryPage() {
     try {
       setLoading(true);
       const [productsData, categoriesData] = await Promise.all([
-        getAllDocuments('products'),
-        getAllDocuments('categories'),
+        getProducts(getToken),
+        getCategories(getToken),
       ]);
       setProducts(productsData as Product[]);
       setCategories(categoriesData as Category[]);
@@ -58,7 +61,7 @@ export default function InventoryPage() {
     <div className="space-y-6">
       <div>
         <h1 className="text-3xl font-bold">Inventario</h1>
-        <p className="text-gray-500">Gestiona el stock de tus productos</p>
+        <p className="text-gray-500">Gestiona la cantidad disponible de tus productos</p>
       </div>
 
       {/* Estadísticas */}
@@ -87,12 +90,12 @@ export default function InventoryPage() {
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Stock Bajo</CardTitle>
+            <CardTitle className="text-sm font-medium">Cantidad Baja</CardTitle>
             <AlertTriangle className="h-4 w-4 text-orange-500" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-orange-600">{lowStockProducts.length}</div>
-            <p className="text-xs text-gray-500">productos con stock bajo</p>
+            <p className="text-xs text-gray-500">productos con cantidad baja</p>
           </CardContent>
         </Card>
       </div>
@@ -150,7 +153,7 @@ export default function InventoryPage() {
                   <tr className="border-b">
                     <th className="text-left p-4 font-medium">Producto</th>
                     <th className="text-left p-4 font-medium">Código</th>
-                    <th className="text-right p-4 font-medium">Stock</th>
+                    <th className="text-right p-4 font-medium">Disponible</th>
                     <th className="text-right p-4 font-medium">Mín.</th>
                     <th className="text-right p-4 font-medium">Costo</th>
                     <th className="text-right p-4 font-medium">Venta</th>

@@ -1,9 +1,9 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { useUser } from '@clerk/nextjs';
+import { useUser, useAuth } from '@clerk/nextjs';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { getAllDocuments } from '@/lib/firestore-helpers';
+import { getAllUserProfiles } from '@/lib/cloudflare-api';
 import { UserProfile } from '@/lib/types';
 import {
   BarChart3,
@@ -23,6 +23,7 @@ import { getUserProfileByClerkId } from '@/lib/subscription-helpers';
 
 export default function ReportsPage() {
   const { user } = useUser();
+  const { getToken } = useAuth();
   const [loading, setLoading] = useState(true);
   const [currentUserProfile, setCurrentUserProfile] = useState<UserProfile | null>(null);
   const [stats, setStats] = useState({
@@ -46,7 +47,7 @@ export default function ReportsPage() {
 
     try {
       setLoading(true);
-      const allProfiles = await getAllDocuments('user_profiles') as UserProfile[];
+      const allProfiles = await getAllUserProfiles(getToken);
 
       // Obtener perfil del usuario actual
       const myProfile = allProfiles.find(p => p.clerk_user_id === user.id);

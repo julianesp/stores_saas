@@ -34,7 +34,11 @@ export function ImageUploader({
     if (!files || files.length === 0) return;
 
     if (images.length >= maxImages) {
-      toast.warning(`Máximo ${maxImages} imágenes permitidas. Elimina una para agregar otra`);
+      toast.warning(
+        maxImages === 1
+          ? 'Ya tienes una imagen. Elimínala para agregar otra'
+          : `Máximo ${maxImages} imágenes permitidas. Elimina una para agregar otra`
+      );
       return;
     }
 
@@ -91,11 +95,15 @@ export function ImageUploader({
       onChange(newImages);
 
       if (uploadedUrls.length > 0) {
-        toast.success(`${uploadedUrls.length} imagen(es) subida(s) correctamente`);
+        toast.success(
+          uploadedUrls.length === 1
+            ? 'Imagen subida correctamente'
+            : `${uploadedUrls.length} imágenes subidas correctamente`
+        );
       }
     } catch (error) {
       console.error('Error uploading images:', error);
-      toast.error('Error al subir imágenes. Intenta de nuevo');
+      toast.error(maxImages === 1 ? 'Error al subir imagen. Intenta de nuevo' : 'Error al subir imágenes. Intenta de nuevo');
     } finally {
       setUploading(false);
       setLoadingIndex(null);
@@ -134,7 +142,7 @@ export function ImageUploader({
   return (
     <div className="space-y-4">
       {/* Grid de imágenes */}
-      <div className="grid grid-cols-3 gap-4">
+      <div className={`grid gap-4 ${maxImages === 1 ? 'grid-cols-1 max-w-xs mx-auto' : 'grid-cols-3'}`}>
         {images.map((imageUrl, index) => (
           <Card key={index} className="relative group">
             <CardContent className="p-2">
@@ -158,7 +166,7 @@ export function ImageUploader({
                 </Button>
               </div>
               <p className="text-xs text-center text-gray-500 mt-1">
-                Imagen {index + 1}
+                {maxImages === 1 ? 'Vista previa' : `Imagen ${index + 1}`}
               </p>
             </CardContent>
           </Card>
@@ -175,9 +183,11 @@ export function ImageUploader({
                   <ImageIcon className="h-8 w-8 text-gray-300" />
                 )}
               </div>
-              <p className="text-xs text-center text-gray-400 mt-1">
-                {images.length + index + 1}
-              </p>
+              {maxImages > 1 && (
+                <p className="text-xs text-center text-gray-400 mt-1">
+                  {images.length + index + 1}
+                </p>
+              )}
             </CardContent>
           </Card>
         ))}
@@ -209,12 +219,12 @@ export function ImageUploader({
             ) : (
               <>
                 <Upload className="mr-2 h-4 w-4" />
-                Agregar Imagen{images.length > 0 ? 's' : ''} ({images.length}/{maxImages})
+                Agregar Imagen ({images.length}/{maxImages})
               </>
             )}
           </label>
           <p className="text-xs text-gray-500 mt-2 text-center">
-            Máximo {maxImages} imágenes • JPG, PNG o WEBP • Máx 5MB por imagen
+            Máximo {maxImages} {maxImages === 1 ? 'imagen' : 'imágenes'} • JPG, PNG o WEBP • Máx 5MB por imagen
           </p>
         </div>
       )}
@@ -223,7 +233,7 @@ export function ImageUploader({
       {images.length === maxImages && (
         <div className="bg-green-50 border border-green-200 rounded-lg p-3">
           <p className="text-sm text-green-800 text-center">
-            ✓ Máximo de imágenes alcanzado ({maxImages}/{maxImages})
+            ✓ {maxImages === 1 ? 'Imagen agregada' : `Máximo de imágenes alcanzado (${maxImages}/${maxImages})`}
           </p>
         </div>
       )}

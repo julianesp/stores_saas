@@ -1,17 +1,19 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { useAuth } from '@clerk/nextjs';
 import { Tag, Plus, AlertTriangle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
-import { getAllDocuments, createDocument } from '@/lib/firestore-helpers';
+import { getProducts, createProduct, getCategories, createCategory, createOffer } from '@/lib/cloudflare-api';
 import { ProductWithRelations, Product, Category } from '@/lib/types';
 import { formatCurrency } from '@/lib/utils';
 import { toast } from 'sonner';
 import { differenceInDays } from 'date-fns';
-import { Timestamp } from 'firebase/firestore';
 
 export default function OffersPage() {
+  const { getToken } = useAuth();
+
   const [products, setProducts] = useState<ProductWithRelations[]>([]);
   const [expiringProducts, setExpiringProducts] = useState<ProductWithRelations[]>([]);
 
@@ -22,8 +24,8 @@ export default function OffersPage() {
   const fetchProducts = async () => {
     try {
       // Obtener productos y categorías
-      const productsData = await getAllDocuments('products') as Product[];
-      const categories = await getAllDocuments('categories') as Category[];
+      const productsData = await getProducts(getToken) as Product[];
+      const categories = await getCategories(getToken) as Category[];
 
       // Crear mapa de categorías
       const categoriesMap = new Map(categories.map(c => [c.id, c]));
@@ -58,20 +60,20 @@ export default function OffersPage() {
     }
   };
 
-  const createOffer = async (productId: string, discount: number) => {
+  const handleCreateOffer = async (productId: string, discount: number) => {
     try {
       const product = products.find(p => p.id === productId);
       if (!product) return;
 
       const endDate = new Date(product.expiration_date!);
-      await createDocument('offers', {
+      await createOffer({
         product_id: productId,
         discount_percentage: discount,
         start_date: new Date().toISOString(),
         end_date: endDate.toISOString(),
-        is_active: true,
+        is_active: 1,
         reason: 'proximoAVencer'
-      });
+      }, getToken);
 
       toast.success('Oferta creada correctamente');
       fetchProducts();
@@ -120,25 +122,25 @@ export default function OffersPage() {
                       <p className="text-sm text-gray-600">
                         Vence en {daysToExpire} días - {formatCurrency(product.sale_price)}
                       </p>
-                      <p className="text-xs text-gray-500">Stock: {product.stock} unidades</p>
+                      <p className="text-xs text-gray-500">Disponible: {product.stock} unidades</p>
                     </div>
                     <div className="flex gap-2">
                       <Button
                         size="sm"
-                        onClick={() => createOffer(product.id, 10)}
+                        onClick={() => handleCreateOffer(product.id, 10)}
                       >
                         10% OFF
                       </Button>
                       <Button
                         size="sm"
-                        onClick={() => createOffer(product.id, 20)}
+                        onClick={() => handleCreateOffer(product.id, 20)}
                       >
                         20% OFF
                       </Button>
                       <Button
                         size="sm"
                         variant="destructive"
-                        onClick={() => createOffer(product.id, 30)}
+                        onClick={() => handleCreateOffer(product.id, 30)}
                       >
                         30% OFF
                       </Button>

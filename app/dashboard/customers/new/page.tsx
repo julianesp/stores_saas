@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { useAuth } from '@clerk/nextjs';
 import { useRouter } from 'next/navigation';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -9,7 +10,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { createDocument } from '@/lib/firestore-helpers';
+import { createCustomer } from '@/lib/cloudflare-api';
 import { toast } from 'sonner';
 
 const customerSchema = z.object({
@@ -24,6 +25,8 @@ const customerSchema = z.object({
 type CustomerFormData = z.infer<typeof customerSchema>;
 
 export default function NewCustomerPage() {
+  const { getToken } = useAuth();
+
   const router = useRouter();
   const [loading, setLoading] = useState(false);
 
@@ -38,10 +41,10 @@ export default function NewCustomerPage() {
   const onSubmit = async (data: CustomerFormData) => {
     setLoading(true);
     try {
-      await createDocument('customers', {
+      await createCustomer({
         ...data,
         loyalty_points: 0,
-      });
+      }, getToken);
       toast.success('Cliente creado correctamente');
       router.push('/dashboard/customers');
       router.refresh();

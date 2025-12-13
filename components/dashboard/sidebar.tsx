@@ -20,8 +20,12 @@ import {
   Shield,
   Banknote,
   Brain,
+  Receipt,
+  Lock,
+  Sparkles,
 } from 'lucide-react';
-import { getUserProfileByClerkId } from '@/lib/subscription-helpers';
+import { getUserProfileByClerkId, hasAIAccess } from '@/lib/subscription-helpers';
+import { UserProfile } from '@/lib/types';
 
 // Menú para Super Administradores (gestión del SaaS)
 const superAdminMenuItems = [
@@ -84,6 +88,12 @@ const storeMenuItems = [
     roles: ['admin', 'cajero'],
   },
   {
+    title: 'Deudores',
+    href: '/dashboard/debtors',
+    icon: Receipt,
+    roles: ['admin', 'cajero'],
+  },
+  {
     title: 'Proveedores',
     href: '/dashboard/suppliers',
     icon: Truck,
@@ -124,12 +134,18 @@ export function Sidebar({ isMobile = false, onLinkClick }: SidebarProps) {
   const pathname = usePathname();
   const { user } = useUser();
   const [isSuperAdmin, setIsSuperAdmin] = useState(false);
+  const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
+  const [hasAI, setHasAI] = useState(false);
 
   useEffect(() => {
     async function checkSuperAdmin() {
       if (user) {
         const profile = await getUserProfileByClerkId(user.id);
         setIsSuperAdmin(profile?.is_superadmin || false);
+        setUserProfile(profile);
+        if (profile) {
+          setHasAI(hasAIAccess(profile));
+        }
       }
     }
     checkSuperAdmin();
@@ -154,6 +170,7 @@ export function Sidebar({ isMobile = false, onLinkClick }: SidebarProps) {
         {menuItems.map((item) => {
           const Icon = item.icon;
           const isActive = pathname === item.href || pathname?.startsWith(item.href + '/');
+          const isAnalytics = item.href === '/dashboard/analytics';
 
           return (
             <Link
@@ -168,7 +185,20 @@ export function Sidebar({ isMobile = false, onLinkClick }: SidebarProps) {
               )}
             >
               <Icon className="h-5 w-5" />
-              {item.title}
+              <span className="flex-1">{item.title}</span>
+              {isAnalytics && userProfile && (
+                <>
+                  {userProfile.subscription_status === 'trial' && (
+                    <span className="text-xs bg-gradient-to-r from-purple-500 to-pink-500 text-white px-2 py-0.5 rounded-full flex items-center gap-1">
+                      <Sparkles className="h-3 w-3" />
+                      Gratis
+                    </span>
+                  )}
+                  {!hasAI && userProfile.subscription_status !== 'trial' && (
+                    <Lock className="h-4 w-4 text-gray-400" />
+                  )}
+                </>
+              )}
             </Link>
           );
         })}

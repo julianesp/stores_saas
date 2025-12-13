@@ -1,10 +1,10 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { useUser } from '@clerk/nextjs';
+import { useUser, useAuth } from '@clerk/nextjs';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
-import { getAllDocuments } from '@/lib/firestore-helpers';
+import { getAllUserProfiles, getAllPaymentTransactions } from '@/lib/cloudflare-api';
 import { UserProfile, PaymentTransaction } from '@/lib/types';
 import {
   DollarSign,
@@ -24,6 +24,7 @@ import { getUserProfileByClerkId } from '@/lib/subscription-helpers';
 
 export default function BillingPage() {
   const { user } = useUser();
+  const { getToken } = useAuth();
   const [transactions, setTransactions] = useState<PaymentTransaction[]>([]);
   const [userProfiles, setUserProfiles] = useState<UserProfile[]>([]);
   const [loading, setLoading] = useState(true);
@@ -39,7 +40,7 @@ export default function BillingPage() {
 
     try {
       setLoading(true);
-      const allProfiles = await getAllDocuments('user_profiles') as UserProfile[];
+      const allProfiles = await getAllUserProfiles(getToken);
 
       // Obtener perfil del usuario actual
       const myProfile = allProfiles.find(p => p.clerk_user_id === user.id);
@@ -52,7 +53,7 @@ export default function BillingPage() {
       }
 
       // Cargar todas las transacciones
-      const allTransactions = await getAllDocuments('payment_transactions') as PaymentTransaction[];
+      const allTransactions = await getAllPaymentTransactions(getToken);
       allTransactions.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
 
       setTransactions(allTransactions);

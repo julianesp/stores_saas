@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { useAuth } from '@clerk/nextjs';
 import { useRouter } from 'next/navigation';
 import { BarcodeScanner } from '@/components/products/barcode-scanner';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -8,11 +9,13 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Package, CheckCircle, ArrowRight, List } from 'lucide-react';
-import { queryDocuments, createDocument } from '@/lib/firestore-helpers';
+import { createProduct, getProducts } from '@/lib/cloudflare-api';
 import { Product } from '@/lib/types';
 import Swal from '@/lib/sweetalert';
 
 export default function QuickAddProductPage() {
+  const { getToken } = useAuth();
+
   const router = useRouter();
   const [showScanner, setShowScanner] = useState(false);
   const [scannedProducts, setScannedProducts] = useState<Array<{ barcode: string; exists: boolean; id?: string }>>([]);
@@ -28,9 +31,8 @@ export default function QuickAddProductPage() {
     }
 
     // Buscar si el producto ya existe
-    const existingProducts = await queryDocuments('products', [
-      { field: 'barcode', operator: '==', value: barcode }
-    ]) as Product[];
+    const allProducts = await getProducts(getToken);
+    const existingProducts = allProducts.filter(p => p.barcode === barcode);
 
     if (existingProducts.length > 0) {
       // Producto ya existe
@@ -39,7 +41,7 @@ export default function QuickAddProductPage() {
     } else {
       // Producto nuevo - crear básico
       try {
-        const newProduct = await createDocument('products', {
+        const newProduct = await createProduct({
           barcode: barcode,
           name: `Producto ${barcode.slice(-6)}`, // Nombre temporal
           description: 'Pendiente de completar',
@@ -47,8 +49,7 @@ export default function QuickAddProductPage() {
           sale_price: 0,
           stock: 0,
           min_stock: 5,
-          images: [], // Array vacío de imágenes
-        });
+        }, getToken);
 
         Swal.success('¡Producto creado!', 'Ahora completa los detalles');
         setScannedProducts(prev => [...prev, { barcode, exists: false, id: newProduct.id }]);
@@ -248,7 +249,7 @@ export default function QuickAddProductPage() {
                       ¡{scannedProducts.filter(p => !p.exists).length} producto(s) nuevo(s) creado(s)!
                     </p>
                     <p className="text-green-700">
-                      Haz clic en "Completar" para agregar nombre, precio y stock
+                      Haz clic en "Completar" para agregar nombre, precio y cantidad disponible
                     </p>
                   </div>
                 </div>

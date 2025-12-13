@@ -81,6 +81,11 @@ export default function SubscriptionPage() {
         <p className="text-gray-500 mt-2">
           Elige el plan perfecto para tu negocio
         </p>
+        <div className="mt-4 inline-block bg-gradient-to-r from-purple-100 to-pink-100 border border-purple-300 rounded-lg px-6 py-3">
+          <p className="text-sm font-medium text-purple-900">
+            ✨ <strong>Prueba Gratis por 15 Días:</strong> Plan Básico + Análisis IA incluido
+          </p>
+        </div>
       </div>
 
       {/* Estado actual de suscripción */}
@@ -156,12 +161,19 @@ export default function SubscriptionPage() {
             key={plan.id}
             className={`relative ${
               plan.popular ? 'border-blue-500 border-2 shadow-lg' : ''
-            }`}
+            } ${plan.isAddon ? 'border-purple-300 bg-gradient-to-br from-purple-50 to-white' : ''}`}
           >
             {plan.popular && (
               <div className="absolute -top-3 left-1/2 transform -translate-x-1/2">
                 <span className="bg-blue-500 text-white px-4 py-1 rounded-full text-sm font-medium">
                   Más Popular
+                </span>
+              </div>
+            )}
+            {plan.isAddon && (
+              <div className="absolute -top-3 left-1/2 transform -translate-x-1/2">
+                <span className="bg-gradient-to-r from-purple-600 to-pink-600 text-white px-4 py-1 rounded-full text-sm font-medium flex items-center gap-1">
+                  ✨ Potencia tu Negocio con IA
                 </span>
               </div>
             )}
