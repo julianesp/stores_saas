@@ -73,21 +73,19 @@ export async function updateLoyaltySettings(
 
 /**
  * Calcula los puntos que debería ganar un cliente según el monto de la compra
+ * NOTA: Temporalmente usa tiers por defecto mientras migramos loyalty_settings a Cloudflare
  */
 export async function calculatePointsForPurchase(
   userProfileId: string,
   purchaseAmount: number
 ): Promise<number> {
   try {
-    const settings = await getLoyaltySettings(userProfileId);
-
-    // Si el sistema de puntos está deshabilitado
-    if (!settings.enabled) {
-      return 0;
-    }
+    // Usar tiers por defecto directamente (sistema siempre habilitado)
+    // TODO: Migrar loyalty_settings a Cloudflare para configuración personalizada
+    const tiers = DEFAULT_TIERS;
 
     // Buscar el tier correspondiente al monto
-    const tier = settings.tiers.find(
+    const tier = tiers.find(
       (t) => purchaseAmount >= t.min_amount && purchaseAmount <= t.max_amount
     );
 
