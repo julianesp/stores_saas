@@ -1,16 +1,18 @@
 'use client';
 
 import React, { useState, useEffect, useRef, useCallback } from 'react';
+import { useAuth } from '@clerk/nextjs';
 import { useUser } from '@clerk/nextjs';
 import Image from 'next/image';
 import { Search, ShoppingCart, Trash2, Plus, Minus, DollarSign, User, X, Package } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { queryDocuments, createDocument, generateSaleNumber, updateDocument, getAllDocuments } from '@/lib/firestore-helpers';
+import { getProducts, createProduct, updateProduct, getCustomers, createCustomer, updateCustomer, getCategories, createCategory, updateCategory, getSales, createSale, getUserProfile } from '@/lib/cloudflare-api';
 import { Product, Customer, Category } from '@/lib/types';
 import { formatCurrency } from '@/lib/utils';
 import { calculatePointsForPurchase, addPointsToCustomer, canRedeemDiscount, redeemPointsForDiscount, getPointsMilestoneMessage, REWARD_CONSTANTS } from '@/lib/loyalty-helpers';
+import { canCustomerGetCredit, updateCustomerDebt } from '@/lib/cloudflare-credit-helpers';
 import Swal from '@/lib/sweetalert';
 
 interface CartItem {
@@ -19,12 +21,14 @@ interface CartItem {
 }
 
 export default function POSPage() {
+  const { getToken } = useAuth();
+
   const { user } = useUser();
   const [products, setProducts] = useState<Product[]>([]);
   const [cart, setCart] = useState<CartItem[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [barcodeInput, setBarcodeInput] = useState('');
-  const [paymentMethod, setPaymentMethod] = useState<'efectivo' | 'tarjeta' | 'transferencia'>('efectivo');
+  const [paymentMethod, setPaymentMethod] = useState<'efectivo' | 'tarjeta' | 'transferencia' | 'credito'>('efectivo');
   const [processing, setProcessing] = useState(false);
   const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(null);
   const [customers, setCustomers] = useState<Customer[]>([]);
@@ -57,7 +61,7 @@ export default function POSPage() {
         loyalty_points: 0,
       };
 
-      const newCustomer = await createDocument('customers', customerData) as any as Customer;
+      const newCustomer = await createCustomer(customerData, getToken) as any as Customer;
 
       Swal.success('Cliente creado', `${newCustomer.name} ha sido agregado exitosamente`);
 
@@ -79,20 +83,20 @@ export default function POSPage() {
 
   const fetchProducts = useCallback(async () => {
     try {
-      const data = (await queryDocuments('products', [
-        { field: 'stock', operator: '>', value: 0 }
-      ])) as Product[];
+      const data = (await getProducts(getToken)) as Product[];
+      // Filtrar productos con stock > 0
+      const productsInStock = data.filter(p => p.stock > 0);
       // Ordenar por nombre manualmente
-      data.sort((a, b) => a.name.localeCompare(b.name));
-      setProducts(data);
+      productsInStock.sort((a, b) => a.name.localeCompare(b.name));
+      setProducts(productsInStock);
     } catch (error) {
       console.error('Error fetching products:', error);
     }
-  }, []);
+  }, [getToken]);
 
   const fetchCustomers = useCallback(async () => {
     try {
-      const data = (await getAllDocuments('customers')) as Customer[];
+      const data = (await getCustomers(getToken)) as Customer[];
       data.sort((a, b) => a.name.localeCompare(b.name));
       setCustomers(data);
     } catch (error) {
@@ -102,7 +106,7 @@ export default function POSPage() {
 
   const fetchCategories = useCallback(async () => {
     try {
-      const data = (await getAllDocuments('categories')) as Category[];
+      const data = (await getCategories(getToken)) as Category[];
       data.sort((a, b) => a.name.localeCompare(b.name));
       setCategories(data);
     } catch (error) {
@@ -138,7 +142,7 @@ export default function POSPage() {
       const existing = prev.find(item => item.product.id === product.id);
       if (existing) {
         if (existing.quantity >= product.stock) {
-          Swal.warning('Stock insuficiente', 'No hay más unidades disponibles');
+          Swal.warning('Cantidad insuficiente', 'No hay más unidades disponibles');
           return prev;
         }
         return prev.map(item =>
@@ -158,7 +162,7 @@ export default function POSPage() {
           const newQuantity = item.quantity + delta;
           if (newQuantity <= 0) return item;
           if (newQuantity > item.product.stock) {
-            Swal.warning('Stock insuficiente', 'No hay más unidades disponibles');
+            Swal.warning('Cantidad insuficiente', 'No hay más unidades disponibles');
             return item;
           }
           return { ...item, quantity: newQuantity };
@@ -177,7 +181,7 @@ export default function POSPage() {
             return item;
           }
           if (quantity > item.product.stock) {
-            Swal.warning('Stock insuficiente', `Solo hay ${item.product.stock} unidades disponibles`);
+            Swal.warning('Cantidad insuficiente', `Solo hay ${item.product.stock} unidades disponibles`);
             return { ...item, quantity: item.product.stock };
           }
           return { ...item, quantity };
@@ -202,36 +206,46 @@ export default function POSPage() {
       return;
     }
 
+    // Validar venta a crédito
+    if (paymentMethod === 'credito') {
+      if (!selectedCustomer) {
+        Swal.warning('Cliente requerido', 'Debes seleccionar un cliente para vender a crédito');
+        return;
+      }
+
+      const total = calculateTotal();
+      const creditCheck = await canCustomerGetCredit(selectedCustomer.id, total, getToken);
+
+      if (!creditCheck.canGetCredit) {
+        Swal.error('Crédito no disponible', creditCheck.message || 'Este cliente no puede recibir más crédito');
+        return;
+      }
+    }
+
     setProcessing(true);
     Swal.loading('Procesando venta...');
     try {
-      // Obtener o crear user_profile
+      // Obtener user_profile del usuario actual
       let userProfile = null;
-      const existingProfiles = await queryDocuments('user_profiles', [
-        { field: 'clerk_user_id', operator: '==', value: user?.id }
-      ]);
+      try {
+        userProfile = await getUserProfile(getToken);
+      } catch (error) {
+        console.error('User profile not found:', error);
+        Swal.closeLoading();
+        Swal.error('Error', 'Perfil de usuario no encontrado. Asegúrate de haber iniciado sesión correctamente.');
+        setProcessing(false);
+        return;
+      }
 
-      if (existingProfiles.length > 0) {
-        userProfile = existingProfiles[0];
-      } else {
-        // Crear nuevo perfil con período de prueba
-        const now = new Date();
-        const trialEnd = new Date();
-        trialEnd.setDate(trialEnd.getDate() + 30);
-
-        userProfile = await createDocument('user_profiles', {
-          clerk_user_id: user?.id,
-          email: user?.emailAddresses[0]?.emailAddress,
-          role: 'cajero',
-          full_name: `${user?.firstName || ''} ${user?.lastName || ''}`.trim(),
-          subscription_status: 'trial',
-          trial_start_date: now.toISOString(),
-          trial_end_date: trialEnd.toISOString(),
-        });
+      if (!userProfile || !userProfile.id) {
+        Swal.closeLoading();
+        Swal.error('Perfil inválido', 'No se pudo obtener información del usuario autenticado.');
+        setProcessing(false);
+        return;
       }
 
       const subtotal = cart.reduce((sum, item) => sum + (item.product.sale_price * item.quantity), 0);
-      const saleNumber = await generateSaleNumber();
+      // El número de venta se genera automáticamente en la API de Cloudflare
 
       // Canjear puntos por descuento si aplica
       let appliedDiscount = 0;
@@ -252,54 +266,73 @@ export default function POSPage() {
 
       // Crear la venta
       const saleData: any = {
-        sale_number: saleNumber,
+        // sale_number se genera automáticamente en la API
         cashier_id: userProfile.id,
+        customer_id: selectedCustomer?.id || null,
         subtotal: subtotal,
         tax: 0,
         discount: appliedDiscount,
         total: total,
         payment_method: paymentMethod,
-        status: 'completada',
+        status: paymentMethod === 'credito' ? 'pendiente' : 'completada',
+        points_earned: pointsEarned || 0,
+        notes: null,
       };
 
-      // Solo agregar customer_id si hay un cliente seleccionado
-      if (selectedCustomer && selectedCustomer.id) {
-        saleData.customer_id = selectedCustomer.id;
-        saleData.points_earned = pointsEarned;
+      // Campos específicos para ventas a crédito
+      if (paymentMethod === 'credito') {
+        saleData.payment_status = 'pendiente';
+        saleData.amount_paid = 0;
+        saleData.amount_pending = total;
+        // Fecha de vencimiento: 30 días desde hoy
+        const dueDate = new Date();
+        dueDate.setDate(dueDate.getDate() + 30);
+        saleData.due_date = dueDate.toISOString();
+      } else {
+        saleData.payment_status = null;
+        saleData.amount_paid = null;
+        saleData.amount_pending = null;
+        saleData.due_date = null;
       }
 
-      const sale = await createDocument('sales', saleData);
+      // Agregar items a la venta (la API de Cloudflare los crea automáticamente)
+      saleData.items = cart.map(cartItem => ({
+        product_id: cartItem.product.id,
+        quantity: cartItem.quantity,
+        unit_price: cartItem.product.sale_price,
+        discount: 0,
+        subtotal: cartItem.product.sale_price * cartItem.quantity
+      }));
 
-      // Crear cada item de venta y actualizar el stock
+      // Validación básica antes de enviar al API para evitar errores de D1 por valores undefined
+      if (!saleData.total || !saleData.payment_method || !Array.isArray(saleData.items) || saleData.items.length === 0) {
+        Swal.closeLoading();
+        Swal.error('Datos de venta inválidos', 'Faltan campos requeridos (total, payment_method o items)');
+        setProcessing(false);
+        return;
+      }
+
+      for (const item of saleData.items) {
+        if (!item.product_id || typeof item.quantity !== 'number' || item.quantity <= 0 || typeof item.unit_price !== 'number' || typeof item.subtotal !== 'number') {
+          Swal.closeLoading();
+          Swal.error('Datos de producto inválidos', 'Revisa los productos en el carrito (id, cantidad o precio inválidos)');
+          setProcessing(false);
+          return;
+        }
+      }
+
+      const sale = await createSale(saleData, getToken);
+
+      // Actualizar el stock de los productos
       for (const cartItem of cart) {
-        // Crear el item de venta
-        await createDocument('sale_items', {
-          sale_id: sale.id,
-          product_id: cartItem.product.id,
-          quantity: cartItem.quantity,
-          unit_price: cartItem.product.sale_price,
-          discount: 0,
-          subtotal: cartItem.product.sale_price * cartItem.quantity
-        });
-
-        // Actualizar el stock del producto
         const newStock = cartItem.product.stock - cartItem.quantity;
-        await updateDocument('products', cartItem.product.id, {
+        await updateProduct(cartItem.product.id, {
           stock: newStock
-        });
+        }, getToken);
 
-        // Crear movimiento de inventario para auditoría
-        await createDocument('inventory_movements', {
-          product_id: cartItem.product.id,
-          type: 'salida',
-          quantity: cartItem.quantity,
-          previous_stock: cartItem.product.stock,
-          new_stock: newStock,
-          reference_type: 'venta',
-          reference_id: sale.id,
-          notes: `Venta ${saleNumber}`,
-          user_id: userProfile.id
-        });
+        // TODO: Implementar API endpoint para inventory_movements
+        // Por ahora la cantidad se actualiza pero no se registra el movimiento de inventario
+        // Esto se puede implementar más adelante creando una ruta /api/inventory-movements
       }
 
       // Asignar puntos al cliente si aplica
@@ -307,12 +340,17 @@ export default function POSPage() {
         await addPointsToCustomer(selectedCustomer.id, pointsEarned);
       }
 
+      // Actualizar deuda del cliente si es venta a crédito
+      if (paymentMethod === 'credito' && selectedCustomer) {
+        await updateCustomerDebt(selectedCustomer.id, total, getToken);
+      }
+
       Swal.closeLoading();
 
       // Mostrar mensaje personalizado
       if (selectedCustomer) {
         let htmlContent = `
-          <p class="text-lg mb-2">Venta #${saleNumber}</p>
+          <p class="text-lg mb-2">Venta #${sale.sale_number}</p>
           ${appliedDiscount > 0 ? `
             <div class="bg-gray-50 p-2 rounded mb-2 text-sm">
               <p class="text-gray-600">Subtotal: ${formatCurrency(subtotal)}</p>
@@ -344,14 +382,26 @@ export default function POSPage() {
           }
         }
 
+        // Agregar mensaje especial para ventas a crédito
+        if (paymentMethod === 'credito') {
+          const dueDate = new Date();
+          dueDate.setDate(dueDate.getDate() + 30);
+          htmlContent += `
+            <div class="bg-orange-50 border border-orange-200 rounded-lg p-3 mt-2">
+              <p class="text-sm font-semibold text-orange-800">💳 Venta a Crédito</p>
+              <p class="text-xs text-gray-600 mt-1">Fecha de vencimiento: ${dueDate.toLocaleDateString('es-CO')}</p>
+            </div>
+          `;
+        }
+
         await Swal.custom({
-          title: 'Venta Completada',
+          title: paymentMethod === 'credito' ? 'Venta a Crédito Registrada' : 'Venta Completada',
           html: htmlContent,
           icon: 'success',
           confirmButtonText: 'Aceptar'
         });
       } else {
-        Swal.saleCompleted(saleNumber, total);
+        Swal.saleCompleted(sale.sale_number, total);
       }
 
       setCart([]);
@@ -376,6 +426,67 @@ export default function POSPage() {
     const matchesCategory = selectedCategory === 'all' || p.category_id === selectedCategory;
     return matchesSearch && matchesCategory;
   });
+
+  // Modal cuando no hay productos
+  if (products.length === 0) {
+    return (
+      <div className="fixed inset-0 backdrop-blur-sm bg-opacity-50 flex items-center justify-center z-50 p-4">
+        <div className="bg-white rounded-2xl max-w-md w-full p-8 text-center shadow-2xl">
+          <div className="mb-6">
+            <div className="mx-auto w-20 h-20 bg-blue-100 rounded-full flex items-center justify-center mb-4">
+              <Package className="h-10 w-10 text-blue-600" />
+            </div>
+            <h2 className="text-2xl font-bold text-gray-900 mb-2">
+              ¡Bienvenido al Punto de Venta!
+            </h2>
+            <p className="text-gray-600">
+              Para comenzar a vender, primero necesitas agregar productos a tu inventario.
+            </p>
+          </div>
+
+          <div className="space-y-3">
+            <a
+              href="/dashboard/products/new"
+              className="block w-full bg-blue-600 hover:bg-blue-700 text-white font-medium py-3 px-4 rounded-lg transition-colors"
+            >
+              <Plus className="inline-block h-5 w-5 mr-2 -mt-1" />
+              Crear Mi Primer Producto
+            </a>
+
+            <button
+              onClick={async () => {
+                const response = await fetch('/api/seed-products', { method: 'POST' });
+                const data = await response.json();
+                if (response.ok) {
+                  Swal.success('¡Productos creados!', data.message);
+                  fetchProducts();
+                } else {
+                  Swal.error('Error', data.error || 'No se pudieron crear productos de ejemplo');
+                }
+              }}
+              className="block w-full bg-green-600 hover:bg-green-700 text-white font-medium py-3 px-4 rounded-lg transition-colors"
+            >
+              <Package className="inline-block h-5 w-5 mr-2 -mt-1" />
+              Crear Productos de Ejemplo
+            </button>
+
+            <a
+              href="/dashboard/products"
+              className="block w-full bg-gray-100 hover:bg-gray-200 text-gray-700 font-medium py-3 px-4 rounded-lg transition-colors"
+            >
+              Ver Todos los Productos
+            </a>
+          </div>
+
+          <div className="mt-6 pt-6 border-t border-gray-200">
+            <p className="text-sm text-gray-500">
+              💡 <strong>Consejo:</strong> Puedes crear productos de ejemplo para probar el sistema rápidamente.
+            </p>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-4 md:space-y-6">
@@ -473,7 +584,7 @@ export default function POSPage() {
                       <p className="text-sm md:text-lg font-bold text-blue-600">
                         {formatCurrency(product.sale_price)}
                       </p>
-                      <p className="text-xs text-gray-500">Stock: {product.stock}</p>
+                      <p className="text-xs text-gray-500">Disponible: {product.stock}</p>
                     </CardContent>
                   </Card>
                 ))}
@@ -746,7 +857,7 @@ export default function POSPage() {
                         size="sm"
                         variant="ghost"
                         onClick={() => removeFromCart(item.product.id)}
-                        className="h-7 w-7 p-0 md:h-8 md:w-8 flex-shrink-0"
+                          className="h-7 w-7 p-0 md:h-8 md:w-8 shrink-0"
                       >
                         <Trash2 className="h-3 w-3 md:h-4 md:w-4 text-red-600" />
                       </Button>
@@ -779,12 +890,15 @@ export default function POSPage() {
                       <label className="text-xs md:text-sm font-medium">Método de Pago:</label>
                       <select
                         value={paymentMethod}
-                        onChange={(e: React.ChangeEvent<HTMLSelectElement>) => setPaymentMethod(e.target.value as 'efectivo' | 'tarjeta' | 'transferencia')}
+                        onChange={(e: React.ChangeEvent<HTMLSelectElement>) => setPaymentMethod(e.target.value as 'efectivo' | 'tarjeta' | 'transferencia' | 'credito')}
                         className="w-full h-9 md:h-10 rounded-md border border-gray-300 px-3 text-sm"
                       >
                         <option value="efectivo">Efectivo</option>
-                        <option value="tarjeta">Tarjeta</option>
+                        {/* <option value="tarjeta">Tarjeta</option> */}
                         <option value="transferencia">Transferencia</option>
+                        <option value="credito" disabled={!selectedCustomer}>
+                          Crédito {!selectedCustomer && '(Requiere cliente)'}
+                        </option>
                       </select>
                     </div>
 

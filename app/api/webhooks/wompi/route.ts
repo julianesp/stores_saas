@@ -96,8 +96,22 @@ async function handleTransactionUpdated(transaction: any) {
 
     // Si el pago fue aprobado, activar la suscripción
     if (status === 'APPROVED') {
-      await activateSubscription(userProfile.id, id);
-      console.log('Subscription activated for user:', userProfile.id);
+      // Determinar el plan basado en el monto
+      // 39900 = Plan Básico
+      // 9900 = Addon IA
+      // 49800 = Plan Básico + IA (ambos juntos)
+      const amountCOP = amount_in_cents / 100;
+      let planId = 'basic-monthly';
+
+      if (amountCOP === 9900) {
+        planId = 'ai-addon-monthly';
+      } else if (amountCOP === 49800) {
+        // Usuario compró ambos, activar plan básico
+        planId = 'basic-monthly';
+      }
+
+      await activateSubscription(userProfile.id, id, planId);
+      console.log('Subscription activated for user:', userProfile.id, 'with plan:', planId);
     }
 
     // Si el pago fue declinado o tiene error, marcar como expirado

@@ -1,20 +1,23 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { useAuth } from '@clerk/nextjs';
 import Link from 'next/link';
 import { Plus, Users, Eye } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
-import { getAllDocuments } from '@/lib/firestore-helpers';
+import { getCustomers } from '@/lib/cloudflare-api';
 import { Customer } from '@/lib/types';
 
 export default function CustomersPage() {
+  const { getToken } = useAuth();
+
   const [customers, setCustomers] = useState<Customer[]>([]);
 
   useEffect(() => {
     const fetchCustomers = async () => {
       try {
-        const data = await getAllDocuments('customers') as Customer[];
+        const data = await getCustomers(getToken) as Customer[];
         // Ordenar por nombre manualmente
         data.sort((a, b) => a.name.localeCompare(b.name));
         setCustomers(data);

@@ -1,13 +1,13 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { useUser } from '@clerk/nextjs';
+import { useUser, useAuth } from '@clerk/nextjs';
 import { usePathname } from 'next/navigation';
 import { Sidebar } from '@/components/dashboard/sidebar';
 import { Header } from '@/components/dashboard/header';
 import { TrialBanner } from '@/components/subscription/trial-banner';
 import { SubscriptionExpiredModal } from '@/components/subscription/expired-modal';
-import { checkSubscriptionStatus, getUserProfileByClerkId } from '@/lib/subscription-helpers';
+import { checkSubscriptionStatus, getUserProfileByClerkId } from '@/lib/cloudflare-subscription-helpers';
 import { SubscriptionStatus } from '@/lib/types';
 
 export default function DashboardLayout({
@@ -16,6 +16,7 @@ export default function DashboardLayout({
   children: React.ReactNode;
 }) {
   const { user } = useUser();
+  const { getToken } = useAuth();
   const pathname = usePathname();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [subscriptionInfo, setSubscriptionInfo] = useState<SubscriptionStatus | null>(null);
@@ -37,12 +38,12 @@ export default function DashboardLayout({
           });
 
           // Verificar si es superadmin
-          const profile = await getUserProfileByClerkId(user.id);
+          const profile = await getUserProfileByClerkId(getToken);
           const isSuperAdminUser = profile?.is_superadmin || false;
           setIsSuperAdmin(isSuperAdminUser);
 
           // Luego, verificar el estado de suscripción
-          const info = await checkSubscriptionStatus(user.id);
+          const info = await checkSubscriptionStatus(getToken);
           setSubscriptionInfo(info);
         } catch (error) {
           console.error('Error checking subscription:', error);

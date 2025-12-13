@@ -2,30 +2,26 @@
 
 import { useState, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import { useUser } from '@clerk/nextjs';
+import { useAuth } from '@clerk/nextjs';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { ArrowLeft, Plus, Trash2, ShoppingCart, Search } from 'lucide-react';
-import { getDocumentById, getAllDocuments } from '@/lib/firestore-helpers';
-import { getUserProfileByClerkId } from '@/lib/subscription-helpers';
-import { createPurchaseOrder, suggestSalePrice } from '@/lib/purchase-helpers';
-import { Supplier, Product } from '@/lib/types';
+import { getSupplierById } from '@/lib/cloudflare-api';
+import { getProducts, createPurchaseOrder } from '@/lib/cloudflare-api';
+import type { Supplier, Product } from '@/lib/types';
+import type { PurchaseOrderItem } from '@/lib/cloudflare-api';
 import { formatCurrency } from '@/lib/utils';
 import { toast } from 'sonner';
 
-interface OrderItem {
-  product_id: string;
-  product_name: string;
-  quantity: number;
-  unit_cost: number;
+interface OrderItem extends PurchaseOrderItem {
   suggested_price: number;
 }
 
 export default function NewPurchaseOrderPage() {
   const params = useParams();
   const router = useRouter();
-  const { user } = useUser();
+  const { getToken } = useAuth();
   const supplierId = params.id as string;
 
   const [supplier, setSupplier] = useState<Supplier | null>(null);
@@ -57,18 +53,33 @@ export default function NewPurchaseOrderPage() {
   const loadData = async () => {
     try {
       setLoading(true);
-      const supplierData = await getDocumentById('suppliers', supplierId) as Supplier;
+      const supplierData = await getSupplierById(supplierId, getToken);
       setSupplier(supplierData);
 
-      const allProducts = await getAllDocuments('products') as Product[];
-      setProducts(allProducts);
-      setFilteredProducts(allProducts);
+      const allProducts = await getProducts(getToken);
+      // Normalizar el campo images para compatibilidad con el tipo Product
+      const normalizedProducts = allProducts.map(p => ({
+        ...p,
+        images: Array.isArray(p.images)
+          ? p.images
+          : p.images
+            ? [p.images]
+            : p.image_url
+              ? [p.image_url]
+              : undefined,
+      }));
+      setProducts(normalizedProducts);
+      setFilteredProducts(normalizedProducts);
     } catch (error) {
       console.error('Error loading data:', error);
       toast.error('Error al cargar datos');
     } finally {
       setLoading(false);
     }
+  };
+
+  const suggestSalePrice = (cost: number, marginPercent: number = 30): number => {
+    return cost * (1 + marginPercent / 100);
   };
 
   const addProduct = (product: Product) => {
@@ -84,7 +95,7 @@ export default function NewPurchaseOrderPage() {
       product_name: product.name,
       quantity: 1,
       unit_cost: product.cost_price || 0,
-      suggested_price: suggestSalePrice(product.cost_price || 0, 30), // 30% margen sugerido
+      suggested_price: suggestSalePrice(product.cost_price || 0, 30),
     };
 
     setOrderItems([...orderItems, newItem]);
@@ -123,26 +134,17 @@ export default function NewPurchaseOrderPage() {
       return;
     }
 
-    if (!user) {
-      toast.error('Usuario no autenticado');
-      return;
-    }
-
     try {
       setSaving(true);
-      const profile = await getUserProfileByClerkId(user.id);
-
-      if (!profile) {
-        toast.error('Perfil no encontrado');
-        return;
-      }
 
       await createPurchaseOrder(
-        profile.id,
-        supplierId,
-        orderItems,
-        notes,
-        expectedDate || undefined
+        {
+          supplier_id: supplierId,
+          items: orderItems,
+          notes: notes || undefined,
+          expected_date: expectedDate || undefined,
+        },
+        getToken
       );
 
       toast.success('Orden de compra creada exitosamente');
@@ -209,29 +211,58 @@ export default function NewPurchaseOrderPage() {
                 />
               </div>
 
-              {searchTerm && (
-                <div className="max-h-64 overflow-y-auto border rounded-lg">
-                  {filteredProducts.length > 0 ? (
-                    filteredProducts.slice(0, 5).map((product) => (
-                      <button
-                        key={product.id}
-                        type="button"
-                        onClick={() => addProduct(product)}
-                        className="w-full p-3 hover:bg-gray-50 border-b last:border-b-0 text-left"
-                      >
-                        <p className="font-medium text-sm">{product.name}</p>
-                        <p className="text-xs text-gray-500">
-                          Costo actual: {formatCurrency(product.cost_price)}
-                        </p>
-                      </button>
-                    ))
-                  ) : (
-                    <div className="p-4 text-center text-gray-500 text-sm">
-                      No se encontraron productos
+              {/* Mostrar siempre algunos productos */}
+              <div className="space-y-2">
+                {searchTerm ? (
+                  <div className="max-h-64 overflow-y-auto border rounded-lg">
+                    {filteredProducts.length > 0 ? (
+                      filteredProducts.slice(0, 10).map((product) => (
+                        <button
+                          key={product.id}
+                          type="button"
+                          onClick={() => addProduct(product)}
+                          className="w-full p-3 hover:bg-gray-50 border-b last:border-b-0 text-left"
+                        >
+                          <p className="font-medium text-sm">{product.name}</p>
+                          <p className="text-xs text-gray-500">
+                            Disponible: {product.stock} | Costo: {formatCurrency(product.cost_price)}
+                          </p>
+                        </button>
+                      ))
+                    ) : (
+                      <div className="p-4 text-center text-gray-500 text-sm">
+                        No se encontraron productos
+                      </div>
+                    )}
+                  </div>
+                ) : (
+                  <div className="space-y-2">
+                    <p className="text-xs text-gray-500 font-medium">Productos disponibles ({products.length})</p>
+                    <div className="max-h-64 overflow-y-auto border rounded-lg">
+                      {products.length > 0 ? (
+                        products.slice(0, 10).map((product) => (
+                          <button
+                            key={product.id}
+                            type="button"
+                            onClick={() => addProduct(product)}
+                            className="w-full p-3 hover:bg-gray-50 border-b last:border-b-0 text-left"
+                          >
+                            <p className="font-medium text-sm">{product.name}</p>
+                            <p className="text-xs text-gray-500">
+                              Stock: {product.stock} | Costo: {formatCurrency(product.cost_price)}
+                            </p>
+                          </button>
+                        ))
+                      ) : (
+                        <div className="p-4 text-center text-gray-500 text-sm">
+                          No hay productos disponibles. <br/>
+                          <span className="text-xs">Crea productos primero en el menú Productos.</span>
+                        </div>
+                      )}
                     </div>
-                  )}
-                </div>
-              )}
+                  </div>
+                )}
+              </div>
             </CardContent>
           </Card>
 
@@ -324,6 +355,7 @@ export default function NewPurchaseOrderPage() {
                         <Input
                           type="number"
                           min="0"
+                          step="0.01"
                           value={item.unit_cost}
                           onChange={(e) => updateCost(item.product_id, parseFloat(e.target.value) || 0)}
                           className="text-sm"

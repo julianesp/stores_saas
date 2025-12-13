@@ -1,12 +1,12 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { useUser } from '@clerk/nextjs';
+import { useUser, useAuth } from '@clerk/nextjs';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { DollarSign, ShoppingCart, Package, TrendingUp, Users, AlertTriangle, Store, Activity, Crown, Calendar, Database } from 'lucide-react';
+import { DollarSign, ShoppingCart, Package, TrendingUp, Users, AlertTriangle, Store, Activity, Crown, Calendar, Database, Trash2 } from 'lucide-react';
 import { getUserProfileByClerkId } from '@/lib/subscription-helpers';
-import { getAllDocuments } from '@/lib/firestore-helpers';
+import { getAllUserProfiles } from '@/lib/cloudflare-api';
 import { UserProfile } from '@/lib/types';
 import { formatCurrency } from '@/lib/utils';
 import { toast } from 'sonner';
@@ -21,6 +21,7 @@ import {
 
 export default function DashboardPage() {
   const { user } = useUser();
+  const { getToken } = useAuth();
   const [isSuperAdmin, setIsSuperAdmin] = useState(false);
   const [loading, setLoading] = useState(true);
   const [saasMetrics, setSaasMetrics] = useState({
@@ -42,6 +43,7 @@ export default function DashboardPage() {
   const [topProducts, setTopProducts] = useState<TopProduct[]>([]);
   const [expiringProductsCount, setExpiringProductsCount] = useState(0);
   const [seeding, setSeeding] = useState(false);
+  const [cleaning, setCleaning] = useState(false);
 
   useEffect(() => {
     async function checkUserAndFetchMetrics() {
@@ -49,10 +51,11 @@ export default function DashboardPage() {
         const profile = await getUserProfileByClerkId(user.id);
         const isSuper = profile?.is_superadmin || false;
         setIsSuperAdmin(isSuper);
+        const userProfileId = profile?.id;
 
         if (isSuper) {
           // Fetch SaaS metrics for super admin
-          const allProfiles = await getAllDocuments('user_profiles') as UserProfile[];
+          const allProfiles = await getAllUserProfiles(getToken);
           const stores = allProfiles.filter(p => !p.is_superadmin);
 
           const now = new Date();
@@ -76,9 +79,9 @@ export default function DashboardPage() {
         } else {
           // Fetch store metrics for regular users
           const [dashboardMetrics, products, expiringCount] = await Promise.all([
-            getDashboardMetrics(),
-            getTopProducts(4),
-            getExpiringProducts(),
+            getDashboardMetrics(userProfileId),
+            getTopProducts(4, userProfileId),
+            getExpiringProducts(userProfileId),
           ]);
 
           setMetrics(dashboardMetrics);
@@ -108,11 +111,14 @@ export default function DashboardPage() {
       if (response.ok) {
         toast.success(data.message);
         // Recargar métricas
-        if (!isSuperAdmin) {
+        if (!isSuperAdmin && user) {
+          const profile = await getUserProfileByClerkId(user.id);
+          const userProfileId = profile?.id;
+
           const [dashboardMetrics, products, expiringCount] = await Promise.all([
-            getDashboardMetrics(),
-            getTopProducts(4),
-            getExpiringProducts(),
+            getDashboardMetrics(userProfileId),
+            getTopProducts(4, userProfileId),
+            getExpiringProducts(userProfileId),
           ]);
 
           setMetrics(dashboardMetrics);
@@ -127,6 +133,51 @@ export default function DashboardPage() {
       toast.error('Error al crear productos de muestra');
     } finally {
       setSeeding(false);
+    }
+  };
+
+  const handleCleanData = async () => {
+    if (!confirm('⚠️ ADVERTENCIA: Esto eliminará TODOS tus datos (productos, ventas, clientes, etc.). Esta operación es IRREVERSIBLE. ¿Estás seguro de que quieres continuar?')) {
+      return;
+    }
+
+    if (!confirm('¿Estás completamente seguro? Esta es tu última oportunidad para cancelar.')) {
+      return;
+    }
+
+    try {
+      setCleaning(true);
+      const response = await fetch('/api/user/clean-data', {
+        method: 'POST',
+      });
+
+      const data = await response.json();
+
+      if (response.ok) {
+        toast.success(`Datos limpiados: ${data.totalDeleted} elementos eliminados`);
+        // Recargar métricas
+        if (!isSuperAdmin && user) {
+          const profile = await getUserProfileByClerkId(user.id);
+          const userProfileId = profile?.id;
+
+          const [dashboardMetrics, products, expiringCount] = await Promise.all([
+            getDashboardMetrics(userProfileId),
+            getTopProducts(4, userProfileId),
+            getExpiringProducts(userProfileId),
+          ]);
+
+          setMetrics(dashboardMetrics);
+          setTopProducts(products);
+          setExpiringProductsCount(expiringCount);
+        }
+      } else {
+        toast.error(data.error || 'Error al limpiar datos');
+      }
+    } catch (error) {
+      console.error('Error:', error);
+      toast.error('Error al limpiar datos');
+    } finally {
+      setCleaning(false);
     }
   };
 
@@ -300,17 +351,33 @@ export default function DashboardPage() {
           <h1 className="text-2xl md:text-3xl font-bold tracking-tight">Dashboard</h1>
           <p className="text-gray-500 text-sm md:text-base">Resumen general de tu tienda</p>
         </div>
-        {!isSuperAdmin && metrics.totalProducts === 0 && (
-          <Button
-            onClick={handleSeedProducts}
-            disabled={seeding}
-            variant="outline"
-            size="sm"
-            className="gap-2"
-          >
-            <Database className="h-4 w-4" />
-            {seeding ? 'Creando...' : 'Crear Productos Demo'}
-          </Button>
+        {!isSuperAdmin && (
+          <div className="flex gap-2">
+            {metrics.totalProducts === 0 && (
+              <Button
+                onClick={handleSeedProducts}
+                disabled={seeding}
+                variant="outline"
+                size="sm"
+                className="gap-2"
+              >
+                <Database className="h-4 w-4" />
+                {seeding ? 'Creando...' : 'Crear Productos Demo'}
+              </Button>
+            )}
+            {metrics.totalProducts > 0 && (
+              <Button
+                onClick={handleCleanData}
+                disabled={cleaning}
+                variant="destructive"
+                size="sm"
+                className="gap-2"
+              >
+                <Trash2 className="h-4 w-4" />
+                {cleaning ? 'Limpiando...' : 'Limpiar Todos los Datos'}
+              </Button>
+            )}
+          </div>
         )}
       </div>
 
@@ -357,7 +424,7 @@ export default function DashboardPage() {
             <div className="text-2xl font-bold">{metrics.totalProducts}</div>
             <p className="text-xs text-gray-500 mt-1">
               {metrics.lowStockProducts > 0
-                ? `${metrics.lowStockProducts} con stock bajo`
+                ? `${metrics.lowStockProducts} con cantidad baja`
                 : 'Inventario saludable'}
             </p>
           </CardContent>
@@ -365,7 +432,7 @@ export default function DashboardPage() {
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Stock Bajo</CardTitle>
+            <CardTitle className="text-sm font-medium">Cantidad Baja</CardTitle>
             <AlertTriangle className="h-4 w-4 text-orange-600" />
           </CardHeader>
           <CardContent>
@@ -412,7 +479,7 @@ export default function DashboardPage() {
                   <div className="flex items-center gap-2 md:gap-3">
                     <AlertTriangle className="h-4 w-4 md:h-5 md:w-5 text-orange-600 flex-shrink-0" />
                     <div>
-                      <p className="font-medium text-xs md:text-sm">{metrics.lowStockProducts} productos con stock bajo</p>
+                      <p className="font-medium text-xs md:text-sm">{metrics.lowStockProducts} productos con cantidad baja</p>
                       <p className="text-xs text-gray-500 hidden sm:block">Revisar inventario</p>
                     </div>
                   </div>
@@ -423,7 +490,7 @@ export default function DashboardPage() {
                     <Package className="h-4 w-4 md:h-5 md:w-5 text-green-600 flex-shrink-0" />
                     <div>
                       <p className="font-medium text-xs md:text-sm">Inventario saludable</p>
-                      <p className="text-xs text-gray-500 hidden sm:block">Sin alertas de stock</p>
+                      <p className="text-xs text-gray-500 hidden sm:block">Sin alertas de cantidad</p>
                     </div>
                   </div>
                 </div>

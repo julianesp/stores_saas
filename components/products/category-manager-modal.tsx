@@ -1,12 +1,13 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { useAuth } from '@clerk/nextjs';
 import { Plus, Trash2, Pencil, Tag, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { getAllDocuments, createDocument, deleteDocument, updateDocument } from '@/lib/firestore-helpers';
+import { getCategories, createCategory, updateCategory, deleteCategory } from '@/lib/cloudflare-api';
 import { Category } from '@/lib/types';
 import { toast } from 'sonner';
 
@@ -17,6 +18,7 @@ interface CategoryManagerModalProps {
 }
 
 export function CategoryManagerModal({ isOpen, onClose, onUpdate }: CategoryManagerModalProps) {
+  const { getToken } = useAuth();
   const [categories, setCategories] = useState<Category[]>([]);
   const [loading, setLoading] = useState(false);
   const [showForm, setShowForm] = useState(false);
@@ -34,7 +36,7 @@ export function CategoryManagerModal({ isOpen, onClose, onUpdate }: CategoryMana
 
   const fetchCategories = async () => {
     try {
-      const data = await getAllDocuments('categories') as Category[];
+      const data = await getCategories(getToken) as Category[];
       data.sort((a, b) => a.name.localeCompare(b.name));
       setCategories(data);
     } catch (error) {
@@ -53,10 +55,10 @@ export function CategoryManagerModal({ isOpen, onClose, onUpdate }: CategoryMana
     setLoading(true);
     try {
       if (editingCategory) {
-        await updateDocument('categories', editingCategory.id, formData);
+        await updateCategory(editingCategory.id, formData, getToken);
         toast.success('Categoría actualizada correctamente');
       } else {
-        await createDocument('categories', formData);
+        await createCategory(formData, getToken);
         toast.success('Categoría creada correctamente');
       }
 
@@ -88,7 +90,7 @@ export function CategoryManagerModal({ isOpen, onClose, onUpdate }: CategoryMana
     }
 
     try {
-      await deleteDocument('categories', id);
+      await deleteCategory(id, getToken);
       toast.success('Categoría eliminada correctamente');
       fetchCategories();
       onUpdate?.();
@@ -107,7 +109,7 @@ export function CategoryManagerModal({ isOpen, onClose, onUpdate }: CategoryMana
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4 backdrop-blur-sm">
       <div className="bg-white rounded-lg w-full max-w-4xl max-h-[90vh] overflow-hidden flex flex-col">
         {/* Header */}
         <div className="flex items-center justify-between p-6 border-b">
@@ -117,7 +119,7 @@ export function CategoryManagerModal({ isOpen, onClose, onUpdate }: CategoryMana
           </div>
           <button
             onClick={onClose}
-            className="p-2 hover:bg-gray-100 rounded-full transition-colors"
+            className="p-2 hover:bg-black hover:text-white hover:scale-90 scale-100 transition-all border cursor-pointer rounded-full  "
           >
             <X className="h-5 w-5" />
           </button>
@@ -233,8 +235,8 @@ export function CategoryManagerModal({ isOpen, onClose, onUpdate }: CategoryMana
         </div>
 
         {/* Footer */}
-        <div className="flex justify-end p-6 border-t bg-gray-50">
-          <Button onClick={onClose} variant="outline">
+        <div className="flex justify-end p-6 border-t bg-gray-50 ">
+          <Button onClick={onClose} variant="outline" className='hover:bg-black hover:text-white  transition-all border cursor-pointer'>
             Cerrar
           </Button>
         </div>

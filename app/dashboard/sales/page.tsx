@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { useAuth } from '@clerk/nextjs';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { Receipt, Eye, Download, FileSpreadsheet, Brain } from 'lucide-react';
@@ -8,7 +9,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { getAllDocuments, queryDocuments } from '@/lib/firestore-helpers';
+import { getProducts, getCustomers, getSales, getAllUserProfiles } from '@/lib/cloudflare-api';
 import { SaleWithRelations, Sale, Customer, UserProfile, SaleItem, Product } from '@/lib/types';
 import { formatCurrency } from '@/lib/utils';
 import { toast } from 'sonner';
@@ -16,6 +17,8 @@ import { Timestamp } from 'firebase/firestore';
 import { exportSalesToExcel, exportSalesByDateRange, exportSalesForPredictions } from '@/lib/excel-export';
 
 export default function SalesPage() {
+  const { getToken } = useAuth();
+
   const [sales, setSales] = useState<SaleWithRelations[]>([]);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState('all'); // all, today, week, month
@@ -32,7 +35,7 @@ export default function SalesPage() {
   const fetchSales = async () => {
     try {
       // Obtener todas las ventas
-      let salesData = await getAllDocuments('sales') as Sale[];
+      let salesData = await getSales(getToken) as Sale[];
 
       // Aplicar filtros de fecha
       if (filter === 'today') {
@@ -65,35 +68,32 @@ export default function SalesPage() {
       }
 
       // Obtener datos relacionados para hacer el join manualmente
-      const customers = await getAllDocuments('customers') as Customer[];
-      const userProfiles = await getAllDocuments('user_profiles') as UserProfile[];
-      const saleItems = await getAllDocuments('sale_items') as SaleItem[];
-      const products = await getAllDocuments('products') as Product[];
+      const customers = await getCustomers(getToken) as Customer[];
+      const userProfiles = await getAllUserProfiles(getToken) as UserProfile[];
+      const products = await getProducts(getToken) as Product[];
 
       // Crear mapas para acceso rápido
       const customersMap = new Map(customers.map(c => [c.id, c]));
       const userProfilesMap = new Map(userProfiles.map(u => [u.id, u]));
       const productsMap = new Map(products.map(p => [p.id, p]));
 
-      // Agrupar sale_items por sale_id
-      const saleItemsMap = new Map<string, SaleItem[]>();
-      saleItems.forEach(item => {
-        if (!saleItemsMap.has(item.sale_id)) {
-          saleItemsMap.set(item.sale_id, []);
-        }
-        saleItemsMap.get(item.sale_id)?.push({
+      // Combinar los datos - la API ya devuelve items con cada venta
+      const salesWithRelations: SaleWithRelations[] = salesData.map(sale => {
+        // Agregar información del producto a cada item
+        // La API de Cloudflare devuelve items con cada venta
+        const saleWithItems = sale as any;
+        const itemsWithProducts = (saleWithItems.items || []).map((item: SaleItem) => ({
           ...item,
           product: productsMap.get(item.product_id)
-        } as any);
-      });
+        }));
 
-      // Combinar los datos
-      const salesWithRelations: SaleWithRelations[] = salesData.map(sale => ({
-        ...sale,
-        customer: sale.customer_id ? customersMap.get(sale.customer_id) : undefined,
-        cashier: userProfilesMap.get(sale.cashier_id),
-        items: saleItemsMap.get(sale.id) || []
-      }));
+        return {
+          ...sale,
+          customer: sale.customer_id ? customersMap.get(sale.customer_id) : undefined,
+          cashier: userProfilesMap.get(sale.cashier_id),
+          items: itemsWithProducts as any
+        };
+      });
 
       // Ordenar por fecha de creación descendente
       salesWithRelations.sort((a, b) => {
@@ -163,8 +163,8 @@ export default function SalesPage() {
   };
 
   return (
-    <div className="space-y-4 md:space-y-6">
-      <div className="flex flex-col md:flex-row md:justify-between md:items-center gap-4">
+    <div className="space-y-4 md:space-y-6 ">
+      <div className="flex flex-col md:flex-row md:justify-between md:items-center gap-4 ">
         <div>
           <h1 className="text-2xl md:text-3xl font-bold">Ventas</h1>
           <p className="text-gray-500 text-sm md:text-base">Historial de todas las ventas</p>
@@ -348,13 +348,23 @@ export default function SalesPage() {
                           {formatCurrency(sale.total)}
                         </td>
                         <td className="py-3 px-4 text-center">
-                          <span className={`inline-block px-2 py-1 rounded text-xs ${
-                            sale.status === 'completada' ? 'bg-green-100 text-green-800' :
-                            sale.status === 'cancelada' ? 'bg-red-100 text-red-800' :
-                            'bg-yellow-100 text-yellow-800'
-                          }`}>
-                            {sale.status}
-                          </span>
+                          {sale.payment_method === 'credito' ? (
+                            <span className={`inline-block px-2 py-1 rounded text-xs ${
+                              sale.payment_status === 'pagado' ? 'bg-green-100 text-green-800' :
+                              sale.payment_status === 'parcial' ? 'bg-yellow-100 text-yellow-800' :
+                              'bg-red-100 text-red-800'
+                            }`}>
+                              {sale.payment_status}
+                            </span>
+                          ) : (
+                            <span className={`inline-block px-2 py-1 rounded text-xs ${
+                              sale.status === 'completada' ? 'bg-green-100 text-green-800' :
+                              sale.status === 'cancelada' ? 'bg-red-100 text-red-800' :
+                              'bg-yellow-100 text-yellow-800'
+                            }`}>
+                              {sale.status}
+                            </span>
+                          )}
                         </td>
                         <td className="py-3 px-4 text-center">
                           <Button
@@ -393,13 +403,23 @@ export default function SalesPage() {
                             )}
                           </p>
                         </div>
-                        <span className={`inline-block px-2 py-1 rounded text-xs ${
-                          sale.status === 'completada' ? 'bg-green-100 text-green-800' :
-                          sale.status === 'cancelada' ? 'bg-red-100 text-red-800' :
-                          'bg-yellow-100 text-yellow-800'
-                        }`}>
-                          {sale.status}
-                        </span>
+                        {sale.payment_method === 'credito' ? (
+                          <span className={`inline-block px-2 py-1 rounded text-xs ${
+                            sale.payment_status === 'pagado' ? 'bg-green-100 text-green-800' :
+                            sale.payment_status === 'parcial' ? 'bg-yellow-100 text-yellow-800' :
+                            'bg-red-100 text-red-800'
+                          }`}>
+                            {sale.payment_status}
+                          </span>
+                        ) : (
+                          <span className={`inline-block px-2 py-1 rounded text-xs ${
+                            sale.status === 'completada' ? 'bg-green-100 text-green-800' :
+                            sale.status === 'cancelada' ? 'bg-red-100 text-red-800' :
+                            'bg-yellow-100 text-yellow-800'
+                          }`}>
+                            {sale.status}
+                          </span>
+                        )}
                       </div>
 
                       {/* Cliente */}
@@ -455,8 +475,8 @@ export default function SalesPage() {
 
       {/* Modal de detalle de venta */}
       {showDetailModal && selectedSale && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-lg max-w-3xl w-full max-h-[90vh] overflow-y-auto">
+        <div className="fixed inset-0  bg-opacity-50 flex items-center justify-center z-50 p-4 backdrop-blur-sm">
+          <div className="bg-white rounded-lg max-w-3xl w-full max-h-[90vh] overflow-y-auto ">
             <div className="sticky top-0 bg-white border-b px-6 py-4 flex justify-between items-center">
               <div>
                 <h2 className="text-xl font-bold">Detalle de Venta</h2>

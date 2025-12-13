@@ -1,12 +1,12 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { useUser } from '@clerk/nextjs';
+import { useUser, useAuth } from '@clerk/nextjs';
 import { useRouter } from 'next/navigation';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { getAllDocuments, updateDocument } from '@/lib/firestore-helpers';
+import { getAllUserProfiles, updateUserProfile } from '@/lib/cloudflare-api';
 import { UserProfile } from '@/lib/types';
 import {
   Store,
@@ -27,6 +27,7 @@ import { formatCurrency } from '@/lib/utils';
 
 export default function SuperAdminPage() {
   const { user } = useUser();
+  const { getToken } = useAuth();
   const router = useRouter();
   const [stores, setStores] = useState<UserProfile[]>([]);
   const [loading, setLoading] = useState(true);
@@ -42,7 +43,7 @@ export default function SuperAdminPage() {
 
     try {
       setLoading(true);
-      const allProfiles = await getAllDocuments('user_profiles') as UserProfile[];
+      const allProfiles = await getAllUserProfiles(getToken);
 
       // Obtener perfil del usuario actual
       const myProfile = allProfiles.find(p => p.clerk_user_id === user.id);
@@ -76,9 +77,9 @@ export default function SuperAdminPage() {
     const newStatus = currentStatus === 'active' ? 'expired' : 'active';
 
     try {
-      await updateDocument('user_profiles', storeId, {
+      await updateUserProfile(storeId, {
         subscription_status: newStatus,
-      });
+      }, getToken);
       toast.success(`Tienda ${newStatus === 'active' ? 'activada' : 'suspendida'} correctamente`);
       fetchData();
     } catch (error) {

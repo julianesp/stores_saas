@@ -1,6 +1,13 @@
+'use client';
+
+import { Suspense } from 'react';
+import { useSearchParams } from 'next/navigation';
 import { ProductForm } from '@/components/products/product-form';
 
-export default function NewProductPage() {
+function NewProductContent() {
+  const searchParams = useSearchParams();
+  const supplierId = searchParams.get('supplier_id');
+
   return (
     <div className="space-y-6">
       <div>
@@ -8,7 +15,15 @@ export default function NewProductPage() {
         <p className="text-gray-500">Crea un nuevo producto en el inventario</p>
       </div>
 
-      <ProductForm />
+      <ProductForm initialData={supplierId ? { supplier_id: supplierId } : undefined} />
     </div>
+  );
+}
+
+export default function NewProductPage() {
+  return (
+    <Suspense fallback={<div>Cargando...</div>}>
+      <NewProductContent />
+    </Suspense>
   );
 }

@@ -18,6 +18,7 @@ export interface UserProfile {
   next_billing_date?: string;
   wompi_customer_id?: string;
   plan_id?: string; // ID del plan de suscripción
+  has_ai_addon?: boolean; // Usuario tiene addon de IA activo
 
   created_at: string;
   updated_at: string;
@@ -25,6 +26,7 @@ export interface UserProfile {
 
 export interface Category {
   id: string;
+  user_profile_id?: string; // ID del propietario de la categoría
   name: string;
   description?: string;
   created_at: string;
@@ -33,6 +35,7 @@ export interface Category {
 
 export interface Supplier {
   id: string;
+  user_profile_id?: string; // ID del propietario del proveedor
   name: string;
   contact_name?: string;
   email?: string;
@@ -40,12 +43,33 @@ export interface Supplier {
   address?: string;
   city?: string;
   notes?: string;
+  // Información comercial
+  tax_id?: string; // NIT/RUT
+  payment_type: 'contado' | 'credito';
+  credit_days: number; // Días de plazo si es a crédito
+  credit_limit: number; // Límite de crédito con el proveedor
+  current_debt: number; // Deuda actual con el proveedor
+  default_discount: number; // Descuento habitual en %
+  // Información de contacto extendida
+  visit_day?: string; // Día habitual de visita del vendedor
+  website?: string;
+  whatsapp?: string;
+  business_hours?: string; // Horario de atención
+  // Control y evaluación
+  rating?: number; // Calificación del proveedor (1-5)
+  status: 'activo' | 'inactivo' | 'suspendido';
+  delivery_days: number; // Días de entrega prometidos
+  minimum_order: number; // Pedido mínimo
+  // Estadísticas automáticas
+  total_purchased: number; // Total comprado históricamente
+  last_purchase_date?: string; // Última fecha de compra
   created_at: string;
   updated_at: string;
 }
 
 export interface Product {
   id: string;
+  user_profile_id?: string; // ID del propietario del producto
   barcode?: string;
   name: string;
   description?: string;
@@ -57,7 +81,7 @@ export interface Product {
   min_stock: number;
   expiration_date?: string;
   image_url?: string; // Deprecated: mantener por compatibilidad
-  images?: string[]; // Array de URLs de imágenes (máximo 3)
+  images?: string[]; // Array de URLs de imágenes (actualmente solo se usa la primera)
   created_at: string;
   updated_at: string;
 }
@@ -78,12 +102,16 @@ export interface Customer {
   city?: string;
   id_number?: string;
   loyalty_points: number;
+  // Campos para sistema de crédito
+  credit_limit?: number; // Límite de crédito autorizado
+  current_debt?: number; // Deuda actual
   created_at: string;
   updated_at: string;
 }
 
 export interface Sale {
   id: string;
+  user_profile_id?: string; // ID del propietario (tienda)
   sale_number: string;
   customer_id?: string;
   cashier_id: string;
@@ -91,10 +119,15 @@ export interface Sale {
   tax: number;
   discount: number;
   total: number;
-  payment_method: 'efectivo' | 'tarjeta' | 'transferencia';
+  payment_method: 'efectivo' | 'tarjeta' | 'transferencia' | 'credito';
   status: 'completada' | 'cancelada' | 'pendiente';
   notes?: string;
   points_earned?: number; // Puntos ganados por el cliente en esta compra
+  // Campos para ventas a crédito
+  payment_status?: 'pagado' | 'pendiente' | 'parcial'; // Estado del pago
+  amount_paid?: number; // Monto pagado
+  amount_pending?: number; // Monto pendiente
+  due_date?: string; // Fecha límite de pago
   created_at: string;
   updated_at: string;
 }
@@ -107,6 +140,7 @@ export interface SaleWithRelations extends Sale {
 
 export interface SaleItem {
   id: string;
+  user_profile_id?: string; // ID del propietario (tienda)
   sale_id: string;
   product_id: string;
   quantity: number;
@@ -122,6 +156,7 @@ export interface SaleItemWithProduct extends SaleItem {
 
 export interface InventoryMovement {
   id: string;
+  user_profile_id?: string; // ID del propietario (tienda)
   product_id: string;
   type: 'entrada' | 'salida' | 'ajuste';
   quantity: number;
@@ -133,6 +168,7 @@ export interface InventoryMovement {
 
 export interface Offer {
   id: string;
+  user_profile_id?: string; // ID del propietario (tienda)
   product_id: string;
   discount_percentage: number;
   discount_amount?: number;
@@ -206,6 +242,7 @@ export interface SubscriptionPlan {
   interval: 'monthly' | 'yearly';
   features: string[];
   popular?: boolean;
+  isAddon?: boolean; // Indica si es un add-on al plan básico
 }
 
 export interface SubscriptionStatus {
@@ -220,7 +257,7 @@ export interface PaymentTransaction {
   user_profile_id: string;
   wompi_transaction_id: string;
   amount: number;
-  currency: 'COP';
+  currency: string;
   status: 'APPROVED' | 'DECLINED' | 'PENDING' | 'ERROR';
   payment_method_type?: string;
   reference?: string;
@@ -252,6 +289,24 @@ export interface CustomerPurchaseHistory {
   total: number;
   points_earned: number;
   payment_method: string;
+}
+
+// Tipos para sistema de crédito/fiado
+export interface CreditPayment {
+  id: string;
+  sale_id: string;
+  customer_id: string;
+  amount: number;
+  payment_method: 'efectivo' | 'tarjeta' | 'transferencia';
+  notes?: string;
+  cashier_id: string;
+  created_at: string;
+}
+
+export interface CreditPaymentWithRelations extends CreditPayment {
+  sale?: Sale;
+  customer?: Customer;
+  cashier?: UserProfile;
 }
 
 // Tipos para sistema de notificaciones

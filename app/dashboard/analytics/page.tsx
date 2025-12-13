@@ -1,28 +1,60 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Brain, Download, TrendingUp, AlertTriangle, CheckCircle, Package, BarChart } from 'lucide-react';
+import { useAuth, useUser } from '@clerk/nextjs';
+import { Brain, Download, TrendingUp, AlertTriangle, CheckCircle, Package, BarChart, Lock, Sparkles } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { analyzeProductSales, ProductAnalytics } from '@/lib/analytics-helpers';
+import { analyzeProductSales, ProductAnalytics } from '@/lib/cloudflare-analytics-helpers';
 import { exportAnalyticsToExcel } from '@/lib/excel-export';
 import { formatCurrency } from '@/lib/utils';
 import { toast } from 'sonner';
+import { getUserProfileByClerkId, hasAIAccess } from '@/lib/subscription-helpers';
+import { UserProfile } from '@/lib/types';
+import Link from 'next/link';
 
 export default function AnalyticsPage() {
+  const { getToken } = useAuth();
+  const { user } = useUser();
   const [analytics, setAnalytics] = useState<ProductAnalytics[]>([]);
   const [loading, setLoading] = useState(true);
   const [analyzing, setAnalyzing] = useState(false);
   const [daysToAnalyze, setDaysToAnalyze] = useState(30);
+  const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
+  const [hasAccess, setHasAccess] = useState(false);
 
   useEffect(() => {
-    runAnalysis();
-  }, []);
+    checkAccess();
+  }, [user]);
+
+  const checkAccess = async () => {
+    if (!user) return;
+
+    try {
+      const profile = await getUserProfileByClerkId(user.id);
+      if (profile) {
+        setUserProfile(profile);
+        const access = hasAIAccess(profile);
+        setHasAccess(access);
+
+        if (access) {
+          runAnalysis();
+        } else {
+          setLoading(false);
+        }
+      } else {
+        setLoading(false);
+      }
+    } catch (error) {
+      console.error('Error checking access:', error);
+      setLoading(false);
+    }
+  };
 
   const runAnalysis = async () => {
     try {
       setAnalyzing(true);
-      const data = await analyzeProductSales(daysToAnalyze);
+      const data = await analyzeProductSales(daysToAnalyze, getToken);
       setAnalytics(data);
       toast.success('Análisis completado exitosamente');
     } catch (error) {
@@ -57,6 +89,90 @@ export default function AnalyticsPage() {
           <Brain className="h-12 w-12 mx-auto mb-4 text-blue-600 animate-pulse" />
           <p className="text-gray-500">Analizando datos con IA...</p>
         </div>
+      </div>
+    );
+  }
+
+  // Si no tiene acceso, mostrar pantalla de bloqueo
+  if (!hasAccess) {
+    const isTrial = userProfile?.subscription_status === 'trial';
+    const isActive = userProfile?.subscription_status === 'active';
+
+    return (
+      <div className="flex items-center justify-center min-h-[70vh]">
+        <Card className="max-w-2xl w-full border-2 border-purple-200 bg-gradient-to-br from-purple-50 to-pink-50">
+          <CardContent className="pt-8 pb-8 text-center">
+            <div className="mb-6">
+              <div className="mx-auto w-20 h-20 bg-gradient-to-r from-purple-600 to-pink-600 rounded-full flex items-center justify-center mb-4">
+                <Lock className="h-10 w-10 text-white" />
+              </div>
+              <h2 className="text-3xl font-bold text-gray-900 mb-2">
+                Análisis IA
+              </h2>
+              <p className="text-lg text-gray-600">
+                Desbloquea el poder de la inteligencia artificial para tu negocio
+              </p>
+            </div>
+
+            {isTrial ? (
+              <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 mb-6">
+                <p className="text-yellow-800">
+                  <strong>¡Hola!</strong> Estás en período de prueba pero parece que hubo un problema verificando tu acceso.
+                  Por favor recarga la página o contacta a soporte.
+                </p>
+              </div>
+            ) : (
+              <>
+                <div className="bg-white rounded-lg p-6 mb-6 text-left">
+                  <h3 className="font-semibold text-lg mb-3 flex items-center gap-2">
+                    <Sparkles className="h-5 w-5 text-purple-600" />
+                    ¿Qué incluye el Análisis IA?
+                  </h3>
+                  <ul className="space-y-2 text-gray-700">
+                    <li className="flex items-start gap-2">
+                      <CheckCircle className="h-5 w-5 text-green-600 mt-0.5 flex-shrink-0" />
+                      <span>Análisis inteligente de ventas y predicciones precisas</span>
+                    </li>
+                    <li className="flex items-start gap-2">
+                      <CheckCircle className="h-5 w-5 text-green-600 mt-0.5 flex-shrink-0" />
+                      <span>Predicciones de inventario para evitar agotamientos</span>
+                    </li>
+                    <li className="flex items-start gap-2">
+                      <CheckCircle className="h-5 w-5 text-green-600 mt-0.5 flex-shrink-0" />
+                      <span>Recomendaciones automáticas de pedidos optimizados</span>
+                    </li>
+                    <li className="flex items-start gap-2">
+                      <CheckCircle className="h-5 w-5 text-green-600 mt-0.5 flex-shrink-0" />
+                      <span>Reportes avanzados exportables a Excel</span>
+                    </li>
+                    <li className="flex items-start gap-2">
+                      <CheckCircle className="h-5 w-5 text-green-600 mt-0.5 flex-shrink-0" />
+                      <span>Identificación de productos críticos en tiempo real</span>
+                    </li>
+                  </ul>
+                </div>
+
+                <div className="mb-6">
+                  <p className="text-3xl font-bold text-purple-600 mb-2">
+                    Solo $9,900/mes
+                  </p>
+                  <p className="text-sm text-gray-500">
+                    {isActive
+                      ? 'Complementa tu suscripción actual con IA'
+                      : '✨ GRATIS durante los 15 días de prueba'}
+                  </p>
+                </div>
+
+                <Link href="/dashboard/subscription">
+                  <Button size="lg" className="bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white px-8">
+                    <Sparkles className="mr-2 h-5 w-5" />
+                    {isActive ? 'Agregar Análisis IA a mi Plan' : 'Ver Planes y Activar Prueba Gratis'}
+                  </Button>
+                </Link>
+              </>
+            )}
+          </CardContent>
+        </Card>
       </div>
     );
   }
@@ -172,7 +288,7 @@ export default function AnalyticsPage() {
                   <p className="font-semibold text-green-600">
                     {formatCurrency(product.total_revenue)}
                   </p>
-                  <p className="text-xs text-gray-500">Stock: {product.current_stock}</p>
+                  <p className="text-xs text-gray-500">Disponible: {product.current_stock}</p>
                 </div>
               </div>
             ))}
@@ -207,7 +323,7 @@ export default function AnalyticsPage() {
                   </div>
                   <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-sm">
                     <div>
-                      <span className="text-gray-500">Stock Actual:</span>
+                      <span className="text-gray-500">Cantidad Actual:</span>
                       <p className="font-semibold text-red-600">{product.current_stock}</p>
                     </div>
                     <div>
@@ -259,7 +375,7 @@ export default function AnalyticsPage() {
                   </div>
                   <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-sm">
                     <div>
-                      <span className="text-gray-500">Stock:</span>
+                      <span className="text-gray-500">Disponible:</span>
                       <p className="font-semibold">{product.current_stock}</p>
                     </div>
                     <div>
@@ -299,19 +415,19 @@ export default function AnalyticsPage() {
           </p>
           <p>
             <strong>📊 Predicción de Agotamiento:</strong> Estimamos cuántos días quedan antes de
-            que el producto se agote, considerando el stock actual y la velocidad de venta.
+            que el producto se agote, considerando la cantidad actual y la velocidad de venta.
           </p>
           <p>
             <strong>🎯 Cantidad Recomendada:</strong> Calculamos la cantidad óptima a pedir para
-            mantener 30 días de inventario, más un margen de seguridad basado en el stock mínimo.
+            mantener 30 días de inventario, más un margen de seguridad basado en el mínimo disponible.
           </p>
           <p>
             <strong>⚠️ Niveles de Riesgo:</strong>
           </p>
           <ul className="list-disc list-inside ml-4 space-y-1">
-            <li><strong>Crítico:</strong> Stock por debajo del mínimo o se agotará en 3 días o menos</li>
+            <li><strong>Crítico:</strong> Cantidad por debajo del mínimo o se agotará en 3 días o menos</li>
             <li><strong>Advertencia:</strong> Se agotará en 7 días o menos</li>
-            <li><strong>Bien:</strong> Stock suficiente para más de 7 días</li>
+            <li><strong>Bien:</strong> Cantidad suficiente para más de 7 días</li>
           </ul>
         </CardContent>
       </Card>

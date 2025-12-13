@@ -18,7 +18,7 @@ export const SUBSCRIPTION_PLANS: SubscriptionPlan[] = [
   {
     id: 'basic-monthly',
     name: 'Plan Básico',
-    price: 50000, // $50,000 COP
+    price: 39900, // $39,900 COP
     currency: 'COP',
     interval: 'monthly',
     features: [
@@ -31,19 +31,19 @@ export const SUBSCRIPTION_PLANS: SubscriptionPlan[] = [
     popular: true,
   },
   {
-    id: 'pro-monthly',
-    name: 'Plan Profesional',
-    price: 100000, // $100,000 COP
+    id: 'ai-addon-monthly',
+    name: 'Análisis IA',
+    price: 9900, // $9,900 COP
     currency: 'COP',
     interval: 'monthly',
     features: [
-      'Todo lo del Plan Básico',
-      'Productos ilimitados',
-      'Múltiples usuarios (hasta 5)',
-      'Reportes avanzados',
-      'Integración con DIAN',
-      'Soporte prioritario',
+      '✨ GRATIS durante los 15 días de prueba',
+      'Análisis inteligente de ventas',
+      'Predicciones de inventario',
+      'Recomendaciones automáticas',
+      'Reportes avanzados con IA',
     ],
+    isAddon: true,
   },
 ];
 
@@ -62,6 +62,7 @@ export async function createPaymentLink(params: {
     console.log('Creating payment link with config:', {
       apiUrl: WOMPI_CONFIG.apiUrl,
       hasPrivateKey: !!WOMPI_CONFIG.privateKey,
+      privateKeyPrefix: WOMPI_CONFIG.privateKey?.substring(0, 15),
       amount: params.amount,
       reference: params.reference,
       paymentMethod: params.paymentMethod,
@@ -69,7 +70,7 @@ export async function createPaymentLink(params: {
 
     const body: any = {
       name: 'Suscripción Sistema POS',
-      description: 'Pago mensual Sistema POS',
+      description: `Pago mensual - ${params.reference}`,
       single_use: false,
       collect_shipping: false,
       currency: params.currency,
@@ -83,7 +84,11 @@ export async function createPaymentLink(params: {
       body.payment_method_types = [params.paymentMethod];
     }
 
-    console.log('Request body:', JSON.stringify(body, null, 2));
+    console.log('Request to Wompi:', {
+      url: `${WOMPI_CONFIG.apiUrl}/payment_links`,
+      method: 'POST',
+      body: body,
+    });
 
     const response = await fetch(`${WOMPI_CONFIG.apiUrl}/payment_links`, {
       method: 'POST',
@@ -95,10 +100,20 @@ export async function createPaymentLink(params: {
     });
 
     const data = await response.json();
-    console.log('Wompi response:', { status: response.status, data });
+    console.log('Wompi full response:', {
+      status: response.status,
+      statusText: response.statusText,
+      ok: response.ok,
+      data: data,
+    });
 
     if (!response.ok) {
-      throw new Error(`Wompi API Error: ${JSON.stringify(data)}`);
+      console.error('Wompi API Error Details:', {
+        status: response.status,
+        error: data.error,
+        message: data.error?.messages || data.error?.message,
+      });
+      throw new Error(`Wompi API Error (${response.status}): ${JSON.stringify(data)}`);
     }
 
     return data;

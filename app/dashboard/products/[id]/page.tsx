@@ -1,12 +1,15 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { useAuth } from '@clerk/nextjs';
 import { useParams } from 'next/navigation';
 import { ProductForm } from '@/components/products/product-form';
-import { getDocumentById } from '@/lib/firestore-helpers';
+import { getProductById } from '@/lib/cloudflare-api';
 import { Product } from '@/lib/types';
 
 export default function EditProductPage() {
+  const { getToken } = useAuth();
+
   const params = useParams();
   const [product, setProduct] = useState<Product | null>(null);
   const [loading, setLoading] = useState(true);
@@ -17,7 +20,7 @@ export default function EditProductPage() {
 
   const fetchProduct = async () => {
     try {
-      const data = await getDocumentById('products', params.id as string) as Product | null;
+      const data = await getProductById(params.id as string, getToken) as Product | null;
       setProduct(data);
     } catch (error) {
       console.error('Error fetching product:', error);

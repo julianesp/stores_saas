@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { auth, currentUser } from '@clerk/nextjs/server';
 import { getUserProfileByClerkId } from '@/lib/subscription-helpers';
-import { createDocument, updateDocument } from '@/lib/firestore-helpers';
+import { createUserProfile, updateUserProfile } from '@/lib/cloudflare-api';
 
 export async function POST(req: NextRequest) {
   try {
@@ -35,12 +35,17 @@ export async function POST(req: NextRequest) {
     if (existingProfile) {
       // Si el email es admin@neurai.dev, actualizar a superadmin
       if (isSuperAdmin && !existingProfile.is_superadmin) {
-        await updateDocument('user_profiles', existingProfile.id, {
+        const getToken = async () => {
+          const { getToken } = await auth();
+          return getToken();
+        };
+
+        await updateUserProfile(existingProfile.id, {
           is_superadmin: true,
           subscription_status: 'active',
           trial_start_date: undefined,
           trial_end_date: undefined,
-        });
+        }, getToken);
 
         return NextResponse.json({
           success: true,
@@ -59,9 +64,14 @@ export async function POST(req: NextRequest) {
     // Crear nuevo perfil
     const now = new Date();
     const trialEnd = new Date();
-    trialEnd.setDate(trialEnd.getDate() + 30); // 30 días de prueba
+    trialEnd.setDate(trialEnd.getDate() + 15); // 15 días de prueba
 
-    const newProfile = await createDocument('user_profiles', {
+    const getToken = async () => {
+      const { getToken } = await auth();
+      return getToken();
+    };
+
+    const newProfile = await createUserProfile({
       clerk_user_id: userId,
       email: userEmail,
       full_name: `${user.firstName || ''} ${user.lastName || ''}`.trim() || 'Usuario',
@@ -70,7 +80,7 @@ export async function POST(req: NextRequest) {
       subscription_status: isSuperAdmin ? 'active' : 'trial', // Super admin tiene acceso ilimitado
       trial_start_date: isSuperAdmin ? undefined : now.toISOString(),
       trial_end_date: isSuperAdmin ? undefined : trialEnd.toISOString(),
-    });
+    }, getToken);
 
     return NextResponse.json({
       success: true,

@@ -82,9 +82,9 @@ export async function POST(req: NextRequest) {
     }
 
     if (needsFix) {
-      // Corregir: establecer trial de 30 días
+      // Corregir: establecer trial de 15 días
       const trialEnd = new Date();
-      trialEnd.setDate(trialEnd.getDate() + 30);
+      trialEnd.setDate(trialEnd.getDate() + 15);
 
       await updateDocument('user_profiles', profile.id, {
         subscription_status: 'trial',
@@ -98,7 +98,7 @@ export async function POST(req: NextRequest) {
         fixed: true,
         fixMessage,
         newTrialEndDate: trialEnd.toISOString(),
-        daysRemaining: 30,
+        daysRemaining: 15,
       });
     }
 

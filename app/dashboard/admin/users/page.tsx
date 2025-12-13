@@ -1,11 +1,11 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { useUser } from '@clerk/nextjs';
+import { useUser, useAuth } from '@clerk/nextjs';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
-import { getAllDocuments, updateDocument } from '@/lib/firestore-helpers';
+import { getAllUserProfiles, updateUserProfile } from '@/lib/cloudflare-api';
 import { UserProfile } from '@/lib/types';
 import {
   Users,
@@ -23,6 +23,7 @@ import { getUserProfileByClerkId } from '@/lib/subscription-helpers';
 
 export default function UsersManagementPage() {
   const { user } = useUser();
+  const { getToken } = useAuth();
   const [users, setUsers] = useState<UserProfile[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
@@ -37,7 +38,7 @@ export default function UsersManagementPage() {
 
     try {
       setLoading(true);
-      const allProfiles = await getAllDocuments('user_profiles') as UserProfile[];
+      const allProfiles = await getAllUserProfiles(getToken);
 
       // Obtener perfil del usuario actual
       const myProfile = allProfiles.find(p => p.clerk_user_id === user.id);
@@ -64,9 +65,9 @@ export default function UsersManagementPage() {
     const newRole = currentRole === 'admin' ? 'cajero' : 'admin';
 
     try {
-      await updateDocument('user_profiles', userId, {
+      await updateUserProfile(userId, {
         role: newRole,
-      });
+      }, getToken);
       toast.success(`Rol actualizado a ${newRole === 'admin' ? 'Administrador' : 'Cajero'}`);
       fetchData();
     } catch (error) {

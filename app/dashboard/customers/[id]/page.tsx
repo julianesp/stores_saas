@@ -1,10 +1,11 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { useAuth } from '@clerk/nextjs';
 import { useParams, useRouter } from 'next/navigation';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { getDocumentById } from '@/lib/firestore-helpers';
+import { getCustomerById } from '@/lib/cloudflare-api';
 import { getCustomerPurchaseHistory } from '@/lib/loyalty-helpers';
 import { Customer, CustomerPurchaseHistory } from '@/lib/types';
 import { formatCurrency } from '@/lib/utils';
@@ -12,6 +13,8 @@ import { ArrowLeft, User, Mail, Phone, MapPin, Award, ShoppingBag, Calendar, Cre
 import Link from 'next/link';
 
 export default function CustomerDetailPage() {
+  const { getToken } = useAuth();
+
   const params = useParams();
   const router = useRouter();
   const customerId = params.id as string;
@@ -27,7 +30,7 @@ export default function CustomerDetailPage() {
   const loadCustomerData = async () => {
     try {
       setLoading(true);
-      const customerData = await getDocumentById('customers', customerId);
+      const customerData = await getCustomerById(customerId, getToken);
       setCustomer(customerData as Customer);
 
       const history = await getCustomerPurchaseHistory(customerId) as any;

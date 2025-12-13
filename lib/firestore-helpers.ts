@@ -36,9 +36,28 @@ export type CollectionName =
   | 'purchase_order_items';
 
 // Helper para obtener todos los documentos de una colección
-export async function getAllDocuments(collectionName: CollectionName) {
+// Si se proporciona userProfileId, filtra por ese campo (multi-tenant)
+// Si no se proporciona, obtiene todos los documentos (para superadmin)
+export async function getAllDocuments(
+  collectionName: CollectionName,
+  userProfileId?: string
+) {
   try {
-    const querySnapshot = await getDocs(collection(db, collectionName));
+    // Colecciones que NO se filtran por user_profile_id
+    const globalCollections: CollectionName[] = ['user_profiles'];
+
+    // Si es una colección global o no se proporciona userProfileId, obtener todos
+    if (globalCollections.includes(collectionName) || !userProfileId) {
+      const querySnapshot = await getDocs(collection(db, collectionName));
+      return querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+    }
+
+    // Para colecciones multi-tenant, filtrar por user_profile_id
+    const q = query(
+      collection(db, collectionName),
+      where('user_profile_id', '==', userProfileId)
+    );
+    const querySnapshot = await getDocs(q);
     return querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
   } catch (error) {
     console.error(`Error getting documents from ${collectionName}:`, error);
@@ -63,14 +82,28 @@ export async function getDocumentById(collectionName: CollectionName, id: string
 }
 
 // Helper para crear un documento
-export async function createDocument(collectionName: CollectionName, data: DocumentData) {
+// Si se proporciona userProfileId, lo agrega automáticamente al documento
+export async function createDocument(
+  collectionName: CollectionName,
+  data: DocumentData,
+  userProfileId?: string
+) {
   try {
     const now = Timestamp.now();
-    const docData = {
+
+    // Colecciones que NO necesitan user_profile_id
+    const globalCollections: CollectionName[] = ['user_profiles'];
+
+    const docData: DocumentData = {
       ...data,
       created_at: now,
       updated_at: now,
     };
+
+    // Agregar user_profile_id si es una colección multi-tenant y se proporciona
+    if (!globalCollections.includes(collectionName) && userProfileId) {
+      docData.user_profile_id = userProfileId;
+    }
 
     const docRef = await addDoc(collection(db, collectionName), docData);
     return { id: docRef.id, ...docData };
