@@ -33,7 +33,7 @@ export default function CustomerDetailPage() {
       const customerData = await getCustomerById(customerId, getToken);
       setCustomer(customerData as Customer);
 
-      const history = await getCustomerPurchaseHistory(customerId) as any;
+      const history = await getCustomerPurchaseHistory(customerId, getToken) as any;
       setPurchaseHistory(history);
     } catch (error) {
       console.error('Error loading customer data:', error);

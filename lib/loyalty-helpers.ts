@@ -126,56 +126,43 @@ export async function addPointsToCustomer(
 /**
  * Obtiene el historial de compras de un cliente con detalles
  */
-export async function getCustomerPurchaseHistory(customerId: string) {
+export async function getCustomerPurchaseHistory(customerId: string, getToken: any) {
   try {
-    // Obtener todas las ventas del cliente (sin ordenamiento en Firestore)
-    const sales = await queryDocuments('sales', [
-      { field: 'customer_id', operator: '==', value: customerId }
-    ]) as any[];
+    const { getSales, getProducts } = await import('./cloudflare-api');
 
-    // Para cada venta, obtener los items
-    const salesWithItems = await Promise.all(
-      sales.map(async (sale: any) => {
-        const items = await queryDocuments('sale_items', [
-          { field: 'sale_id', operator: '==', value: sale.id }
-        ]) as any[];
+    // Obtener todas las ventas (que ya incluyen los items)
+    const allSales = await getSales(getToken) as any[];
 
-        // Para cada item, obtener el producto
-        const itemsWithProducts = await Promise.all(
-          items.map(async (item: any) => {
-            const product = await getDocumentById('products', item.product_id);
-            return {
-              ...item,
-              product,
-            };
-          })
-        );
+    // Filtrar solo las ventas de este cliente
+    const customerSales = allSales.filter((sale: any) => sale.customer_id === customerId);
 
-        // Convertir Timestamp de Firestore a string ISO si es necesario
-        let dateStr = sale.created_at;
-        if (sale.created_at && typeof sale.created_at === 'object' && 'toDate' in sale.created_at) {
-          dateStr = sale.created_at.toDate().toISOString();
-        } else if (sale.created_at && typeof sale.created_at === 'object' && 'seconds' in sale.created_at) {
-          // Si es un objeto plano con seconds y nanoseconds
-          dateStr = new Date(sale.created_at.seconds * 1000).toISOString();
-        }
+    // Obtener todos los productos para hacer lookup más rápido
+    const allProducts = await getProducts(getToken) as any[];
+    const productsMap = new Map(allProducts.map(p => [p.id, p]));
 
-        return {
-          sale_id: sale.id,
-          sale_number: sale.sale_number,
-          date: dateStr,
-          items: itemsWithProducts,
-          total: sale.total,
-          points_earned: sale.points_earned || 0,
-          payment_method: sale.payment_method,
-        };
-      })
-    );
+    // Mapear las ventas con la información de productos
+    const salesWithDetails = customerSales.map((sale: any) => {
+      // Para cada item de la venta, agregar la información del producto
+      const itemsWithProducts = (sale.items || []).map((item: any) => ({
+        ...item,
+        product: productsMap.get(item.product_id),
+      }));
+
+      return {
+        sale_id: sale.id,
+        sale_number: sale.sale_number,
+        date: sale.created_at || new Date().toISOString(),
+        items: itemsWithProducts,
+        total: sale.total,
+        points_earned: sale.points_earned || 0,
+        payment_method: sale.payment_method,
+      };
+    });
 
     // Ordenar por fecha descendente (más reciente primero)
-    salesWithItems.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+    salesWithDetails.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
 
-    return salesWithItems;
+    return salesWithDetails;
   } catch (error) {
     console.error('Error getting purchase history:', error);
     return [];
