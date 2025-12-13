@@ -10,10 +10,10 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { getCategories, getSuppliers, createProduct, updateProduct } from '@/lib/cloudflare-api';
+import { getCategories, getSuppliers, createProduct, updateProduct, createCategory, createSupplier } from '@/lib/cloudflare-api';
 import { Category, Supplier } from '@/lib/types';
 import { toast } from 'sonner';
-import { Scan, Camera, X } from 'lucide-react';
+import { Scan, Camera, X, Plus } from 'lucide-react';
 import { ImageUploader } from './image-uploader';
 import dynamic from 'next/dynamic';
 
@@ -51,6 +51,14 @@ export function ProductForm({ initialData, productId }: ProductFormProps) {
   const [suppliers, setSuppliers] = useState<Supplier[]>([]);
   const [productImages, setProductImages] = useState<string[]>(initialData?.images || []);
   const [showScanner, setShowScanner] = useState(false);
+  const [showNewCategory, setShowNewCategory] = useState(false);
+  const [showNewSupplier, setShowNewSupplier] = useState(false);
+  const [newCategoryName, setNewCategoryName] = useState('');
+  const [newSupplierData, setNewSupplierData] = useState({
+    name: '',
+    phone: '',
+    email: '',
+  });
 
   const {
     register,
@@ -97,6 +105,49 @@ export function ProductForm({ initialData, productId }: ProductFormProps) {
     } catch (error) {
       console.error('Error fetching suppliers:', error);
       toast.error('Error al cargar proveedores');
+    }
+  };
+
+  const handleCreateCategory = async () => {
+    if (!newCategoryName.trim()) {
+      toast.error('El nombre de la categoría es requerido');
+      return;
+    }
+
+    try {
+      const newCategory = await createCategory({ name: newCategoryName.trim() }, getToken) as Category;
+      toast.success('Categoría creada correctamente');
+      await fetchCategories();
+      setValue('category_id', newCategory.id);
+      setNewCategoryName('');
+      setShowNewCategory(false);
+    } catch (error) {
+      console.error('Error creating category:', error);
+      toast.error('Error al crear la categoría');
+    }
+  };
+
+  const handleCreateSupplier = async () => {
+    if (!newSupplierData.name.trim()) {
+      toast.error('El nombre del proveedor es requerido');
+      return;
+    }
+
+    try {
+      const supplierData: any = {
+        name: newSupplierData.name.trim(),
+        phone: newSupplierData.phone.trim() || undefined,
+        email: newSupplierData.email.trim() || undefined,
+      };
+      const newSupplier = await createSupplier(supplierData, getToken) as Supplier;
+      toast.success('Proveedor creado correctamente');
+      await fetchSuppliers();
+      setValue('supplier_id', newSupplier.id);
+      setNewSupplierData({ name: '', phone: '', email: '' });
+      setShowNewSupplier(false);
+    } catch (error) {
+      console.error('Error creating supplier:', error);
+      toast.error('Error al crear el proveedor');
     }
   };
 
@@ -197,36 +248,149 @@ export function ProductForm({ initialData, productId }: ProductFormProps) {
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {/* Categoría */}
             <div className="space-y-2">
               <Label htmlFor="category_id">Categoría</Label>
-              <select
-                id="category_id"
-                {...register('category_id')}
-                className="w-full h-9 rounded-md border border-gray-300 px-3 text-sm"
-              >
-                <option value="">Seleccionar categoría</option>
-                {categories.map((cat) => (
-                  <option key={cat.id} value={cat.id}>
-                    {cat.name}
-                  </option>
-                ))}
-              </select>
+              {!showNewCategory ? (
+                <div className="flex gap-2">
+                  <select
+                    id="category_id"
+                    {...register('category_id')}
+                    className="flex-1 h-9 rounded-md border border-gray-300 px-3 text-sm"
+                  >
+                    <option value="">Seleccionar categoría</option>
+                    {categories.map((cat) => (
+                      <option key={cat.id} value={cat.id}>
+                        {cat.name}
+                      </option>
+                    ))}
+                  </select>
+                  <Button
+                    type="button"
+                    onClick={() => setShowNewCategory(true)}
+                    variant="outline"
+                    size="sm"
+                    className="shrink-0"
+                    title="Crear nueva categoría"
+                  >
+                    <Plus className="h-4 w-4" />
+                  </Button>
+                </div>
+              ) : (
+                <div className="space-y-2 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="text-sm font-medium text-blue-900">Nueva Categoría</span>
+                    <Button
+                      type="button"
+                      onClick={() => {
+                        setShowNewCategory(false);
+                        setNewCategoryName('');
+                      }}
+                      variant="ghost"
+                      size="sm"
+                      className="h-6 w-6 p-0"
+                    >
+                      <X className="h-4 w-4" />
+                    </Button>
+                  </div>
+                  <Input
+                    placeholder="Nombre de la categoría"
+                    value={newCategoryName}
+                    onChange={(e) => setNewCategoryName(e.target.value)}
+                    onKeyPress={(e) => {
+                      if (e.key === 'Enter') {
+                        e.preventDefault();
+                        handleCreateCategory();
+                      }
+                    }}
+                    className="h-8"
+                  />
+                  <Button
+                    type="button"
+                    onClick={handleCreateCategory}
+                    size="sm"
+                    className="w-full h-8"
+                  >
+                    Crear Categoría
+                  </Button>
+                </div>
+              )}
             </div>
 
+            {/* Proveedor */}
             <div className="space-y-2">
               <Label htmlFor="supplier_id">Proveedor</Label>
-              <select
-                id="supplier_id"
-                {...register('supplier_id')}
-                className="w-full h-9 rounded-md border border-gray-300 px-3 text-sm"
-              >
-                <option value="">Seleccionar proveedor</option>
-                {suppliers.map((sup) => (
-                  <option key={sup.id} value={sup.id}>
-                    {sup.name}
-                  </option>
-                ))}
-              </select>
+              {!showNewSupplier ? (
+                <div className="flex gap-2">
+                  <select
+                    id="supplier_id"
+                    {...register('supplier_id')}
+                    className="flex-1 h-9 rounded-md border border-gray-300 px-3 text-sm"
+                  >
+                    <option value="">Seleccionar proveedor</option>
+                    {suppliers.map((sup) => (
+                      <option key={sup.id} value={sup.id}>
+                        {sup.name}
+                      </option>
+                    ))}
+                  </select>
+                  <Button
+                    type="button"
+                    onClick={() => setShowNewSupplier(true)}
+                    variant="outline"
+                    size="sm"
+                    className="shrink-0"
+                    title="Crear nuevo proveedor"
+                  >
+                    <Plus className="h-4 w-4" />
+                  </Button>
+                </div>
+              ) : (
+                <div className="space-y-2 p-3 bg-green-50 border border-green-200 rounded-lg">
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="text-sm font-medium text-green-900">Nuevo Proveedor</span>
+                    <Button
+                      type="button"
+                      onClick={() => {
+                        setShowNewSupplier(false);
+                        setNewSupplierData({ name: '', phone: '', email: '' });
+                      }}
+                      variant="ghost"
+                      size="sm"
+                      className="h-6 w-6 p-0"
+                    >
+                      <X className="h-4 w-4" />
+                    </Button>
+                  </div>
+                  <Input
+                    placeholder="Nombre del proveedor *"
+                    value={newSupplierData.name}
+                    onChange={(e) => setNewSupplierData({ ...newSupplierData, name: e.target.value })}
+                    className="h-8"
+                  />
+                  <Input
+                    placeholder="Teléfono"
+                    value={newSupplierData.phone}
+                    onChange={(e) => setNewSupplierData({ ...newSupplierData, phone: e.target.value })}
+                    className="h-8"
+                  />
+                  <Input
+                    placeholder="Email"
+                    type="email"
+                    value={newSupplierData.email}
+                    onChange={(e) => setNewSupplierData({ ...newSupplierData, email: e.target.value })}
+                    className="h-8"
+                  />
+                  <Button
+                    type="button"
+                    onClick={handleCreateSupplier}
+                    size="sm"
+                    className="w-full h-8"
+                  >
+                    Crear Proveedor
+                  </Button>
+                </div>
+              )}
             </div>
           </div>
         </CardContent>
