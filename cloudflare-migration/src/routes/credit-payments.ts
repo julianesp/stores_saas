@@ -163,6 +163,20 @@ app.post('/', async (c) => {
       });
     }
 
+    // Si la venta quedó completamente pagada, asignar puntos de lealtad
+    if (paymentStatus === 'pagado' && sale.points_earned && sale.points_earned > 0) {
+      if (customer) {
+        const currentPoints = (customer.loyalty_points as number) || 0;
+        const newPoints = currentPoints + sale.points_earned;
+
+        await tenantDB.update('customers', customer_id, {
+          loyalty_points: newPoints,
+        });
+
+        console.log(`Puntos asignados: ${sale.points_earned} puntos al cliente ${customer_id} por completar pago de venta ${sale_id}`);
+      }
+    }
+
     return c.json({
       success: true,
       data: {
@@ -173,6 +187,7 @@ app.post('/', async (c) => {
           amount_pending: newAmountPending,
           payment_status: paymentStatus,
         },
+        points_awarded: paymentStatus === 'pagado' && sale.points_earned ? sale.points_earned : 0,
       },
     });
   } catch (error: any) {

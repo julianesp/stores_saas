@@ -259,9 +259,22 @@ export default function POSPage() {
       const total = subtotal - appliedDiscount;
 
       // Calcular puntos si hay un cliente seleccionado (después de aplicar descuento)
+      // NOTA: En ventas a crédito, los puntos NO se asignan hasta que se pague completamente
       let pointsEarned = 0;
+      let pointsToAssignNow = 0;
+
       if (selectedCustomer) {
+        // Calcular puntos basados en el total de la compra
         pointsEarned = await calculatePointsForPurchase(userProfile.id, total);
+
+        // Solo asignar puntos inmediatamente si NO es venta a crédito
+        if (paymentMethod !== 'credito') {
+          pointsToAssignNow = pointsEarned;
+        } else {
+          // En ventas a crédito, guardamos los puntos en la venta
+          // pero NO los asignamos al cliente hasta que se pague completamente
+          pointsToAssignNow = 0;
+        }
       }
 
       // Crear la venta
@@ -335,9 +348,9 @@ export default function POSPage() {
         // Esto se puede implementar más adelante creando una ruta /api/inventory-movements
       }
 
-      // Asignar puntos al cliente si aplica
-      if (selectedCustomer && pointsEarned > 0) {
-        await addPointsToCustomer(selectedCustomer.id, pointsEarned, getToken);
+      // Asignar puntos al cliente si aplica (solo para ventas NO a crédito)
+      if (selectedCustomer && pointsToAssignNow > 0) {
+        await addPointsToCustomer(selectedCustomer.id, pointsToAssignNow, getToken);
       }
 
       // Actualizar deuda del cliente si es venta a crédito
@@ -365,20 +378,31 @@ export default function POSPage() {
         `;
 
         if (pointsEarned > 0) {
-          htmlContent += `
-            <div class="bg-yellow-50 border border-yellow-200 rounded-lg p-3 mb-2">
-              <p class="text-lg font-bold text-yellow-600">+${pointsEarned} puntos ganados</p>
-            </div>
-          `;
-
-          // Agregar mensaje de hito si aplica
-          const milestoneMessage = getPointsMilestoneMessage(pointsEarned);
-          if (milestoneMessage) {
+          if (paymentMethod === 'credito') {
+            // Para ventas a crédito, mostrar que los puntos se asignarán al pagar
             htmlContent += `
-              <div class="bg-green-50 border border-green-200 rounded-lg p-3 text-sm">
-                <p class="text-green-800">${milestoneMessage}</p>
+              <div class="bg-yellow-50 border border-yellow-200 rounded-lg p-3 mb-2">
+                <p class="text-sm font-bold text-yellow-600">⏳ ${pointsEarned} puntos pendientes</p>
+                <p class="text-xs text-gray-600 mt-1">Se asignarán cuando se complete el pago</p>
               </div>
             `;
+          } else {
+            // Para ventas normales, mostrar que los puntos ya se asignaron
+            htmlContent += `
+              <div class="bg-yellow-50 border border-yellow-200 rounded-lg p-3 mb-2">
+                <p class="text-lg font-bold text-yellow-600">+${pointsEarned} puntos ganados</p>
+              </div>
+            `;
+
+            // Agregar mensaje de hito si aplica
+            const milestoneMessage = getPointsMilestoneMessage(pointsEarned);
+            if (milestoneMessage) {
+              htmlContent += `
+                <div class="bg-green-50 border border-green-200 rounded-lg p-3 text-sm">
+                  <p class="text-green-800">${milestoneMessage}</p>
+                </div>
+              `;
+            }
           }
         }
 
