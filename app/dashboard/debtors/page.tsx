@@ -3,14 +3,17 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '@clerk/nextjs';
 import Link from 'next/link';
-import { DollarSign, Users, Eye, Search, Filter, CreditCard } from 'lucide-react';
+import { DollarSign, Users, Eye, Search, Filter, CreditCard, FileSpreadsheet, Download } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Customer } from '@/lib/types';
 import { getDebtorCustomers } from '@/lib/cloudflare-credit-helpers';
+import { getSales } from '@/lib/cloudflare-api';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
+import * as XLSX from 'xlsx';
+import { toast } from 'sonner';
 
 export default function DebtorsPage() {
   const { getToken } = useAuth();
@@ -19,6 +22,7 @@ export default function DebtorsPage() {
   const [searchTerm, setSearchTerm] = useState('');
   const [loading, setLoading] = useState(true);
   const [totalDebt, setTotalDebt] = useState(0);
+  const [exporting, setExporting] = useState(false);
 
   useEffect(() => {
     const fetchDebtors = async () => {
@@ -55,6 +59,140 @@ export default function DebtorsPage() {
     }
   }, [searchTerm, debtors]);
 
+  const handleExportToExcel = async () => {
+    try {
+      setExporting(true);
+      toast.loading('Generando archivo Excel...', { id: 'exporting' });
+
+      // Obtener todas las ventas a crédito
+      const allSales = await getSales(getToken) as any[];
+
+      // Filtrar solo ventas a crédito con saldo pendiente
+      const creditSales = allSales.filter((sale: any) =>
+        sale.payment_method === 'credito' &&
+        sale.payment_status !== 'pagado' &&
+        sale.customer_id
+      );
+
+      // Crear array para las filas del Excel
+      const excelData: any[] = [];
+
+      // Agregar hoja de resumen de deudores
+      debtors.forEach((debtor) => {
+        const debtorSales = creditSales.filter((sale: any) => sale.customer_id === debtor.id);
+
+        debtorSales.forEach((sale: any) => {
+          // Para cada venta, agregar los productos
+          (sale.items || []).forEach((item: any) => {
+            excelData.push({
+              'Cliente': debtor.name,
+              'Teléfono': debtor.phone || 'N/A',
+              'Email': debtor.email || 'N/A',
+              'Límite de Crédito': debtor.credit_limit || 0,
+              'Deuda Total Cliente': debtor.current_debt || 0,
+              'Crédito Disponible': (debtor.credit_limit || 0) - (debtor.current_debt || 0),
+              '---': '---',
+              'Nº Venta': sale.sale_number,
+              'Fecha Venta': sale.created_at ? format(new Date(sale.created_at), 'dd/MM/yyyy HH:mm', { locale: es }) : 'N/A',
+              'Total Venta': sale.total || 0,
+              'Monto Pagado': sale.amount_paid || 0,
+              'Saldo Pendiente': sale.amount_pending || 0,
+              'Estado': sale.payment_status === 'pendiente' ? 'Pendiente' : sale.payment_status === 'parcial' ? 'Parcial' : 'Pagado',
+              '----': '----',
+              'Producto': item.product?.name || 'Producto desconocido',
+              'Cantidad': item.quantity,
+              'Precio Unitario': item.unit_price,
+              'Subtotal Producto': item.subtotal,
+            });
+          });
+        });
+      });
+
+      // Crear workbook y worksheet
+      const wb = XLSX.utils.book_new();
+
+      // Hoja 1: Detalle completo de deudas
+      const ws = XLSX.utils.json_to_sheet(excelData);
+
+      // Ajustar anchos de columna
+      const colWidths = [
+        { wch: 25 }, // Cliente
+        { wch: 15 }, // Teléfono
+        { wch: 25 }, // Email
+        { wch: 18 }, // Límite de Crédito
+        { wch: 18 }, // Deuda Total Cliente
+        { wch: 18 }, // Crédito Disponible
+        { wch: 5 },  // ---
+        { wch: 20 }, // Nº Venta
+        { wch: 18 }, // Fecha Venta
+        { wch: 15 }, // Total Venta
+        { wch: 15 }, // Monto Pagado
+        { wch: 15 }, // Saldo Pendiente
+        { wch: 12 }, // Estado
+        { wch: 5 },  // ----
+        { wch: 30 }, // Producto
+        { wch: 10 }, // Cantidad
+        { wch: 15 }, // Precio Unitario
+        { wch: 15 }, // Subtotal Producto
+      ];
+      ws['!cols'] = colWidths;
+
+      XLSX.utils.book_append_sheet(wb, ws, 'Detalle de Deudas');
+
+      // Hoja 2: Resumen por cliente
+      const summaryData = debtors.map(debtor => {
+        const debtorSales = creditSales.filter((sale: any) => sale.customer_id === debtor.id);
+        const totalVentas = debtorSales.length;
+        const totalProductos = debtorSales.reduce((sum: number, sale: any) =>
+          sum + (sale.items?.length || 0), 0
+        );
+
+        return {
+          'Cliente': debtor.name,
+          'Teléfono': debtor.phone || 'N/A',
+          'Email': debtor.email || 'N/A',
+          'Límite de Crédito': debtor.credit_limit || 0,
+          'Deuda Total': debtor.current_debt || 0,
+          'Crédito Disponible': (debtor.credit_limit || 0) - (debtor.current_debt || 0),
+          'Ventas a Crédito': totalVentas,
+          'Total Productos': totalProductos,
+          'Estado': !debtor.credit_limit || debtor.credit_limit === 0
+            ? 'Sin Límite'
+            : ((debtor.current_debt || 0) / (debtor.credit_limit || 1) * 100) >= 90
+            ? 'Crítico'
+            : ((debtor.current_debt || 0) / (debtor.credit_limit || 1) * 100) >= 70
+            ? 'Alerta'
+            : 'Normal',
+        };
+      });
+
+      const wsSummary = XLSX.utils.json_to_sheet(summaryData);
+      wsSummary['!cols'] = [
+        { wch: 25 },
+        { wch: 15 },
+        { wch: 25 },
+        { wch: 18 },
+        { wch: 18 },
+        { wch: 18 },
+        { wch: 18 },
+        { wch: 15 },
+        { wch: 12 },
+      ];
+      XLSX.utils.book_append_sheet(wb, wsSummary, 'Resumen por Cliente');
+
+      // Generar archivo y descargar
+      const fileName = `deudores_${format(new Date(), 'yyyy-MM-dd_HHmm')}.xlsx`;
+      XLSX.writeFile(wb, fileName);
+
+      toast.success('Archivo Excel generado correctamente', { id: 'exporting' });
+    } catch (error) {
+      console.error('Error exporting to Excel:', error);
+      toast.error('Error al generar archivo Excel', { id: 'exporting' });
+    } finally {
+      setExporting(false);
+    }
+  };
+
   return (
     <div className="space-y-4 md:space-y-6">
       <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4">
@@ -64,6 +202,23 @@ export default function DebtorsPage() {
             Gestiona las cuentas por cobrar
           </p>
         </div>
+        <Button
+          onClick={handleExportToExcel}
+          disabled={exporting || debtors.length === 0}
+          className="bg-green-600 hover:bg-green-700 flex items-center gap-2"
+        >
+          {exporting ? (
+            <>
+              <Download className="h-4 w-4 animate-bounce" />
+              Generando...
+            </>
+          ) : (
+            <>
+              <FileSpreadsheet className="h-4 w-4" />
+              Exportar a Excel
+            </>
+          )}
+        </Button>
       </div>
 
       {/* Resumen de deuda total */}
