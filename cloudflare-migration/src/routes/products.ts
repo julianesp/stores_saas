@@ -169,11 +169,11 @@ app.put('/:id', async (c) => {
       data: product!,
       message: 'Product updated successfully',
     });
-  } catch (error) {
+  } catch (error: any) {
     console.error('Error updating product:', error);
     return c.json<APIResponse>({
       success: false,
-      error: 'Failed to update product',
+      error: error.message || 'Failed to update product',
     }, 500);
   }
 });
