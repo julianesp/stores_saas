@@ -164,6 +164,9 @@ app.post('/', async (c) => {
     }
 
     // Si la venta quedó completamente pagada, asignar puntos de lealtad
+    let customerReachedRewardThreshold = false;
+    let customerNewPoints = 0;
+
     if (paymentStatus === 'pagado' && sale.points_earned && sale.points_earned > 0) {
       if (customer) {
         const currentPoints = (customer.loyalty_points as number) || 0;
@@ -172,6 +175,15 @@ app.post('/', async (c) => {
         await tenantDB.update('customers', customer_id, {
           loyalty_points: newPoints,
         });
+
+        customerNewPoints = newPoints;
+
+        // Verificar si alcanzó el umbral de 100 puntos para descuento
+        const REWARD_THRESHOLD = 100; // REWARD_CONSTANTS.POINTS_FOR_DISCOUNT
+        if (currentPoints < REWARD_THRESHOLD && newPoints >= REWARD_THRESHOLD) {
+          customerReachedRewardThreshold = true;
+          console.log(`🎉 Cliente ${customer_id} alcanzó ${REWARD_THRESHOLD} puntos y puede obtener descuento!`);
+        }
 
         console.log(`Puntos asignados: ${sale.points_earned} puntos al cliente ${customer_id} por completar pago de venta ${sale_id}`);
       }
@@ -188,6 +200,8 @@ app.post('/', async (c) => {
           payment_status: paymentStatus,
         },
         points_awarded: paymentStatus === 'pagado' && sale.points_earned ? sale.points_earned : 0,
+        customer_reached_reward_threshold: customerReachedRewardThreshold,
+        customer_new_points: customerNewPoints,
       },
     });
   } catch (error: any) {

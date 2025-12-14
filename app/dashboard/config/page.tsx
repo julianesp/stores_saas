@@ -7,8 +7,6 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Switch } from '@/components/ui/switch';
 import { Settings, Save, Plus, Trash2, Award } from 'lucide-react';
-import { getLoyaltySettings, updateLoyaltySettings } from '@/lib/loyalty-helpers';
-import { getUserProfileByClerkId } from '@/lib/subscription-helpers';
 import { LoyaltySettings, LoyaltyTier } from '@/lib/types';
 import { formatCurrency } from '@/lib/utils';
 import { toast } from 'sonner';
@@ -23,6 +21,7 @@ export default function ConfigPage() {
 
   useEffect(() => {
     loadSettings();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user]);
 
   const loadSettings = async () => {
