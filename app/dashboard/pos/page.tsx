@@ -8,7 +8,7 @@ import { Search, ShoppingCart, Trash2, Plus, Minus, DollarSign, User, X, Package
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { getProducts, createProduct, updateProduct, getCustomers, createCustomer, updateCustomer, getCategories, createCategory, updateCategory, getSales, createSale, getUserProfile } from '@/lib/cloudflare-api';
+import { getProducts, createProduct, updateProduct, getCustomers, getCustomerById, createCustomer, updateCustomer, getCategories, createCategory, updateCategory, getSales, createSale, getUserProfile } from '@/lib/cloudflare-api';
 import { Product, Customer, Category } from '@/lib/types';
 import { formatCurrency } from '@/lib/utils';
 import { calculatePointsForPurchase, addPointsToCustomer, canRedeemDiscount, redeemPointsForDiscount, getPointsMilestoneMessage, REWARD_CONSTANTS } from '@/lib/loyalty-helpers';
@@ -349,8 +349,23 @@ export default function POSPage() {
       }
 
       // Asignar puntos al cliente si aplica (solo para ventas NO a crédito)
+      let customerReachedRewardThreshold = false;
+      let customerNewPoints = 0;
+
       if (selectedCustomer && pointsToAssignNow > 0) {
         await addPointsToCustomer(selectedCustomer.id, pointsToAssignNow, getToken);
+
+        // Verificar si el cliente alcanzó el umbral para obtener descuento
+        const updatedCustomer = await getCustomerById(selectedCustomer.id, getToken);
+        customerNewPoints = (updatedCustomer as any).loyalty_points || 0;
+
+        // Si el cliente ahora tiene >= 100 puntos y antes tenía < 100, alcanzó el umbral
+        const previousPoints = selectedCustomer.loyalty_points || 0;
+        const REWARD_THRESHOLD = REWARD_CONSTANTS.POINTS_FOR_DISCOUNT;
+
+        if (previousPoints < REWARD_THRESHOLD && customerNewPoints >= REWARD_THRESHOLD) {
+          customerReachedRewardThreshold = true;
+        }
       }
 
       // Actualizar deuda del cliente si es venta a crédito
@@ -359,6 +374,36 @@ export default function POSPage() {
       }
 
       Swal.closeLoading();
+
+      // Mostrar notificación especial si el cliente alcanzó el umbral de recompensa
+      if (customerReachedRewardThreshold && selectedCustomer) {
+        await Swal.custom({
+          icon: 'success',
+          title: '🎉 ¡Cliente Alcanzó Recompensa!',
+          html: `
+            <div class="text-left space-y-3">
+              <div class="bg-yellow-50 border border-yellow-200 rounded-lg p-4 mb-3">
+                <p class="text-lg font-bold text-yellow-800 mb-2">
+                  🏆 ${selectedCustomer.name}
+                </p>
+                <p class="text-sm text-gray-700 mb-2">
+                  Ahora tiene <strong class="text-yellow-600">${customerNewPoints} puntos acumulados</strong>
+                </p>
+                <p class="text-sm text-green-700 font-semibold">
+                  ✓ Ya puede canjear un descuento del ${REWARD_CONSTANTS.DISCOUNT_PERCENTAGE}% en su próxima compra
+                </p>
+              </div>
+              <div class="bg-blue-50 border border-blue-200 rounded-lg p-3 text-xs text-gray-600">
+                <p><strong>Recuerda:</strong> El cliente puede canjear ${REWARD_CONSTANTS.POINTS_FOR_DISCOUNT} puntos por un ${REWARD_CONSTANTS.DISCOUNT_PERCENTAGE}% de descuento en su próxima compra.</p>
+              </div>
+            </div>
+          `,
+          confirmButtonText: 'Entendido',
+          confirmButtonColor: '#EAB308',
+          timer: 8000,
+          timerProgressBar: true,
+        });
+      }
 
       // Mostrar mensaje personalizado
       if (selectedCustomer) {
