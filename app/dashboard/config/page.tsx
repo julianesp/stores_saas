@@ -30,16 +30,28 @@ export default function ConfigPage() {
 
     try {
       setLoading(true);
-      const profile = await getUserProfileByClerkId(user.id);
-      if (!profile) {
-        toast.error('Perfil no encontrado');
-        return;
-      }
 
-      const loyaltySettings = await getLoyaltySettings(profile.id);
-      setSettings(loyaltySettings);
-      setEnabled(loyaltySettings.enabled);
-      setTiers(loyaltySettings.tiers);
+      // NOTA: Temporalmente usamos configuración por defecto
+      // TODO: Migrar loyalty_settings a Cloudflare D1
+      const defaultSettings: LoyaltySettings = {
+        id: 'default',
+        user_profile_id: user.id,
+        enabled: true,
+        tiers: [
+          { min_amount: 0, max_amount: 19999, points: 0, name: 'Sin puntos' },
+          { min_amount: 20000, max_amount: 49999, points: 5, name: 'Compra pequeña' },
+          { min_amount: 50000, max_amount: 99999, points: 10, name: 'Compra mediana' },
+          { min_amount: 100000, max_amount: 199999, points: 25, name: 'Compra grande' },
+          { min_amount: 200000, max_amount: 499999, points: 50, name: 'Compra muy grande' },
+          { min_amount: 500000, max_amount: Infinity, points: 100, name: 'Compra premium' },
+        ],
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      };
+
+      setSettings(defaultSettings);
+      setEnabled(defaultSettings.enabled);
+      setTiers(defaultSettings.tiers);
     } catch (error) {
       console.error('Error loading settings:', error);
       toast.error('Error al cargar configuración');
@@ -62,12 +74,13 @@ export default function ConfigPage() {
 
     try {
       setSaving(true);
-      await updateLoyaltySettings(settings.id, {
-        enabled,
-        tiers: sortedTiers,
+
+      // NOTA: Por ahora solo se puede visualizar la configuración por defecto
+      // TODO: Implementar guardado en Cloudflare D1 cuando se migre loyalty_settings
+      toast.warning('Configuración de solo lectura', {
+        description: 'Por ahora se usa la configuración por defecto del sistema. La edición personalizada estará disponible próximamente.'
       });
-      toast.success('Configuración guardada correctamente');
-      loadSettings();
+
     } catch (error) {
       console.error('Error saving settings:', error);
       toast.error('Error al guardar configuración');
