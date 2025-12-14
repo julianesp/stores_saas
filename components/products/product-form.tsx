@@ -160,6 +160,24 @@ export function ProductForm({ initialData, productId }: ProductFormProps) {
         images: productImages,
       };
 
+      // Limpiar campos vacíos para evitar errores en la base de datos
+      // Convertir strings vacíos a undefined
+      if (productData.category_id === '') {
+        productData.category_id = undefined;
+      }
+      if (productData.supplier_id === '') {
+        productData.supplier_id = undefined;
+      }
+      if (productData.barcode === '') {
+        productData.barcode = undefined;
+      }
+      if (productData.description === '') {
+        productData.description = undefined;
+      }
+      if (productData.expiration_date === '') {
+        productData.expiration_date = undefined;
+      }
+
       if (productId) {
         await updateProduct(productId, productData, getToken);
         toast.success('Producto actualizado correctamente');
