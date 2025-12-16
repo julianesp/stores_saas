@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { useUser } from '@clerk/nextjs';
+import { useUser, useAuth } from '@clerk/nextjs';
 import { Check, Loader2, Smartphone, CreditCard, Building2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -13,6 +13,7 @@ import { formatCurrency } from '@/lib/utils';
 
 export default function SubscriptionPage() {
   const { user } = useUser();
+  const { getToken } = useAuth();
   const [loading, setLoading] = useState(false);
   const [subscriptionStatus, setSubscriptionStatus] = useState<SubscriptionStatus | null>(null);
   const [selectedPlan, setSelectedPlan] = useState<string | null>(null);
@@ -20,13 +21,13 @@ export default function SubscriptionPage() {
 
   useEffect(() => {
     async function fetchStatus() {
-      if (user) {
-        const status = await checkSubscriptionStatus(user.id);
+      if (user && getToken) {
+        const status = await checkSubscriptionStatus(getToken);
         setSubscriptionStatus(status);
       }
     }
     fetchStatus();
-  }, [user]);
+  }, [user, getToken]);
 
   const handleSubscribe = async (planId: string, paymentMethod: 'NEQUI' | null = null) => {
     if (!user) return;

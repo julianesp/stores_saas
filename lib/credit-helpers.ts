@@ -1,41 +1,55 @@
-import { collection, query, where, getDocs, doc, getDoc, updateDoc, addDoc, Timestamp, orderBy, limit } from 'firebase/firestore';
-import { db } from './firebase';
-import { Sale, Customer, CreditPayment, CreditPaymentWithRelations, SaleWithRelations } from './types';
+import type { GetTokenFn, Sale, Customer } from './cloudflare-api';
+import { getSales, getCustomers, getCustomerById, getSaleById, updateCustomer, registerCreditPayment, getCreditPaymentHistory, getCustomerCreditPayments } from './cloudflare-api';
+
+export interface SaleWithRelations extends Sale {
+  customer?: Customer;
+}
+
+export interface CreditPaymentWithRelations {
+  id: string;
+  sale_id: string;
+  customer_id: string;
+  amount: number;
+  payment_method: 'efectivo' | 'tarjeta' | 'transferencia';
+  cashier_id: string;
+  notes?: string;
+  created_at: string;
+  sale?: Sale;
+}
 
 /**
  * Obtiene todas las ventas a crédito con saldo pendiente
  */
-export async function getCreditSales(userProfileId: string): Promise<SaleWithRelations[]> {
+export async function getCreditSales(userProfileId: string, getToken: GetTokenFn): Promise<SaleWithRelations[]> {
   try {
-    const salesRef = collection(db, 'sales');
-    const q = query(
-      salesRef,
-      where('cashier_id', '==', userProfileId),
-      where('payment_method', '==', 'credito'),
-      where('payment_status', 'in', ['pendiente', 'parcial']),
-      orderBy('created_at', 'desc')
+    const allSales = await getSales(getToken);
+
+    // Filtrar ventas a crédito con saldo pendiente
+    const creditSales = allSales.filter(sale =>
+      sale.payment_method === 'credito' &&
+      (sale.payment_status === 'pendiente' || sale.payment_status === 'parcial')
     );
 
-    const snapshot = await getDocs(q);
+    // Obtener información de clientes
     const sales: SaleWithRelations[] = [];
-
-    for (const docSnap of snapshot.docs) {
-      const saleData = { id: docSnap.id, ...docSnap.data() } as Sale;
-
-      // Obtener información del cliente si existe
+    for (const sale of creditSales) {
       let customer: Customer | undefined;
-      if (saleData.customer_id) {
-        const customerDoc = await getDoc(doc(db, 'customers', saleData.customer_id));
-        if (customerDoc.exists()) {
-          customer = { id: customerDoc.id, ...customerDoc.data() } as Customer;
+      if (sale.customer_id) {
+        try {
+          customer = await getCustomerById(sale.customer_id, getToken);
+        } catch (error) {
+          console.error(`Error al obtener cliente ${sale.customer_id}:`, error);
         }
       }
 
       sales.push({
-        ...saleData,
+        ...sale,
         customer,
       });
     }
+
+    // Ordenar por fecha descendente
+    sales.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
 
     return sales;
   } catch (error) {
@@ -47,35 +61,32 @@ export async function getCreditSales(userProfileId: string): Promise<SaleWithRel
 /**
  * Obtiene todas las ventas a crédito de un cliente específico
  */
-export async function getCustomerCreditSales(customerId: string): Promise<SaleWithRelations[]> {
+export async function getCustomerCreditSales(customerId: string, getToken: GetTokenFn): Promise<SaleWithRelations[]> {
   try {
-    const salesRef = collection(db, 'sales');
-    const q = query(
-      salesRef,
-      where('customer_id', '==', customerId),
-      where('payment_method', '==', 'credito'),
-      where('payment_status', 'in', ['pendiente', 'parcial']),
-      orderBy('created_at', 'desc')
+    const allSales = await getSales(getToken);
+
+    // Filtrar ventas del cliente que sean a crédito y tengan saldo pendiente
+    const customerCreditSales = allSales.filter(sale =>
+      sale.customer_id === customerId &&
+      sale.payment_method === 'credito' &&
+      (sale.payment_status === 'pendiente' || sale.payment_status === 'parcial')
     );
 
-    const snapshot = await getDocs(q);
-    const sales: SaleWithRelations[] = [];
-
-    for (const docSnap of snapshot.docs) {
-      const saleData = { id: docSnap.id, ...docSnap.data() } as Sale;
-
-      // Obtener información del cliente
-      const customerDoc = await getDoc(doc(db, 'customers', customerId));
-      let customer: Customer | undefined;
-      if (customerDoc.exists()) {
-        customer = { id: customerDoc.id, ...customerDoc.data() } as Customer;
-      }
-
-      sales.push({
-        ...saleData,
-        customer,
-      });
+    // Obtener información del cliente
+    let customer: Customer | undefined;
+    try {
+      customer = await getCustomerById(customerId, getToken);
+    } catch (error) {
+      console.error(`Error al obtener cliente ${customerId}:`, error);
     }
+
+    const sales: SaleWithRelations[] = customerCreditSales.map(sale => ({
+      ...sale,
+      customer,
+    }));
+
+    // Ordenar por fecha descendente
+    sales.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
 
     return sales;
   } catch (error) {
@@ -87,21 +98,19 @@ export async function getCustomerCreditSales(customerId: string): Promise<SaleWi
 /**
  * Obtiene todos los clientes con deuda pendiente
  */
-export async function getDebtorCustomers(userProfileId: string): Promise<Customer[]> {
+export async function getDebtorCustomers(userProfileId: string, getToken: GetTokenFn): Promise<Customer[]> {
   try {
-    const customersRef = collection(db, 'customers');
-    const q = query(
-      customersRef,
-      where('user_profile_id', '==', userProfileId),
-      where('current_debt', '>', 0),
-      orderBy('current_debt', 'desc')
+    const allCustomers = await getCustomers(getToken);
+
+    // Filtrar clientes con deuda pendiente
+    const debtors = allCustomers.filter(customer =>
+      (customer.current_debt || 0) > 0
     );
 
-    const snapshot = await getDocs(q);
-    return snapshot.docs.map(doc => ({
-      id: doc.id,
-      ...doc.data()
-    })) as Customer[];
+    // Ordenar por deuda descendente
+    debtors.sort((a, b) => (b.current_debt || 0) - (a.current_debt || 0));
+
+    return debtors;
   } catch (error) {
     console.error('Error al obtener clientes deudores:', error);
     throw error;
@@ -111,7 +120,7 @@ export async function getDebtorCustomers(userProfileId: string): Promise<Custome
 /**
  * Verifica si un cliente puede recibir más crédito
  */
-export async function canCustomerGetCredit(customerId: string, newAmount: number): Promise<{
+export async function canCustomerGetCredit(customerId: string, newAmount: number, getToken: GetTokenFn): Promise<{
   canGetCredit: boolean;
   currentDebt: number;
   creditLimit: number;
@@ -119,9 +128,9 @@ export async function canCustomerGetCredit(customerId: string, newAmount: number
   message?: string;
 }> {
   try {
-    const customerDoc = await getDoc(doc(db, 'customers', customerId));
+    const customer = await getCustomerById(customerId, getToken);
 
-    if (!customerDoc.exists()) {
+    if (!customer) {
       return {
         canGetCredit: false,
         currentDebt: 0,
@@ -131,7 +140,6 @@ export async function canCustomerGetCredit(customerId: string, newAmount: number
       };
     }
 
-    const customer = customerDoc.data() as Customer;
     const currentDebt = customer.current_debt || 0;
     const creditLimit = customer.credit_limit || 0;
 
@@ -166,23 +174,20 @@ export async function canCustomerGetCredit(customerId: string, newAmount: number
 /**
  * Actualiza la deuda del cliente después de una venta a crédito
  */
-export async function updateCustomerDebt(customerId: string, amount: number): Promise<void> {
+export async function updateCustomerDebt(customerId: string, amount: number, getToken: GetTokenFn): Promise<void> {
   try {
-    const customerRef = doc(db, 'customers', customerId);
-    const customerDoc = await getDoc(customerRef);
+    const customer = await getCustomerById(customerId, getToken);
 
-    if (!customerDoc.exists()) {
+    if (!customer) {
       throw new Error('Cliente no encontrado');
     }
 
-    const customer = customerDoc.data() as Customer;
     const currentDebt = customer.current_debt || 0;
     const newDebt = currentDebt + amount;
 
-    await updateDoc(customerRef, {
+    await updateCustomer(customerId, {
       current_debt: newDebt,
-      updated_at: new Date().toISOString()
-    });
+    }, getToken);
   } catch (error) {
     console.error('Error al actualizar deuda del cliente:', error);
     throw error;
@@ -191,64 +196,27 @@ export async function updateCustomerDebt(customerId: string, amount: number): Pr
 
 /**
  * Registra un pago de crédito (parcial o total)
+ * Ahora usa la API de Cloudflare que maneja toda la lógica de actualización
  */
-export async function registerCreditPayment(
+export async function registerCreditPaymentLocal(
   saleId: string,
   customerId: string,
   amount: number,
   paymentMethod: 'efectivo' | 'tarjeta' | 'transferencia',
   cashierId: string,
+  getToken: GetTokenFn,
   notes?: string
 ): Promise<void> {
   try {
-    // Obtener la venta
-    const saleRef = doc(db, 'sales', saleId);
-    const saleDoc = await getDoc(saleRef);
-
-    if (!saleDoc.exists()) {
-      throw new Error('Venta no encontrada');
-    }
-
-    const sale = saleDoc.data() as Sale;
-    const amountPaid = (sale.amount_paid || 0) + amount;
-    const amountPending = sale.total - amountPaid;
-    const paymentStatus = amountPending <= 0 ? 'pagado' : amountPending < sale.total ? 'parcial' : 'pendiente';
-
-    // Registrar el pago en la colección credit_payments
-    const creditPaymentData: Omit<CreditPayment, 'id'> = {
+    // Usar la función de cloudflare-api que maneja toda la lógica
+    await registerCreditPayment({
       sale_id: saleId,
       customer_id: customerId,
       amount,
       payment_method: paymentMethod,
-      notes,
       cashier_id: cashierId,
-      created_at: new Date().toISOString()
-    };
-
-    await addDoc(collection(db, 'credit_payments'), creditPaymentData);
-
-    // Actualizar la venta
-    await updateDoc(saleRef, {
-      amount_paid: amountPaid,
-      amount_pending: amountPending,
-      payment_status: paymentStatus,
-      updated_at: new Date().toISOString()
-    });
-
-    // Actualizar la deuda del cliente (reducir)
-    const customerRef = doc(db, 'customers', customerId);
-    const customerDoc = await getDoc(customerRef);
-
-    if (customerDoc.exists()) {
-      const customer = customerDoc.data() as Customer;
-      const currentDebt = customer.current_debt || 0;
-      const newDebt = Math.max(0, currentDebt - amount); // No puede ser negativo
-
-      await updateDoc(customerRef, {
-        current_debt: newDebt,
-        updated_at: new Date().toISOString()
-      });
-    }
+      notes,
+    }, getToken);
   } catch (error) {
     console.error('Error al registrar pago de crédito:', error);
     throw error;
@@ -258,24 +226,21 @@ export async function registerCreditPayment(
 /**
  * Obtiene el historial de pagos de una venta a crédito
  */
-export async function getCreditPaymentHistory(saleId: string): Promise<CreditPaymentWithRelations[]> {
+export async function getCreditPaymentHistoryLocal(saleId: string, getToken: GetTokenFn): Promise<CreditPaymentWithRelations[]> {
   try {
-    const paymentsRef = collection(db, 'credit_payments');
-    const q = query(
-      paymentsRef,
-      where('sale_id', '==', saleId),
-      orderBy('created_at', 'asc')
-    );
+    const payments = await getCreditPaymentHistory(saleId, getToken);
 
-    const snapshot = await getDocs(q);
-    const payments: CreditPaymentWithRelations[] = [];
-
-    for (const docSnap of snapshot.docs) {
-      const paymentData = { id: docSnap.id, ...docSnap.data() } as CreditPayment;
-      payments.push(paymentData);
-    }
-
-    return payments;
+    // Convertir al formato con relaciones
+    return payments.map(payment => ({
+      id: payment.id || '',
+      sale_id: payment.sale_id,
+      customer_id: payment.customer_id,
+      amount: payment.amount,
+      payment_method: payment.payment_method,
+      cashier_id: payment.cashier_id,
+      notes: payment.notes,
+      created_at: payment.created_at || new Date().toISOString(),
+    }));
   } catch (error) {
     console.error('Error al obtener historial de pagos:', error);
     throw error;
@@ -285,37 +250,37 @@ export async function getCreditPaymentHistory(saleId: string): Promise<CreditPay
 /**
  * Obtiene todos los pagos de crédito de un cliente
  */
-export async function getCustomerCreditPayments(customerId: string): Promise<CreditPaymentWithRelations[]> {
+export async function getCustomerCreditPaymentsLocal(customerId: string, getToken: GetTokenFn): Promise<CreditPaymentWithRelations[]> {
   try {
-    const paymentsRef = collection(db, 'credit_payments');
-    const q = query(
-      paymentsRef,
-      where('customer_id', '==', customerId),
-      orderBy('created_at', 'desc')
-    );
+    const payments = await getCustomerCreditPayments(customerId, getToken);
 
-    const snapshot = await getDocs(q);
-    const payments: CreditPaymentWithRelations[] = [];
+    // Convertir al formato con relaciones y obtener información de las ventas
+    const paymentsWithRelations: CreditPaymentWithRelations[] = [];
 
-    for (const docSnap of snapshot.docs) {
-      const paymentData = { id: docSnap.id, ...docSnap.data() } as CreditPayment;
-
-      // Obtener información de la venta
+    for (const payment of payments) {
       let sale: Sale | undefined;
-      if (paymentData.sale_id) {
-        const saleDoc = await getDoc(doc(db, 'sales', paymentData.sale_id));
-        if (saleDoc.exists()) {
-          sale = { id: saleDoc.id, ...saleDoc.data() } as Sale;
+      if (payment.sale_id) {
+        try {
+          sale = await getSaleById(payment.sale_id, getToken);
+        } catch (error) {
+          console.error(`Error al obtener venta ${payment.sale_id}:`, error);
         }
       }
 
-      payments.push({
-        ...paymentData,
-        sale
+      paymentsWithRelations.push({
+        id: payment.id || '',
+        sale_id: payment.sale_id,
+        customer_id: payment.customer_id,
+        amount: payment.amount,
+        payment_method: payment.payment_method,
+        cashier_id: payment.cashier_id,
+        notes: payment.notes,
+        created_at: payment.created_at || new Date().toISOString(),
+        sale,
       });
     }
 
-    return payments;
+    return paymentsWithRelations;
   } catch (error) {
     console.error('Error al obtener pagos del cliente:', error);
     throw error;
@@ -325,13 +290,11 @@ export async function getCustomerCreditPayments(customerId: string): Promise<Cre
 /**
  * Actualiza el límite de crédito de un cliente
  */
-export async function updateCustomerCreditLimit(customerId: string, newLimit: number): Promise<void> {
+export async function updateCustomerCreditLimit(customerId: string, newLimit: number, getToken: GetTokenFn): Promise<void> {
   try {
-    const customerRef = doc(db, 'customers', customerId);
-    await updateDoc(customerRef, {
+    await updateCustomer(customerId, {
       credit_limit: newLimit,
-      updated_at: new Date().toISOString()
-    });
+    }, getToken);
   } catch (error) {
     console.error('Error al actualizar límite de crédito:', error);
     throw error;

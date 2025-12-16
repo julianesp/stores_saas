@@ -1,8 +1,16 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { verifyWebhookSignature } from '@/lib/wompi';
-import { activateSubscription, getUserProfileByClerkId } from '@/lib/subscription-helpers';
-import { createDocument, queryDocuments, updateDocument } from '@/lib/firestore-helpers';
-import { PaymentTransaction } from '@/lib/types';
+import { activateSubscription } from '@/lib/subscription-helpers';
+import { getAllUserProfiles, updateUserProfile, createPaymentTransaction, getAllPaymentTransactions } from '@/lib/cloudflare-api';
+import type { GetTokenFn } from '@/lib/cloudflare-api';
+
+// Para webhooks de Wompi necesitamos un getToken básico que obtenga un token de sistema
+// En producción, esto debería ser un token de servicio
+const getSystemToken: GetTokenFn = async () => {
+  // TODO: Implementar autenticación de servicio para webhooks
+  // Por ahora, usamos una autenticación básica o token de sistema
+  return process.env.SYSTEM_API_TOKEN || '';
+};
 
 export async function POST(req: NextRequest) {
   try {
@@ -50,9 +58,8 @@ async function handleTransactionUpdated(transaction: any) {
     const { id, status, reference, amount_in_cents, payment_method_type } = transaction;
 
     // Buscar si ya existe esta transacción
-    const existingTransactions = await queryDocuments('payment_transactions', [
-      { field: 'wompi_transaction_id', operator: '==', value: id }
-    ]);
+    const allTransactions = await getAllPaymentTransactions(getSystemToken);
+    const existingTransaction = allTransactions.find(t => t.wompi_transaction_id === id);
 
     // Extraer el user ID del reference (formato: SUB-userId-timestamp)
     const referenceParts = reference.split('-');
@@ -63,7 +70,7 @@ async function handleTransactionUpdated(transaction: any) {
 
     // Buscar el user_profile por la referencia
     // El formato es SUB-{primeros8caracteresDelId}-{timestamp}
-    const userProfiles = await queryDocuments('user_profiles', []);
+    const userProfiles = await getAllUserProfiles(getSystemToken);
     const userProfile = userProfiles.find((profile: any) =>
       reference.includes(profile.id.substring(0, 8))
     );
@@ -73,25 +80,18 @@ async function handleTransactionUpdated(transaction: any) {
       return;
     }
 
-    // Crear o actualizar la transacción en Firestore
-    const transactionData: Omit<PaymentTransaction, 'id' | 'created_at'> = {
-      user_profile_id: userProfile.id,
-      wompi_transaction_id: id,
-      amount: amount_in_cents / 100,
-      currency: 'COP',
-      status,
-      payment_method_type,
-      reference,
-    };
-
-    if (existingTransactions.length > 0) {
-      // Actualizar transacción existente
-      await updateDocument('payment_transactions', existingTransactions[0].id, {
-        status,
-      });
-    } else {
+    // Crear o actualizar la transacción
+    if (!existingTransaction) {
       // Crear nueva transacción
-      await createDocument('payment_transactions', transactionData);
+      await createPaymentTransaction({
+        user_profile_id: userProfile.id,
+        wompi_transaction_id: id,
+        amount: amount_in_cents / 100,
+        currency: 'COP',
+        status,
+        payment_method_type,
+        reference,
+      }, getSystemToken);
     }
 
     // Si el pago fue aprobado, activar la suscripción
@@ -110,15 +110,15 @@ async function handleTransactionUpdated(transaction: any) {
         planId = 'basic-monthly';
       }
 
-      await activateSubscription(userProfile.id, id, planId);
+      await activateSubscription(userProfile.id, id, planId, getSystemToken);
       console.log('Subscription activated for user:', userProfile.id, 'with plan:', planId);
     }
 
     // Si el pago fue declinado o tiene error, marcar como expirado
     if (status === 'DECLINED' || status === 'ERROR') {
-      await updateDocument('user_profiles', userProfile.id, {
+      await updateUserProfile(userProfile.id, {
         subscription_status: 'expired'
-      });
+      }, getSystemToken);
       console.log('Subscription marked as expired for user:', userProfile.id);
     }
   } catch (error) {

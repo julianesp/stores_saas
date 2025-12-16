@@ -1,8 +1,6 @@
-import {
-  getAllDocuments,
-  queryDocuments,
-} from './firestore-helpers';
-import { Sale, SaleItem, Product } from './types';
+import type { GetTokenFn } from './cloudflare-api';
+import { getSales, getProducts } from './cloudflare-api';
+import type { Sale, Product } from './cloudflare-api';
 
 export interface ProductAnalytics {
   product_id: string;
@@ -26,123 +24,102 @@ export interface ProductAnalytics {
 /**
  * Analiza las ventas y genera recomendaciones inteligentes de stock
  */
-export async function analyzeProductSales(daysToAnalyze: number = 30): Promise<ProductAnalytics[]> {
+export async function analyzeProductSales(daysToAnalyze: number = 30, getToken: GetTokenFn): Promise<ProductAnalytics[]> {
   try {
     // Obtener todas las ventas de los últimos N días
-    const allSales = await getAllDocuments('sales') as Sale[];
+    const allSales = await getSales(getToken);
     const cutoffDate = new Date();
     cutoffDate.setDate(cutoffDate.getDate() - daysToAnalyze);
 
     // Filtrar ventas del período
     const recentSales = allSales.filter(sale => {
-      const saleDate = (sale.created_at as any)?.toDate
-        ? (sale.created_at as any).toDate()
-        : new Date(sale.created_at);
+      const saleDate = new Date(sale.created_at);
       return saleDate >= cutoffDate && sale.status === 'completada';
     });
 
-    // Obtener todos los items de venta
-    const allSaleItems = await getAllDocuments('sale_items') as SaleItem[];
-
     // Obtener todos los productos
-    const allProducts = await getAllDocuments('products') as Product[];
+    const allProducts = await getProducts(getToken);
     const productsMap = new Map(allProducts.map(p => [p.id, p]));
 
-    // Filtrar items de las ventas recientes
-    const recentSaleIds = new Set(recentSales.map(s => s.id));
-    const recentSaleItems = allSaleItems.filter(item => recentSaleIds.has(item.sale_id));
-
-    // Agrupar items por producto
+    // Agrupar ventas por producto
     const productSalesMap = new Map<string, {
-      items: SaleItem[];
-      last_7_days: SaleItem[];
-      last_30_days: SaleItem[];
+      quantities: number[];
+      revenues: number[];
+      salesIds: Set<string>;
+      last7DaysSales: number;
+      last30DaysSales: number;
     }>();
 
-    const now = new Date();
-    const last7Days = new Date();
-    last7Days.setDate(last7Days.getDate() - 7);
-    const last30Days = new Date();
-    last30Days.setDate(last30Days.getDate() - 30);
+    // Fechas para análisis de últimos 7 y 30 días
+    const sevenDaysAgo = new Date();
+    sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+    const thirtyDaysAgo = new Date();
+    thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
 
-    recentSaleItems.forEach(item => {
-      if (!productSalesMap.has(item.product_id)) {
-        productSalesMap.set(item.product_id, {
-          items: [],
-          last_7_days: [],
-          last_30_days: [],
-        });
-      }
+    // Procesar las ventas
+    for (const sale of recentSales) {
+      if (!sale.items) continue;
 
-      const data = productSalesMap.get(item.product_id)!;
-      data.items.push(item);
+      const saleDate = new Date(sale.created_at);
 
-      // Obtener fecha de la venta
-      const sale = recentSales.find(s => s.id === item.sale_id);
-      if (sale) {
-        const saleDate = (sale.created_at as any)?.toDate
-          ? (sale.created_at as any).toDate()
-          : new Date(sale.created_at);
+      for (const item of sale.items) {
+        const productId = item.product_id;
 
-        if (saleDate >= last7Days) {
-          data.last_7_days.push(item);
+        if (!productSalesMap.has(productId)) {
+          productSalesMap.set(productId, {
+            quantities: [],
+            revenues: [],
+            salesIds: new Set(),
+            last7DaysSales: 0,
+            last30DaysSales: 0,
+          });
         }
-        if (saleDate >= last30Days) {
-          data.last_30_days.push(item);
+
+        const productData = productSalesMap.get(productId)!;
+        productData.quantities.push(item.quantity);
+        productData.revenues.push(item.subtotal);
+        productData.salesIds.add(sale.id);
+
+        // Contador de últimos 7 y 30 días
+        if (saleDate >= sevenDaysAgo) {
+          productData.last7DaysSales += item.quantity;
+        }
+        if (saleDate >= thirtyDaysAgo) {
+          productData.last30DaysSales += item.quantity;
         }
       }
-    });
+    }
 
-    // Generar análisis para cada producto
+    // Generar analytics para cada producto
     const analytics: ProductAnalytics[] = [];
 
-    productSalesMap.forEach((data, productId) => {
+    for (const [productId, data] of productSalesMap.entries()) {
       const product = productsMap.get(productId);
-      if (!product) return;
+      if (!product) continue;
 
-      const totalQuantitySold = data.items.reduce((sum, item) => sum + item.quantity, 0);
-      const totalRevenue = data.items.reduce((sum, item) => sum + item.subtotal, 0);
-      const salesCount = data.items.length;
-      const averageSaleQuantity = totalQuantitySold / salesCount;
-
-      // Calcular velocidad de venta (unidades por día)
+      const totalQuantitySold = data.quantities.reduce((sum, q) => sum + q, 0);
+      const totalRevenue = data.revenues.reduce((sum, r) => sum + r, 0);
+      const salesCount = data.salesIds.size;
+      const averageSaleQuantity = salesCount > 0 ? totalQuantitySold / salesCount : 0;
       const salesVelocity = totalQuantitySold / daysToAnalyze;
 
-      // Calcular días hasta quedarse sin stock
+      // Calcular días hasta agotamiento
       const daysUntilStockout = salesVelocity > 0
         ? Math.floor(product.stock / salesVelocity)
-        : 9999;
+        : 999;
 
-      // Calcular cantidad recomendada de pedido
-      // Fórmula: (velocidad de venta × 30 días) + stock mínimo - stock actual
-      const recommendedOrderQuantity = Math.max(
-        0,
-        Math.ceil((salesVelocity * 30) + product.min_stock - product.stock)
-      );
+      // Recomendar cantidad de pedido (para 30 días)
+      const recommendedOrderQuantity = Math.ceil(salesVelocity * 30) - product.stock;
 
       // Determinar tendencia
-      let trend: 'high' | 'medium' | 'low';
-      if (salesVelocity >= 5) {
-        trend = 'high';
-      } else if (salesVelocity >= 1) {
-        trend = 'medium';
-      } else {
-        trend = 'low';
-      }
+      let trend: 'high' | 'medium' | 'low' = 'low';
+      if (salesVelocity >= 10) trend = 'high';
+      else if (salesVelocity >= 3) trend = 'medium';
 
       // Determinar nivel de riesgo
-      let riskLevel: 'critical' | 'warning' | 'good';
-      if (daysUntilStockout <= 3 || product.stock <= product.min_stock) {
-        riskLevel = 'critical';
-      } else if (daysUntilStockout <= 7) {
-        riskLevel = 'warning';
-      } else {
-        riskLevel = 'good';
-      }
-
-      // Ventas de los últimos períodos
-      const last7DaysSales = data.last_7_days.reduce((sum, item) => sum + item.quantity, 0);
-      const last30DaysSales = data.last_30_days.reduce((sum, item) => sum + item.quantity, 0);
+      let riskLevel: 'critical' | 'warning' | 'good' = 'good';
+      if (daysUntilStockout <= 7) riskLevel = 'critical';
+      else if (daysUntilStockout <= 15) riskLevel = 'warning';
 
       analytics.push({
         product_id: productId,
@@ -155,45 +132,21 @@ export async function analyzeProductSales(daysToAnalyze: number = 30): Promise<P
         current_stock: product.stock,
         min_stock: product.min_stock,
         days_until_stockout: daysUntilStockout,
-        recommended_order_quantity: recommendedOrderQuantity,
+        recommended_order_quantity: Math.max(0, recommendedOrderQuantity),
         sales_velocity: Number(salesVelocity.toFixed(2)),
         trend,
         risk_level: riskLevel,
-        last_30_days_sales: last30DaysSales,
-        last_7_days_sales: last7DaysSales,
+        last_30_days_sales: data.last30DaysSales,
+        last_7_days_sales: data.last7DaysSales,
       });
-    });
+    }
 
-    // Ordenar por velocidad de venta (más vendidos primero)
+    // Ordenar por velocidad de venta descendente
     analytics.sort((a, b) => b.sales_velocity - a.sales_velocity);
 
     return analytics;
   } catch (error) {
     console.error('Error analyzing product sales:', error);
-    throw error;
+    return [];
   }
-}
-
-/**
- * Obtiene los productos más vendidos (top N)
- */
-export async function getTopSellingProducts(limit: number = 10): Promise<ProductAnalytics[]> {
-  const analytics = await analyzeProductSales(30);
-  return analytics.slice(0, limit);
-}
-
-/**
- * Obtiene productos en riesgo de agotarse
- */
-export async function getProductsAtRisk(): Promise<ProductAnalytics[]> {
-  const analytics = await analyzeProductSales(30);
-  return analytics.filter(p => p.risk_level === 'critical' || p.risk_level === 'warning');
-}
-
-/**
- * Obtiene productos que necesitan pedirse urgentemente
- */
-export async function getProductsToOrder(): Promise<ProductAnalytics[]> {
-  const analytics = await analyzeProductSales(30);
-  return analytics.filter(p => p.recommended_order_quantity > 0);
 }

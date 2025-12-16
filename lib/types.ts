@@ -315,7 +315,7 @@ export interface CreditPaymentWithRelations extends CreditPayment {
 }
 
 // Tipos para sistema de notificaciones
-export type NotificationType = 'stock' | 'loyalty' | 'sale' | 'system';
+export type NotificationType = 'stock' | 'loyalty' | 'sale' | 'system' | 'subscription';
 
 export interface Notification {
   id: string;

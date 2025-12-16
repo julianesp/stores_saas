@@ -2,21 +2,19 @@
 
 import { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
+import { useAuth } from '@clerk/nextjs';
 import { Bell, Package, Award, TrendingUp, AlertCircle, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Notification } from '@/lib/types';
 import { getAllNotifications } from '@/lib/notification-helpers';
 
-interface NotificationPanelProps {
-  userId: string;
-}
-
-export function NotificationPanel({ userId }: NotificationPanelProps) {
+export function NotificationPanel() {
   const [isOpen, setIsOpen] = useState(false);
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [loading, setLoading] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
   const router = useRouter();
+  const { getToken } = useAuth();
 
   // Cargar notificaciones al abrir el panel
   useEffect(() => {
@@ -40,9 +38,11 @@ export function NotificationPanel({ userId }: NotificationPanelProps) {
   }, [isOpen]);
 
   const loadNotifications = async () => {
+    if (!getToken) return;
+
     setLoading(true);
     try {
-      const notifs = await getAllNotifications(userId);
+      const notifs = await getAllNotifications(getToken);
       setNotifications(notifs);
     } catch (error) {
       console.error('Error loading notifications:', error);
