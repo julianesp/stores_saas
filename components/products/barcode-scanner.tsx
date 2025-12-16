@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from 'react';
 import Quagga from '@ericblade/quagga2';
-import { Camera, X, Zap } from 'lucide-react';
+import { Camera, X, Zap, AlertCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 
@@ -16,6 +16,40 @@ export function BarcodeScanner({ onDetected, onClose }: BarcodeScannerProps) {
   const [isScanning, setIsScanning] = useState(false);
   const [lastScanned, setLastScanned] = useState<string>('');
   const [error, setError] = useState<string>('');
+  const [permissionState, setPermissionState] = useState<'prompt' | 'granted' | 'denied'>('prompt');
+
+  // Verificar permisos de cámara
+  const checkCameraPermission = async () => {
+    try {
+      // Intentar acceder a la cámara para verificar permisos
+      const stream = await navigator.mediaDevices.getUserMedia({
+        video: { facingMode: 'environment' }
+      });
+
+      // Si llegamos aquí, tenemos permisos
+      setPermissionState('granted');
+
+      // Detener el stream inmediatamente
+      stream.getTracks().forEach(track => track.stop());
+
+      return true;
+    } catch (err: any) {
+      console.error('Error al verificar permisos:', err);
+
+      if (err.name === 'NotAllowedError' || err.name === 'PermissionDeniedError') {
+        setPermissionState('denied');
+        setError('Permisos de cámara denegados. Por favor, permite el acceso a la cámara en la configuración de tu navegador.');
+      } else if (err.name === 'NotFoundError' || err.name === 'DevicesNotFoundError') {
+        setError('No se encontró ninguna cámara en este dispositivo.');
+      } else if (err.name === 'NotReadableError' || err.name === 'TrackStartError') {
+        setError('La cámara está siendo usada por otra aplicación. Cierra otras apps que usen la cámara.');
+      } else {
+        setError('No se pudo acceder a la cámara. Verifica los permisos e intenta nuevamente.');
+      }
+
+      return false;
+    }
+  };
 
   useEffect(() => {
     if (isScanning && scannerRef.current) {
@@ -66,7 +100,7 @@ export function BarcodeScanner({ onDetected, onClose }: BarcodeScannerProps) {
         (err) => {
           if (err) {
             console.error('Error al iniciar escáner:', err);
-            setError('No se pudo acceder a la cámara. Asegúrate de dar permisos.');
+            setError('No se pudo iniciar el escáner. Verifica los permisos de cámara.');
             setIsScanning(false);
             return;
           }
@@ -109,9 +143,15 @@ export function BarcodeScanner({ onDetected, onClose }: BarcodeScannerProps) {
     };
   }, [isScanning, lastScanned, onDetected]);
 
-  const startScanning = () => {
+  const startScanning = async () => {
     setError('');
-    setIsScanning(true);
+
+    // Primero verificar permisos
+    const hasPermission = await checkCameraPermission();
+
+    if (hasPermission) {
+      setIsScanning(true);
+    }
   };
 
   const stopScanning = () => {
@@ -120,6 +160,12 @@ export function BarcodeScanner({ onDetected, onClose }: BarcodeScannerProps) {
     if (onClose) {
       onClose();
     }
+  };
+
+  const retry = () => {
+    setError('');
+    setPermissionState('prompt');
+    startScanning();
   };
 
   if (!isScanning) {
@@ -136,15 +182,58 @@ export function BarcodeScanner({ onDetected, onClose }: BarcodeScannerProps) {
                 Usa la cámara de tu dispositivo para escanear códigos de barras
               </p>
             </div>
+
             {error && (
-              <div className="bg-red-50 border border-red-200 rounded-lg p-3">
-                <p className="text-sm text-red-700">{error}</p>
+              <div className="bg-red-50 border border-red-200 rounded-lg p-4 text-left">
+                <div className="flex gap-3">
+                  <AlertCircle className="h-5 w-5 text-red-600 flex-shrink-0 mt-0.5" />
+                  <div>
+                    <p className="text-sm font-medium text-red-900 mb-2">{error}</p>
+
+                    {permissionState === 'denied' && (
+                      <div className="text-xs text-red-700 space-y-2 mt-2">
+                        <p className="font-medium">Para habilitar la cámara:</p>
+                        <ol className="list-decimal list-inside space-y-1">
+                          <li>En tu navegador, busca el ícono de candado 🔒 o información ℹ️ en la barra de direcciones</li>
+                          <li>Busca la opción "Permisos" o "Configuración del sitio"</li>
+                          <li>Encuentra "Cámara" y selecciona "Permitir"</li>
+                          <li>Recarga la página y vuelve a intentar</li>
+                        </ol>
+                      </div>
+                    )}
+                  </div>
+                </div>
               </div>
             )}
-            <Button onClick={startScanning} size="lg" className="w-full">
-              <Camera className="mr-2 h-5 w-5" />
-              Activar Cámara
-            </Button>
+
+            <div className="space-y-2">
+              <Button
+                onClick={error ? retry : startScanning}
+                size="lg"
+                className="w-full"
+                disabled={isScanning}
+              >
+                <Camera className="mr-2 h-5 w-5" />
+                {error ? 'Reintentar' : 'Activar Cámara'}
+              </Button>
+
+              {error && onClose && (
+                <Button
+                  onClick={onClose}
+                  variant="outline"
+                  size="lg"
+                  className="w-full"
+                >
+                  Cancelar
+                </Button>
+              )}
+            </div>
+
+            <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 text-left">
+              <p className="text-xs text-blue-700">
+                <strong>💡 Importante:</strong> Debes permitir el acceso a la cámara cuando tu navegador lo solicite.
+              </p>
+            </div>
           </div>
         </CardContent>
       </Card>
