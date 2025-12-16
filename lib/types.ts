@@ -20,6 +20,11 @@ export interface UserProfile {
   plan_id?: string; // ID del plan de suscripción
   has_ai_addon?: boolean; // Usuario tiene addon de IA activo
 
+  // Configuración de reportes automáticos
+  auto_reports_enabled?: boolean; // Si los reportes automáticos están activados
+  auto_reports_time?: string; // Hora para generar reportes (formato HH:MM)
+  auto_reports_email?: string; // Email para enviar reportes (opcional)
+
   created_at: string;
   updated_at: string;
 }

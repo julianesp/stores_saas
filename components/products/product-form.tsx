@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -15,13 +15,7 @@ import { Category, Supplier } from '@/lib/types';
 import { toast } from 'sonner';
 import { Scan, Camera, X, Plus } from 'lucide-react';
 import { ImageUploader } from './image-uploader';
-import dynamic from 'next/dynamic';
-
-// Importar el escáner de códigos de barras de forma dinámica (solo en cliente)
-const BarcodeScannerComponent = dynamic(
-  () => import('react-qr-barcode-scanner'),
-  { ssr: false }
-) as any;
+import { Html5Qrcode } from 'html5-qrcode';
 
 const productSchema = z.object({
   barcode: z.string().optional(),
@@ -59,6 +53,9 @@ export function ProductForm({ initialData, productId }: ProductFormProps) {
     phone: '',
     email: '',
   });
+  const [isScanning, setIsScanning] = useState(false);
+  const scannerRef = useRef<Html5Qrcode | null>(null);
+  const scannerElementId = 'barcode-scanner';
 
   const {
     register,
@@ -73,12 +70,83 @@ export function ProductForm({ initialData, productId }: ProductFormProps) {
     },
   });
 
-  const handleBarcodeDetected = (data: string) => {
-    if (data) {
-      setValue('barcode', data);
-      setShowScanner(false);
-      toast.success('Código escaneado correctamente');
+  const startScanner = async () => {
+    try {
+      setIsScanning(true);
+
+      if (!scannerRef.current) {
+        scannerRef.current = new Html5Qrcode(scannerElementId);
+      }
+
+      // Configuración optimizada para detección rápida
+      const config = {
+        fps: 30, // Incrementado de 10 a 30 para detección más rápida
+        qrbox: { width: 350, height: 150 }, // Área de escaneo más amplia
+        aspectRatio: 1.7777778,
+        disableFlip: false, // Permitir flip para mejor detección
+        // Formatos soportados (códigos de barras comunes)
+        formatsToSupport: [
+          0,  // QR_CODE
+          5,  // EAN_13 (más común en productos)
+          6,  // EAN_8
+          7,  // UPC_A
+          8,  // UPC_E
+          9,  // CODE_39
+          10, // CODE_93
+          11, // CODE_128
+          12, // ITF (Interleaved 2 of 5)
+        ],
+      };
+
+      await scannerRef.current.start(
+        { facingMode: 'environment' },
+        config,
+        (decodedText) => {
+          // Código escaneado exitosamente
+          setValue('barcode', decodedText);
+          toast.success('✓ Código escaneado: ' + decodedText);
+          stopScanner();
+        },
+        (errorMessage) => {
+          // Errores de escaneo (normal durante el proceso)
+          // No mostrar nada para evitar spam en consola
+        }
+      );
+    } catch (err) {
+      console.error('Error starting scanner:', err);
+      toast.error('No se pudo iniciar la cámara. Verifica los permisos.');
+      setIsScanning(false);
     }
+  };
+
+  const stopScanner = async () => {
+    try {
+      if (scannerRef.current && isScanning) {
+        await scannerRef.current.stop();
+        scannerRef.current.clear();
+      }
+    } catch (err) {
+      console.error('Error stopping scanner:', err);
+    } finally {
+      setIsScanning(false);
+      setShowScanner(false);
+    }
+  };
+
+  // Cleanup al desmontar el componente
+  useEffect(() => {
+    return () => {
+      if (scannerRef.current) {
+        scannerRef.current.stop().catch(console.error);
+      }
+    };
+  }, []);
+
+  const handleOpenScanner = () => {
+    setShowScanner(true);
+    setTimeout(() => {
+      startScanner();
+    }, 100);
   };
 
   useEffect(() => {
@@ -226,7 +294,7 @@ export function ProductForm({ initialData, productId }: ProductFormProps) {
                 </div>
                 <Button
                   type="button"
-                  onClick={() => setShowScanner(true)}
+                  onClick={handleOpenScanner}
                   className="shrink-0 bg-blue-600 hover:bg-blue-700"
                   size="default"
                 >
@@ -515,7 +583,7 @@ export function ProductForm({ initialData, productId }: ProductFormProps) {
         </Button>
       </div>
 
-      {/* Modal del Escáner de Códigos de Barras */}
+      {/* Modal del Escáner de Códigos de Barras - HTML5-QRCode (Optimizado) */}
       {showScanner && (
         <div className="fixed inset-0 bg-black bg-opacity-75 z-50 flex items-center justify-center p-4">
           <div className="bg-white rounded-lg max-w-2xl w-full overflow-hidden">
@@ -528,33 +596,43 @@ export function ProductForm({ initialData, productId }: ProductFormProps) {
                 type="button"
                 variant="ghost"
                 size="sm"
-                onClick={() => setShowScanner(false)}
+                onClick={stopScanner}
                 className="text-white hover:bg-blue-700"
               >
                 <X className="h-6 w-6" />
               </Button>
             </div>
             <div className="p-4">
-              <p className="text-sm text-gray-600 mb-4 text-center">
-                Apunta la cámara hacia el código de barras del producto
-              </p>
-              <div className="aspect-video bg-gray-900 rounded-lg overflow-hidden relative">
-                {typeof window !== 'undefined' && (
-                  <BarcodeScannerComponent
-                    onUpdate={(err: any, result: any) => {
-                      if (result) {
-                        handleBarcodeDetected(result.getText());
-                      }
-                    }}
-                  />
-                )}
+              <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 mb-4">
+                <p className="text-sm text-blue-800 text-center font-medium">
+                  📱 Apunta la cámara hacia el código de barras
+                </p>
+                <p className="text-xs text-blue-600 text-center mt-1">
+                  El código se detectará automáticamente
+                </p>
               </div>
-              <div className="mt-4 text-center">
+
+              {/* Contenedor del escáner */}
+              <div
+                id={scannerElementId}
+                className="w-full rounded-lg overflow-hidden"
+                style={{ minHeight: '300px' }}
+              ></div>
+
+              <div className="mt-4 flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  {isScanning && (
+                    <>
+                      <div className="h-2 w-2 bg-green-500 rounded-full animate-pulse"></div>
+                      <span className="text-sm text-gray-600">Escaneando...</span>
+                    </>
+                  )}
+                </div>
                 <Button
                   type="button"
                   variant="outline"
-                  onClick={() => setShowScanner(false)}
-                  className="w-full sm:w-auto"
+                  onClick={stopScanner}
+                  className="w-auto"
                 >
                   Cancelar
                 </Button>
