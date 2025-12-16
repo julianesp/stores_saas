@@ -10,6 +10,7 @@ import { Settings, Save, Plus, Trash2, Award } from 'lucide-react';
 import { LoyaltySettings, LoyaltyTier } from '@/lib/types';
 import { formatCurrency } from '@/lib/utils';
 import { toast } from 'sonner';
+import { AutoReportsConfig } from '@/components/config/auto-reports-config';
 
 export default function ConfigPage() {
   const { user } = useUser();
@@ -290,6 +291,9 @@ export default function ConfigPage() {
           </div>
         </CardContent>
       </Card>
+
+      {/* Reportes Automáticos */}
+      <AutoReportsConfig />
 
       {/* Información adicional */}
       <Card>

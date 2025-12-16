@@ -4,7 +4,7 @@ import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useAuth } from '@clerk/nextjs';
 import { useUser } from '@clerk/nextjs';
 import Image from 'next/image';
-import { Search, ShoppingCart, Trash2, Plus, Minus, DollarSign, User, X, Package } from 'lucide-react';
+import { Search, ShoppingCart, Trash2, Plus, Minus, DollarSign, User, X, Package, Scan } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -45,6 +45,7 @@ export default function POSPage() {
     phone: '',
     email: '',
   });
+  const [scanSuccess, setScanSuccess] = useState(false);
   const barcodeRef = useRef<HTMLInputElement>(null);
 
   const handleCreateCustomer = async () => {
@@ -128,8 +129,14 @@ export default function POSPage() {
 
     const product = products.find(p => p.barcode === barcodeInput.trim());
     if (product) {
+      // Efecto visual de éxito
+      setScanSuccess(true);
+      setTimeout(() => setScanSuccess(false), 500);
+
       addToCart(product);
       setBarcodeInput('');
+
+      // Toast pequeño y no intrusivo
       Swal.productAdded(product.name, 1);
     } else {
       Swal.error('Producto no encontrado', 'Código no registrado');
@@ -565,23 +572,75 @@ export default function POSPage() {
         {/* Panel izquierdo - Productos */}
         <div className="lg:col-span-2 space-y-4 order-2 lg:order-1">
           {/* Búsqueda por código de barras */}
-          {/* <Card>
-            <CardHeader className="pb-3">
-              <CardTitle className="text-base md:text-lg">Escanear Código de Barras</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <form onSubmit={handleBarcodeSearch} className="flex gap-2">
-                <Input
-                  ref={barcodeRef}
-                  value={barcodeInput}
-                  onChange={(e) => setBarcodeInput(e.target.value)}
-                  placeholder="Código de barras..."
-                  className="flex-1 text-sm md:text-base"
-                />
-                <Button type="submit" className="flex-shrink-0">Buscar</Button>
+          <Card className={`border-2 shadow-lg transition-all duration-300 ${
+            scanSuccess
+              ? 'border-green-500 bg-green-50'
+              : 'border-blue-500 bg-gradient-to-r from-blue-50 to-white'
+          }`}>
+            <CardContent className="pt-6">
+              <form onSubmit={handleBarcodeSearch} className="space-y-3">
+                <div className="flex items-center gap-3 mb-2">
+                  <div className={`p-2 rounded-lg transition-colors ${
+                    scanSuccess ? 'bg-green-600' : 'bg-blue-600'
+                  }`}>
+                    <Scan className="h-6 w-6 text-white" />
+                  </div>
+                  <div>
+                    <h3 className="font-bold text-lg text-gray-900">
+                      {scanSuccess ? '✓ Producto Agregado' : 'Escanear Producto'}
+                    </h3>
+                    <p className="text-xs text-gray-600">
+                      {scanSuccess ? 'Escanea el siguiente producto' : 'Escanea o escribe el código de barras'}
+                    </p>
+                  </div>
+                </div>
+                <div className="flex gap-2">
+                  <div className="relative flex-1">
+                    <Input
+                      ref={barcodeRef}
+                      value={barcodeInput}
+                      onChange={(e) => setBarcodeInput(e.target.value)}
+                      placeholder="Escanea aquí el código de barras..."
+                      className={`h-14 text-xl font-mono tracking-wider border-2 focus:ring-2 pl-12 transition-colors ${
+                        scanSuccess
+                          ? 'border-green-300 focus:border-green-500 focus:ring-green-200'
+                          : 'border-blue-300 focus:border-blue-500 focus:ring-blue-200'
+                      }`}
+                      autoComplete="off"
+                    />
+                    <div className="absolute left-3 top-1/2 transform -translate-y-1/2 pointer-events-none">
+                      <Scan className={`h-6 w-6 ${
+                        scanSuccess ? 'text-green-600' : 'text-blue-600 animate-pulse'
+                      }`} />
+                    </div>
+                  </div>
+                  <Button
+                    type="submit"
+                    size="lg"
+                    className={`shrink-0 h-14 px-6 transition-colors ${
+                      scanSuccess
+                        ? 'bg-green-600 hover:bg-green-700'
+                        : 'bg-blue-600 hover:bg-blue-700'
+                    }`}
+                  >
+                    <Search className="h-5 w-5 mr-2" />
+                    Agregar
+                  </Button>
+                </div>
+                <div className="flex items-center gap-2 text-xs text-gray-500">
+                  <div className={`h-1.5 w-1.5 rounded-full ${
+                    scanSuccess ? 'bg-green-500 animate-ping' : 'bg-green-500'
+                  }`}></div>
+                  <span>
+                    {scanSuccess
+                      ? 'Producto agregado al carrito'
+                      : 'Listo para escanear - Presiona Enter o click en Agregar'
+                    }
+                  </span>
+                </div>
               </form>
             </CardContent>
-          </Card> */}
+          </Card>
 
           {/* Búsqueda de productos */}
           <Card>
