@@ -1,13 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { auth } from '@clerk/nextjs/server';
-import { getUserProfileByClerkId, checkSubscriptionStatus } from '@/lib/subscription-helpers';
+import { checkSubscriptionStatus, getUserProfileByToken } from '@/lib/subscription-helpers';
 
 export async function GET(req: NextRequest) {
   try {
     // Verificar autenticación
-    const { userId } = await auth();
+    const { userId, getToken } = await auth();
 
-    if (!userId) {
+    if (!userId || !getToken) {
       return NextResponse.json(
         { error: 'No autorizado' },
         { status: 401 }
@@ -15,7 +15,7 @@ export async function GET(req: NextRequest) {
     }
 
     // Obtener el perfil del usuario
-    const userProfile = await getUserProfileByClerkId(userId);
+    const userProfile = await getUserProfileByToken(getToken);
 
     if (!userProfile) {
       return NextResponse.json(
@@ -25,7 +25,7 @@ export async function GET(req: NextRequest) {
     }
 
     // Obtener el estado de suscripción
-    const subscriptionStatus = await checkSubscriptionStatus(userId);
+    const subscriptionStatus = await checkSubscriptionStatus(getToken);
 
     // Calcular días desde el inicio del trial si existe
     let daysSinceTrialStart = null;

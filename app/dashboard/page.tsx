@@ -79,9 +79,9 @@ export default function DashboardPage() {
         } else {
           // Fetch store metrics for regular users
           const [dashboardMetrics, products, expiringCount] = await Promise.all([
-            getDashboardMetrics(userProfileId),
-            getTopProducts(4, userProfileId),
-            getExpiringProducts(userProfileId),
+            getDashboardMetrics(getToken),
+            getTopProducts(4, getToken),
+            getExpiringProducts(getToken),
           ]);
 
           setMetrics(dashboardMetrics);
@@ -112,13 +112,10 @@ export default function DashboardPage() {
         toast.success(data.message);
         // Recargar métricas
         if (!isSuperAdmin && user) {
-          const profile = await getUserProfileByClerkId(user.id);
-          const userProfileId = profile?.id;
-
           const [dashboardMetrics, products, expiringCount] = await Promise.all([
-            getDashboardMetrics(userProfileId),
-            getTopProducts(4, userProfileId),
-            getExpiringProducts(userProfileId),
+            getDashboardMetrics(getToken),
+            getTopProducts(4, getToken),
+            getExpiringProducts(getToken),
           ]);
 
           setMetrics(dashboardMetrics);
@@ -157,13 +154,10 @@ export default function DashboardPage() {
         toast.success(`Datos limpiados: ${data.totalDeleted} elementos eliminados`);
         // Recargar métricas
         if (!isSuperAdmin && user) {
-          const profile = await getUserProfileByClerkId(user.id);
-          const userProfileId = profile?.id;
-
           const [dashboardMetrics, products, expiringCount] = await Promise.all([
-            getDashboardMetrics(userProfileId),
-            getTopProducts(4, userProfileId),
-            getExpiringProducts(userProfileId),
+            getDashboardMetrics(getToken),
+            getTopProducts(4, getToken),
+            getExpiringProducts(getToken),
           ]);
 
           setMetrics(dashboardMetrics);

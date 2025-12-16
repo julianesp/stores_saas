@@ -1,5 +1,5 @@
 import { LoyaltySettings, LoyaltyTier } from './types';
-import { queryDocuments, createDocument, updateDocument, getDocumentById } from './firestore-helpers';
+import type { GetTokenFn } from './cloudflare-api';
 
 /**
  * Niveles de puntos por defecto
@@ -23,32 +23,26 @@ export const REWARD_CONSTANTS = {
 
 /**
  * Obtiene la configuración de lealtad del usuario actual
+ * NOTA: Actualmente usa tiers por defecto.
+ * TODO: Migrar loyalty_settings a Cloudflare para configuración personalizada
  */
 export async function getLoyaltySettings(userProfileId: string): Promise<LoyaltySettings> {
   try {
-    const settings = await queryDocuments('loyalty_settings', [
-      { field: 'user_profile_id', operator: '==', value: userProfileId }
-    ]);
-
-    if (settings.length > 0) {
-      return settings[0] as LoyaltySettings;
-    }
-
-    // Si no existe, crear configuración por defecto
-    const defaultSettings = await createDocument('loyalty_settings', {
-      user_profile_id: userProfileId,
-      enabled: true,
-      tiers: DEFAULT_TIERS,
-    });
-
-    return defaultSettings as any as LoyaltySettings;
-  } catch (error) {
-    console.error('Error getting loyalty settings:', error);
-    // TEMPORAL: Devolver configuración por defecto si falla
+    // Devolver configuración por defecto (siempre habilitado)
     return {
       id: 'default',
       user_profile_id: userProfileId,
-      enabled: false, // Deshabilitado por defecto hasta configurar Firebase
+      enabled: true,
+      tiers: DEFAULT_TIERS,
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    };
+  } catch (error) {
+    console.error('Error getting loyalty settings:', error);
+    return {
+      id: 'default',
+      user_profile_id: userProfileId,
+      enabled: false,
       tiers: DEFAULT_TIERS,
       created_at: new Date().toISOString(),
       updated_at: new Date().toISOString(),
@@ -58,13 +52,15 @@ export async function getLoyaltySettings(userProfileId: string): Promise<Loyalty
 
 /**
  * Actualiza la configuración de lealtad
+ * NOTA: No hace nada hasta que migremos loyalty_settings a Cloudflare
  */
 export async function updateLoyaltySettings(
   settingsId: string,
   data: Partial<LoyaltySettings>
 ): Promise<void> {
   try {
-    await updateDocument('loyalty_settings', settingsId, data);
+    console.log('updateLoyaltySettings not yet implemented in Cloudflare');
+    // TODO: Implementar cuando tengamos loyalty_settings en Cloudflare
   } catch (error) {
     console.error('Error updating loyalty settings:', error);
     throw error;
@@ -73,7 +69,6 @@ export async function updateLoyaltySettings(
 
 /**
  * Calcula los puntos que debería ganar un cliente según el monto de la compra
- * NOTA: Temporalmente usa tiers por defecto mientras migramos loyalty_settings a Cloudflare
  */
 export async function calculatePointsForPurchase(
   userProfileId: string,
@@ -81,7 +76,6 @@ export async function calculatePointsForPurchase(
 ): Promise<number> {
   try {
     // Usar tiers por defecto directamente (sistema siempre habilitado)
-    // TODO: Migrar loyalty_settings a Cloudflare para configuración personalizada
     const tiers = DEFAULT_TIERS;
 
     // Buscar el tier correspondiente al monto
@@ -102,7 +96,7 @@ export async function calculatePointsForPurchase(
 export async function addPointsToCustomer(
   customerId: string,
   pointsToAdd: number,
-  getToken: any
+  getToken: GetTokenFn
 ): Promise<void> {
   try {
     const { getCustomerById, updateCustomer } = await import('./cloudflare-api');
@@ -127,7 +121,7 @@ export async function addPointsToCustomer(
 /**
  * Obtiene el historial de compras de un cliente con detalles
  */
-export async function getCustomerPurchaseHistory(customerId: string, getToken: any) {
+export async function getCustomerPurchaseHistory(customerId: string, getToken: GetTokenFn) {
   try {
     const { getSales, getProducts } = await import('./cloudflare-api');
 
@@ -173,7 +167,7 @@ export async function getCustomerPurchaseHistory(customerId: string, getToken: a
 /**
  * Verifica si un cliente puede canjear puntos por descuento
  */
-export async function canRedeemDiscount(customerId: string, getToken: any): Promise<boolean> {
+export async function canRedeemDiscount(customerId: string, getToken: GetTokenFn): Promise<boolean> {
   try {
     const { getCustomerById } = await import('./cloudflare-api');
 
@@ -194,7 +188,7 @@ export async function canRedeemDiscount(customerId: string, getToken: any): Prom
 export async function redeemPointsForDiscount(
   customerId: string,
   purchaseAmount: number,
-  getToken: any
+  getToken: GetTokenFn
 ): Promise<{ discount: number; pointsRedeemed: number }> {
   try {
     const { getCustomerById, updateCustomer } = await import('./cloudflare-api');

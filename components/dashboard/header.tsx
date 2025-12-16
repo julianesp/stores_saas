@@ -31,11 +31,9 @@ export function Header({ onMenuClick }: HeaderProps) {
       </div>
 
       <div className="flex items-center gap-2 shrink-0">
-        {user?.id && (
-          <div className="hidden sm:block">
-            <NotificationPanel userId={user.id} />
-          </div>
-        )}
+        <div className="hidden sm:block">
+          <NotificationPanel />
+        </div>
 
         <div className="hidden sm:block">
           <RefreshProfileButton />

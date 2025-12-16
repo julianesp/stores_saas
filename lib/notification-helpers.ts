@@ -1,14 +1,15 @@
 import { Notification } from './types';
-import { queryDocuments, getAllDocuments } from './firestore-helpers';
+import type { GetTokenFn } from './cloudflare-api';
+import { getProducts, getCustomers } from './cloudflare-api';
 import { REWARD_CONSTANTS } from './loyalty-helpers';
 import { checkSubscriptionStatus } from './subscription-helpers';
 
 /**
  * Obtiene productos con stock bajo
  */
-async function getLowStockNotifications(): Promise<Notification[]> {
+async function getLowStockNotifications(getToken: GetTokenFn): Promise<Notification[]> {
   try {
-    const products = await getAllDocuments('products') as any[];
+    const products = await getProducts(getToken);
 
     const lowStockProducts = products.filter(
       (p) => p.stock > 0 && p.stock <= (p.min_stock || 5)
@@ -34,9 +35,9 @@ async function getLowStockNotifications(): Promise<Notification[]> {
 /**
  * Obtiene clientes que pueden canjear puntos
  */
-async function getLoyaltyNotifications(): Promise<Notification[]> {
+async function getLoyaltyNotifications(getToken: GetTokenFn): Promise<Notification[]> {
   try {
-    const customers = await getAllDocuments('customers') as any[];
+    const customers = await getCustomers(getToken);
 
     const eligibleCustomers = customers.filter(
       (c) => (c.loyalty_points || 0) >= REWARD_CONSTANTS.POINTS_FOR_DISCOUNT
@@ -48,7 +49,7 @@ async function getLoyaltyNotifications(): Promise<Notification[]> {
       id: 'loyalty-eligible',
       type: 'loyalty',
       title: 'Clientes con Descuento Disponible',
-      message: `${eligibleCustomers.length} cliente${eligibleCustomers.length > 1 ? 's pueden' : ' puede'} canjear descuento`,
+      message: `${eligibleCustomers.length} cliente${eligibleCustomers.length > 1 ? 's' : ''} puede${eligibleCustomers.length > 1 ? 'n' : ''} canjear descuento`,
       link: '/dashboard/customers',
       count: eligibleCustomers.length,
       timestamp: new Date(),
@@ -60,77 +61,44 @@ async function getLoyaltyNotifications(): Promise<Notification[]> {
 }
 
 /**
- * Obtiene ventas importantes recientes (últimas 24 horas)
+ * Obtiene notificaciones de suscripción próxima a vencer
  */
-async function getHighValueSalesNotifications(): Promise<Notification[]> {
+async function getSubscriptionNotifications(getToken: GetTokenFn): Promise<Notification[]> {
   try {
-    const HIGH_VALUE_THRESHOLD = 500000; // $500,000
-    const twentyFourHoursAgo = new Date(Date.now() - 24 * 60 * 60 * 1000);
+    const subStatus = await checkSubscriptionStatus(getToken);
 
-    const sales = await getAllDocuments('sales') as any[];
-
-    const recentHighValueSales = sales.filter((sale) => {
-      const saleDate = new Date(sale.created_at);
-      return (
-        sale.total >= HIGH_VALUE_THRESHOLD &&
-        saleDate >= twentyFourHoursAgo
-      );
-    });
-
-    if (recentHighValueSales.length === 0) return [];
-
-    return [{
-      id: 'high-value-sales',
-      type: 'sale',
-      title: 'Ventas Importantes',
-      message: `${recentHighValueSales.length} venta${recentHighValueSales.length > 1 ? 's' : ''} mayor${recentHighValueSales.length > 1 ? 'es' : ''} a $500,000 (últimas 24h)`,
-      link: '/dashboard/sales',
-      count: recentHighValueSales.length,
-      timestamp: new Date(),
-    }];
-  } catch (error) {
-    console.error('Error getting high value sales notifications:', error);
-    return [];
-  }
-}
-
-/**
- * Obtiene alertas del sistema (suscripción, etc)
- */
-async function getSystemNotifications(userId: string): Promise<Notification[]> {
-  try {
-    const notifications: Notification[] = [];
-
-    // Verificar estado de suscripción
-    const subscriptionStatus = await checkSubscriptionStatus(userId);
-
-    if (subscriptionStatus.status === 'trial' && subscriptionStatus.daysLeft !== undefined) {
-      if (subscriptionStatus.daysLeft <= 7) {
-        notifications.push({
-          id: 'trial-expiring',
-          type: 'system',
-          title: 'Prueba Terminando',
-          message: `Tu período de prueba termina en ${subscriptionStatus.daysLeft} día${subscriptionStatus.daysLeft > 1 ? 's' : ''}`,
-          link: '/dashboard/subscription',
-          timestamp: new Date(),
-        });
-      }
+    // Si está en trial y le quedan menos de 3 días
+    if (
+      subStatus.status === 'trial' &&
+      subStatus.daysLeft !== undefined &&
+      subStatus.daysLeft <= 3
+    ) {
+      return [{
+        id: 'trial-ending',
+        type: 'subscription',
+        title: 'Período de Prueba Próximo a Vencer',
+        message: `Tu prueba vence en ${subStatus.daysLeft} día${subStatus.daysLeft !== 1 ? 's' : ''}`,
+        link: '/dashboard/subscription',
+        count: subStatus.daysLeft,
+        timestamp: new Date(),
+      }];
     }
 
-    if (subscriptionStatus.status === 'expired') {
-      notifications.push({
+    // Si la suscripción expiró
+    if (subStatus.status === 'expired') {
+      return [{
         id: 'subscription-expired',
-        type: 'system',
+        type: 'subscription',
         title: 'Suscripción Expirada',
         message: 'Tu suscripción ha expirado. Renueva para continuar usando el sistema.',
         link: '/dashboard/subscription',
         timestamp: new Date(),
-      });
+      }];
     }
 
-    return notifications;
+    return [];
   } catch (error) {
-    console.error('Error getting system notifications:', error);
+    console.error('Error getting subscription notifications:', error);
     return [];
   }
 }
@@ -138,39 +106,17 @@ async function getSystemNotifications(userId: string): Promise<Notification[]> {
 /**
  * Obtiene todas las notificaciones del sistema
  */
-export async function getAllNotifications(userId: string): Promise<Notification[]> {
+export async function getAllNotifications(getToken: GetTokenFn): Promise<Notification[]> {
   try {
-    const [stockNotifs, loyaltyNotifs, salesNotifs, systemNotifs] = await Promise.all([
-      getLowStockNotifications(),
-      getLoyaltyNotifications(),
-      getHighValueSalesNotifications(),
-      getSystemNotifications(userId),
+    const [stockNotifs, loyaltyNotifs, subNotifs] = await Promise.all([
+      getLowStockNotifications(getToken),
+      getLoyaltyNotifications(getToken),
+      getSubscriptionNotifications(getToken),
     ]);
 
-    const allNotifications = [
-      ...systemNotifs,
-      ...stockNotifs,
-      ...loyaltyNotifs,
-      ...salesNotifs,
-    ];
-
-    // Ordenar por timestamp (más reciente primero)
-    return allNotifications.sort((a, b) => b.timestamp.getTime() - a.timestamp.getTime());
+    return [...stockNotifs, ...loyaltyNotifs, ...subNotifs];
   } catch (error) {
-    console.error('Error getting all notifications:', error);
+    console.error('Error getting notifications:', error);
     return [];
-  }
-}
-
-/**
- * Obtiene el conteo total de notificaciones
- */
-export async function getNotificationCount(userId: string): Promise<number> {
-  try {
-    const notifications = await getAllNotifications(userId);
-    return notifications.length;
-  } catch (error) {
-    console.error('Error getting notification count:', error);
-    return 0;
   }
 }

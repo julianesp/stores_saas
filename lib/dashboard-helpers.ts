@@ -1,5 +1,4 @@
-import { queryDocuments, getAllDocuments } from './firestore-helpers';
-import { Product, Sale, Customer, SaleItem } from './types';
+import { GetTokenFn, getProducts, getSales, getCustomers } from './cloudflare-api';
 
 export interface DashboardMetrics {
   dailySales: number;
@@ -26,9 +25,8 @@ export interface InventoryAlert {
 
 /**
  * Obtiene las métricas principales del dashboard para la tienda
- * @param userProfileId - ID del perfil de usuario para filtrar datos (opcional para superadmin)
  */
-export async function getDashboardMetrics(userProfileId?: string): Promise<DashboardMetrics> {
+export async function getDashboardMetrics(getToken: GetTokenFn): Promise<DashboardMetrics> {
   try {
     // Obtener fecha de hoy y comienzo del día
     const now = new Date();
@@ -37,8 +35,8 @@ export async function getDashboardMetrics(userProfileId?: string): Promise<Dashb
     const startOfLastMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1);
     const endOfLastMonth = new Date(now.getFullYear(), now.getMonth(), 0);
 
-    // Obtener todos los productos (filtrando por user_profile_id si se proporciona)
-    const allProducts = await getAllDocuments('products', userProfileId) as Product[];
+    // Obtener todos los productos
+    const allProducts = await getProducts(getToken);
     const totalProducts = allProducts.length;
 
     // Calcular productos con stock bajo
@@ -46,8 +44,8 @@ export async function getDashboardMetrics(userProfileId?: string): Promise<Dashb
       p => p.stock <= p.min_stock && p.stock > 0
     ).length;
 
-    // Obtener todas las ventas (filtrando por user_profile_id si se proporciona)
-    const allSales = await getAllDocuments('sales', userProfileId) as Sale[];
+    // Obtener todas las ventas
+    const allSales = await getSales(getToken);
 
     // Filtrar ventas de hoy que estén completadas
     const todaySales = allSales.filter(sale => {
@@ -84,8 +82,6 @@ export async function getDashboardMetrics(userProfileId?: string): Promise<Dashb
       monthlyGrowth = 100; // Si no había ventas el mes pasado pero hay este mes
     }
 
-    // Obtener clientes activos del mes (filtrando por user_profile_id si se proporciona)
-    const allCustomers = await getAllDocuments('customers', userProfileId) as Customer[];
     // Clientes que han comprado este mes (filtrando por customer_id en las ventas)
     const customerIdsThisMonth = new Set(
       thisMonthSales
@@ -119,13 +115,12 @@ export async function getDashboardMetrics(userProfileId?: string): Promise<Dashb
 /**
  * Obtiene los productos más vendidos
  * @param limit - Número máximo de productos a retornar
- * @param userProfileId - ID del perfil de usuario para filtrar datos (opcional para superadmin)
  */
-export async function getTopProducts(limit: number = 4, userProfileId?: string): Promise<TopProduct[]> {
+export async function getTopProducts(limit: number = 4, getToken: GetTokenFn): Promise<TopProduct[]> {
   try {
-    // Obtener todos los items de ventas (filtrando por user_profile_id si se proporciona)
-    const allSaleItems = await getAllDocuments('sale_items', userProfileId) as SaleItem[];
-    const allProducts = await getAllDocuments('products', userProfileId) as Product[];
+    // Obtener todas las ventas (que ya incluyen los items)
+    const allSales = await getSales(getToken);
+    const allProducts = await getProducts(getToken);
 
     // Crear un mapa de productos por ID para búsqueda rápida
     const productsMap = new Map(allProducts.map(p => [p.id, p]));
@@ -133,19 +128,23 @@ export async function getTopProducts(limit: number = 4, userProfileId?: string):
     // Agrupar por producto y sumar cantidades
     const productSales = new Map<string, { name: string; quantity: number }>();
 
-    for (const item of allSaleItems) {
-      const productId = item.product_id;
-      const product = productsMap.get(productId);
+    for (const sale of allSales) {
+      if (!sale.items) continue;
 
-      if (product) {
-        const existing = productSales.get(productId);
-        if (existing) {
-          existing.quantity += item.quantity || 0;
-        } else {
-          productSales.set(productId, {
-            name: product.name,
-            quantity: item.quantity || 0,
-          });
+      for (const item of sale.items) {
+        const productId = item.product_id;
+        const product = productsMap.get(productId);
+
+        if (product) {
+          const existing = productSales.get(productId);
+          if (existing) {
+            existing.quantity += item.quantity || 0;
+          } else {
+            productSales.set(productId, {
+              name: product.name,
+              quantity: item.quantity || 0,
+            });
+          }
         }
       }
     }
@@ -164,11 +163,10 @@ export async function getTopProducts(limit: number = 4, userProfileId?: string):
 
 /**
  * Obtiene alertas de inventario
- * @param userProfileId - ID del perfil de usuario para filtrar datos (opcional para superadmin)
  */
-export async function getInventoryAlerts(userProfileId?: string): Promise<InventoryAlert> {
+export async function getInventoryAlerts(getToken: GetTokenFn): Promise<InventoryAlert> {
   try {
-    const allProducts = await getAllDocuments('products', userProfileId) as Product[];
+    const allProducts = await getProducts(getToken);
 
     // Productos con stock bajo
     const lowStockProducts = allProducts.filter(
@@ -194,11 +192,10 @@ export async function getInventoryAlerts(userProfileId?: string): Promise<Invent
 
 /**
  * Obtiene productos próximos a vencer
- * @param userProfileId - ID del perfil de usuario para filtrar datos (opcional para superadmin)
  */
-export async function getExpiringProducts(userProfileId?: string): Promise<number> {
+export async function getExpiringProducts(getToken: GetTokenFn): Promise<number> {
   try {
-    const allProducts = await getAllDocuments('products', userProfileId) as Product[];
+    const allProducts = await getProducts(getToken);
     const now = new Date();
     const thirtyDaysFromNow = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000);
 

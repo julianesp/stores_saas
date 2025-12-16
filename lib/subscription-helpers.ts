@@ -1,26 +1,25 @@
 import { UserProfile, SubscriptionStatus } from './types';
-import { queryDocuments, updateDocument } from './firestore-helpers';
+import type { GetTokenFn } from './cloudflare-api';
+import { getUserProfile, updateUserProfile } from './cloudflare-api';
 
 /**
  * Verifica el estado de suscripción de un usuario
+ * NOTA: Usa el token de Clerk para identificar al usuario automáticamente
  */
 export async function checkSubscriptionStatus(
-  clerkUserId: string
+  getToken: GetTokenFn
 ): Promise<SubscriptionStatus> {
   try {
-    // Obtener el perfil del usuario
-    const profiles = await queryDocuments('user_profiles', [
-      { field: 'clerk_user_id', operator: '==', value: clerkUserId }
-    ]);
+    // Obtener el perfil del usuario (identificado por el token)
+    const userProfile = await getUserProfile(getToken);
 
-    if (profiles.length === 0) {
+    if (!userProfile) {
       return {
         canAccess: false,
         status: 'expired',
       };
     }
 
-    const userProfile = profiles[0] as UserProfile;
     const now = new Date();
 
     // Si está en período de prueba
@@ -30,9 +29,9 @@ export async function checkSubscriptionStatus(
         const trialEnd = new Date();
         trialEnd.setDate(trialEnd.getDate() + 15);
 
-        await updateDocument('user_profiles', userProfile.id, {
+        await updateUserProfile(userProfile.id, {
           trial_end_date: trialEnd.toISOString()
-        });
+        }, getToken);
 
         return {
           canAccess: true,
@@ -49,9 +48,9 @@ export async function checkSubscriptionStatus(
 
       // Verificar si el trial ya expiró
       if (nowMidnight > trialEndMidnight) {
-        await updateDocument('user_profiles', userProfile.id, {
+        await updateUserProfile(userProfile.id, {
           subscription_status: 'expired'
-        });
+        }, getToken);
 
         return {
           canAccess: false,
@@ -81,9 +80,9 @@ export async function checkSubscriptionStatus(
         if (now > nextBilling) {
           // La suscripción debería renovarse, pero no lo ha hecho
           // Marcar como expirada
-          await updateDocument('user_profiles', userProfile.id, {
+          await updateUserProfile(userProfile.id, {
             subscription_status: 'expired'
-          });
+          }, getToken);
 
           return {
             canAccess: false,
@@ -116,17 +115,17 @@ export async function checkSubscriptionStatus(
 /**
  * Inicializa el período de prueba para un nuevo usuario
  */
-export async function initializeTrialPeriod(userProfileId: string) {
+export async function initializeTrialPeriod(userProfileId: string, getToken: GetTokenFn) {
   try {
     const now = new Date();
     const trialEnd = new Date();
     trialEnd.setDate(trialEnd.getDate() + 15); // 15 días de prueba
 
-    await updateDocument('user_profiles', userProfileId, {
+    await updateUserProfile(userProfileId, {
       subscription_status: 'trial',
       trial_start_date: now.toISOString(),
       trial_end_date: trialEnd.toISOString(),
-    });
+    }, getToken);
 
     return {
       success: true,
@@ -145,6 +144,7 @@ export async function activateSubscription(
   userProfileId: string,
   transactionId: string,
   planId: string,
+  getToken: GetTokenFn,
   paymentDate: Date = new Date()
 ) {
   try {
@@ -164,7 +164,7 @@ export async function activateSubscription(
       updates.has_ai_addon = true;
     }
 
-    await updateDocument('user_profiles', userProfileId, updates);
+    await updateUserProfile(userProfileId, updates, getToken);
 
     return {
       success: true,
@@ -179,11 +179,11 @@ export async function activateSubscription(
 /**
  * Cancela una suscripción
  */
-export async function cancelSubscription(userProfileId: string) {
+export async function cancelSubscription(userProfileId: string, getToken: GetTokenFn) {
   try {
-    await updateDocument('user_profiles', userProfileId, {
+    await updateUserProfile(userProfileId, {
       subscription_status: 'canceled',
-    });
+    }, getToken);
 
     return { success: true };
   } catch (error) {
@@ -193,19 +193,26 @@ export async function cancelSubscription(userProfileId: string) {
 }
 
 /**
- * Obtiene el perfil de usuario por Clerk ID
+ * Obtiene el perfil de usuario por token de Clerk
  */
-export async function getUserProfileByClerkId(clerkUserId: string) {
+export async function getUserProfileByToken(getToken: GetTokenFn) {
   try {
-    const profiles = await queryDocuments('user_profiles', [
-      { field: 'clerk_user_id', operator: '==', value: clerkUserId }
-    ]);
-
-    return profiles.length > 0 ? (profiles[0] as UserProfile) : null;
+    const profile = await getUserProfile(getToken);
+    return profile || null;
   } catch (error) {
     console.error('Error getting user profile:', error);
     return null;
   }
+}
+
+/**
+ * Obtiene el perfil de usuario por Clerk ID
+ * DEPRECATED: Esta función ya no está implementada correctamente con Cloudflare.
+ * Use getUserProfileByToken en su lugar.
+ */
+export async function getUserProfileByClerkId(clerkUserId: string): Promise<UserProfile | null> {
+  console.warn('getUserProfileByClerkId is deprecated. This function no longer works with Cloudflare API.');
+  return null;
 }
 
 /**
