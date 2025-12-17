@@ -17,6 +17,7 @@ export function BarcodeScanner({ onDetected, onClose }: BarcodeScannerProps) {
   const [lastScanned, setLastScanned] = useState<string>('');
   const [error, setError] = useState<string>('');
   const [permissionState, setPermissionState] = useState<'prompt' | 'granted' | 'denied'>('prompt');
+  const [isProcessing, setIsProcessing] = useState(false);
 
   // Verificar permisos de cámara
   const checkCameraPermission = async () => {
@@ -115,10 +116,10 @@ export function BarcodeScanner({ onDetected, onClose }: BarcodeScannerProps) {
           .filter((c: any) => c.error !== undefined)
           .reduce((sum: number, c: any) => sum + c.error, 0) / result.codeResult.decodedCodes.length;
 
-        // Solo aceptar códigos con buena calidad (error < 0.15)
-        if (code && quality < 0.15 && code !== lastScanned) {
+        // Solo aceptar códigos con buena calidad (error < 0.15) y si no está procesando
+        if (code && quality < 0.15 && code !== lastScanned && !isProcessing) {
+          setIsProcessing(true);
           setLastScanned(code);
-          onDetected(code);
 
           // Vibración (si el dispositivo lo soporta)
           if (navigator.vibrate) {
@@ -130,8 +131,14 @@ export function BarcodeScanner({ onDetected, onClose }: BarcodeScannerProps) {
           audio.volume = 0.3;
           audio.play().catch(() => {}); // Silenciar errores si no se puede reproducir
 
-          // Resetear después de 1.5 segundos
-          setTimeout(() => setLastScanned(''), 1500);
+          // Llamar a onDetected
+          onDetected(code);
+
+          // Resetear después de 3 segundos
+          setTimeout(() => {
+            setLastScanned('');
+            setIsProcessing(false);
+          }, 3000);
         }
       });
     }
@@ -141,7 +148,7 @@ export function BarcodeScanner({ onDetected, onClose }: BarcodeScannerProps) {
         Quagga.stop();
       }
     };
-  }, [isScanning, lastScanned, onDetected]);
+  }, [isScanning, lastScanned, isProcessing, onDetected]);
 
   const startScanning = async () => {
     setError('');
