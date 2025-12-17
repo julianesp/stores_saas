@@ -4,7 +4,7 @@ import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useAuth } from '@clerk/nextjs';
 import { useUser } from '@clerk/nextjs';
 import Image from 'next/image';
-import { Search, ShoppingCart, Trash2, Plus, Minus, DollarSign, User, X, Package, Scan } from 'lucide-react';
+import { Search, ShoppingCart, Trash2, Plus, Minus, DollarSign, User, X, Package, Scan, Camera } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -14,6 +14,7 @@ import { formatCurrency } from '@/lib/utils';
 import { calculatePointsForPurchase, addPointsToCustomer, canRedeemDiscount, redeemPointsForDiscount, getPointsMilestoneMessage, REWARD_CONSTANTS } from '@/lib/loyalty-helpers';
 import { canCustomerGetCredit, updateCustomerDebt } from '@/lib/cloudflare-credit-helpers';
 import Swal from '@/lib/sweetalert';
+import { BarcodeScanner } from '@/components/products/barcode-scanner';
 
 interface CartItem {
   product: Product;
@@ -46,6 +47,7 @@ export default function POSPage() {
     email: '',
   });
   const [scanSuccess, setScanSuccess] = useState(false);
+  const [showCameraScanner, setShowCameraScanner] = useState(false);
   const barcodeRef = useRef<HTMLInputElement>(null);
 
   const handleCreateCustomer = async () => {
@@ -142,6 +144,27 @@ export default function POSPage() {
       Swal.error('Producto no encontrado', 'Código no registrado');
     }
     barcodeRef.current?.focus();
+  };
+
+  const handleCameraScan = async (barcode: string) => {
+    if (!barcode.trim()) return;
+
+    const product = products.find(p => p.barcode === barcode.trim());
+    if (product) {
+      // Efecto visual de éxito
+      setScanSuccess(true);
+      setTimeout(() => setScanSuccess(false), 500);
+
+      addToCart(product);
+
+      // Toast pequeño y no intrusivo
+      Swal.productAdded(product.name, 1);
+
+      // Cerrar el escáner después de agregar el producto
+      setShowCameraScanner(false);
+    } else {
+      Swal.error('Producto no encontrado', `El código ${barcode} no está registrado`);
+    }
   };
 
   const addToCart = (product: Product) => {
@@ -568,6 +591,18 @@ export default function POSPage() {
     <div className="space-y-4 md:space-y-6">
       {/* <h1 className="text-2xl md:text-3xl font-bold">Punto de Venta</h1> */}
 
+      {/* Modal del escáner de cámara */}
+      {showCameraScanner && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="w-full max-w-2xl">
+            <BarcodeScanner
+              onDetected={handleCameraScan}
+              onClose={() => setShowCameraScanner(false)}
+            />
+          </div>
+        </div>
+      )}
+
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 md:gap-6">
         {/* Panel izquierdo - Productos */}
         <div className="lg:col-span-2 space-y-4 order-2 lg:order-1">
@@ -614,6 +649,15 @@ export default function POSPage() {
                       }`} />
                     </div>
                   </div>
+                  <Button
+                    type="button"
+                    size="lg"
+                    onClick={() => setShowCameraScanner(true)}
+                    className="shrink-0 h-14 px-6 bg-purple-600 hover:bg-purple-700 transition-colors"
+                    title="Escanear con cámara"
+                  >
+                    <Camera className="h-5 w-5" />
+                  </Button>
                   <Button
                     type="submit"
                     size="lg"
