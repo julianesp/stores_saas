@@ -48,6 +48,7 @@ export default function POSPage() {
   });
   const [scanSuccess, setScanSuccess] = useState(false);
   const [showCameraScanner, setShowCameraScanner] = useState(false);
+  const [lastCameraScannedCode, setLastCameraScannedCode] = useState<string>('');
   const barcodeRef = useRef<HTMLInputElement>(null);
 
   const handleCreateCustomer = async () => {
@@ -149,6 +150,13 @@ export default function POSPage() {
   const handleCameraScan = async (barcode: string) => {
     if (!barcode.trim()) return;
 
+    // Evitar procesar el mismo código dos veces seguidas
+    if (barcode === lastCameraScannedCode) {
+      return;
+    }
+
+    setLastCameraScannedCode(barcode);
+
     const product = products.find(p => p.barcode === barcode.trim());
     if (product) {
       // Efecto visual de éxito
@@ -161,9 +169,15 @@ export default function POSPage() {
       Swal.productAdded(product.name, 1);
 
       // Cerrar el escáner después de agregar el producto
-      setShowCameraScanner(false);
+      setTimeout(() => {
+        setShowCameraScanner(false);
+        // Resetear el último código escaneado después de cerrar
+        setTimeout(() => setLastCameraScannedCode(''), 1000);
+      }, 500);
     } else {
       Swal.error('Producto no encontrado', `El código ${barcode} no está registrado`);
+      // También resetear el código en caso de error
+      setTimeout(() => setLastCameraScannedCode(''), 2000);
     }
   };
 
