@@ -18,6 +18,20 @@ export function BarcodeScanner({ onDetected, onClose }: BarcodeScannerProps) {
   const [error, setError] = useState<string>('');
   const [permissionState, setPermissionState] = useState<'prompt' | 'granted' | 'denied'>('prompt');
   const [isProcessing, setIsProcessing] = useState(false);
+  const [showPermissionModal, setShowPermissionModal] = useState(true);
+  const [checkingPermission, setCheckingPermission] = useState(true);
+
+  // Verificar si ya tenemos permisos guardados
+  useEffect(() => {
+    const savedPermission = localStorage.getItem('camera_permission');
+    if (savedPermission === 'granted') {
+      setPermissionState('granted');
+      setShowPermissionModal(false);
+      // Iniciar escaneo automáticamente
+      setIsScanning(true);
+    }
+    setCheckingPermission(false);
+  }, []);
 
   // Verificar permisos de cámara
   const checkCameraPermission = async () => {
@@ -29,6 +43,8 @@ export function BarcodeScanner({ onDetected, onClose }: BarcodeScannerProps) {
 
       // Si llegamos aquí, tenemos permisos
       setPermissionState('granted');
+      // Guardar en localStorage para no volver a pedir
+      localStorage.setItem('camera_permission', 'granted');
 
       // Detener el stream inmediatamente
       stream.getTracks().forEach(track => track.stop());
@@ -157,6 +173,7 @@ export function BarcodeScanner({ onDetected, onClose }: BarcodeScannerProps) {
     const hasPermission = await checkCameraPermission();
 
     if (hasPermission) {
+      setShowPermissionModal(false);
       setIsScanning(true);
     }
   };
@@ -175,7 +192,20 @@ export function BarcodeScanner({ onDetected, onClose }: BarcodeScannerProps) {
     startScanning();
   };
 
-  if (!isScanning) {
+  // Mostrar loading mientras verificamos permisos guardados
+  if (checkingPermission) {
+    return (
+      <div className="flex items-center justify-center p-8">
+        <div className="text-center">
+          <Camera className="h-12 w-12 mx-auto mb-4 text-blue-600 animate-pulse" />
+          <p className="text-gray-500">Verificando permisos...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Solo mostrar modal de permisos si no estamos escaneando y es necesario
+  if (!isScanning && showPermissionModal) {
     return (
       <Card>
         <CardContent className="pt-6">
