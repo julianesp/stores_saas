@@ -548,14 +548,14 @@ export default function SalesPage() {
               {/* Productos comprados */}
               <div>
                 <h3 className="font-semibold mb-3 text-lg">Productos Comprados</h3>
-                <div className="border rounded-lg overflow-hidden">
-                  <table className="w-full">
+                <div className="border rounded-lg overflow-x-auto">
+                  <table className="w-full min-w-[500px]">
                     <thead className="bg-gray-50">
                       <tr>
-                        <th className="text-left py-3 px-4 text-sm font-semibold">Producto</th>
-                        <th className="text-center py-3 px-4 text-sm font-semibold">Cantidad</th>
-                        <th className="text-right py-3 px-4 text-sm font-semibold">Precio Unit.</th>
-                        <th className="text-right py-3 px-4 text-sm font-semibold">Subtotal</th>
+                        <th className="text-left py-3 px-4 text-sm font-semibold whitespace-nowrap">Producto</th>
+                        <th className="text-center py-3 px-4 text-sm font-semibold whitespace-nowrap">Cantidad</th>
+                        <th className="text-right py-3 px-4 text-sm font-semibold whitespace-nowrap">Precio Unit.</th>
+                        <th className="text-right py-3 px-4 text-sm font-semibold whitespace-nowrap">Subtotal</th>
                       </tr>
                     </thead>
                     <tbody>

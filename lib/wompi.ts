@@ -18,7 +18,7 @@ export const SUBSCRIPTION_PLANS: SubscriptionPlan[] = [
   {
     id: 'basic-monthly',
     name: 'Plan Básico',
-    price: 39900, // $39,900 COP
+    price: 29900, // $29,900 COP
     currency: 'COP',
     interval: 'monthly',
     features: [

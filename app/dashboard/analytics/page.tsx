@@ -9,7 +9,8 @@ import { analyzeProductSales, ProductAnalytics } from '@/lib/cloudflare-analytic
 import { exportAnalyticsToExcel } from '@/lib/excel-export';
 import { formatCurrency } from '@/lib/utils';
 import { toast } from 'sonner';
-import { getUserProfileByClerkId, hasAIAccess } from '@/lib/subscription-helpers';
+import { getUserProfile } from '@/lib/cloudflare-api';
+import { hasAIAccess } from '@/lib/subscription-helpers';
 import { UserProfile } from '@/lib/types';
 import Link from 'next/link';
 
@@ -31,7 +32,7 @@ export default function AnalyticsPage() {
     if (!user) return;
 
     try {
-      const profile = await getUserProfileByClerkId(user.id);
+      const profile = await getUserProfile(getToken);
       if (profile) {
         setUserProfile(profile);
         const access = hasAIAccess(profile);

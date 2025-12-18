@@ -26,6 +26,7 @@ export default function POSPage() {
 
   const { user } = useUser();
   const [products, setProducts] = useState<Product[]>([]);
+  const [hasAnyProducts, setHasAnyProducts] = useState(true); // Track if user has ANY products
   const [cart, setCart] = useState<CartItem[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [barcodeInput, setBarcodeInput] = useState('');
@@ -88,6 +89,10 @@ export default function POSPage() {
   const fetchProducts = useCallback(async () => {
     try {
       const data = (await getProducts(getToken)) as Product[];
+
+      // Verificar si hay productos en el sistema (antes de filtrar por stock)
+      setHasAnyProducts(data.length > 0);
+
       // Filtrar productos con stock > 0
       const productsInStock = data.filter(p => p.stock > 0);
       // Ordenar por nombre manualmente
@@ -540,8 +545,8 @@ export default function POSPage() {
     return matchesSearch && matchesCategory;
   });
 
-  // Modal cuando no hay productos
-  if (products.length === 0) {
+  // Modal cuando NO hay productos en el sistema (no solo sin stock)
+  if (!hasAnyProducts) {
     return (
       <div className="fixed inset-0 backdrop-blur-sm bg-opacity-50 flex items-center justify-center z-50 p-4">
         <div className="bg-white rounded-2xl max-w-md w-full p-8 text-center shadow-2xl">
@@ -742,38 +747,60 @@ export default function POSPage() {
               </div>
 
               <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-3 xl:grid-cols-4 gap-2 md:gap-3 max-h-[400px] md:max-h-[500px] overflow-y-auto">
-                {filteredProducts.map(product => (
-                  <Card
-                    key={product.id}
-                    className="cursor-pointer hover:border-blue-500 transition-colors"
-                    onClick={() => addToCart(product)}
-                  >
-                    <CardContent className="p-2 md:p-4">
-                      {/* Imagen del producto */}
-                      <div className="relative w-full aspect-square mb-2 bg-gray-50 rounded-md overflow-hidden">
-                        {product.images && product.images.length > 0 ? (
-                          <Image
-                            src={product.images[0]}
-                            alt={product.name}
-                            fill
-                            sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 25vw"
-                            className="object-contain p-2"
-                            loading="lazy"
-                          />
-                        ) : (
-                          <div className="w-full h-full flex items-center justify-center">
-                            <Package className="h-8 w-8 md:h-12 md:w-12 text-gray-300" />
-                          </div>
-                        )}
-                      </div>
-                      <h4 className="font-medium text-xs md:text-sm mb-1 line-clamp-2">{product.name}</h4>
-                      <p className="text-sm md:text-lg font-bold text-blue-600">
-                        {formatCurrency(product.sale_price)}
-                      </p>
-                      <p className="text-xs text-gray-500">Disponible: {product.stock}</p>
-                    </CardContent>
-                  </Card>
-                ))}
+                {filteredProducts.length > 0 ? (
+                  filteredProducts.map(product => (
+                    <Card
+                      key={product.id}
+                      className="cursor-pointer hover:border-blue-500 transition-colors"
+                      onClick={() => addToCart(product)}
+                    >
+                      <CardContent className="p-2 md:p-4">
+                        {/* Imagen del producto */}
+                        <div className="relative w-full aspect-square mb-2 bg-gray-50 rounded-md overflow-hidden">
+                          {product.images && product.images.length > 0 ? (
+                            <Image
+                              src={product.images[0]}
+                              alt={product.name}
+                              fill
+                              sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 25vw"
+                              className="object-contain p-2"
+                              loading="lazy"
+                            />
+                          ) : (
+                            <div className="w-full h-full flex items-center justify-center">
+                              <Package className="h-8 w-8 md:h-12 md:w-12 text-gray-300" />
+                            </div>
+                          )}
+                        </div>
+                        <h4 className="font-medium text-xs md:text-sm mb-1 line-clamp-2">{product.name}</h4>
+                        <p className="text-sm md:text-lg font-bold text-blue-600">
+                          {formatCurrency(product.sale_price)}
+                        </p>
+                        <p className="text-xs text-gray-500">Disponible: {product.stock}</p>
+                      </CardContent>
+                    </Card>
+                  ))
+                ) : (
+                  <div className="col-span-full flex flex-col items-center justify-center py-12 text-center">
+                    <Package className="h-16 w-16 text-gray-300 mb-4" />
+                    <h3 className="text-lg font-semibold text-gray-700 mb-2">
+                      No hay productos disponibles
+                    </h3>
+                    <p className="text-sm text-gray-500 mb-4">
+                      {searchTerm || selectedCategory !== 'all'
+                        ? 'Intenta cambiar los filtros de búsqueda'
+                        : 'Todos tus productos están sin stock'}
+                    </p>
+                    {!searchTerm && selectedCategory === 'all' && (
+                      <a
+                        href="/dashboard/products"
+                        className="text-blue-600 hover:text-blue-700 text-sm font-medium underline"
+                      >
+                        Ver todos los productos
+                      </a>
+                    )}
+                  </div>
+                )}
               </div>
             </CardContent>
           </Card>
@@ -860,8 +887,11 @@ export default function POSPage() {
                       onClick={() => setShowCustomerSearch(!showCustomerSearch)}
                     >
                       <User className="h-4 w-4 mr-2" />
-                      {showCustomerSearch ? 'Cerrar búsqueda' : 'Seleccionar Cliente'}
+                      {showCustomerSearch ? 'Cerrar búsqueda' : 'Seleccionar Cliente (Opcional)'}
                     </Button>
+                    <p className="text-xs text-gray-500 text-center mt-1">
+                      Puedes vender sin seleccionar cliente
+                    </p>
 
                     {showCustomerSearch && (
                       <div className="mt-2 space-y-2">
