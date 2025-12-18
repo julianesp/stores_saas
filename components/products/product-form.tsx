@@ -55,6 +55,7 @@ export function ProductForm({ initialData, productId }: ProductFormProps) {
   });
   const [isScanning, setIsScanning] = useState(false);
   const scannerRef = useRef<Html5Qrcode | null>(null);
+  const hasScannedRef = useRef(false); // Flag para evitar múltiples escaneos
   const scannerElementId = 'barcode-scanner';
 
   const {
@@ -103,9 +104,13 @@ export function ProductForm({ initialData, productId }: ProductFormProps) {
         config,
         (decodedText) => {
           // Código escaneado exitosamente
-          setValue('barcode', decodedText);
-          toast.success('✓ Código escaneado: ' + decodedText);
-          stopScanner();
+          // Evitar procesar múltiples veces el mismo escaneo
+          if (!hasScannedRef.current) {
+            hasScannedRef.current = true;
+            setValue('barcode', decodedText);
+            toast.success('✓ Código escaneado: ' + decodedText);
+            stopScanner();
+          }
         },
         (errorMessage) => {
           // Errores de escaneo (normal durante el proceso)
@@ -143,6 +148,7 @@ export function ProductForm({ initialData, productId }: ProductFormProps) {
   }, []);
 
   const handleOpenScanner = () => {
+    hasScannedRef.current = false; // Resetear flag al abrir el escáner
     setShowScanner(true);
     setTimeout(() => {
       startScanner();
@@ -383,7 +389,7 @@ export function ProductForm({ initialData, productId }: ProductFormProps) {
                     placeholder="Nombre de la categoría"
                     value={newCategoryName}
                     onChange={(e) => setNewCategoryName(e.target.value)}
-                    onKeyPress={(e) => {
+                    onKeyDown={(e) => {
                       if (e.key === 'Enter') {
                         e.preventDefault();
                         handleCreateCategory();
