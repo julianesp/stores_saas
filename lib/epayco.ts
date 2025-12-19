@@ -116,7 +116,14 @@ export async function createEPaycoCheckout(
   const referenceCode = `SUB-${userProfileId}-${Date.now()}`;
 
   // URL de confirmación y respuesta
-  const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
+  const baseUrl = process.env.NEXT_PUBLIC_APP_URL || process.env.NEXT_PUBLIC_URL || 'https://tienda-pos.vercel.app';
+
+  console.log('🔍 ePayco Debug:', {
+    NEXT_PUBLIC_APP_URL: process.env.NEXT_PUBLIC_APP_URL,
+    NEXT_PUBLIC_URL: process.env.NEXT_PUBLIC_URL,
+    baseUrl,
+  });
+
   const confirmationUrl = `${baseUrl}/api/webhooks/epayco`;
   const responseUrl = `${baseUrl}/dashboard/subscription/payment-response`;
 
@@ -148,7 +155,8 @@ export async function createEPaycoCheckout(
     p_method_confirmation: 'POST',
   });
 
-  const checkoutUrl = `https://secure.epayco.co/checkout.php?${params.toString()}`;
+  // Endpoint correcto según documentación oficial de ePayco
+  const checkoutUrl = `https://secure.payco.co/checkout.php?${params.toString()}`;
 
   return {
     success: true,

@@ -16,6 +16,7 @@
 - **Aplicación**: https://tienda-pos.vercel.app
 - **Webhook de confirmación**: https://tienda-pos.vercel.app/api/webhooks/epayco
 - **Página de respuesta**: https://tienda-pos.vercel.app/dashboard/subscription/payment-response
+- **Endpoint de checkout**: https://secure.payco.co/checkout.php (sin la "e" en payco)
 
 ---
 
