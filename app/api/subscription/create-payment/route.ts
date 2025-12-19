@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { auth } from '@clerk/nextjs/server';
-import { createPaymentLink, generatePaymentReference, SUBSCRIPTION_PLANS } from '@/lib/wompi';
+import { createEPaycoCheckout, SUBSCRIPTION_PLANS } from '@/lib/epayco';
 
 export async function POST(req: NextRequest) {
   try {
@@ -57,43 +57,33 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // Generar referencia única
-    const reference = generatePaymentReference(userProfile.id);
+    // Crear checkout en ePayco
+    const checkoutData = await createEPaycoCheckout(
+      planId,
+      userProfile.id,
+      userProfile.email,
+      userProfile.store_name || userProfile.email
+    );
 
-    // Crear enlace de pago en Wompi
-    const paymentLink = await createPaymentLink({
-      amount: plan.price,
-      currency: 'COP',
-      reference,
-      customerEmail: userProfile.email,
-      redirectUrl: `${process.env.NEXT_PUBLIC_URL}/dashboard/subscription/success`,
-      paymentMethod: paymentMethod || undefined, // 'NEQUI', 'CARD', etc.
-    });
+    console.log('ePayco checkout created:', checkoutData);
 
-    console.log('Payment link created:', paymentLink);
-
-    // Wompi devuelve { data: { id, ... } }
-    if (!paymentLink || !paymentLink.data || !paymentLink.data.id) {
-      console.error('Invalid payment link response:', JSON.stringify(paymentLink, null, 2));
+    if (!checkoutData || !checkoutData.success) {
+      console.error('Invalid ePayco checkout response:', JSON.stringify(checkoutData, null, 2));
       return NextResponse.json(
         {
-          error: 'No se pudo generar el enlace de pago. Verifica tu configuración de Wompi.',
-          details: paymentLink,
+          error: 'No se pudo generar el enlace de pago. Verifica tu configuración de ePayco.',
+          details: checkoutData,
         },
         { status: 500 }
       );
     }
 
-    // Construir el permalink manualmente usando el ID
-    const permalink = `https://checkout.wompi.co/l/${paymentLink.data.id}`;
-
     return NextResponse.json({
       success: true,
       paymentLink: {
-        ...paymentLink.data,
-        permalink, // Agregar el permalink construido
+        permalink: checkoutData.checkoutUrl,
       },
-      reference,
+      reference: checkoutData.referenceCode,
     });
   } catch (error) {
     console.error('Error creating payment:', error);

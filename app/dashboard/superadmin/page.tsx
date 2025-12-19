@@ -20,10 +20,28 @@ import {
   Shield,
   Calendar,
   Activity,
-  ArrowUpRight
+  ArrowUpRight,
+  Plus,
+  Filter,
+  Info
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { formatCurrency } from '@/lib/utils';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 
 export default function SuperAdminPage() {
   const { user } = useUser();
@@ -33,6 +51,16 @@ export default function SuperAdminPage() {
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [currentUserProfile, setCurrentUserProfile] = useState<UserProfile | null>(null);
+  const [statusFilter, setStatusFilter] = useState<string>('all');
+  const [extendTrialDialog, setExtendTrialDialog] = useState<{
+    open: boolean;
+    store: UserProfile | null;
+    days: string;
+  }>({ open: false, store: null, days: '15' });
+  const [detailsDialog, setDetailsDialog] = useState<{
+    open: boolean;
+    store: UserProfile | null;
+  }>({ open: false, store: null });
 
   useEffect(() => {
     fetchData();
@@ -114,6 +142,59 @@ export default function SuperAdminPage() {
     }
   };
 
+  const handleExtendTrial = async () => {
+    if (!extendTrialDialog.store) return;
+
+    const days = parseInt(extendTrialDialog.days);
+    if (isNaN(days) || days < 1) {
+      toast.error('Por favor ingresa un número válido de días');
+      return;
+    }
+
+    try {
+      const response = await fetch('/api/admin/extend-trial', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          userProfileId: extendTrialDialog.store.id,
+          days,
+        }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || 'Error al extender período de prueba');
+      }
+
+      toast.success(data.message || `Período de prueba extendido por ${days} días`);
+      setExtendTrialDialog({ open: false, store: null, days: '15' });
+      fetchData();
+    } catch (error) {
+      console.error('Error extending trial:', error);
+      toast.error(error instanceof Error ? error.message : 'Error al extender período de prueba');
+    }
+  };
+
+  const getDaysRemaining = (store: UserProfile): number | null => {
+    if (store.subscription_status !== 'trial' || !store.trial_end_date) {
+      return null;
+    }
+
+    const now = new Date();
+    const trialEnd = new Date(store.trial_end_date);
+    const nowMidnight = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    const trialEndMidnight = new Date(trialEnd.getFullYear(), trialEnd.getMonth(), trialEnd.getDate());
+
+    const daysLeft = Math.ceil(
+      (trialEndMidnight.getTime() - nowMidnight.getTime()) / (1000 * 60 * 60 * 24)
+    );
+
+    return Math.max(0, daysLeft);
+  };
+
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
@@ -136,10 +217,16 @@ export default function SuperAdminPage() {
     );
   }
 
-  const filteredStores = stores.filter((store) =>
-    store.full_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    store.email.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  const filteredStores = stores.filter((store) => {
+    // Filtro por búsqueda
+    const matchesSearch = store.full_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      store.email.toLowerCase().includes(searchTerm.toLowerCase());
+
+    // Filtro por estado
+    const matchesStatus = statusFilter === 'all' || store.subscription_status === statusFilter;
+
+    return matchesSearch && matchesStatus;
+  });
 
   // Estadísticas
   const totalStores = stores.length;
@@ -358,17 +445,34 @@ export default function SuperAdminPage() {
         </Card>
       </div>
 
-      {/* Buscador */}
+      {/* Buscador y Filtros */}
       <Card>
         <CardContent className="pt-6">
-          <div className="relative">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
-            <Input
-              placeholder="Buscar tienda por nombre o email..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="pl-10"
-            />
+          <div className="flex flex-col md:flex-row gap-4">
+            <div className="relative flex-1">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+              <Input
+                placeholder="Buscar tienda por nombre o email..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="pl-10"
+              />
+            </div>
+            <div className="flex gap-2">
+              <Select value={statusFilter} onValueChange={setStatusFilter}>
+                <SelectTrigger className="w-[180px]">
+                  <Filter className="h-4 w-4 mr-2" />
+                  <SelectValue placeholder="Filtrar por estado" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Todos los estados</SelectItem>
+                  <SelectItem value="trial">En prueba</SelectItem>
+                  <SelectItem value="active">Activas</SelectItem>
+                  <SelectItem value="expired">Expiradas</SelectItem>
+                  <SelectItem value="canceled">Canceladas</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
           </div>
         </CardContent>
       </Card>
@@ -392,6 +496,7 @@ export default function SuperAdminPage() {
                     <th className="text-left p-4 font-medium">Tienda</th>
                     <th className="text-left p-4 font-medium">Email</th>
                     <th className="text-left p-4 font-medium">Estado</th>
+                    <th className="text-left p-4 font-medium">Días Rest.</th>
                     <th className="text-left p-4 font-medium">Plan</th>
                     <th className="text-left p-4 font-medium">Registro</th>
                     <th className="text-right p-4 font-medium">Acciones</th>
@@ -408,6 +513,7 @@ export default function SuperAdminPage() {
                     };
 
                     const status = statusConfig[store.subscription_status];
+                    const daysRemaining = getDaysRemaining(store);
 
                     return (
                       <tr key={store.id} className="border-b hover:bg-gray-50">
@@ -422,22 +528,40 @@ export default function SuperAdminPage() {
                           </span>
                         </td>
                         <td className="p-4 text-sm">
+                          {daysRemaining !== null ? (
+                            <span className={`font-medium ${daysRemaining <= 3 ? 'text-red-600' : daysRemaining <= 7 ? 'text-yellow-600' : 'text-green-600'}`}>
+                              {daysRemaining} días
+                            </span>
+                          ) : (
+                            <span className="text-gray-400">-</span>
+                          )}
+                        </td>
+                        <td className="p-4 text-sm">
                           {store.plan_id || 'Sin plan'}
                         </td>
                         <td className="p-4 text-sm text-gray-600">{createdDate}</td>
                         <td className="p-4">
-                          <div className="flex gap-2 justify-end">
-                            {store.subscription_status === 'trial' ? (
+                          <div className="flex gap-2 justify-end flex-wrap">
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              onClick={() => setDetailsDialog({ open: true, store })}
+                              title="Ver detalles"
+                            >
+                              <Info className="h-4 w-4" />
+                            </Button>
+                            {store.subscription_status === 'trial' && (
                               <Button
                                 size="sm"
                                 variant="outline"
-                                disabled
-                                title="Las cuentas en período de prueba no se pueden modificar manualmente"
+                                onClick={() => setExtendTrialDialog({ open: true, store, days: '15' })}
+                                title="Extender período de prueba"
                               >
-                                <Clock className="h-4 w-4 mr-1" />
-                                En Prueba
+                                <Plus className="h-4 w-4 mr-1" />
+                                Extender
                               </Button>
-                            ) : (
+                            )}
+                            {store.subscription_status !== 'trial' && (
                               <Button
                                 size="sm"
                                 variant={store.subscription_status === 'active' ? 'outline' : 'default'}
@@ -475,6 +599,171 @@ export default function SuperAdminPage() {
           )}
         </CardContent>
       </Card>
+
+      {/* Diálogo para extender trial */}
+      <Dialog open={extendTrialDialog.open} onOpenChange={(open) => setExtendTrialDialog({ ...extendTrialDialog, open })}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Extender Período de Prueba</DialogTitle>
+            <DialogDescription>
+              Extender el período de prueba para {extendTrialDialog.store?.full_name || extendTrialDialog.store?.email}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Días a agregar</label>
+              <Input
+                type="number"
+                min="1"
+                max="365"
+                value={extendTrialDialog.days}
+                onChange={(e) => setExtendTrialDialog({ ...extendTrialDialog, days: e.target.value })}
+                placeholder="Número de días"
+              />
+              <p className="text-xs text-gray-500">
+                Puedes agregar entre 1 y 365 días al período de prueba actual
+              </p>
+            </div>
+            {extendTrialDialog.store && (
+              <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 space-y-1">
+                <div className="text-sm">
+                  <span className="font-medium">Estado actual:</span>{' '}
+                  {extendTrialDialog.store.subscription_status === 'trial' ? 'En prueba' : 'No activo'}
+                </div>
+                {extendTrialDialog.store.trial_end_date && (
+                  <div className="text-sm">
+                    <span className="font-medium">Vence:</span>{' '}
+                    {new Date(extendTrialDialog.store.trial_end_date).toLocaleDateString('es-CO')}
+                  </div>
+                )}
+                <div className="text-sm">
+                  <span className="font-medium">Días restantes actuales:</span>{' '}
+                  {getDaysRemaining(extendTrialDialog.store) ?? 0} días
+                </div>
+              </div>
+            )}
+          </div>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setExtendTrialDialog({ open: false, store: null, days: '15' })}
+            >
+              Cancelar
+            </Button>
+            <Button onClick={handleExtendTrial}>
+              Extender Trial
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Diálogo de detalles de cuenta */}
+      <Dialog open={detailsDialog.open} onOpenChange={(open) => setDetailsDialog({ ...detailsDialog, open })}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>Detalles de la Cuenta</DialogTitle>
+            <DialogDescription>
+              Información completa de {detailsDialog.store?.full_name || detailsDialog.store?.email}
+            </DialogDescription>
+          </DialogHeader>
+          {detailsDialog.store && (
+            <div className="space-y-4 py-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-1">
+                  <p className="text-sm font-medium text-gray-500">Nombre completo</p>
+                  <p className="text-sm">{detailsDialog.store.full_name || 'No especificado'}</p>
+                </div>
+                <div className="space-y-1">
+                  <p className="text-sm font-medium text-gray-500">Email</p>
+                  <p className="text-sm">{detailsDialog.store.email}</p>
+                </div>
+                <div className="space-y-1">
+                  <p className="text-sm font-medium text-gray-500">Teléfono</p>
+                  <p className="text-sm">{detailsDialog.store.phone || 'No especificado'}</p>
+                </div>
+                <div className="space-y-1">
+                  <p className="text-sm font-medium text-gray-500">Rol</p>
+                  <p className="text-sm capitalize">{detailsDialog.store.role}</p>
+                </div>
+              </div>
+
+              <div className="border-t pt-4">
+                <h4 className="font-medium mb-3">Información de Suscripción</h4>
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-1">
+                    <p className="text-sm font-medium text-gray-500">Estado</p>
+                    <p className="text-sm capitalize">{detailsDialog.store.subscription_status}</p>
+                  </div>
+                  <div className="space-y-1">
+                    <p className="text-sm font-medium text-gray-500">Plan</p>
+                    <p className="text-sm">{detailsDialog.store.plan_id || 'Sin plan'}</p>
+                  </div>
+                  {detailsDialog.store.trial_start_date && (
+                    <div className="space-y-1">
+                      <p className="text-sm font-medium text-gray-500">Inicio de prueba</p>
+                      <p className="text-sm">{new Date(detailsDialog.store.trial_start_date).toLocaleDateString('es-CO')}</p>
+                    </div>
+                  )}
+                  {detailsDialog.store.trial_end_date && (
+                    <div className="space-y-1">
+                      <p className="text-sm font-medium text-gray-500">Fin de prueba</p>
+                      <p className="text-sm">{new Date(detailsDialog.store.trial_end_date).toLocaleDateString('es-CO')}</p>
+                    </div>
+                  )}
+                  {detailsDialog.store.last_payment_date && (
+                    <div className="space-y-1">
+                      <p className="text-sm font-medium text-gray-500">Último pago</p>
+                      <p className="text-sm">{new Date(detailsDialog.store.last_payment_date).toLocaleDateString('es-CO')}</p>
+                    </div>
+                  )}
+                  {detailsDialog.store.next_billing_date && (
+                    <div className="space-y-1">
+                      <p className="text-sm font-medium text-gray-500">Próximo cobro</p>
+                      <p className="text-sm">{new Date(detailsDialog.store.next_billing_date).toLocaleDateString('es-CO')}</p>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              <div className="border-t pt-4">
+                <h4 className="font-medium mb-3">Fechas</h4>
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-1">
+                    <p className="text-sm font-medium text-gray-500">Registro</p>
+                    <p className="text-sm">{new Date(detailsDialog.store.created_at).toLocaleString('es-CO')}</p>
+                  </div>
+                  <div className="space-y-1">
+                    <p className="text-sm font-medium text-gray-500">Última actualización</p>
+                    <p className="text-sm">{new Date(detailsDialog.store.updated_at).toLocaleString('es-CO')}</p>
+                  </div>
+                </div>
+              </div>
+
+              <div className="border-t pt-4">
+                <h4 className="font-medium mb-3">Configuraciones</h4>
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-1">
+                    <p className="text-sm font-medium text-gray-500">Add-on de IA</p>
+                    <p className="text-sm">{detailsDialog.store.has_ai_addon ? 'Activo' : 'Inactivo'}</p>
+                  </div>
+                  <div className="space-y-1">
+                    <p className="text-sm font-medium text-gray-500">Reportes automáticos</p>
+                    <p className="text-sm">{detailsDialog.store.auto_reports_enabled ? 'Activados' : 'Desactivados'}</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setDetailsDialog({ open: false, store: null })}
+            >
+              Cerrar
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

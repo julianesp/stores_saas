@@ -20,6 +20,7 @@ import userProfilesRoutes from './routes/user-profiles';
 import creditPaymentsRoutes from './routes/credit-payments';
 import offersRoutes from './routes/offers';
 import paymentTransactionsRoutes from './routes/payment-transactions';
+import webhooksRoutes from './routes/webhooks';
 
 const app = new Hono<{ Bindings: Env }>();
 
@@ -60,6 +61,9 @@ app.get('/', (c) => {
     docs: '/docs',
   });
 });
+
+// Webhooks (NO auth middleware - verifican su propio secret)
+app.route('/api/webhooks', webhooksRoutes);
 
 // Apply authentication middleware to all API routes
 app.use('/api/*', authMiddleware);

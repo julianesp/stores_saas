@@ -1,0 +1,42 @@
+====================================
+CONFIGURACIÓN WEBHOOK WOMPI
+====================================
+
+URL DEL WEBHOOK:
+https://scoldable-chu-stauroscopically.ngrok-free.dev/api/webhooks/wompi
+
+EVENTO A CONFIGURAR:
+transaction.updated
+
+SECRET (ya configurado):
+prod_events_QqwC3D3DQxyCyvjMo1O4VFRIT6DaJ2ZZ
+
+====================================
+INSTRUCCIONES PASO A PASO
+====================================
+
+1. Ve a: https://comercios.wompi.co/login
+
+2. Inicia sesión con tus credenciales de Wompi
+
+3. Ve a: Configuración → Eventos/Webhooks
+   (Puede estar en el menú lateral o en configuración)
+
+4. Haz clic en "Agregar webhook" o "Nuevo webhook"
+
+5. Pega esta URL EXACTA:
+   https://scoldable-chu-stauroscopically.ngrok-free.dev/api/webhooks/wompi
+
+6. Selecciona el evento: "transaction.updated"
+
+7. Guarda
+
+====================================
+IMPORTANTE
+====================================
+
+⚠️  MANTÉN NGROK CORRIENDO: No cierres la terminal de ngrok mientras pruebes pagos
+⚠️  MANTÉN EL SERVIDOR CORRIENDO: No cierres npm run dev
+⚠️  Si reinicias ngrok, la URL cambiará y tendrás que actualizar el webhook en Wompi
+
+====================================

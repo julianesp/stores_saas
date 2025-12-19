@@ -24,7 +24,7 @@ import {
   Lock,
   Sparkles,
 } from 'lucide-react';
-import { getUserProfileByClerkId, hasAIAccess } from '@/lib/subscription-helpers';
+import { getUserProfileByClerkId, hasAIAccess } from '@/lib/cloudflare-subscription-helpers';
 import { UserProfile } from '@/lib/types';
 
 // Menú para Super Administradores (gestión del SaaS)
@@ -140,11 +140,29 @@ export function Sidebar({ isMobile = false, onLinkClick }: SidebarProps) {
   useEffect(() => {
     async function checkSuperAdmin() {
       if (user) {
-        const profile = await getUserProfileByClerkId(user.id);
-        setIsSuperAdmin(profile?.is_superadmin || false);
-        setUserProfile(profile);
-        if (profile) {
-          setHasAI(hasAIAccess(profile));
+        // Usar auth para obtener el token
+        const getToken = async () => {
+          // En el cliente, no podemos usar auth() de @clerk/nextjs/server
+          // Debemos importar desde @clerk/nextjs
+          return null; // Temporalmente null, el getToken se manejará en el componente
+        };
+
+        try {
+          // Hacer una llamada al API para obtener el perfil
+          const response = await fetch('/api/user/init-profile', {
+            method: 'POST',
+          });
+          const data = await response.json();
+
+          if (data.success && data.profile) {
+            setIsSuperAdmin(data.profile.is_superadmin || false);
+            setUserProfile(data.profile);
+            if (data.profile) {
+              setHasAI(hasAIAccess(data.profile));
+            }
+          }
+        } catch (error) {
+          console.error('Error fetching profile:', error);
         }
       }
     }

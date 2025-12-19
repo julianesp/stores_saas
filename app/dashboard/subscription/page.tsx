@@ -5,8 +5,8 @@ import { useUser, useAuth } from '@clerk/nextjs';
 import { Check, Loader2, Smartphone, CreditCard, Building2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { SUBSCRIPTION_PLANS } from '@/lib/wompi';
-import { checkSubscriptionStatus, getUserProfileByClerkId } from '@/lib/subscription-helpers';
+import { SUBSCRIPTION_PLANS } from '@/lib/epayco';
+import { checkSubscriptionStatus, getUserProfileByClerkId } from '@/lib/cloudflare-subscription-helpers';
 import { SubscriptionStatus } from '@/lib/types';
 import { toast } from 'sonner';
 import { formatCurrency } from '@/lib/utils';
@@ -202,7 +202,7 @@ export default function SubscriptionPage() {
                 className="w-full bg-purple-600 hover:bg-purple-700"
                 size="lg"
                 onClick={() => handleSubscribe(plan.id, 'NEQUI')}
-                disabled={loading || subscriptionStatus?.status === 'active'}
+                disabled={loading}
               >
                 {isButtonLoading(plan.id, 'NEQUI') ? (
                   <>
@@ -223,7 +223,7 @@ export default function SubscriptionPage() {
                 size="lg"
                 variant="outline"
                 onClick={() => handleSubscribe(plan.id, null)}
-                disabled={loading || subscriptionStatus?.status === 'active'}
+                disabled={loading}
               >
                 {isButtonLoading(plan.id, null) ? (
                   <>
@@ -244,12 +244,33 @@ export default function SubscriptionPage() {
         ))}
       </div>
 
+      {/* Verificación manual de pago */}
+      <Card className="max-w-4xl mx-auto bg-gradient-to-r from-blue-50 to-purple-50 border-blue-200">
+        <CardContent className="pt-6">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="font-medium text-blue-900">¿Ya pagaste y tu suscripción no se activó?</p>
+              <p className="text-sm text-blue-700 mt-1">
+                Verifica tu pago manualmente ingresando el ID de transacción de ePayco
+              </p>
+            </div>
+            <Button
+              variant="outline"
+              onClick={() => window.location.href = '/dashboard/subscription/verify-payment'}
+              className="border-blue-300 hover:bg-blue-100"
+            >
+              Verificar Pago
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
+
       {/* Información adicional */}
       <Card className="max-w-4xl mx-auto">
         <CardContent className="pt-6">
           <div className="space-y-3 text-sm text-gray-600">
             <p>
-              ✓ <strong>Pago seguro</strong> procesado por Wompi (Bancolombia)
+              ✓ <strong>Pago seguro</strong> procesado por ePayco
             </p>
             <p>
               ✓ <strong>Pago con Nequi</strong> - La forma más rápida y fácil de pagar

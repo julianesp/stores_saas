@@ -20,7 +20,7 @@ import {
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { formatCurrency } from '@/lib/utils';
-import { getUserProfileByClerkId } from '@/lib/subscription-helpers';
+import { getUserProfileByClerkId } from '@/lib/cloudflare-subscription-helpers';
 
 export default function BillingPage() {
   const { user } = useUser();
