@@ -60,14 +60,15 @@ export async function authMiddleware(c: Context<{ Bindings: Env }>, next: Next) 
       }
     }
 
-    // Check subscription status
-    if (tenant.subscriptionStatus === 'expired' || tenant.subscriptionStatus === 'canceled') {
-      return c.json({
-        success: false,
-        error: 'Subscription required',
-        message: 'Your subscription has expired. Please renew to continue.'
-      }, 402); // Payment Required
-    }
+    // Check subscription status (skip for superadmin)
+    // Super admins are checked later after getting user_profile
+    // if (tenant.subscriptionStatus === 'expired' || tenant.subscriptionStatus === 'canceled') {
+    //   return c.json({
+    //     success: false,
+    //     error: 'Subscription required',
+    //     message: 'Your subscription has expired. Please renew to continue.'
+    //   }, 402); // Payment Required
+    // }
 
     // IMPORTANT: Get user_profile.id to use as tenant_id for FK constraints
     // The products table has FK to user_profiles, not to tenants table
@@ -126,6 +127,19 @@ export async function authMiddleware(c: Context<{ Bindings: Env }>, next: Next) 
     tenant.id = userProfile.id;
     // Ensure clerk_user_id is available in tenant object (for user-profiles endpoint)
     (tenant as any).clerk_user_id = clerkUserId;
+    // Attach is_superadmin flag to tenant object
+    (tenant as any).is_superadmin = userProfile.is_superadmin === 1;
+
+    // Check subscription status (skip for superadmin)
+    if (userProfile.is_superadmin !== 1) {
+      if (tenant.subscriptionStatus === 'expired' || tenant.subscriptionStatus === 'canceled') {
+        return c.json({
+          success: false,
+          error: 'Subscription required',
+          message: 'Your subscription has expired. Please renew to continue.'
+        }, 402); // Payment Required
+      }
+    }
 
     // Attach tenant to context
     c.set('tenant', tenant);

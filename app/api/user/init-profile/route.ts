@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { auth, currentUser } from '@clerk/nextjs/server';
 import { getUserProfileByClerkId } from '@/lib/subscription-helpers';
-import { createUserProfile, updateUserProfile } from '@/lib/cloudflare-api';
+import { createUserProfile, updateUserProfile, getAllUserProfiles } from '@/lib/cloudflare-api';
 
 export async function POST(req: NextRequest) {
   try {
@@ -29,17 +29,17 @@ export async function POST(req: NextRequest) {
     const superAdminEmail = process.env.SUPER_ADMIN_EMAIL || 'admin@neurai.dev';
     const isSuperAdmin = userEmail === superAdminEmail;
 
-    // Verificar si el perfil ya existe
-    const existingProfile = await getUserProfileByClerkId(userId);
+    const getToken = async () => {
+      const { getToken } = await auth();
+      return getToken();
+    };
+
+    // Verificar si el perfil ya existe por clerk_user_id
+    let existingProfile = await getUserProfileByClerkId(userId);
 
     if (existingProfile) {
       // Si el email es admin@neurai.dev, actualizar a superadmin
       if (isSuperAdmin && !existingProfile.is_superadmin) {
-        const getToken = async () => {
-          const { getToken } = await auth();
-          return getToken();
-        };
-
         await updateUserProfile(existingProfile.id, {
           is_superadmin: true,
           subscription_status: 'active',
@@ -61,15 +61,36 @@ export async function POST(req: NextRequest) {
       });
     }
 
+    // Si no existe por clerk_user_id, buscar por email (para el caso de admin@neurai.dev)
+    if (isSuperAdmin) {
+      try {
+        // Intentar obtener todos los perfiles y buscar por email
+        const allProfiles = await getAllUserProfiles(getToken);
+        const profileByEmail = allProfiles.find(p => p.email === userEmail);
+
+        if (profileByEmail) {
+          // Actualizar el clerk_user_id del perfil existente
+          await updateUserProfile(profileByEmail.id, {
+            clerk_user_id: userId,
+            is_superadmin: true,
+            subscription_status: 'active',
+          }, getToken);
+
+          return NextResponse.json({
+            success: true,
+            profile: { ...profileByEmail, clerk_user_id: userId, is_superadmin: true },
+            message: 'Perfil de Super Admin asociado a tu cuenta de Clerk',
+          });
+        }
+      } catch (error) {
+        console.error('Error buscando perfil por email:', error);
+      }
+    }
+
     // Crear nuevo perfil
     const now = new Date();
     const trialEnd = new Date();
     trialEnd.setDate(trialEnd.getDate() + 15); // 15 días de prueba
-
-    const getToken = async () => {
-      const { getToken } = await auth();
-      return getToken();
-    };
 
     const newProfile = await createUserProfile({
       clerk_user_id: userId,

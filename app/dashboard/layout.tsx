@@ -28,23 +28,59 @@ export default function DashboardLayout({
       if (user) {
         try {
           // Primero, asegurarse de que el perfil de usuario existe
-          await fetch('/api/user/init-profile', {
-            method: 'POST',
-          });
+          try {
+            await fetch('/api/user/init-profile', {
+              method: 'POST',
+            });
+          } catch (err) {
+            console.warn('Error initializing profile:', err);
+          }
 
-          // Inicializar categorías por defecto si no existen
-          await fetch('/api/categories/seed', {
-            method: 'POST',
-          });
+          // Intentar auto-upgrade si es el super admin
+          const userEmail = user.emailAddresses[0]?.emailAddress || '';
+          const superAdminEmail = 'admin@neurai.dev'; // Hardcoded para evitar problemas con env
+
+          if (userEmail === superAdminEmail) {
+            try {
+              const upgradeResponse = await fetch('/api/admin/auto-upgrade', {
+                method: 'POST',
+              });
+              const upgradeData = await upgradeResponse.json();
+
+              if (upgradeData.upgraded) {
+                console.log('✅ Perfil actualizado a super admin automáticamente');
+              } else if (upgradeData.isSuperAdmin) {
+                console.log('✅ Ya eres super admin');
+              }
+            } catch (err) {
+              console.warn('Error en auto-upgrade:', err);
+            }
+          }
+
+          // Inicializar categorías por defecto si no existen (opcional, no crítico)
+          // COMENTADO: No es necesario para el funcionamiento del sistema
+          // await fetch('/api/categories/seed', { method: 'POST' }).catch(() => {});
 
           // Verificar si es superadmin
           const profile = await getUserProfileByClerkId(getToken);
           const isSuperAdminUser = profile?.is_superadmin || false;
           setIsSuperAdmin(isSuperAdminUser);
 
-          // Luego, verificar el estado de suscripción
-          const info = await checkSubscriptionStatus(getToken);
-          setSubscriptionInfo(info);
+          if (isSuperAdminUser) {
+            console.log('🔐 Usuario verificado como Super Admin');
+          }
+
+          // Luego, verificar el estado de suscripción (excepto para superadmin)
+          if (!isSuperAdminUser) {
+            const info = await checkSubscriptionStatus(getToken);
+            setSubscriptionInfo(info);
+          } else {
+            // Super admin siempre tiene acceso
+            setSubscriptionInfo({
+              canAccess: true,
+              status: 'active',
+            });
+          }
         } catch (error) {
           console.error('Error checking subscription:', error);
         } finally {

@@ -1,16 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { verifyWebhookSignature } from '@/lib/wompi';
-import { activateSubscription } from '@/lib/subscription-helpers';
-import { getAllUserProfiles, updateUserProfile, createPaymentTransaction, getAllPaymentTransactions } from '@/lib/cloudflare-api';
-import type { GetTokenFn } from '@/lib/cloudflare-api';
 
-// Para webhooks de Wompi necesitamos un getToken básico que obtenga un token de sistema
-// En producción, esto debería ser un token de servicio
-const getSystemToken: GetTokenFn = async () => {
-  // TODO: Implementar autenticación de servicio para webhooks
-  // Por ahora, usamos una autenticación básica o token de sistema
-  return process.env.SYSTEM_API_TOKEN || '';
-};
+// El webhook de Wompi llamará directamente al Worker de Cloudflare
+// que tiene acceso directo a la base de datos
+const CLOUDFLARE_API_URL = process.env.NEXT_PUBLIC_CLOUDFLARE_API_URL || 'https://tienda-pos-api.julii1295.workers.dev';
+const WEBHOOK_SECRET = process.env.WOMPI_EVENTS_SECRET || '';
 
 export async function POST(req: NextRequest) {
   try {
@@ -19,9 +13,15 @@ export async function POST(req: NextRequest) {
     const signature = req.headers.get('x-wompi-signature') || '';
     const timestamp = req.headers.get('x-wompi-timestamp') || '';
 
+    console.log('📨 Webhook received from Wompi');
+    console.log('Headers:', {
+      signature: signature?.substring(0, 20) + '...',
+      timestamp,
+    });
+
     // Verificar la firma del webhook
     if (!verifyWebhookSignature(signature, timestamp, body)) {
-      console.error('Invalid webhook signature');
+      console.error('❌ Invalid webhook signature');
       return NextResponse.json(
         { error: 'Invalid signature' },
         { status: 401 }
@@ -31,98 +31,38 @@ export async function POST(req: NextRequest) {
     // Parsear el evento
     const event = JSON.parse(body);
 
-    console.log('Wompi webhook received:', event.event);
+    console.log('✅ Valid webhook signature');
+    console.log('Event type:', event.event);
+    console.log('Transaction data:', event.data);
 
-    // Manejar diferentes tipos de eventos
-    switch (event.event) {
-      case 'transaction.updated':
-        await handleTransactionUpdated(event.data);
-        break;
+    // Reenviar al Worker de Cloudflare que tiene acceso directo a la DB
+    const workerResponse = await fetch(`${CLOUDFLARE_API_URL}/api/webhooks/wompi`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-Webhook-Secret': WEBHOOK_SECRET,
+      },
+      body: JSON.stringify(event),
+    });
 
-      default:
-        console.log('Unhandled webhook event:', event.event);
+    if (!workerResponse.ok) {
+      const errorText = await workerResponse.text();
+      console.error('❌ Worker webhook processing failed:', errorText);
+      throw new Error(`Worker returned ${workerResponse.status}: ${errorText}`);
     }
 
-    return NextResponse.json({ received: true });
+    const result = await workerResponse.json();
+    console.log('✅ Worker processed webhook successfully:', result);
+
+    return NextResponse.json({ received: true, workerResult: result });
   } catch (error) {
-    console.error('Error processing webhook:', error);
+    console.error('❌ Error processing webhook:', error);
     return NextResponse.json(
-      { error: 'Webhook processing failed' },
+      { error: 'Webhook processing failed', details: error instanceof Error ? error.message : String(error) },
       { status: 500 }
     );
   }
 }
 
-async function handleTransactionUpdated(transaction: any) {
-  try {
-    const { id, status, reference, amount_in_cents, payment_method_type } = transaction;
-
-    // Buscar si ya existe esta transacción
-    const allTransactions = await getAllPaymentTransactions(getSystemToken);
-    const existingTransaction = allTransactions.find(t => t.wompi_transaction_id === id);
-
-    // Extraer el user ID del reference (formato: SUB-userId-timestamp)
-    const referenceParts = reference.split('-');
-    if (referenceParts.length < 2) {
-      console.error('Invalid reference format:', reference);
-      return;
-    }
-
-    // Buscar el user_profile por la referencia
-    // El formato es SUB-{primeros8caracteresDelId}-{timestamp}
-    const userProfiles = await getAllUserProfiles(getSystemToken);
-    const userProfile = userProfiles.find((profile: any) =>
-      reference.includes(profile.id.substring(0, 8))
-    );
-
-    if (!userProfile) {
-      console.error('User profile not found for reference:', reference);
-      return;
-    }
-
-    // Crear o actualizar la transacción
-    if (!existingTransaction) {
-      // Crear nueva transacción
-      await createPaymentTransaction({
-        user_profile_id: userProfile.id,
-        wompi_transaction_id: id,
-        amount: amount_in_cents / 100,
-        currency: 'COP',
-        status,
-        payment_method_type,
-        reference,
-      }, getSystemToken);
-    }
-
-    // Si el pago fue aprobado, activar la suscripción
-    if (status === 'APPROVED') {
-      // Determinar el plan basado en el monto
-      // 39900 = Plan Básico
-      // 9900 = Addon IA
-      // 49800 = Plan Básico + IA (ambos juntos)
-      const amountCOP = amount_in_cents / 100;
-      let planId = 'basic-monthly';
-
-      if (amountCOP === 9900) {
-        planId = 'ai-addon-monthly';
-      } else if (amountCOP === 49800) {
-        // Usuario compró ambos, activar plan básico
-        planId = 'basic-monthly';
-      }
-
-      await activateSubscription(userProfile.id, id, planId, getSystemToken);
-      console.log('Subscription activated for user:', userProfile.id, 'with plan:', planId);
-    }
-
-    // Si el pago fue declinado o tiene error, marcar como expirado
-    if (status === 'DECLINED' || status === 'ERROR') {
-      await updateUserProfile(userProfile.id, {
-        subscription_status: 'expired'
-      }, getSystemToken);
-      console.log('Subscription marked as expired for user:', userProfile.id);
-    }
-  } catch (error) {
-    console.error('Error handling transaction update:', error);
-    throw error;
-  }
-}
+// El procesamiento real del webhook se hace en el Worker de Cloudflare
+// que tiene acceso directo a la base de datos

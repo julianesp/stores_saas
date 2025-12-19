@@ -470,6 +470,7 @@ export interface UserProfile {
   next_billing_date?: string;
   wompi_customer_id?: string;
   plan_id?: string;
+  has_ai_addon?: boolean;
   auto_reports_enabled?: boolean;
   auto_reports_time?: string;
   auto_reports_email?: string;

@@ -5,7 +5,7 @@ import { useUser, useAuth } from '@clerk/nextjs';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { DollarSign, ShoppingCart, Package, TrendingUp, Users, AlertTriangle, Store, Activity, Crown, Calendar, Database, Trash2 } from 'lucide-react';
-import { getUserProfileByClerkId } from '@/lib/subscription-helpers';
+import { getUserProfileByClerkId } from '@/lib/cloudflare-subscription-helpers';
 import { getAllUserProfiles } from '@/lib/cloudflare-api';
 import { UserProfile } from '@/lib/types';
 import { formatCurrency } from '@/lib/utils';
@@ -48,7 +48,7 @@ export default function DashboardPage() {
   useEffect(() => {
     async function checkUserAndFetchMetrics() {
       if (user) {
-        const profile = await getUserProfileByClerkId(user.id);
+        const profile = await getUserProfileByClerkId(getToken);
         const isSuper = profile?.is_superadmin || false;
         setIsSuperAdmin(isSuper);
         const userProfileId = profile?.id;
