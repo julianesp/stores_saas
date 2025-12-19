@@ -67,17 +67,17 @@ export interface EPaycoConfirmation {
 
 /**
  * Genera la firma para validar la respuesta de ePayco
+ * Formato según documentación: SHA256(p_cust_id_cliente^p_key^x_ref_payco^x_transaction_id^x_amount^x_currency_code)
  */
 export function generateResponseSignature(
-  ref_payco: string,
   cust_id_cliente: string,
-  id_invoice: string,
+  ref_payco: string,
+  transaction_id: string,
   amount: string,
-  currency: string,
-  transaction_state: string
+  currency: string
 ): string {
-  const privateKey = EPAYCO_CONFIG.privateKey;
-  const signatureString = `${cust_id_cliente}^${privateKey}^${ref_payco}^${id_invoice}^${amount}^${currency}^${transaction_state}`;
+  const p_key = EPAYCO_CONFIG.p_key;
+  const signatureString = `${cust_id_cliente}^${p_key}^${ref_payco}^${transaction_id}^${amount}^${currency}`;
   return crypto.createHash('sha256').update(signatureString).digest('hex');
 }
 
@@ -86,13 +86,18 @@ export function generateResponseSignature(
  */
 export function verifyEPaycoSignature(confirmation: EPaycoConfirmation): boolean {
   const expectedSignature = generateResponseSignature(
-    confirmation.x_ref_payco,
     confirmation.x_cust_id_cliente,
-    confirmation.x_id_invoice,
+    confirmation.x_ref_payco,
+    confirmation.x_transaction_id,
     confirmation.x_amount,
-    confirmation.x_currency_code,
-    confirmation.x_transaction_state
+    confirmation.x_currency_code
   );
+
+  console.log('🔐 Verificación de firma:', {
+    expected: expectedSignature,
+    received: confirmation.x_signature,
+    match: expectedSignature === confirmation.x_signature,
+  });
 
   return expectedSignature === confirmation.x_signature;
 }
@@ -127,11 +132,22 @@ export async function createEPaycoCheckout(
   const confirmationUrl = `${baseUrl}/api/webhooks/epayco`;
   const responseUrl = `${baseUrl}/dashboard/subscription/payment-response`;
 
-  // Calcular firma
+  // Calcular firma según documentación oficial de ePayco
+  // Formato: MD5(p_cust_id_cliente + p_key + p_id_invoice + p_amount + p_currency_code)
   const amount = plan.price.toString();
   const currency = 'COP';
-  const signatureString = `${EPAYCO_CONFIG.p_cust_id_cliente}^${EPAYCO_CONFIG.p_key}^${referenceCode}^${amount}^${currency}`;
-  const signature = crypto.createHash('sha256').update(signatureString).digest('hex');
+  const signatureString = `${EPAYCO_CONFIG.p_cust_id_cliente}${EPAYCO_CONFIG.p_key}${referenceCode}${amount}${currency}`;
+  const signature = crypto.createHash('md5').update(signatureString).digest('hex');
+
+  console.log('🔐 Signature Debug:', {
+    p_cust_id_cliente: EPAYCO_CONFIG.p_cust_id_cliente,
+    p_key: EPAYCO_CONFIG.p_key?.substring(0, 10) + '...',
+    p_id_invoice: referenceCode,
+    p_amount: amount,
+    p_currency_code: currency,
+    signatureString: signatureString.substring(0, 50) + '...',
+    signature,
+  });
 
   // Construir URL del checkout estándar de ePayco
   const params = new URLSearchParams({
