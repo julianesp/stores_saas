@@ -144,8 +144,11 @@ vercel --prod
 ### 2. Creación del checkout
 - Se llama a `/api/subscription/create-payment`
 - Se genera referencia única: `SUB-{userProfileId}-{timestamp}`
-- Se calcula firma de seguridad
-- Se crea URL de checkout en ePayco
+- Se calcula firma de seguridad con **MD5**:
+  ```
+  p_signature = MD5(p_cust_id_cliente + p_key + p_id_invoice + p_amount + p_currency_code)
+  ```
+- Se crea URL de checkout en ePayco (`https://secure.payco.co/checkout.php`)
 
 ### 3. Proceso de pago en ePayco
 - Usuario es redirigido a ePayco
@@ -154,7 +157,10 @@ vercel --prod
 
 ### 4. Confirmación (Webhook)
 - ePayco envía POST a `/api/webhooks/epayco`
-- Se verifica la firma de seguridad
+- Se verifica la firma de seguridad con **SHA256**:
+  ```
+  x_signature = SHA256(p_cust_id_cliente^p_key^x_ref_payco^x_transaction_id^x_amount^x_currency_code)
+  ```
 - Se valida que la transacción fue aprobada
 - Se activa la suscripción del usuario
 - Se registra la transacción en la base de datos
