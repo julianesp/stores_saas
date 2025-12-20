@@ -138,11 +138,20 @@ export async function createEPaycoCheckout(
     // Paso 1: Autenticar con Apify y obtener token
     const publicKey = EPAYCO_CONFIG.publicKey; // La PUBLIC_KEY para Apify
     const privateKey = EPAYCO_CONFIG.privateKey; // La PRIVATE_KEY
-    const authString = Buffer.from(`${publicKey}:${privateKey}`).toString('base64');
 
-    console.log('🔐 Autenticando con ePayco Apify...');
-    console.log('🔍 Debug - Public Key:', publicKey?.substring(0, 10) + '...');
-    console.log('🔍 Debug - Private Key:', privateKey?.substring(0, 10) + '...');
+    console.log('🔐 Iniciando autenticación con ePayco Apify...');
+    console.log('🔍 Debug - Public Key exists:', !!publicKey);
+    console.log('🔍 Debug - Private Key exists:', !!privateKey);
+
+    if (!publicKey || !privateKey) {
+      console.error('❌ Faltan credenciales de ePayco');
+      throw new Error('Credenciales de ePayco no configuradas correctamente');
+    }
+
+    console.log('🔍 Debug - Public Key:', publicKey.substring(0, 10) + '...');
+    console.log('🔍 Debug - Private Key:', privateKey.substring(0, 10) + '...');
+
+    const authString = Buffer.from(`${publicKey}:${privateKey}`).toString('base64');
 
     const authResponse = await fetch('https://apify.epayco.co/login', {
       method: 'POST',
@@ -163,9 +172,16 @@ export async function createEPaycoCheckout(
     }
 
     const authData = await authResponse.json();
+    console.log('🔍 Auth Data:', authData);
+
     const apifyToken = authData.token;
 
-    console.log('✓ Token de Apify obtenido');
+    if (!apifyToken) {
+      console.error('❌ No se recibió token de Apify');
+      throw new Error('No se recibió token de autenticación de ePayco');
+    }
+
+    console.log('✓ Token de Apify obtenido:', apifyToken.substring(0, 20) + '...');
 
     // Paso 2: Crear sesión de checkout
     console.log('📝 Creando sesión de checkout...');
@@ -212,17 +228,23 @@ export async function createEPaycoCheckout(
       }),
     });
 
+    console.log('🔍 Session Response Status:', sessionResponse.status);
+
     if (!sessionResponse.ok) {
       const errorText = await sessionResponse.text();
-      console.error('Error creando sesión:', errorText);
+      console.error('❌ Error creando sesión:', errorText);
+      console.error('❌ Status:', sessionResponse.status);
       throw new Error(`Error al crear sesión de pago: ${sessionResponse.status}`);
     }
 
     const sessionData = await sessionResponse.json();
+    console.log('🔍 Session Data:', JSON.stringify(sessionData, null, 2));
+
     const sessionId = sessionData.sessionId || sessionData.data?.sessionId;
 
     if (!sessionId) {
-      console.error('Respuesta de sesión:', sessionData);
+      console.error('❌ No se recibió sessionId');
+      console.error('❌ Respuesta completa:', sessionData);
       throw new Error('No se recibió sessionId de ePayco');
     }
 
@@ -236,7 +258,8 @@ export async function createEPaycoCheckout(
       sessionId,
     };
   } catch (error) {
-    console.error('Error en createEPaycoCheckout:', error);
+    console.error('❌ Error en createEPaycoCheckout:', error);
+    console.error('❌ Error stack:', error instanceof Error ? error.stack : 'N/A');
     throw error;
   }
 }
