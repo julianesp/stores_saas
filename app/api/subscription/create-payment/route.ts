@@ -62,7 +62,8 @@ export async function POST(req: NextRequest) {
       planId,
       userProfile.id,
       userProfile.email,
-      userProfile.store_name || userProfile.email
+      userProfile.store_name || userProfile.email,
+      userProfile.phone
     );
 
     console.log('ePayco checkout created:', checkoutData);

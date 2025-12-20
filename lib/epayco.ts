@@ -110,7 +110,8 @@ export async function createEPaycoCheckout(
   planId: string,
   userProfileId: string,
   userEmail: string,
-  _userName: string // No se usa en Smart Checkout v2
+  userName: string,
+  userPhone?: string
 ): Promise<EPaycoPaymentLink & { sessionId?: string }> {
   const plan = SUBSCRIPTION_PLANS.find(p => p.id === planId);
 
@@ -168,18 +169,39 @@ export async function createEPaycoCheckout(
         'Authorization': `Bearer ${apifyToken}`,
       },
       body: JSON.stringify({
+        // Información básica de la transacción
         checkout_version: "2",
         name: `Suscripción ${plan.name} - Tienda POS`,
         description: `Suscripción ${plan.name}`,
         currency: "COP",
         amount: plan.price,
         external_id: referenceCode,
-        email: userEmail,
-        confirmation_url: confirmationUrl,
-        response_url: responseUrl,
-        extra1: userProfileId,
-        extra2: planId,
-        extra3: plan.isAddon ? 'true' : 'false',
+
+        // Configuración regional
+        lang: "ES",
+        country: "CO",
+
+        // URLs de confirmación y respuesta
+        confirmation: confirmationUrl,
+        response: responseUrl,
+        method: "POST", // Método de confirmación
+
+        // Información del comprador para autocompletar formularios
+        billing: {
+          email: userEmail,
+          name: userName,
+          ...(userPhone && {
+            callingCode: "+57",
+            mobilePhone: userPhone,
+          }),
+        },
+
+        // Información adicional
+        extras: {
+          extra1: userProfileId,
+          extra2: planId,
+          extra3: plan.isAddon ? 'true' : 'false',
+        },
       }),
     });
 
