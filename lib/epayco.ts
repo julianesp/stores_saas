@@ -36,6 +36,7 @@ export const SUBSCRIPTION_PLANS = [
 const EPAYCO_CONFIG = {
   p_cust_id_cliente: process.env.EPAYCO_P_CUST_ID_CLIENTE!,
   p_key: process.env.EPAYCO_P_KEY!,
+  publicKey: process.env.NEXT_PUBLIC_EPAYCO_PUBLIC_KEY!,
   privateKey: process.env.EPAYCO_PRIVATE_KEY!,
   test: process.env.NEXT_PUBLIC_EPAYCO_ENV === 'test',
 };
@@ -134,7 +135,7 @@ export async function createEPaycoCheckout(
 
   try {
     // Paso 1: Autenticar con Apify y obtener token
-    const publicKey = EPAYCO_CONFIG.p_key; // La PUBLIC_KEY
+    const publicKey = EPAYCO_CONFIG.publicKey; // La PUBLIC_KEY para Apify
     const privateKey = EPAYCO_CONFIG.privateKey; // La PRIVATE_KEY
     const authString = Buffer.from(`${publicKey}:${privateKey}`).toString('base64');
 
