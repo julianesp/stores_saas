@@ -133,10 +133,10 @@ export async function createEPaycoCheckout(
   const responseUrl = `${baseUrl}/dashboard/subscription/payment-response`;
 
   // Calcular firma según documentación oficial de ePayco
-  // Formato: MD5(p_cust_id_cliente + p_key + p_id_invoice + p_amount + p_currency_code)
+  // Formato: MD5(p_cust_id_cliente^p_key^p_id_invoice^p_amount^p_currency_code)
   const amount = plan.price.toString();
   const currency = 'COP';
-  const signatureString = `${EPAYCO_CONFIG.p_cust_id_cliente}${EPAYCO_CONFIG.p_key}${referenceCode}${amount}${currency}`;
+  const signatureString = `${EPAYCO_CONFIG.p_cust_id_cliente}^${EPAYCO_CONFIG.p_key}^${referenceCode}^${amount}^${currency}`;
   const signature = crypto.createHash('md5').update(signatureString).digest('hex');
 
   console.log('🔐 Signature Debug:', {

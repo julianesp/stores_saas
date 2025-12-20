@@ -18,6 +18,7 @@ import {
   Clock,
   Calendar,
   Mail,
+  Trash2,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { formatCurrency } from '@/lib/utils';
@@ -126,6 +127,34 @@ export default function SubscriptionsManagementPage() {
     } catch (error) {
       console.error('Error suspending subscription:', error);
       toast.error('Error al suspender suscripción');
+    }
+  };
+
+  const handleDeleteUser = async (profileId: string, email: string, fullName: string) => {
+    if (!confirm(`¿Eliminar a ${fullName} (${email}) y todos sus datos?\n\nEsta acción NO SE PUEDE DESHACER.`)) {
+      return;
+    }
+
+    try {
+      const response = await fetch('/api/admin/delete-user', {
+        method: 'DELETE',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ userIdToDelete: profileId }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || 'Error al eliminar usuario');
+      }
+
+      toast.success(`Usuario ${fullName} eliminado correctamente`);
+      fetchData();
+    } catch (error) {
+      console.error('Error deleting user:', error);
+      toast.error(error instanceof Error ? error.message : 'Error al eliminar usuario');
     }
   };
 
@@ -351,6 +380,15 @@ export default function SubscriptionsManagementPage() {
                                 Suspender
                               </Button>
                             )}
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              className="border-red-300 text-red-600 hover:bg-red-50 hover:text-red-700"
+                              onClick={() => handleDeleteUser(sub.id, sub.email, sub.full_name || 'Usuario')}
+                              title="Eliminar usuario y todos sus datos"
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
                           </div>
                         </td>
                       </tr>
