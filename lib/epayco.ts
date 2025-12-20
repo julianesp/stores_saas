@@ -141,6 +141,9 @@ export async function createEPaycoCheckout(
     const authString = Buffer.from(`${publicKey}:${privateKey}`).toString('base64');
 
     console.log('🔐 Autenticando con ePayco Apify...');
+    console.log('🔍 Debug - Public Key:', publicKey?.substring(0, 10) + '...');
+    console.log('🔍 Debug - Private Key:', privateKey?.substring(0, 10) + '...');
+
     const authResponse = await fetch('https://apify.epayco.co/login', {
       method: 'POST',
       headers: {
@@ -149,9 +152,13 @@ export async function createEPaycoCheckout(
       },
     });
 
+    console.log('🔍 Auth Response Status:', authResponse.status);
+
     if (!authResponse.ok) {
       const errorText = await authResponse.text();
-      console.error('Error en autenticación ePayco:', errorText);
+      console.error('❌ Error en autenticación ePayco:', errorText);
+      console.error('❌ Status:', authResponse.status);
+      console.error('❌ Headers:', Object.fromEntries(authResponse.headers.entries()));
       throw new Error(`Error de autenticación con ePayco: ${authResponse.status}`);
     }
 
