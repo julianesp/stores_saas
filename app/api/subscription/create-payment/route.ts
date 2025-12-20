@@ -80,10 +80,11 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json({
       success: true,
-      paymentLink: {
-        permalink: checkoutData.checkoutUrl,
-      },
+      sessionId: checkoutData.sessionId,
       reference: checkoutData.referenceCode,
+      paymentLink: {
+        permalink: checkoutData.checkoutUrl || '', // Deprecated - para compatibilidad
+      },
     });
   } catch (error) {
     console.error('Error creating payment:', error);

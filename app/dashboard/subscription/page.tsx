@@ -37,7 +37,7 @@ export default function SubscriptionPage() {
     setSelectedMethod(paymentMethod);
 
     try {
-      // Llamar a la API para crear el enlace de pago
+      // Llamar a la API para crear la sesión de pago con ePayco
       const response = await fetch('/api/subscription/create-payment', {
         method: 'POST',
         headers: {
@@ -45,7 +45,7 @@ export default function SubscriptionPage() {
         },
         body: JSON.stringify({
           planId,
-          paymentMethod, // Enviar el método de pago
+          paymentMethod,
         }),
       });
 
@@ -55,12 +55,52 @@ export default function SubscriptionPage() {
 
       const data = await response.json();
 
-      // Redirigir a Wompi
-      if (data.paymentLink?.permalink) {
-        window.location.href = data.paymentLink.permalink;
-      } else {
-        throw new Error(data.error || 'No se recibió el enlace de pago');
+      // Verificar que recibimos el sessionId para Smart Checkout
+      if (!data.sessionId) {
+        throw new Error(data.error || 'No se recibió el sessionId de ePayco');
       }
+
+      console.log('✓ SessionId recibido:', data.sessionId);
+
+      // Cargar el script de ePayco si no está cargado
+      if (!(window as any).ePayco) {
+        await new Promise<void>((resolve, reject) => {
+          const script = document.createElement('script');
+          script.src = 'https://checkout.epayco.co/checkout-v2.js';
+          script.onload = () => resolve();
+          script.onerror = () => reject(new Error('Error al cargar ePayco SDK'));
+          document.head.appendChild(script);
+        });
+      }
+
+      // Configurar y abrir el checkout de ePayco
+      const checkout = (window as any).ePayco.checkout.configure({
+        sessionId: data.sessionId,
+        type: "onpage",
+        test: process.env.NEXT_PUBLIC_EPAYCO_ENV !== 'production',
+      });
+
+      checkout.onCreated(() => {
+        console.log("✓ Checkout de ePayco creado");
+      });
+
+      checkout.onErrors((errors: any) => {
+        console.error("❌ Errores en checkout:", errors);
+        toast.error('Error al procesar el pago');
+        setLoading(false);
+        setSelectedPlan(null);
+        setSelectedMethod(null);
+      });
+
+      checkout.onClosed(() => {
+        console.log("Checkout cerrado");
+        setLoading(false);
+        setSelectedPlan(null);
+        setSelectedMethod(null);
+      });
+
+      checkout.open();
+
     } catch (error) {
       console.error('Error:', error);
       const errorMessage = error instanceof Error ? error.message : 'Error al procesar el pago';
