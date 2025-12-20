@@ -103,14 +103,14 @@ export function verifyEPaycoSignature(confirmation: EPaycoConfirmation): boolean
 }
 
 /**
- * Crea un enlace de pago con ePayco (Checkout Estándar)
+ * Crea una sesión de pago con ePayco Smart Checkout v2
  */
 export async function createEPaycoCheckout(
   planId: string,
   userProfileId: string,
   userEmail: string,
-  userName: string
-): Promise<EPaycoPaymentLink> {
+  _userName: string // No se usa en Smart Checkout v2
+): Promise<EPaycoPaymentLink & { sessionId?: string }> {
   const plan = SUBSCRIPTION_PLANS.find(p => p.id === planId);
 
   if (!plan) {
@@ -132,53 +132,83 @@ export async function createEPaycoCheckout(
   const confirmationUrl = `${baseUrl}/api/webhooks/epayco`;
   const responseUrl = `${baseUrl}/dashboard/subscription/payment-response`;
 
-  // Calcular firma según documentación oficial de ePayco
-  // Formato: MD5(p_cust_id_cliente^p_key^p_id_invoice^p_amount^p_currency_code)
-  const amount = plan.price.toString();
-  const currency = 'COP';
-  const signatureString = `${EPAYCO_CONFIG.p_cust_id_cliente}^${EPAYCO_CONFIG.p_key}^${referenceCode}^${amount}^${currency}`;
-  const signature = crypto.createHash('md5').update(signatureString).digest('hex');
+  try {
+    // Paso 1: Autenticar con Apify y obtener token
+    const publicKey = EPAYCO_CONFIG.p_key; // La PUBLIC_KEY
+    const privateKey = EPAYCO_CONFIG.privateKey; // La PRIVATE_KEY
+    const authString = Buffer.from(`${publicKey}:${privateKey}`).toString('base64');
 
-  console.log('🔐 Signature Debug:', {
-    p_cust_id_cliente: EPAYCO_CONFIG.p_cust_id_cliente,
-    p_key: EPAYCO_CONFIG.p_key?.substring(0, 10) + '...',
-    p_id_invoice: referenceCode,
-    p_amount: amount,
-    p_currency_code: currency,
-    signatureString: signatureString.substring(0, 50) + '...',
-    signature,
-  });
+    console.log('🔐 Autenticando con ePayco Apify...');
+    const authResponse = await fetch('https://apify.epayco.co/login', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Basic ${authString}`,
+      },
+    });
 
-  // Construir URL del checkout estándar de ePayco
-  const params = new URLSearchParams({
-    p_cust_id_cliente: EPAYCO_CONFIG.p_cust_id_cliente,
-    p_key: EPAYCO_CONFIG.p_key,
-    p_id_invoice: referenceCode,
-    p_description: `Suscripción ${plan.name} - Tienda POS`,
-    p_amount: amount,
-    p_amount_base: amount,
-    p_tax: '0',
-    p_currency_code: currency,
-    p_signature: signature,
-    p_test_request: EPAYCO_CONFIG.test ? 'true' : 'false',
-    p_url_confirmation: confirmationUrl,
-    p_url_response: responseUrl,
-    p_email: userEmail,
-    p_name: userName,
-    p_extra1: userProfileId,
-    p_extra2: planId,
-    p_extra3: plan.isAddon ? 'true' : 'false',
-    p_method_confirmation: 'POST',
-  });
+    if (!authResponse.ok) {
+      const errorText = await authResponse.text();
+      console.error('Error en autenticación ePayco:', errorText);
+      throw new Error(`Error de autenticación con ePayco: ${authResponse.status}`);
+    }
 
-  // Endpoint correcto según documentación oficial de ePayco
-  const checkoutUrl = `https://secure.payco.co/checkout.php?${params.toString()}`;
+    const authData = await authResponse.json();
+    const apifyToken = authData.token;
 
-  return {
-    success: true,
-    checkoutUrl,
-    referenceCode,
-  };
+    console.log('✓ Token de Apify obtenido');
+
+    // Paso 2: Crear sesión de checkout
+    console.log('📝 Creando sesión de checkout...');
+    const sessionResponse = await fetch('https://apify.epayco.co/payment/session/create', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${apifyToken}`,
+      },
+      body: JSON.stringify({
+        checkout_version: "2",
+        name: `Suscripción ${plan.name} - Tienda POS`,
+        description: `Suscripción ${plan.name}`,
+        currency: "COP",
+        amount: plan.price,
+        external_id: referenceCode,
+        email: userEmail,
+        confirmation_url: confirmationUrl,
+        response_url: responseUrl,
+        extra1: userProfileId,
+        extra2: planId,
+        extra3: plan.isAddon ? 'true' : 'false',
+      }),
+    });
+
+    if (!sessionResponse.ok) {
+      const errorText = await sessionResponse.text();
+      console.error('Error creando sesión:', errorText);
+      throw new Error(`Error al crear sesión de pago: ${sessionResponse.status}`);
+    }
+
+    const sessionData = await sessionResponse.json();
+    const sessionId = sessionData.sessionId || sessionData.data?.sessionId;
+
+    if (!sessionId) {
+      console.error('Respuesta de sesión:', sessionData);
+      throw new Error('No se recibió sessionId de ePayco');
+    }
+
+    console.log('✓ Sesión de checkout creada:', sessionId);
+
+    // Retornar sessionId para abrir el checkout en el frontend
+    return {
+      success: true,
+      checkoutUrl: '', // No se usa en Smart Checkout
+      referenceCode,
+      sessionId,
+    };
+  } catch (error) {
+    console.error('Error en createEPaycoCheckout:', error);
+    throw error;
+  }
 }
 
 /**
