@@ -17,17 +17,23 @@ function PaymentResponseContent() {
 
     console.log('ePayco response:', { transactionState, refPayco, response });
 
+    // Crear query string con todos los parámetros para pasarlos a la página de destino
+    const params = new URLSearchParams();
+    searchParams.forEach((value, key) => {
+      params.append(key, value);
+    });
+
     // Redirigir según el estado
     if (transactionState === 'Aceptada' || response === 'Aceptada') {
-      router.push('/dashboard/subscription/success');
+      router.push(`/dashboard/subscription/success?${params.toString()}`);
     } else if (transactionState === 'Rechazada' || response === 'Rechazada') {
-      router.push('/dashboard/subscription/failed');
+      router.push(`/dashboard/subscription/failed?${params.toString()}`);
     } else if (transactionState === 'Pendiente' || response === 'Pendiente') {
       // Caso pendiente - mostrar página de pendiente o redirigir al dashboard
       router.push('/dashboard?payment=pending');
     } else {
       // Estado desconocido o cancelado
-      router.push('/dashboard/subscription/failed');
+      router.push(`/dashboard/subscription/failed?${params.toString()}`);
     }
   }, [router, searchParams]);
 

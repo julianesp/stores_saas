@@ -202,7 +202,7 @@ export default function SubscriptionPage() {
                 className="w-full bg-purple-600 hover:bg-purple-700"
                 size="lg"
                 onClick={() => handleSubscribe(plan.id, 'NEQUI')}
-                disabled={loading}
+                disabled={isButtonLoading(plan.id, 'NEQUI')}
               >
                 {isButtonLoading(plan.id, 'NEQUI') ? (
                   <>
@@ -223,7 +223,7 @@ export default function SubscriptionPage() {
                 size="lg"
                 variant="outline"
                 onClick={() => handleSubscribe(plan.id, null)}
-                disabled={loading}
+                disabled={isButtonLoading(plan.id, null)}
               >
                 {isButtonLoading(plan.id, null) ? (
                   <>

@@ -39,16 +39,29 @@ export async function authMiddleware(c: Context<{ Bindings: Env }>, next: Next) 
     const tenantManager = new TenantManager(c.env);
     let tenant = await tenantManager.getTenantByClerkId(clerkUserId);
 
+    // Fetch Clerk user data once to use for both tenant and user_profile creation
+    let clerkUser = null;
+    let userEmail = '';
+    if (!tenant) {
+      const clerkSecretKey = c.env.CLERK_SECRET_KEY;
+      if (clerkSecretKey) {
+        const { fetchClerkUser, getClerkUserEmail } = await import('../utils/clerk-helpers');
+        clerkUser = await fetchClerkUser(clerkUserId, clerkSecretKey);
+        userEmail = getClerkUserEmail(clerkUser, clerkUserId);
+      } else {
+        userEmail = `user_${clerkUserId}@placeholder.com`;
+      }
+    }
+
     if (!tenant) {
       // Auto-create tenant on first API call
       try {
         const { generateTenantId } = await import('../utils/tenant-manager');
-        const payload = await decodeClerkToken(token);
-        console.log('Creating tenant for clerk_user_id:', clerkUserId, 'email:', payload.email || 'NO_EMAIL');
+        console.log('Creating tenant for clerk_user_id:', clerkUserId, 'email:', userEmail);
         tenant = await tenantManager.createTenant(
           generateTenantId(),
           clerkUserId,
-          payload.email || 'no-email@placeholder.com'
+          userEmail
         );
       } catch (error) {
         console.error('Error creating tenant:', error);
@@ -80,12 +93,25 @@ export async function authMiddleware(c: Context<{ Bindings: Env }>, next: Next) 
     if (!userProfile) {
       // Auto-create user profile on first API call
       try {
-        const payload = await decodeClerkToken(token);
-        const superAdminEmail = 'admin@neurai.dev';
-        const userEmail = payload.email || `user_${clerkUserId}@placeholder.com`;
-        const isSuperAdmin = payload.email === superAdminEmail;
+        // Fetch real user data from Clerk API if not already fetched
+        if (!clerkUser) {
+          const clerkSecretKey = c.env.CLERK_SECRET_KEY;
+          if (clerkSecretKey) {
+            const { fetchClerkUser, getClerkUserEmail } = await import('../utils/clerk-helpers');
+            clerkUser = await fetchClerkUser(clerkUserId, clerkSecretKey);
+            userEmail = getClerkUserEmail(clerkUser, clerkUserId);
+          } else {
+            console.warn('CLERK_SECRET_KEY not configured, using placeholder email');
+            userEmail = `user_${clerkUserId}@placeholder.com`;
+          }
+        }
 
-        console.log('Creating user_profile for clerk_user_id:', clerkUserId, 'email:', userEmail);
+        const { getClerkUserFullName } = await import('../utils/clerk-helpers');
+        const fullName = getClerkUserFullName(clerkUser);
+        const superAdminEmail = 'admin@neurai.dev';
+        const isSuperAdmin = userEmail === superAdminEmail;
+
+        console.log('Creating user_profile for clerk_user_id:', clerkUserId, 'email:', userEmail, 'name:', fullName);
 
         const profileId = `usr_${Date.now()}_${Math.random().toString(36).substring(7)}`;
         const now = new Date().toISOString();
@@ -102,7 +128,7 @@ export async function authMiddleware(c: Context<{ Bindings: Env }>, next: Next) 
           clerkUserId,
           userEmail,
           'admin',
-          payload.name || payload.given_name || payload.family_name || 'Usuario',
+          fullName,
           isSuperAdmin ? 1 : 0,
           isSuperAdmin ? 'active' : 'trial',
           isSuperAdmin ? null : now,
