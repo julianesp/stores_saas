@@ -4,17 +4,18 @@ import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useAuth } from '@clerk/nextjs';
 import { useUser } from '@clerk/nextjs';
 import Image from 'next/image';
-import { Search, ShoppingCart, Trash2, Plus, Minus, DollarSign, User, X, Package, Scan, Camera } from 'lucide-react';
+import { Search, ShoppingCart, Trash2, Plus, Minus, DollarSign, User, X, Package, Scan, Camera, FileText } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { getProducts, createProduct, updateProduct, getCustomers, getCustomerById, createCustomer, updateCustomer, getCategories, createCategory, updateCategory, getSales, createSale, getUserProfile } from '@/lib/cloudflare-api';
-import { Product, Customer, Category } from '@/lib/types';
+import { Product, Customer, Category, Sale, SaleItemWithProduct, UserProfile } from '@/lib/types';
 import { formatCurrency } from '@/lib/utils';
 import { calculatePointsForPurchase, addPointsToCustomer, canRedeemDiscount, redeemPointsForDiscount, getPointsMilestoneMessage, REWARD_CONSTANTS } from '@/lib/loyalty-helpers';
 import { canCustomerGetCredit, updateCustomerDebt } from '@/lib/cloudflare-credit-helpers';
 import Swal from '@/lib/sweetalert';
 import { BarcodeScanner } from '@/components/products/barcode-scanner';
+import { InvoiceModal } from '@/components/sales/invoice-modal';
 
 interface CartItem {
   product: Product;
@@ -51,6 +52,13 @@ export default function POSPage() {
   const [showCameraScanner, setShowCameraScanner] = useState(false);
   const [lastCameraScannedCode, setLastCameraScannedCode] = useState<string>('');
   const barcodeRef = useRef<HTMLInputElement>(null);
+
+  // Estados para la factura
+  const [showInvoiceModal, setShowInvoiceModal] = useState(false);
+  const [lastSale, setLastSale] = useState<Sale | null>(null);
+  const [lastSaleItems, setLastSaleItems] = useState<SaleItemWithProduct[]>([]);
+  const [lastSaleCustomer, setLastSaleCustomer] = useState<Customer | null>(null);
+  const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
 
   const handleCreateCustomer = async () => {
     if (!newCustomerData.name.trim()) {
@@ -123,13 +131,24 @@ export default function POSPage() {
     }
   }, []);
 
+  // Cargar perfil de usuario
+  const fetchUserProfile = useCallback(async () => {
+    try {
+      const profile = await getUserProfile(getToken) as any;
+      setUserProfile(profile);
+    } catch (error) {
+      console.error('Error fetching user profile:', error);
+    }
+  }, [getToken]);
+
   useEffect(() => {
     fetchProducts();
     fetchCustomers();
     fetchCategories();
+    fetchUserProfile();
     // Auto-focus en el input de código de barras
     barcodeRef.current?.focus();
-  }, [fetchProducts, fetchCustomers, fetchCategories]);
+  }, [fetchProducts, fetchCustomers, fetchCategories, fetchUserProfile]);
 
   const handleBarcodeSearch = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -512,16 +531,54 @@ export default function POSPage() {
           `;
         }
 
-        await Swal.custom({
+        // Agregar botón para generar factura
+        htmlContent += `
+          <div class="mt-4 pt-3 border-t border-gray-200">
+            <button id="generate-invoice-btn" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 px-4 rounded flex items-center justify-center gap-2">
+              📄 Generar Factura
+            </button>
+          </div>
+        `;
+
+        const result = await Swal.custom({
           title: paymentMethod === 'credito' ? 'Venta a Crédito Registrada' : 'Venta Completada',
           html: htmlContent,
           icon: 'success',
-          confirmButtonText: 'Aceptar'
+          confirmButtonText: 'Aceptar',
+          didOpen: () => {
+            // Agregar evento al botón de factura
+            const invoiceBtn = document.getElementById('generate-invoice-btn');
+            if (invoiceBtn) {
+              invoiceBtn.addEventListener('click', () => {
+                // Cerrar el SweetAlert y abrir el modal de factura
+                Swal.close();
+                // Guardar la información de la venta para la factura
+                setLastSale(sale);
+                // Construir los items con la información del producto
+                const saleItemsWithProducts: SaleItemWithProduct[] = cart.map((cartItem) => ({
+                  id: '', // Se genera en la API
+                  user_profile_id: (sale as any).user_profile_id,
+                  sale_id: sale.id,
+                  product_id: cartItem.product.id,
+                  quantity: cartItem.quantity,
+                  unit_price: cartItem.product.sale_price,
+                  discount: 0,
+                  subtotal: cartItem.product.sale_price * cartItem.quantity,
+                  created_at: new Date().toISOString(),
+                  product: cartItem.product,
+                }));
+                setLastSaleItems(saleItemsWithProducts);
+                setLastSaleCustomer(selectedCustomer);
+                setShowInvoiceModal(true);
+              });
+            }
+          }
         });
       } else {
-        Swal.saleCompleted(sale.sale_number, total);
+        await Swal.saleCompleted(sale.sale_number, total);
       }
 
+      // Limpiar el carrito y estados
       setCart([]);
       setSelectedCustomer(null);
       setCanRedeem(false);
@@ -1134,6 +1191,19 @@ export default function POSPage() {
           </Card>
         </div>
       </div>
+
+      {/* Modal de Factura */}
+      {userProfile && lastSale && (
+        <InvoiceModal
+          open={showInvoiceModal}
+          onOpenChange={setShowInvoiceModal}
+          sale={lastSale}
+          saleItems={lastSaleItems}
+          customer={lastSaleCustomer}
+          storeInfo={userProfile}
+          cashierName={user?.fullName || undefined}
+        />
+      )}
     </div>
   );
 }

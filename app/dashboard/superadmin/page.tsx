@@ -23,7 +23,8 @@ import {
   ArrowUpRight,
   Plus,
   Filter,
-  Info
+  Info,
+  ShoppingCart
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { formatCurrency } from '@/lib/utils';
@@ -43,15 +44,33 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 
+interface StoreStats {
+  storeId: string;
+  storeName: string;
+  storeEmail: string;
+  subscriptionStatus: string;
+  stats: {
+    productsCount: number;
+    salesCount: number;
+    salesTotal: number;
+    customersCount: number;
+    lastSaleDate: string | null;
+    isActive: boolean;
+    error?: string;
+  };
+}
+
 export default function SuperAdminPage() {
   const { user } = useUser();
   const { getToken } = useAuth();
   const router = useRouter();
   const [stores, setStores] = useState<UserProfile[]>([]);
+  const [storeStats, setStoreStats] = useState<StoreStats[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [currentUserProfile, setCurrentUserProfile] = useState<UserProfile | null>(null);
   const [statusFilter, setStatusFilter] = useState<string>('all');
+  const [usageFilter, setUsageFilter] = useState<string>('all'); // 'all', 'active', 'inactive'
   const [extendTrialDialog, setExtendTrialDialog] = useState<{
     open: boolean;
     store: UserProfile | null;
@@ -87,6 +106,20 @@ export default function SuperAdminPage() {
       const storesData = allProfiles.filter(p => !p.is_superadmin);
       storesData.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
       setStores(storesData);
+
+      // Obtener estadísticas de uso de las tiendas
+      try {
+        const statsResponse = await fetch('/api/admin/store-stats');
+        if (statsResponse.ok) {
+          const statsData = await statsResponse.json();
+          if (statsData.success) {
+            setStoreStats(statsData.data);
+          }
+        }
+      } catch (error) {
+        console.error('Error fetching store stats:', error);
+        // No mostrar error al usuario, las estadísticas son opcionales
+      }
     } catch (error) {
       console.error('Error fetching data:', error);
       toast.error('Error al cargar datos');
@@ -225,7 +258,18 @@ export default function SuperAdminPage() {
     // Filtro por estado
     const matchesStatus = statusFilter === 'all' || store.subscription_status === statusFilter;
 
-    return matchesSearch && matchesStatus;
+    // Filtro por uso
+    let matchesUsage = true;
+    if (usageFilter !== 'all') {
+      const stats = storeStats.find(s => s.storeId === store.id);
+      if (usageFilter === 'active') {
+        matchesUsage = stats?.stats.isActive || false;
+      } else if (usageFilter === 'inactive') {
+        matchesUsage = !(stats?.stats.isActive || false);
+      }
+    }
+
+    return matchesSearch && matchesStatus && matchesUsage;
   });
 
   // Estadísticas
@@ -243,6 +287,12 @@ export default function SuperAdminPage() {
   // Tasa de conversión (trial a activo)
   const totalWithTrial = stores.filter(s => s.subscription_status === 'trial' || s.subscription_status === 'active' || s.subscription_status === 'expired').length;
   const conversionRate = totalWithTrial > 0 ? (activeStores / totalWithTrial * 100).toFixed(1) : '0.0';
+
+  // Estadísticas de uso
+  const storesUsingPOS = storeStats.filter(s => s.stats.isActive).length;
+  const storesNotUsing = totalStores - storesUsingPOS;
+  const totalSalesAllStores = storeStats.reduce((sum, s) => sum + s.stats.salesCount, 0);
+  const totalRevenueAllStores = storeStats.reduce((sum, s) => sum + s.stats.salesTotal, 0);
 
   return (
     <div className="space-y-6">
@@ -331,6 +381,71 @@ export default function SuperAdminPage() {
             <p className="text-xs text-gray-500 mt-1">Trial → Activo</p>
             <div className="flex items-center mt-2 text-xs text-gray-600">
               <span>De {totalWithTrial} tiendas</span>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Métricas de Uso del POS */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+        {/* Tiendas Usando POS */}
+        <Card className="hover:shadow-lg transition-shadow">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Usando el POS</CardTitle>
+            <Activity className="h-4 w-4 text-green-500" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold text-green-600">{storesUsingPOS}</div>
+            <p className="text-xs text-gray-500 mt-1">Tiendas con actividad</p>
+            <div className="flex items-center mt-2 text-xs text-gray-600">
+              <span className="text-green-600">{totalStores > 0 ? ((storesUsingPOS / totalStores) * 100).toFixed(1) : 0}% del total</span>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Tiendas Sin Usar */}
+        <Card className="hover:shadow-lg transition-shadow">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Sin Actividad</CardTitle>
+            <XCircle className="h-4 w-4 text-orange-500" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold text-orange-600">{storesNotUsing}</div>
+            <p className="text-xs text-gray-500 mt-1">No han usado el POS</p>
+            <div className="flex items-center mt-2 text-xs text-gray-600">
+              <span className="text-orange-600">Requieren seguimiento</span>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Total Ventas del Sistema */}
+        <Card className="hover:shadow-lg transition-shadow">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Ventas Totales</CardTitle>
+            <ShoppingCart className="h-4 w-4 text-blue-500" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold text-blue-600">{totalSalesAllStores}</div>
+            <p className="text-xs text-gray-500 mt-1">Todas las tiendas</p>
+            <div className="flex items-center mt-2 text-xs text-gray-600">
+              <span className="text-blue-600">{formatCurrency(totalRevenueAllStores)}</span>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Tasa de Adopción */}
+        <Card className="hover:shadow-lg transition-shadow">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Tasa de Adopción</CardTitle>
+            <TrendingUp className="h-4 w-4 text-purple-500" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold text-purple-600">
+              {totalStores > 0 ? ((storesUsingPOS / totalStores) * 100).toFixed(1) : 0}%
+            </div>
+            <p className="text-xs text-gray-500 mt-1">Tiendas activas</p>
+            <div className="flex items-center mt-2 text-xs text-gray-600">
+              <span className="text-purple-600">De {totalStores} registradas</span>
             </div>
           </CardContent>
         </Card>
@@ -472,6 +587,17 @@ export default function SuperAdminPage() {
                   <SelectItem value="canceled">Canceladas</SelectItem>
                 </SelectContent>
               </Select>
+              <Select value={usageFilter} onValueChange={setUsageFilter}>
+                <SelectTrigger className="w-[180px]">
+                  <Activity className="h-4 w-4 mr-2" />
+                  <SelectValue placeholder="Filtrar por uso" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Todas</SelectItem>
+                  <SelectItem value="active">Usando POS</SelectItem>
+                  <SelectItem value="inactive">Sin actividad</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
           </div>
         </CardContent>
@@ -497,8 +623,10 @@ export default function SuperAdminPage() {
                     <th className="text-left p-4 font-medium">Email</th>
                     <th className="text-left p-4 font-medium">Estado</th>
                     <th className="text-left p-4 font-medium">Días Rest.</th>
-                    <th className="text-left p-4 font-medium">Plan</th>
-                    <th className="text-left p-4 font-medium">Registro</th>
+                    <th className="text-center p-4 font-medium">Productos</th>
+                    <th className="text-center p-4 font-medium">Ventas</th>
+                    <th className="text-center p-4 font-medium">Clientes</th>
+                    <th className="text-left p-4 font-medium">Última Venta</th>
                     <th className="text-right p-4 font-medium">Acciones</th>
                   </tr>
                 </thead>
@@ -514,6 +642,7 @@ export default function SuperAdminPage() {
 
                     const status = statusConfig[store.subscription_status];
                     const daysRemaining = getDaysRemaining(store);
+                    const stats = storeStats.find(s => s.storeId === store.id);
 
                     return (
                       <tr key={store.id} className="border-b hover:bg-gray-50">
@@ -536,10 +665,47 @@ export default function SuperAdminPage() {
                             <span className="text-gray-400">-</span>
                           )}
                         </td>
-                        <td className="p-4 text-sm">
-                          {store.plan_id || 'Sin plan'}
+                        <td className="p-4 text-sm text-center">
+                          {stats ? (
+                            <span className={stats.stats.productsCount > 0 ? 'font-medium text-blue-600' : 'text-gray-400'}>
+                              {stats.stats.productsCount}
+                            </span>
+                          ) : (
+                            <span className="text-gray-400">-</span>
+                          )}
                         </td>
-                        <td className="p-4 text-sm text-gray-600">{createdDate}</td>
+                        <td className="p-4 text-sm text-center">
+                          {stats ? (
+                            <span className={stats.stats.salesCount > 0 ? 'font-medium text-green-600' : 'text-gray-400'}>
+                              {stats.stats.salesCount}
+                            </span>
+                          ) : (
+                            <span className="text-gray-400">-</span>
+                          )}
+                        </td>
+                        <td className="p-4 text-sm text-center">
+                          {stats ? (
+                            <span className={stats.stats.customersCount > 0 ? 'font-medium text-purple-600' : 'text-gray-400'}>
+                              {stats.stats.customersCount}
+                            </span>
+                          ) : (
+                            <span className="text-gray-400">-</span>
+                          )}
+                        </td>
+                        <td className="p-4 text-sm">
+                          {stats?.stats.lastSaleDate ? (
+                            <span className="text-gray-600">
+                              {new Date(stats.stats.lastSaleDate).toLocaleDateString('es-CO', {
+                                day: '2-digit',
+                                month: 'short',
+                                hour: '2-digit',
+                                minute: '2-digit'
+                              })}
+                            </span>
+                          ) : (
+                            <span className="text-gray-400">Sin ventas</span>
+                          )}
+                        </td>
                         <td className="p-4">
                           <div className="flex gap-2 justify-end flex-wrap">
                             <Button

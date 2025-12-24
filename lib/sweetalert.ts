@@ -161,6 +161,13 @@ export const closeLoading = () => {
 };
 
 /**
+ * Cerrar cualquier modal abierto
+ */
+export const close = () => {
+  Swal.close();
+};
+
+/**
  * Modal con formulario de input
  */
 export const showInput = async (
@@ -270,6 +277,7 @@ export default {
   deleteConfirm: showDeleteConfirm,
   loading: showLoading,
   closeLoading,
+  close,
   input: showInput,
   custom: showCustom,
   productAdded: showProductAdded,

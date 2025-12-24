@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import Image from 'next/image';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
-import { Upload, X, Image as ImageIcon, Loader2 } from 'lucide-react';
+import { Upload, X, Image as ImageIcon, Loader2, Camera } from 'lucide-react';
 import { toast } from 'sonner';
 
 interface ImageUploaderProps {
@@ -63,26 +63,27 @@ export function ImageUploader({
 
         setLoadingIndex(images.length + index);
 
-        // Crear FormData para subir a Cloudinary
+        // Usar endpoint de Next.js que maneja la subida con firma
         const formData = new FormData();
         formData.append('file', file);
-        formData.append('upload_preset', 'tiendapos'); // Preset configurado en Cloudinary
         formData.append('folder', `products/${productId || 'temp'}`);
 
-        // Subir a Cloudinary
-        const response = await fetch(
-          `https://api.cloudinary.com/v1_1/${process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME}/image/upload`,
-          {
-            method: 'POST',
-            body: formData,
-          }
-        );
+        // Subir a través del endpoint de Next.js
+        const response = await fetch('/api/upload-image', {
+          method: 'POST',
+          body: formData,
+        });
 
         if (!response.ok) {
-          throw new Error('Error al subir imagen a Cloudinary');
+          const errorData = await response.json().catch(() => ({}));
+          throw new Error(errorData.error || 'Error al subir imagen');
         }
 
         const data = await response.json();
+        if (!data.success || !data.secure_url) {
+          throw new Error('Respuesta inválida del servidor');
+        }
+
         return data.secure_url;
       });
 
@@ -193,9 +194,10 @@ export function ImageUploader({
         ))}
       </div>
 
-      {/* Botón de subida */}
+      {/* Botones de subida */}
       {images.length < maxImages && (
-        <div>
+        <div className="space-y-3">
+          {/* Input oculto para selección de archivos */}
           <input
             type="file"
             accept="image/*"
@@ -205,6 +207,19 @@ export function ImageUploader({
             id="image-upload"
             disabled={uploading}
           />
+
+          {/* Input oculto para captura de cámara */}
+          <input
+            type="file"
+            accept="image/*"
+            capture="environment"
+            onChange={handleFileSelect}
+            className="hidden"
+            id="camera-capture"
+            disabled={uploading}
+          />
+
+          {/* Botón de galería */}
           <label
             htmlFor="image-upload"
             className={`inline-flex items-center justify-center w-full rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium transition-colors hover:bg-gray-50 ${
@@ -219,11 +234,23 @@ export function ImageUploader({
             ) : (
               <>
                 <Upload className="mr-2 h-4 w-4" />
-                Agregar Imagen ({images.length}/{maxImages})
+                Seleccionar desde Galería ({images.length}/{maxImages})
               </>
             )}
           </label>
-          <p className="text-xs text-gray-500 mt-2 text-center">
+
+          {/* Botón de cámara */}
+          <label
+            htmlFor="camera-capture"
+            className={`inline-flex items-center justify-center w-full rounded-md border border-blue-300 bg-blue-50 px-4 py-2 text-sm font-medium text-blue-700 transition-colors hover:bg-blue-100 ${
+              uploading ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'
+            }`}
+          >
+            <Camera className="mr-2 h-4 w-4" />
+            Tomar Foto con Cámara
+          </label>
+
+          <p className="text-xs text-gray-500 text-center">
             Máximo {maxImages} {maxImages === 1 ? 'imagen' : 'imágenes'} • JPG, PNG o WEBP • Máx 5MB por imagen
           </p>
         </div>
