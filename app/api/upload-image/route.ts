@@ -14,6 +14,7 @@ export async function POST(request: NextRequest) {
     // Verificar autenticación
     const { userId } = await auth();
     if (!userId) {
+      console.error('Upload attempt without authentication');
       return NextResponse.json(
         { error: 'No autorizado' },
         { status: 401 }
@@ -26,14 +27,23 @@ export async function POST(request: NextRequest) {
     const folder = formData.get('folder') as string || 'products';
 
     if (!file) {
+      console.error('No file provided in upload request');
       return NextResponse.json(
         { error: 'No se proporcionó archivo' },
         { status: 400 }
       );
     }
 
+    console.log('Processing image upload:', {
+      fileName: file.name,
+      fileType: file.type,
+      fileSize: `${(file.size / 1024 / 1024).toFixed(2)} MB`,
+      folder,
+    });
+
     // Validar tipo de archivo
     if (!file.type.startsWith('image/')) {
+      console.error('Invalid file type:', file.type);
       return NextResponse.json(
         { error: 'El archivo debe ser una imagen' },
         { status: 400 }
@@ -42,6 +52,7 @@ export async function POST(request: NextRequest) {
 
     // Validar tamaño (máximo 5MB)
     if (file.size > 5 * 1024 * 1024) {
+      console.error('File too large:', file.size);
       return NextResponse.json(
         { error: 'La imagen es muy grande (máximo 5MB)' },
         { status: 400 }
@@ -52,6 +63,8 @@ export async function POST(request: NextRequest) {
     const bytes = await file.arrayBuffer();
     const buffer = Buffer.from(bytes);
 
+    console.log('Starting Cloudinary upload...');
+
     // Subir a Cloudinary usando upload_stream
     const uploadResult = await new Promise((resolve, reject) => {
       const uploadStream = cloudinary.uploader.upload_stream(
@@ -59,14 +72,19 @@ export async function POST(request: NextRequest) {
           folder: folder,
           resource_type: 'image',
           transformation: [
-            { width: 800, height: 800, crop: 'limit' }, // Limitar tamaño máximo
-            { quality: 'auto' }, // Optimizar calidad automáticamente
+            { width: 1200, height: 1200, crop: 'limit' }, // Limitar tamaño máximo
+            { quality: 'auto:good' }, // Optimizar calidad automáticamente
             { fetch_format: 'auto' }, // Formato automático (WebP cuando sea posible)
           ],
         },
         (error, result) => {
-          if (error) reject(error);
-          else resolve(result);
+          if (error) {
+            console.error('Cloudinary upload error:', error);
+            reject(error);
+          } else {
+            console.log('Cloudinary upload success:', result?.secure_url);
+            resolve(result);
+          }
         }
       );
 
@@ -82,9 +100,13 @@ export async function POST(request: NextRequest) {
     });
 
   } catch (error: any) {
-    console.error('Error uploading image:', error);
+    console.error('Error uploading image:', {
+      message: error.message,
+      stack: error.stack,
+      error,
+    });
     return NextResponse.json(
-      { error: error.message || 'Error al subir imagen' },
+      { error: error.message || 'Error al subir imagen al servidor' },
       { status: 500 }
     );
   }

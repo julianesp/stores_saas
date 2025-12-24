@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Upload, X, Image as ImageIcon, Loader2, Camera } from 'lucide-react';
 import { toast } from 'sonner';
+import imageCompression from 'browser-image-compression';
 
 interface ImageUploaderProps {
   productId?: string;
@@ -49,42 +50,62 @@ export function ImageUploader({
 
     try {
       const uploadPromises = filesToUpload.map(async (file, index) => {
-        // Validar tipo de archivo
-        if (!file.type.startsWith('image/')) {
-          toast.error(`Solo se permiten imágenes. Archivo: ${file.name}`);
+        try {
+          // Validar tipo de archivo
+          if (!file.type.startsWith('image/')) {
+            toast.error(`Solo se permiten imágenes. Archivo: ${file.name}`);
+            return null;
+          }
+
+          setLoadingIndex(images.length + index);
+
+          // Comprimir la imagen antes de subir
+          console.log('Tamaño original:', (file.size / 1024 / 1024).toFixed(2), 'MB');
+
+          const options = {
+            maxSizeMB: 1, // Máximo 1MB después de compresión
+            maxWidthOrHeight: 1920, // Máximo 1920px de ancho o alto
+            useWebWorker: true,
+            fileType: 'image/jpeg', // Convertir todo a JPEG para compatibilidad
+          };
+
+          const compressedFile = await imageCompression(file, options);
+          console.log('Tamaño comprimido:', (compressedFile.size / 1024 / 1024).toFixed(2), 'MB');
+
+          // Validar tamaño después de compresión (máximo 5MB por seguridad)
+          if (compressedFile.size > 5 * 1024 * 1024) {
+            toast.error(`Imagen muy grande incluso después de compresión. Intenta con otra imagen.`);
+            return null;
+          }
+
+          // Usar endpoint de Next.js que maneja la subida con firma
+          const formData = new FormData();
+          formData.append('file', compressedFile);
+          formData.append('folder', `products/${productId || 'temp'}`);
+
+          // Subir a través del endpoint de Next.js
+          const response = await fetch('/api/upload-image', {
+            method: 'POST',
+            body: formData,
+          });
+
+          if (!response.ok) {
+            const errorData = await response.json().catch(() => ({}));
+            console.error('Error del servidor:', errorData);
+            throw new Error(errorData.error || 'Error al subir imagen');
+          }
+
+          const data = await response.json();
+          if (!data.success || !data.secure_url) {
+            throw new Error('Respuesta inválida del servidor');
+          }
+
+          return data.secure_url;
+        } catch (error) {
+          console.error('Error procesando imagen:', error);
+          toast.error(`Error al procesar ${file.name}`);
           return null;
         }
-
-        // Validar tamaño (máximo 5MB)
-        if (file.size > 5 * 1024 * 1024) {
-          toast.error(`Imagen muy grande (máx 5MB). Archivo: ${file.name}`);
-          return null;
-        }
-
-        setLoadingIndex(images.length + index);
-
-        // Usar endpoint de Next.js que maneja la subida con firma
-        const formData = new FormData();
-        formData.append('file', file);
-        formData.append('folder', `products/${productId || 'temp'}`);
-
-        // Subir a través del endpoint de Next.js
-        const response = await fetch('/api/upload-image', {
-          method: 'POST',
-          body: formData,
-        });
-
-        if (!response.ok) {
-          const errorData = await response.json().catch(() => ({}));
-          throw new Error(errorData.error || 'Error al subir imagen');
-        }
-
-        const data = await response.json();
-        if (!data.success || !data.secure_url) {
-          throw new Error('Respuesta inválida del servidor');
-        }
-
-        return data.secure_url;
       });
 
       const uploadedUrls = (await Promise.all(uploadPromises)).filter(
