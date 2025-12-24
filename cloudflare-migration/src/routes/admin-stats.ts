@@ -55,7 +55,7 @@ app.get('/stats', async (c) => {
         try {
           // Contar productos
           const productsResult = await c.env.DB.prepare(
-            'SELECT COUNT(*) as count FROM products WHERE user_profile_id = ?'
+            'SELECT COUNT(*) as count FROM products WHERE tenant_id = ?'
           )
             .bind(store.id)
             .first<{ count: number }>();
@@ -64,7 +64,7 @@ app.get('/stats', async (c) => {
 
           // Contar ventas y obtener total
           const salesResult = await c.env.DB.prepare(
-            'SELECT COUNT(*) as count, COALESCE(SUM(total), 0) as total FROM sales WHERE user_profile_id = ? AND status = ?'
+            'SELECT COUNT(*) as count, COALESCE(SUM(total), 0) as total FROM sales WHERE tenant_id = ? AND status = ?'
           )
             .bind(store.id, 'completada')
             .first<{ count: number; total: number }>();
@@ -74,7 +74,7 @@ app.get('/stats', async (c) => {
 
           // Contar clientes
           const customersResult = await c.env.DB.prepare(
-            'SELECT COUNT(*) as count FROM customers WHERE user_profile_id = ?'
+            'SELECT COUNT(*) as count FROM customers WHERE tenant_id = ?'
           )
             .bind(store.id)
             .first<{ count: number }>();
@@ -83,7 +83,7 @@ app.get('/stats', async (c) => {
 
           // Obtener fecha de la última venta
           const lastSaleResult = await c.env.DB.prepare(
-            'SELECT created_at FROM sales WHERE user_profile_id = ? AND status = ? ORDER BY created_at DESC LIMIT 1'
+            'SELECT created_at FROM sales WHERE tenant_id = ? AND status = ? ORDER BY created_at DESC LIMIT 1'
           )
             .bind(store.id, 'completada')
             .first<{ created_at: string }>();
