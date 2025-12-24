@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { auth, currentUser } from '@clerk/nextjs/server';
-import { getUserProfileByClerkId } from '@/lib/subscription-helpers';
-import { createUserProfile, updateUserProfile, getAllUserProfiles } from '@/lib/cloudflare-api';
+import { createUserProfile, updateUserProfile, getAllUserProfiles, getUserProfile } from '@/lib/cloudflare-api';
 
 export async function POST(req: NextRequest) {
   try {
@@ -29,13 +28,27 @@ export async function POST(req: NextRequest) {
     const superAdminEmail = process.env.SUPER_ADMIN_EMAIL || 'admin@neurai.dev';
     const isSuperAdmin = userEmail === superAdminEmail;
 
+    console.log('[init-profile] userEmail:', userEmail);
+    console.log('[init-profile] isSuperAdmin:', isSuperAdmin);
+
     const getToken = async () => {
       const { getToken } = await auth();
       return getToken();
     };
 
-    // Verificar si el perfil ya existe por clerk_user_id
-    let existingProfile = await getUserProfileByClerkId(userId);
+    // Verificar si el perfil ya existe obteniendo el perfil del usuario actual
+    let existingProfile = null;
+    try {
+      existingProfile = await getUserProfile(getToken);
+      console.log('[init-profile] existingProfile encontrado:', {
+        id: existingProfile?.id,
+        email: existingProfile?.email,
+        is_superadmin: existingProfile?.is_superadmin,
+        type: typeof existingProfile?.is_superadmin
+      });
+    } catch (error) {
+      console.log('[init-profile] No se encontró perfil existente para el usuario');
+    }
 
     if (existingProfile) {
       // Normalizar is_superadmin a boolean
@@ -43,6 +56,8 @@ export async function POST(req: NextRequest) {
         ...existingProfile,
         is_superadmin: !!existingProfile.is_superadmin,
       };
+
+      console.log('[init-profile] normalizedProfile.is_superadmin:', normalizedProfile.is_superadmin);
 
       // Si el email es admin@neurai.dev, actualizar a superadmin
       if (isSuperAdmin && !normalizedProfile.is_superadmin) {
@@ -59,6 +74,11 @@ export async function POST(req: NextRequest) {
           message: 'Perfil actualizado a Super Admin',
         });
       }
+
+      console.log('[init-profile] Retornando perfil normalizado:', {
+        is_superadmin: normalizedProfile.is_superadmin,
+        email: normalizedProfile.email
+      });
 
       return NextResponse.json({
         success: true,
