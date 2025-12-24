@@ -21,6 +21,7 @@ import creditPaymentsRoutes from './routes/credit-payments';
 import offersRoutes from './routes/offers';
 import paymentTransactionsRoutes from './routes/payment-transactions';
 import webhooksRoutes from './routes/webhooks';
+import adminStatsRoutes from './routes/admin-stats';
 
 const app = new Hono<{ Bindings: Env }>();
 
@@ -80,6 +81,7 @@ app.route('/api/user-profiles', userProfilesRoutes);
 app.route('/api/credit-payments', creditPaymentsRoutes);
 app.route('/api/offers', offersRoutes);
 app.route('/api/payment-transactions', paymentTransactionsRoutes);
+app.route('/api/admin', adminStatsRoutes);
 
 // 404 handler
 app.notFound((c) => {
