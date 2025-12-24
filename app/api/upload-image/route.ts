@@ -9,8 +9,34 @@ cloudinary.config({
   api_secret: process.env.CLOUDINARY_API_SECRET,
 });
 
+// Validar configuración de Cloudinary
+const validateCloudinaryConfig = () => {
+  const cloudName = process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME;
+  const apiKey = process.env.NEXT_PUBLIC_CLOUDINARY_API_KEY;
+  const apiSecret = process.env.CLOUDINARY_API_SECRET;
+
+  if (!cloudName || !apiKey || !apiSecret) {
+    console.error('❌ Cloudinary config missing:', {
+      cloudName: cloudName ? '✓' : '✗',
+      apiKey: apiKey ? '✓' : '✗',
+      apiSecret: apiSecret ? '✓' : '✗',
+    });
+    return false;
+  }
+  return true;
+};
+
 export async function POST(request: NextRequest) {
   try {
+    // Validar configuración de Cloudinary
+    if (!validateCloudinaryConfig()) {
+      console.error('❌ Cloudinary no está configurado correctamente');
+      return NextResponse.json(
+        { error: 'Error de configuración del servidor. Contacta al administrador.' },
+        { status: 500 }
+      );
+    }
+
     // Verificar autenticación
     const { userId } = await auth();
     if (!userId) {
@@ -63,10 +89,15 @@ export async function POST(request: NextRequest) {
     const bytes = await file.arrayBuffer();
     const buffer = Buffer.from(bytes);
 
-    console.log('Starting Cloudinary upload...');
+    console.log('📤 Starting Cloudinary upload...');
 
     // Subir a Cloudinary usando upload_stream
     const uploadResult = await new Promise((resolve, reject) => {
+      // Timeout para evitar esperas infinitas
+      const timeout = setTimeout(() => {
+        reject(new Error('Timeout: La subida tardó demasiado (30s). Intenta de nuevo.'));
+      }, 30000); // 30 segundos
+
       const uploadStream = cloudinary.uploader.upload_stream(
         {
           folder: folder,
@@ -78,11 +109,16 @@ export async function POST(request: NextRequest) {
           ],
         },
         (error, result) => {
+          clearTimeout(timeout);
           if (error) {
-            console.error('Cloudinary upload error:', error);
-            reject(error);
+            console.error('❌ Cloudinary upload error:', {
+              message: error.message,
+              http_code: error.http_code,
+              error
+            });
+            reject(new Error(error.message || 'Error al subir imagen a Cloudinary'));
           } else {
-            console.log('Cloudinary upload success:', result?.secure_url);
+            console.log('✅ Cloudinary upload success:', result?.secure_url);
             resolve(result);
           }
         }
