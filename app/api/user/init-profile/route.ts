@@ -38,8 +38,14 @@ export async function POST(req: NextRequest) {
     let existingProfile = await getUserProfileByClerkId(userId);
 
     if (existingProfile) {
+      // Normalizar is_superadmin a boolean
+      const normalizedProfile = {
+        ...existingProfile,
+        is_superadmin: !!existingProfile.is_superadmin,
+      };
+
       // Si el email es admin@neurai.dev, actualizar a superadmin
-      if (isSuperAdmin && !existingProfile.is_superadmin) {
+      if (isSuperAdmin && !normalizedProfile.is_superadmin) {
         await updateUserProfile(existingProfile.id, {
           is_superadmin: true,
           subscription_status: 'active',
@@ -49,14 +55,14 @@ export async function POST(req: NextRequest) {
 
         return NextResponse.json({
           success: true,
-          profile: { ...existingProfile, is_superadmin: true, subscription_status: 'active' },
+          profile: { ...normalizedProfile, is_superadmin: true, subscription_status: 'active' },
           message: 'Perfil actualizado a Super Admin',
         });
       }
 
       return NextResponse.json({
         success: true,
-        profile: existingProfile,
+        profile: normalizedProfile,
         message: 'Perfil ya existe',
       });
     }
@@ -76,9 +82,16 @@ export async function POST(req: NextRequest) {
             subscription_status: 'active',
           }, getToken);
 
+          // Normalizar is_superadmin a boolean
+          const normalizedProfile = {
+            ...profileByEmail,
+            clerk_user_id: userId,
+            is_superadmin: true,
+          };
+
           return NextResponse.json({
             success: true,
-            profile: { ...profileByEmail, clerk_user_id: userId, is_superadmin: true },
+            profile: normalizedProfile,
             message: 'Perfil de Super Admin asociado a tu cuenta de Clerk',
           });
         }

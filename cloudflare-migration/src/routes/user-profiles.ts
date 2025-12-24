@@ -27,9 +27,17 @@ app.get('/', async (c) => {
       }, 404);
     }
 
+    // Normalizar is_superadmin a boolean (viene como 0/1 desde SQLite)
+    const normalizedResult = {
+      ...result,
+      is_superadmin: !!result.is_superadmin,
+      has_ai_addon: !!result.has_ai_addon,
+      auto_reports_enabled: !!result.auto_reports_enabled,
+    };
+
     return c.json<APIResponse<UserProfile>>({
       success: true,
-      data: result
+      data: normalizedResult as UserProfile
     });
   } catch (error: any) {
     console.error('Error fetching user profile:', error);
@@ -52,9 +60,17 @@ app.get('/all', async (c) => {
       'SELECT * FROM user_profiles ORDER BY created_at DESC'
     ).all<UserProfile>();
 
+    // Normalizar booleanos para todos los perfiles (vienen como 0/1 desde SQLite)
+    const normalizedResults = (result.results || []).map(profile => ({
+      ...profile,
+      is_superadmin: !!profile.is_superadmin,
+      has_ai_addon: !!profile.has_ai_addon,
+      auto_reports_enabled: !!profile.auto_reports_enabled,
+    }));
+
     return c.json<APIResponse<UserProfile[]>>({
       success: true,
-      data: result.results || []
+      data: normalizedResults as UserProfile[]
     });
   } catch (error: any) {
     console.error('Error fetching user profiles:', error);
@@ -149,9 +165,17 @@ app.put('/:id', async (c) => {
       .bind(id)
       .first<UserProfile>();
 
+    // Normalizar booleanos
+    const normalizedUpdated = {
+      ...updated!,
+      is_superadmin: !!updated!.is_superadmin,
+      has_ai_addon: !!updated!.has_ai_addon,
+      auto_reports_enabled: !!updated!.auto_reports_enabled,
+    };
+
     return c.json<APIResponse<UserProfile>>({
       success: true,
-      data: updated!,
+      data: normalizedUpdated as UserProfile,
       message: 'User profile updated successfully'
     });
   } catch (error: any) {
