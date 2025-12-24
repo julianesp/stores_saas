@@ -4,7 +4,7 @@ import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useAuth } from '@clerk/nextjs';
 import { useUser } from '@clerk/nextjs';
 import Image from 'next/image';
-import { Search, ShoppingCart, Trash2, Plus, Minus, DollarSign, User, X, Package, Scan, Camera, FileText } from 'lucide-react';
+import { Search, ShoppingCart, Trash2, Plus, Minus, DollarSign, User, X, Package, Scan, Camera, FileText, HelpCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -16,6 +16,8 @@ import { canCustomerGetCredit, updateCustomerDebt } from '@/lib/cloudflare-credi
 import Swal from '@/lib/sweetalert';
 import { BarcodeScanner } from '@/components/products/barcode-scanner';
 import { InvoiceModal } from '@/components/sales/invoice-modal';
+import { useTour } from '@/hooks/useTour';
+import { posTourConfig } from '@/lib/tour-configs';
 
 interface CartItem {
   product: Product;
@@ -23,7 +25,7 @@ interface CartItem {
 }
 
 export default function POSPage() {
-  const { getToken } = useAuth();
+  const { getToken, userId } = useAuth();
 
   const { user } = useUser();
   const [products, setProducts] = useState<Product[]>([]);
@@ -59,6 +61,9 @@ export default function POSPage() {
   const [lastSaleItems, setLastSaleItems] = useState<SaleItemWithProduct[]>([]);
   const [lastSaleCustomer, setLastSaleCustomer] = useState<Customer | null>(null);
   const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
+
+  // Inicializar el tour guiado (incluye userId para que sea específico por usuario)
+  const { startTour } = useTour(posTourConfig, true, userId || undefined);
 
   const handleCreateCustomer = async () => {
     if (!newCustomerData.name.trim()) {
@@ -665,7 +670,18 @@ export default function POSPage() {
 
   return (
     <div className="space-y-4 md:space-y-6">
-      {/* <h1 className="text-2xl md:text-3xl font-bold">Punto de Venta</h1> */}
+      <div className="flex justify-between items-center">
+        <h1 className="text-2xl md:text-3xl font-bold">Punto de Venta</h1>
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={startTour}
+          title="Ver guía interactiva"
+        >
+          <HelpCircle className="h-4 w-4 sm:mr-2" />
+          <span className="hidden sm:inline">Ayuda</span>
+        </Button>
+      </div>
 
       {/* Modal del escáner de cámara */}
       {showCameraScanner && (
