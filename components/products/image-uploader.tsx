@@ -60,17 +60,27 @@ export function ImageUploader({
           setLoadingIndex(images.length + index);
 
           // Comprimir la imagen antes de subir
-          console.log('Tamaño original:', (file.size / 1024 / 1024).toFixed(2), 'MB');
+          console.log('📸 Imagen original:', {
+            nombre: file.name,
+            tamaño: `${(file.size / 1024 / 1024).toFixed(2)} MB`,
+            tipo: file.type
+          });
+
+          toast.info('Comprimiendo imagen...', { duration: 1500 });
 
           const options = {
-            maxSizeMB: 1, // Máximo 1MB después de compresión
-            maxWidthOrHeight: 1920, // Máximo 1920px de ancho o alto
+            maxSizeMB: 0.8, // Máximo 800KB después de compresión (más conservador)
+            maxWidthOrHeight: 1200, // Reducir resolución para móviles (suficiente para web)
             useWebWorker: true,
             fileType: 'image/jpeg', // Convertir todo a JPEG para compatibilidad
+            initialQuality: 0.85, // Calidad inicial del 85%
           };
 
           const compressedFile = await imageCompression(file, options);
-          console.log('Tamaño comprimido:', (compressedFile.size / 1024 / 1024).toFixed(2), 'MB');
+          console.log('✅ Imagen comprimida:', {
+            tamaño: `${(compressedFile.size / 1024 / 1024).toFixed(2)} MB`,
+            reducción: `${((1 - compressedFile.size / file.size) * 100).toFixed(1)}%`
+          });
 
           // Validar tamaño después de compresión (máximo 5MB por seguridad)
           if (compressedFile.size > 5 * 1024 * 1024) {
@@ -84,6 +94,9 @@ export function ImageUploader({
           formData.append('folder', `products/${productId || 'temp'}`);
 
           // Subir a través del endpoint de Next.js
+          console.log('📤 Subiendo a servidor...');
+          toast.info('Subiendo imagen...', { duration: 2000 });
+
           const response = await fetch('/api/upload-image', {
             method: 'POST',
             body: formData,
@@ -91,19 +104,38 @@ export function ImageUploader({
 
           if (!response.ok) {
             const errorData = await response.json().catch(() => ({}));
-            console.error('Error del servidor:', errorData);
-            throw new Error(errorData.error || 'Error al subir imagen');
+            console.error('❌ Error del servidor:', {
+              status: response.status,
+              statusText: response.statusText,
+              error: errorData
+            });
+
+            // Mensajes más específicos según el error
+            let errorMessage = 'Error al subir imagen';
+            if (response.status === 401) {
+              errorMessage = 'No estás autorizado. Intenta cerrar sesión y volver a entrar.';
+            } else if (response.status === 400) {
+              errorMessage = errorData.error || 'La imagen no es válida';
+            } else if (response.status === 500) {
+              errorMessage = 'Error en el servidor. Intenta de nuevo.';
+            } else {
+              errorMessage = errorData.error || `Error ${response.status}`;
+            }
+
+            throw new Error(errorMessage);
           }
 
           const data = await response.json();
           if (!data.success || !data.secure_url) {
+            console.error('❌ Respuesta inválida:', data);
             throw new Error('Respuesta inválida del servidor');
           }
 
+          console.log('✅ Imagen subida exitosamente:', data.secure_url);
           return data.secure_url;
-        } catch (error) {
-          console.error('Error procesando imagen:', error);
-          toast.error(`Error al procesar ${file.name}`);
+        } catch (error: any) {
+          console.error('❌ Error procesando imagen:', error);
+          toast.error(error.message || `Error al procesar ${file.name}`);
           return null;
         }
       });
