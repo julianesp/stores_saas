@@ -1,16 +1,24 @@
-'use client';
+"use client";
 
-import React, { useRef } from 'react';
-import { useReactToPrint } from 'react-to-print';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { InvoiceReceipt } from './invoice-receipt';
-import { generateInvoicePDF, generateWhatsAppMessage, shareViaWhatsApp, shareViaFacebook } from '@/lib/invoice-helpers';
-import { Sale, SaleItemWithProduct, Customer, UserProfile } from '@/lib/types';
-import { Download, Printer, Share2, MessageCircle, Facebook } from 'lucide-react';
-import { toast } from 'sonner';
-import { useState } from 'react';
+import { useRef } from "react";
+import { useReactToPrint } from "react-to-print";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { InvoiceReceipt } from "./invoice-receipt";
+import {
+  generateInvoicePDF,
+  shareInvoicePDFViaWhatsApp,
+} from "@/lib/invoice-helpers";
+import { Sale, SaleItemWithProduct, Customer, UserProfile } from "@/lib/types";
+import { Download, Printer, MessageCircle } from "lucide-react";
+import { toast } from "sonner";
+import { useState } from "react";
 
 interface InvoiceModalProps {
   open: boolean;
@@ -32,7 +40,7 @@ export function InvoiceModal({
   cashierName,
 }: InvoiceModalProps) {
   const invoiceRef = useRef<HTMLDivElement>(null);
-  const [phoneNumber, setPhoneNumber] = useState(customer?.phone || '');
+  const [phoneNumber, setPhoneNumber] = useState(customer?.phone || "");
 
   // Configurar impresión
   const handlePrint = useReactToPrint({
@@ -64,65 +72,40 @@ export function InvoiceModal({
       });
 
       doc.save(`Factura-${sale.sale_number}.pdf`);
-      toast.success('PDF descargado correctamente');
+      toast.success("PDF descargado correctamente");
     } catch (error) {
-      console.error('Error generating PDF:', error);
-      toast.error('Error al generar PDF');
+      console.error("Error generating PDF:", error);
+      toast.error("Error al generar PDF");
     }
   };
 
-  // Compartir por WhatsApp
-  const handleShareWhatsApp = () => {
+  // Compartir PDF por WhatsApp
+  const handleShareWhatsApp = async () => {
     try {
-      const message = generateWhatsAppMessage({
-        sale,
-        saleItems,
-        customer,
-        storeInfo,
-        cashierName,
-      });
+      toast.loading("Generando enlace de descarga...");
 
-      shareViaWhatsApp(phoneNumber, message);
+      const success = await shareInvoicePDFViaWhatsApp(
+        {
+          sale,
+          saleItems,
+          customer,
+          storeInfo,
+          cashierName,
+        },
+        phoneNumber
+      );
+
+      toast.dismiss();
+
+      if (success) {
+        toast.success("Enlace generado y WhatsApp abierto");
+      } else {
+        toast.error("Error al procesar la factura");
+      }
     } catch (error) {
-      console.error('Error sharing via WhatsApp:', error);
-      toast.error('Error al compartir por WhatsApp');
-    }
-  };
-
-  // Compartir por Facebook
-  const handleShareFacebook = () => {
-    try {
-      const message = generateWhatsAppMessage({
-        sale,
-        saleItems,
-        customer,
-        storeInfo,
-        cashierName,
-      });
-
-      shareViaFacebook(message);
-    } catch (error) {
-      console.error('Error sharing via Facebook:', error);
-      toast.error('Error al compartir por Facebook');
-    }
-  };
-
-  // Copiar al portapapeles
-  const handleCopyToClipboard = () => {
-    try {
-      const message = generateWhatsAppMessage({
-        sale,
-        saleItems,
-        customer,
-        storeInfo,
-        cashierName,
-      });
-
-      navigator.clipboard.writeText(message);
-      toast.success('Factura copiada al portapapeles');
-    } catch (error) {
-      console.error('Error copying to clipboard:', error);
-      toast.error('Error al copiar');
+      toast.dismiss();
+      console.error("Error sharing via WhatsApp:", error);
+      toast.error("Error al compartir por WhatsApp");
     }
   };
 
@@ -130,20 +113,22 @@ export function InvoiceModal({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-4xl max-h-[90vh] overflow-hidden flex flex-col">
         <DialogHeader>
-          <DialogTitle>Factura de Venta #{sale.sale_number}</DialogTitle>
+          <DialogTitle className="text-black">
+            Factura de Venta #{sale.sale_number}
+          </DialogTitle>
         </DialogHeader>
 
         {/* Opciones de acción */}
         <div className="border-b pb-4 space-y-4">
           {/* Botones principales */}
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
+          <div className="grid grid-cols-2 md:grid-cols-2 gap-2 justify-center w-full">
             <Button
               variant="outline"
               size="sm"
               onClick={handlePrint}
-              className="gap-2"
+              className="gap-2 text-black"
             >
-              <Printer className="h-4 w-4" />
+              <Printer className="h-4 w-4 text-black" />
               Imprimir
             </Button>
 
@@ -151,19 +136,19 @@ export function InvoiceModal({
               variant="outline"
               size="sm"
               onClick={handleDownloadPDF}
-              className="gap-2"
+              className="gap-2 text-black"
             >
-              <Download className="h-4 w-4" />
+              <Download className="h-4 w-4 text-black" />
               Descargar PDF
             </Button>
 
-            <Button
+            {/* <Button
               variant="outline"
               size="sm"
               onClick={handleCopyToClipboard}
-              className="gap-2"
+              className="gap-2 text-black"
             >
-              <Share2 className="h-4 w-4" />
+              <Share2 className="h-4 w-4 text-black" />
               Copiar
             </Button>
 
@@ -171,16 +156,16 @@ export function InvoiceModal({
               variant="outline"
               size="sm"
               onClick={handleShareFacebook}
-              className="gap-2"
+              className="gap-2 text-black"
             >
-              <Facebook className="h-4 w-4" />
+              <Facebook className="h-4 w-4 text-black" />
               Facebook
-            </Button>
+            </Button> */}
           </div>
 
           {/* Compartir por WhatsApp */}
           <div className="space-y-2">
-            <label className="text-sm font-medium">
+            <label className="text-sm font-medium text-black">
               Enviar por WhatsApp
             </label>
             <div className="flex gap-2">
@@ -188,7 +173,7 @@ export function InvoiceModal({
                 placeholder="Número de teléfono (opcional)"
                 value={phoneNumber}
                 onChange={(e) => setPhoneNumber(e.target.value)}
-                className="flex-1"
+                className="flex-1  text-green-600"
               />
               <Button
                 onClick={handleShareWhatsApp}
@@ -198,7 +183,7 @@ export function InvoiceModal({
                 Enviar
               </Button>
             </div>
-            <p className="text-xs text-gray-500">
+            <p className="text-xs text-black">
               Deja el número en blanco para elegir el contacto en WhatsApp
             </p>
           </div>
@@ -219,7 +204,7 @@ export function InvoiceModal({
         {/* Botón de cerrar */}
         <div className="border-t pt-4 flex justify-end">
           <Button variant="outline" onClick={() => onOpenChange(false)}>
-            Cerrar
+            <h3 className="text-black size-6">Cerrar</h3>
           </Button>
         </div>
       </DialogContent>
