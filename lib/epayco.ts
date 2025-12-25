@@ -4,7 +4,7 @@ import crypto from 'crypto';
 export const SUBSCRIPTION_PLANS = [
   {
     id: 'basic-monthly',
-    name: 'Plan Básico',
+    name: 'Plan básico',
     price: 29900,
     popular: true,
     features: [
@@ -18,7 +18,7 @@ export const SUBSCRIPTION_PLANS = [
   },
   {
     id: 'ai-addon-monthly',
-    name: 'Add-on de Análisis IA',
+    name: 'Agregar análisis IA',
     price: 9900,
     isAddon: true,
     features: [

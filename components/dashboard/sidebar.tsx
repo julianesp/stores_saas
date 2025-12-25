@@ -117,12 +117,13 @@ const storeMenuItems = [
     icon: Scan,
     roles: ['admin'],
   },
-  {
-    title: 'Análisis IA',
-    href: '/dashboard/analytics',
-    icon: Brain,
-    roles: ['admin'],
-  },
+  // TEMPORALMENTE DESHABILITADO - En desarrollo
+  // {
+  //   title: 'Análisis IA',
+  //   href: '/dashboard/analytics',
+  //   icon: Brain,
+  //   roles: ['admin'],
+  // },
 ];
 
 interface SidebarProps {

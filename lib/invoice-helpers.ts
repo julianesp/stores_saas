@@ -374,37 +374,22 @@ export function shareViaFacebook(message: string) {
 }
 
 /**
- * Genera el PDF y envía un enlace por WhatsApp para descargarlo
- * El cliente puede descargar el PDF directamente desde WhatsApp
+ * Genera el PDF, lo descarga localmente y abre WhatsApp con un mensaje
+ * El usuario debe adjuntar manualmente el PDF descargado
  */
 export async function shareInvoicePDFViaWhatsApp(data: InvoiceData, phoneNumber: string | undefined): Promise<boolean> {
   try {
     // Generar el PDF
     const doc = generateInvoicePDF(data);
 
-    // Convertir a base64
-    const pdfBase64 = doc.output('datauristring').split(',')[1];
+    // Descargar el PDF localmente
+    doc.save(`Factura-${data.sale.sale_number}.pdf`);
 
-    // Enviar al endpoint para obtener URL compartible
-    const response = await fetch('/api/invoice/share', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        pdfData: pdfBase64,
-        saleNumber: data.sale.sale_number,
-      }),
-    });
+    // Pequeño delay para que la descarga se complete
+    await new Promise(resolve => setTimeout(resolve, 500));
 
-    if (!response.ok) {
-      throw new Error('Error al generar enlace de descarga');
-    }
-
-    const { downloadUrl } = await response.json();
-
-    // Generar mensaje de WhatsApp con el enlace de descarga
-    const message = `Hola! 👋\n\nTe enviamos tu factura de compra:\n\n*Factura #${data.sale.sale_number}*\n*Total: ${formatCurrency(data.sale.total)}*\n*Fecha: ${format(new Date(data.sale.created_at), "dd/MM/yyyy", { locale: es })}*\n\n📄 Para descargar tu factura en PDF, haz clic en este enlace:\n${window.location.origin}/api/invoice/download?url=${encodeURIComponent(downloadUrl)}\n\n✨ ¡Gracias por tu compra! ✨\n\n_${data.storeInfo.full_name || 'TIENDA POS'}_`;
+    // Generar mensaje de WhatsApp
+    const message = `Hola! 👋\n\nTe enviamos tu factura de compra:\n\n*Factura #${data.sale.sale_number}*\n*Total: ${formatCurrency(data.sale.total)}*\n*Fecha: ${format(new Date(data.sale.created_at), "dd/MM/yyyy", { locale: es })}*\n\n📄 El archivo PDF se ha descargado en tu dispositivo.\n\nPor favor, adjunta el archivo *Factura-${data.sale.sale_number}.pdf* en este chat.\n\n✨ ¡Gracias por tu compra! ✨\n\n_${data.storeInfo.full_name || 'TIENDA POS'}_`;
 
     // Abrir WhatsApp con el mensaje
     shareViaWhatsApp(phoneNumber, message);
