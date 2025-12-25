@@ -21,7 +21,7 @@ export const productsTourConfig: TourConfig = {
       popover: {
         title: 'Panel de Productos 📦',
         description: 'Desde aquí podrás gestionar todo tu inventario de productos de manera fácil y rápida.',
-        side: 'bottom',
+        side: 'left',
         align: 'start',
       },
     },
@@ -30,8 +30,8 @@ export const productsTourConfig: TourConfig = {
       popover: {
         title: 'Agregar Nuevo Producto ➕',
         description: 'Usa este botón para crear un nuevo producto con todos sus detalles: nombre, precio, stock, categoría y más.',
-        side: 'bottom',
-        align: 'end',
+        side: 'left',
+        align: 'start',
       },
     },
     {
@@ -39,8 +39,8 @@ export const productsTourConfig: TourConfig = {
       popover: {
         title: 'Agregar Producto Rápido 📸',
         description: 'Esta opción te permite agregar productos de forma rápida escaneando códigos de barras con tu cámara. ¡Ideal para agilizar el proceso!',
-        side: 'bottom',
-        align: 'end',
+        side: 'left',
+        align: 'start',
       },
     },
     {
@@ -48,8 +48,8 @@ export const productsTourConfig: TourConfig = {
       popover: {
         title: 'Ver Productos Agotados ⚠️',
         description: 'Haz clic aquí para filtrar y ver solo los productos que están agotados (sin stock). El número indica cuántos productos necesitan reabastecimiento.',
-        side: 'bottom',
-        align: 'end',
+        side: 'left',
+        align: 'start',
       },
     },
     {
@@ -57,8 +57,8 @@ export const productsTourConfig: TourConfig = {
       popover: {
         title: 'Gestionar Categorías 🏷️',
         description: 'Organiza tus productos en categorías. Aquí podrás crear, editar y eliminar categorías para mantener tu inventario ordenado.',
-        side: 'bottom',
-        align: 'end',
+        side: 'left',
+        align: 'start',
       },
     },
     {
@@ -66,7 +66,7 @@ export const productsTourConfig: TourConfig = {
       popover: {
         title: 'Búsqueda Rápida 🔍',
         description: 'Busca productos por nombre o código de barras. La búsqueda es instantánea y te ayudará a encontrar productos rápidamente.',
-        side: 'bottom',
+        side: 'right',
         align: 'start',
       },
     },
@@ -75,7 +75,7 @@ export const productsTourConfig: TourConfig = {
       popover: {
         title: 'Filtros por Categoría 📑',
         description: 'Filtra tus productos por categoría para ver solo los que necesitas. El número entre paréntesis indica cuántos productos hay en cada categoría.',
-        side: 'bottom',
+        side: 'right',
         align: 'start',
       },
     },
@@ -91,7 +91,7 @@ export const productsTourConfig: TourConfig = {
   ],
   config: {
     animate: true,
-    overlayOpacity: 0.7,
+    overlayOpacity: 0.4,
     smoothScroll: true,
     allowClose: true,
     disableActiveInteraction: false,
@@ -118,7 +118,7 @@ export const posTourConfig: TourConfig = {
       popover: {
         title: 'Punto de Venta (POS) 💳',
         description: 'Desde aquí podrás registrar todas tus ventas de manera ágil y profesional.',
-        side: 'bottom',
+        side: 'left',
         align: 'start',
       },
     },
@@ -127,7 +127,7 @@ export const posTourConfig: TourConfig = {
       popover: {
         title: 'Buscar Productos 🔍',
         description: 'Busca productos por nombre o código de barras para agregarlos al carrito de compra.',
-        side: 'bottom',
+        side: 'right',
         align: 'start',
       },
     },
@@ -136,7 +136,7 @@ export const posTourConfig: TourConfig = {
       popover: {
         title: 'Escanear Código de Barras 📸',
         description: 'Escanea códigos de barras con tu cámara o lector para agregar productos rápidamente.',
-        side: 'bottom',
+        side: 'right',
         align: 'start',
       },
     },
@@ -152,7 +152,7 @@ export const posTourConfig: TourConfig = {
   ],
   config: {
     animate: true,
-    overlayOpacity: 0.7,
+    overlayOpacity: 0.4,
     smoothScroll: true,
     allowClose: true,
     disableActiveInteraction: false,
@@ -179,14 +179,14 @@ export const customersTourConfig: TourConfig = {
       popover: {
         title: 'Panel de Clientes 📇',
         description: 'Administra toda la información de tus clientes desde aquí.',
-        side: 'bottom',
+        side: 'left',
         align: 'start',
       },
     },
   ],
   config: {
     animate: true,
-    overlayOpacity: 0.7,
+    overlayOpacity: 0.4,
     smoothScroll: true,
     allowClose: true,
     disableActiveInteraction: false,
@@ -213,14 +213,14 @@ export const inventoryTourConfig: TourConfig = {
       popover: {
         title: 'Control de Inventario 📈',
         description: 'Visualiza y gestiona los movimientos de entrada y salida de productos.',
-        side: 'bottom',
+        side: 'left',
         align: 'start',
       },
     },
   ],
   config: {
     animate: true,
-    overlayOpacity: 0.7,
+    overlayOpacity: 0.4,
     smoothScroll: true,
     allowClose: true,
     disableActiveInteraction: false,
@@ -247,14 +247,14 @@ export const dashboardTourConfig: TourConfig = {
       popover: {
         title: 'Panel de Control 📊',
         description: 'Aquí verás un resumen de las métricas más importantes de tu negocio: ventas, productos más vendidos, y más.',
-        side: 'bottom',
+        side: 'left',
         align: 'start',
       },
     },
   ],
   config: {
     animate: true,
-    overlayOpacity: 0.7,
+    overlayOpacity: 0.4,
     smoothScroll: true,
     allowClose: true,
     disableActiveInteraction: false,
