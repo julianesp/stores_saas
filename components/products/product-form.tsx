@@ -14,7 +14,7 @@ import { getCategories, getSuppliers, createProduct, updateProduct, createCatego
 import { Category, Supplier } from '@/lib/types';
 import { toast } from 'sonner';
 import { Scan, Camera, X, Plus } from 'lucide-react';
-import { ImageUploader } from './image-uploader';
+// import { ImageUploader } from './image-uploader'; // COMENTADO: Funcionalidad de imágenes deshabilitada
 import { Html5Qrcode } from 'html5-qrcode';
 
 const productSchema = z.object({
@@ -43,7 +43,7 @@ export function ProductForm({ initialData, productId }: ProductFormProps) {
   const [loading, setLoading] = useState(false);
   const [categories, setCategories] = useState<Category[]>([]);
   const [suppliers, setSuppliers] = useState<Supplier[]>([]);
-  const [productImages, setProductImages] = useState<string[]>(initialData?.images || []);
+  // const [productImages, setProductImages] = useState<string[]>(initialData?.images || []); // COMENTADO: Funcionalidad de imágenes deshabilitada
   const [showScanner, setShowScanner] = useState(false);
   const [showNewCategory, setShowNewCategory] = useState(false);
   const [showNewSupplier, setShowNewSupplier] = useState(false);
@@ -228,10 +228,13 @@ export function ProductForm({ initialData, productId }: ProductFormProps) {
   const onSubmit = async (data: ProductFormData) => {
     setLoading(true);
     try {
-      // Incluir las imágenes en los datos
+      // COMENTADO: Funcionalidad de imágenes deshabilitada
+      // const productData: any = {
+      //   ...data,
+      //   images: productImages,
+      // };
       const productData: any = {
         ...data,
-        images: productImages,
       };
 
       // Limpiar campos vacíos para evitar errores en la base de datos
@@ -562,6 +565,7 @@ export function ProductForm({ initialData, productId }: ProductFormProps) {
         </CardContent>
       </Card>
 
+      {/* COMENTADO: Funcionalidad de subida de imágenes deshabilitada temporalmente
       <Card>
         <CardHeader>
           <CardTitle>Imagen del Producto</CardTitle>
@@ -575,6 +579,7 @@ export function ProductForm({ initialData, productId }: ProductFormProps) {
           />
         </CardContent>
       </Card>
+      */}
 
       <div className="flex gap-4">
         <Button type="submit" disabled={loading}>
