@@ -261,17 +261,6 @@ export function ImageUploader({
             disabled={uploading}
           />
 
-          {/* Input oculto para captura de cámara */}
-          <input
-            type="file"
-            accept="image/*"
-            capture="environment"
-            onChange={handleFileSelect}
-            className="hidden"
-            id="camera-capture"
-            disabled={uploading}
-          />
-
           {/* Botón de galería */}
           <label
             htmlFor="image-upload"
@@ -290,17 +279,6 @@ export function ImageUploader({
                 Seleccionar desde Galería ({images.length}/{maxImages})
               </>
             )}
-          </label>
-
-          {/* Botón de cámara */}
-          <label
-            htmlFor="camera-capture"
-            className={`inline-flex items-center justify-center w-full rounded-md border border-blue-300 bg-blue-50 px-4 py-2 text-sm font-medium text-blue-700 transition-colors hover:bg-blue-100 ${
-              uploading ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'
-            }`}
-          >
-            <Camera className="mr-2 h-4 w-4" />
-            Tomar Foto con Cámara
           </label>
 
           <p className="text-xs text-gray-500 text-center">
