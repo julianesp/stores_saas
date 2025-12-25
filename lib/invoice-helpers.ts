@@ -372,3 +372,46 @@ export function shareViaFacebook(message: string) {
   // Nota: Para compartir con texto pre-llenado necesitarías usar la API de Facebook
   // que requiere una app ID y permisos especiales
 }
+
+/**
+ * Genera el PDF y envía un enlace por WhatsApp para descargarlo
+ * El cliente puede descargar el PDF directamente desde WhatsApp
+ */
+export async function shareInvoicePDFViaWhatsApp(data: InvoiceData, phoneNumber: string | undefined): Promise<boolean> {
+  try {
+    // Generar el PDF
+    const doc = generateInvoicePDF(data);
+
+    // Convertir a base64
+    const pdfBase64 = doc.output('datauristring').split(',')[1];
+
+    // Enviar al endpoint para obtener URL compartible
+    const response = await fetch('/api/invoice/share', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        pdfData: pdfBase64,
+        saleNumber: data.sale.sale_number,
+      }),
+    });
+
+    if (!response.ok) {
+      throw new Error('Error al generar enlace de descarga');
+    }
+
+    const { downloadUrl } = await response.json();
+
+    // Generar mensaje de WhatsApp con el enlace de descarga
+    const message = `Hola! 👋\n\nTe enviamos tu factura de compra:\n\n*Factura #${data.sale.sale_number}*\n*Total: ${formatCurrency(data.sale.total)}*\n*Fecha: ${format(new Date(data.sale.created_at), "dd/MM/yyyy", { locale: es })}*\n\n📄 Para descargar tu factura en PDF, haz clic en este enlace:\n${window.location.origin}/api/invoice/download?url=${encodeURIComponent(downloadUrl)}\n\n✨ ¡Gracias por tu compra! ✨\n\n_${data.storeInfo.full_name || 'TIENDA POS'}_`;
+
+    // Abrir WhatsApp con el mensaje
+    shareViaWhatsApp(phoneNumber, message);
+
+    return true;
+  } catch (error) {
+    console.error('Error sharing PDF via WhatsApp:', error);
+    return false;
+  }
+}

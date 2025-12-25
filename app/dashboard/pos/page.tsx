@@ -717,54 +717,58 @@ export default function POSPage() {
                     <Scan className="h-6 w-6 text-white" />
                   </div>
                   <div>
-                    <h3 className="font-bold text-lg text-gray-900">
+                    <h4 className="font-bold text-lg text-gray-900">
                       {scanSuccess ? '✓ Producto Agregado' : 'Escanear Producto'}
-                    </h3>
+                    </h4>
                     <p className="text-xs text-gray-600">
                       {scanSuccess ? 'Escanea el siguiente producto' : 'Escanea o escribe el código de barras'}
                     </p>
                   </div>
                 </div>
-                <div className="flex gap-2">
-                  <div className="relative flex-1">
-                    <Input
-                      ref={barcodeRef}
-                      value={barcodeInput}
-                      onChange={(e) => setBarcodeInput(e.target.value)}
-                      placeholder="Escanea aquí el código de barras..."
-                      className={`h-14 text-xl font-mono tracking-wider border-2 focus:ring-2 pl-12 transition-colors ${
-                        scanSuccess
-                          ? 'border-green-300 focus:border-green-500 focus:ring-green-200'
-                          : 'border-blue-300 focus:border-blue-500 focus:ring-blue-200'
-                      }`}
-                      autoComplete="off"
-                    />
-                    <div className="absolute left-3 top-1/2 transform -translate-y-1/2 pointer-events-none">
-                      <Scan className={`h-6 w-6 ${
-                        scanSuccess ? 'text-green-600' : 'text-blue-600 animate-pulse'
-                      }`} />
-                    </div>
+                {/* Input de código de barras */}
+                <div className="relative">
+                  <Input
+                    ref={barcodeRef}
+                    value={barcodeInput}
+                    onChange={(e) => setBarcodeInput(e.target.value)}
+                    placeholder="Escanea aquí el código de barras..."
+                    className={`h-12 md:h-14 text-xs md:text-sm font-mono tracking-wider border-2 focus:ring-2 pl-10 md:pl-12 transition-colors ${
+                      scanSuccess
+                        ? 'border-green-300 focus:border-green-500 focus:ring-green-200'
+                        : 'border-blue-300 focus:border-blue-500 focus:ring-blue-200'
+                    }`}
+                    autoComplete="off"
+                  />
+                  <div className="absolute left-3 top-1/2 transform -translate-y-1/2 pointer-events-none">
+                    <Scan className={`h-5 w-5 md:h-6 md:w-6 ${
+                      scanSuccess ? 'text-green-600' : 'text-blue-600 animate-pulse'
+                    }`} />
                   </div>
+                </div>
+
+                {/* Botones de acción */}
+                <div className="flex gap-2 md:gap-2">
                   <Button
                     type="button"
                     size="lg"
                     onClick={() => setShowCameraScanner(true)}
-                    className="shrink-0 h-14 px-6 bg-purple-600 hover:bg-purple-700 transition-colors"
+                    className="flex-1 h-11 md:h-14 bg-purple-600 hover:bg-purple-700 transition-colors"
                     title="Escanear con cámara"
                   >
-                    <Camera className="h-5 w-5" />
+                    <Camera className="h-5 w-5 mr-2" />
+                    <span className="text-sm md:text-base">Cámara</span>
                   </Button>
                   <Button
                     type="submit"
                     size="lg"
-                    className={`shrink-0 h-14 px-6 transition-colors ${
+                    className={`flex-1 h-11 md:h-14 transition-colors ${
                       scanSuccess
                         ? 'bg-green-600 hover:bg-green-700'
                         : 'bg-blue-600 hover:bg-blue-700'
                     }`}
                   >
                     <Search className="h-5 w-5 mr-2" />
-                    Agregar
+                    <span className="text-sm md:text-base">Agregar</span>
                   </Button>
                 </div>
                 <div className="flex items-center gap-2 text-xs text-gray-500">
@@ -1188,7 +1192,7 @@ export default function POSPage() {
                       >
                         <option value="efectivo">Efectivo</option>
                         {/* <option value="tarjeta">Tarjeta</option> */}
-                        <option value="transferencia">Transferencia</option>
+                        {/* <option value="transferencia">Transferencia</option> */}
                         <option value="credito" disabled={!selectedCustomer}>
                           Crédito {!selectedCustomer && '(Requiere cliente)'}
                         </option>
