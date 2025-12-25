@@ -3,7 +3,8 @@
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
-import { Plus, Search, Edit, Trash2, Package, Tag, Camera, AlertTriangle, HelpCircle } from 'lucide-react';
+import { Plus, Search, Edit, Trash2, Package, Tag, Camera, AlertTriangle } from 'lucide-react';
+// import { HelpCircle } from 'lucide-react'; // COMENTADO: Tour deshabilitado
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -13,8 +14,9 @@ import { Product, ProductWithRelations, Category, Supplier } from '@/lib/types';
 import { formatCurrency } from '@/lib/utils';
 import Swal from '@/lib/sweetalert';
 import { CategoryManagerModal } from '@/components/products/category-manager-modal';
-import { useTour } from '@/hooks/useTour';
-import { productsTourConfig } from '@/lib/tour-configs';
+// COMENTADO: Tour deshabilitado
+// import { useTour } from '@/hooks/useTour';
+// import { productsTourConfig } from '@/lib/tour-configs';
 
 export default function ProductsPage() {
   const { getToken, userId } = useAuth();
@@ -26,8 +28,8 @@ export default function ProductsPage() {
   const [showOutOfStock, setShowOutOfStock] = useState(false);
   const [showCategoryModal, setShowCategoryModal] = useState(false);
 
-  // Inicializar el tour guiado (incluye userId para que sea específico por usuario)
-  const { startTour, hasSeenTour } = useTour(productsTourConfig, true, userId || undefined);
+  // COMENTADO: Tour deshabilitado
+  // const { startTour, hasSeenTour } = useTour(productsTourConfig, true, userId || undefined);
 
   useEffect(() => {
     fetchProducts();
@@ -132,6 +134,7 @@ export default function ProductsPage() {
             <span className="hidden sm:inline">Categorías</span>
             <span className="sm:hidden">Cat.</span>
           </Button>
+          {/* COMENTADO: Botón de ayuda/tour deshabilitado
           <Button
             variant="outline"
             onClick={startTour}
@@ -141,6 +144,7 @@ export default function ProductsPage() {
             <HelpCircle className="h-4 w-4 sm:mr-2" />
             <span className="hidden sm:inline">Ayuda</span>
           </Button>
+          */}
           <Button
             variant={showOutOfStock ? "default" : "outline"}
             onClick={() => {
