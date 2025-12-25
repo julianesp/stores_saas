@@ -2,6 +2,10 @@ import { NextRequest, NextResponse } from 'next/server';
 import { auth } from '@clerk/nextjs/server';
 import { v2 as cloudinary } from 'cloudinary';
 
+// Force Node.js runtime (Cloudinary requires Node.js)
+export const runtime = 'nodejs';
+export const dynamic = 'force-dynamic';
+
 // Configurar Cloudinary
 cloudinary.config({
   cloud_name: process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME,
@@ -28,8 +32,23 @@ const validateCloudinaryConfig = () => {
 
 export async function POST(request: NextRequest) {
   try {
+    console.log('=== Upload Image API Called ===');
+
+    // Verificar autenticación primero
+    const { userId } = await auth();
+    if (!userId) {
+      console.error('❌ Upload attempt without authentication');
+      return NextResponse.json(
+        { error: 'No autorizado' },
+        { status: 401 }
+      );
+    }
+
+    console.log('✓ User authenticated:', userId);
+
     // Validar configuración de Cloudinary
-    if (!validateCloudinaryConfig()) {
+    const isConfigValid = validateCloudinaryConfig();
+    if (!isConfigValid) {
       console.error('❌ Cloudinary no está configurado correctamente');
       return NextResponse.json(
         { error: 'Error de configuración del servidor. Contacta al administrador.' },
@@ -37,15 +56,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Verificar autenticación
-    const { userId } = await auth();
-    if (!userId) {
-      console.error('Upload attempt without authentication');
-      return NextResponse.json(
-        { error: 'No autorizado' },
-        { status: 401 }
-      );
-    }
+    console.log('✓ Cloudinary config validated');
 
     // Obtener datos del formulario
     const formData = await request.formData();
@@ -86,8 +97,19 @@ export async function POST(request: NextRequest) {
     }
 
     // Convertir File a Buffer
-    const bytes = await file.arrayBuffer();
-    const buffer = Buffer.from(bytes);
+    console.log('Converting file to buffer...');
+    let buffer: Buffer;
+    try {
+      const bytes = await file.arrayBuffer();
+      buffer = Buffer.from(bytes);
+      console.log('✓ Buffer created, size:', buffer.length);
+    } catch (error: any) {
+      console.error('❌ Error converting file to buffer:', error);
+      return NextResponse.json(
+        { error: 'Error al procesar el archivo. Intenta con otra imagen.' },
+        { status: 400 }
+      );
+    }
 
     console.log('📤 Starting Cloudinary upload...');
 
