@@ -6,38 +6,25 @@ import { v2 as cloudinary } from 'cloudinary';
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
-// Configurar Cloudinary
-cloudinary.config({
-  cloud_name: process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME,
-  api_key: process.env.NEXT_PUBLIC_CLOUDINARY_API_KEY,
-  api_secret: process.env.CLOUDINARY_API_SECRET,
-});
-
-// Validar configuración de Cloudinary
-const validateCloudinaryConfig = () => {
-  const cloudName = process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME;
-  const apiKey = process.env.NEXT_PUBLIC_CLOUDINARY_API_KEY;
-  const apiSecret = process.env.CLOUDINARY_API_SECRET;
-
-  if (!cloudName || !apiKey || !apiSecret) {
-    console.error('❌ Cloudinary config missing:', {
-      cloudName: cloudName ? '✓' : '✗',
-      apiKey: apiKey ? '✓' : '✗',
-      apiSecret: apiSecret ? '✓' : '✗',
-    });
-    return false;
-  }
-  return true;
-};
-
 export async function POST(request: NextRequest) {
   try {
     console.log('=== Upload Image API Called ===');
 
-    // Verificar autenticación primero
-    const { userId } = await auth();
+    // Verificar autenticación
+    let userId: string | null = null;
+    try {
+      const authResult = await auth();
+      userId = authResult.userId;
+    } catch (authError: any) {
+      console.error('❌ Auth error:', authError);
+      return NextResponse.json(
+        { error: 'Error de autenticación' },
+        { status: 401 }
+      );
+    }
+
     if (!userId) {
-      console.error('❌ Upload attempt without authentication');
+      console.error('❌ No userId found');
       return NextResponse.json(
         { error: 'No autorizado' },
         { status: 401 }
@@ -46,41 +33,63 @@ export async function POST(request: NextRequest) {
 
     console.log('✓ User authenticated:', userId);
 
-    // Validar configuración de Cloudinary
-    const isConfigValid = validateCloudinaryConfig();
-    if (!isConfigValid) {
-      console.error('❌ Cloudinary no está configurado correctamente');
+    // Configurar Cloudinary (hacerlo dentro de la función para asegurar que se ejecute en cada request)
+    const cloudName = process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME;
+    const apiKey = process.env.NEXT_PUBLIC_CLOUDINARY_API_KEY;
+    const apiSecret = process.env.CLOUDINARY_API_SECRET;
+
+    if (!cloudName || !apiKey || !apiSecret) {
+      console.error('❌ Cloudinary config missing:', {
+        cloudName: !!cloudName,
+        apiKey: !!apiKey,
+        apiSecret: !!apiSecret,
+      });
       return NextResponse.json(
-        { error: 'Error de configuración del servidor. Contacta al administrador.' },
+        { error: 'Configuración de Cloudinary incompleta' },
         { status: 500 }
       );
     }
 
-    console.log('✓ Cloudinary config validated');
+    cloudinary.config({
+      cloud_name: cloudName,
+      api_key: apiKey,
+      api_secret: apiSecret,
+    });
+
+    console.log('✓ Cloudinary configured');
 
     // Obtener datos del formulario
-    const formData = await request.formData();
-    const file = formData.get('file') as File;
-    const folder = formData.get('folder') as string || 'products';
+    let formData: FormData;
+    try {
+      formData = await request.formData();
+    } catch (formError: any) {
+      console.error('❌ Error parsing formData:', formError);
+      return NextResponse.json(
+        { error: 'Error al procesar la solicitud' },
+        { status: 400 }
+      );
+    }
+
+    const file = formData.get('file') as File | null;
+    const folder = (formData.get('folder') as string) || 'products';
 
     if (!file) {
-      console.error('No file provided in upload request');
+      console.error('❌ No file in formData');
       return NextResponse.json(
         { error: 'No se proporcionó archivo' },
         { status: 400 }
       );
     }
 
-    console.log('Processing image upload:', {
-      fileName: file.name,
-      fileType: file.type,
-      fileSize: `${(file.size / 1024 / 1024).toFixed(2)} MB`,
-      folder,
+    console.log('✓ File received:', {
+      name: file.name,
+      type: file.type,
+      size: `${(file.size / 1024 / 1024).toFixed(2)} MB`,
     });
 
     // Validar tipo de archivo
     if (!file.type.startsWith('image/')) {
-      console.error('Invalid file type:', file.type);
+      console.error('❌ Invalid file type:', file.type);
       return NextResponse.json(
         { error: 'El archivo debe ser una imagen' },
         { status: 400 }
@@ -89,7 +98,7 @@ export async function POST(request: NextRequest) {
 
     // Validar tamaño (máximo 5MB)
     if (file.size > 5 * 1024 * 1024) {
-      console.error('File too large:', file.size);
+      console.error('❌ File too large:', file.size);
       return NextResponse.json(
         { error: 'La imagen es muy grande (máximo 5MB)' },
         { status: 400 }
@@ -97,74 +106,74 @@ export async function POST(request: NextRequest) {
     }
 
     // Convertir File a Buffer
-    console.log('Converting file to buffer...');
     let buffer: Buffer;
     try {
       const bytes = await file.arrayBuffer();
       buffer = Buffer.from(bytes);
       console.log('✓ Buffer created, size:', buffer.length);
-    } catch (error: any) {
-      console.error('❌ Error converting file to buffer:', error);
+    } catch (bufferError: any) {
+      console.error('❌ Error creating buffer:', bufferError);
       return NextResponse.json(
-        { error: 'Error al procesar el archivo. Intenta con otra imagen.' },
+        { error: 'Error al procesar el archivo' },
         { status: 400 }
       );
     }
 
     console.log('📤 Starting Cloudinary upload...');
 
-    // Subir a Cloudinary usando upload_stream
-    const uploadResult = await new Promise((resolve, reject) => {
-      // Timeout para evitar esperas infinitas
-      const timeout = setTimeout(() => {
-        reject(new Error('Timeout: La subida tardó demasiado (30s). Intenta de nuevo.'));
-      }, 30000); // 30 segundos
+    // Subir a Cloudinary
+    let uploadResult: any;
+    try {
+      uploadResult = await new Promise((resolve, reject) => {
+        const timeout = setTimeout(() => {
+          reject(new Error('Timeout al subir imagen'));
+        }, 30000);
 
-      const uploadStream = cloudinary.uploader.upload_stream(
-        {
-          folder: folder,
-          resource_type: 'image',
-          transformation: [
-            { width: 1200, height: 1200, crop: 'limit' }, // Limitar tamaño máximo
-            { quality: 'auto:good' }, // Optimizar calidad automáticamente
-            { fetch_format: 'auto' }, // Formato automático (WebP cuando sea posible)
-          ],
-        },
-        (error, result) => {
-          clearTimeout(timeout);
-          if (error) {
-            console.error('❌ Cloudinary upload error:', {
-              message: error.message,
-              http_code: error.http_code,
-              error
-            });
-            reject(new Error(error.message || 'Error al subir imagen a Cloudinary'));
-          } else {
-            console.log('✅ Cloudinary upload success:', result?.secure_url);
-            resolve(result);
+        const uploadStream = cloudinary.uploader.upload_stream(
+          {
+            folder: folder,
+            resource_type: 'image',
+            transformation: [
+              { width: 1200, height: 1200, crop: 'limit' },
+              { quality: 'auto:good' },
+              { fetch_format: 'auto' },
+            ],
+          },
+          (error, result) => {
+            clearTimeout(timeout);
+            if (error) {
+              console.error('❌ Cloudinary error:', error);
+              reject(error);
+            } else {
+              console.log('✅ Upload success:', result?.secure_url);
+              resolve(result);
+            }
           }
-        }
+        );
+
+        uploadStream.end(buffer);
+      });
+    } catch (uploadError: any) {
+      console.error('❌ Upload failed:', uploadError);
+      return NextResponse.json(
+        { error: `Error al subir a Cloudinary: ${uploadError.message}` },
+        { status: 500 }
       );
-
-      uploadStream.end(buffer);
-    });
-
-    const result = uploadResult as any;
+    }
 
     return NextResponse.json({
       success: true,
-      secure_url: result.secure_url,
-      public_id: result.public_id,
+      secure_url: uploadResult.secure_url,
+      public_id: uploadResult.public_id,
     });
 
   } catch (error: any) {
-    console.error('Error uploading image:', {
+    console.error('❌ Unexpected error:', {
       message: error.message,
       stack: error.stack,
-      error,
     });
     return NextResponse.json(
-      { error: error.message || 'Error al subir imagen al servidor' },
+      { error: `Error interno del servidor: ${error.message}` },
       { status: 500 }
     );
   }
