@@ -59,38 +59,21 @@ export function ImageUploader({
 
           setLoadingIndex(images.length + index);
 
-          // Comprimir la imagen antes de subir
-          console.log('📸 Imagen original:', {
+          console.log('📸 Imagen:', {
             nombre: file.name,
             tamaño: `${(file.size / 1024 / 1024).toFixed(2)} MB`,
             tipo: file.type
           });
 
-          toast.info('Comprimiendo imagen...', { duration: 1500 });
-
-          const options = {
-            maxSizeMB: 0.8, // Máximo 800KB después de compresión (más conservador)
-            maxWidthOrHeight: 1200, // Reducir resolución para móviles (suficiente para web)
-            useWebWorker: true,
-            fileType: 'image/jpeg', // Convertir todo a JPEG para compatibilidad
-            initialQuality: 0.85, // Calidad inicial del 85%
-          };
-
-          const compressedFile = await imageCompression(file, options);
-          console.log('✅ Imagen comprimida:', {
-            tamaño: `${(compressedFile.size / 1024 / 1024).toFixed(2)} MB`,
-            reducción: `${((1 - compressedFile.size / file.size) * 100).toFixed(1)}%`
-          });
-
-          // Validar tamaño después de compresión (máximo 5MB por seguridad)
-          if (compressedFile.size > 5 * 1024 * 1024) {
-            toast.error(`Imagen muy grande incluso después de compresión. Intenta con otra imagen.`);
+          // Validar tamaño (máximo 5MB)
+          if (file.size > 5 * 1024 * 1024) {
+            toast.error(`Imagen muy grande (máx 5MB). Archivo: ${file.name}`);
             return null;
           }
 
           // Usar endpoint de Next.js que maneja la subida con firma
           const formData = new FormData();
-          formData.append('file', compressedFile);
+          formData.append('file', file);
           formData.append('folder', `products/${productId || 'temp'}`);
 
           // Subir a través del endpoint de Next.js
