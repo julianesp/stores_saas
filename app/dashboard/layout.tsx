@@ -10,6 +10,24 @@ import { SubscriptionExpiredModal } from '@/components/subscription/expired-moda
 import { checkSubscriptionStatus, getUserProfileByClerkId } from '@/lib/cloudflare-subscription-helpers';
 import { SubscriptionStatus } from '@/lib/types';
 
+// Component to add noindex meta tag
+function NoIndexMeta() {
+  useEffect(() => {
+    // Add noindex meta tag to prevent search engine indexing
+    const metaRobots = document.createElement('meta');
+    metaRobots.name = 'robots';
+    metaRobots.content = 'noindex, nofollow';
+    document.head.appendChild(metaRobots);
+
+    return () => {
+      // Cleanup on unmount
+      document.head.removeChild(metaRobots);
+    };
+  }, []);
+
+  return null;
+}
+
 export default function DashboardLayout({
   children,
 }: {
@@ -100,8 +118,10 @@ export default function DashboardLayout({
   }
 
   return (
-    <div className="flex h-screen overflow-hidden">
-      <Sidebar />
+    <>
+      <NoIndexMeta />
+      <div className="flex h-screen overflow-hidden">
+        <Sidebar />
 
       {/* Mobile sidebar overlay */}
       {sidebarOpen && (
@@ -133,6 +153,7 @@ export default function DashboardLayout({
           {children}
         </main>
       </div>
-    </div>
+      </div>
+    </>
   );
 }
