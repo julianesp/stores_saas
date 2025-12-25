@@ -82,7 +82,7 @@ export function InvoiceModal({
   // Compartir PDF por WhatsApp
   const handleShareWhatsApp = async () => {
     try {
-      toast.loading("Generando enlace de descarga...");
+      toast.loading("Descargando PDF...");
 
       const success = await shareInvoicePDFViaWhatsApp(
         {
@@ -98,7 +98,7 @@ export function InvoiceModal({
       toast.dismiss();
 
       if (success) {
-        toast.success("Enlace generado y WhatsApp abierto");
+        toast.success("PDF descargado. Por favor adjúntalo en WhatsApp");
       } else {
         toast.error("Error al procesar la factura");
       }
@@ -164,7 +164,7 @@ export function InvoiceModal({
           </div>
 
           {/* Compartir por WhatsApp */}
-          <div className="space-y-2">
+          {/* <div className="space-y-2">
             <label className="text-sm font-medium text-black">
               Enviar por WhatsApp
             </label>
@@ -186,7 +186,7 @@ export function InvoiceModal({
             <p className="text-xs text-black">
               Deja el número en blanco para elegir el contacto en WhatsApp
             </p>
-          </div>
+          </div> */}
         </div>
 
         {/* Vista previa de la factura (con scroll) */}

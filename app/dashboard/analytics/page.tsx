@@ -2,17 +2,21 @@
 
 import { useState, useEffect } from 'react';
 import { useAuth, useUser } from '@clerk/nextjs';
-import { Brain, Download, TrendingUp, AlertTriangle, CheckCircle, Package, BarChart, Lock, Sparkles } from 'lucide-react';
+import { Brain, Download, TrendingUp, AlertTriangle, CheckCircle, Package, BarChart, Lock, Sparkles, Users, ShoppingBag } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { analyzeProductSales, ProductAnalytics } from '@/lib/cloudflare-analytics-helpers';
 import { exportAnalyticsToExcel } from '@/lib/excel-export';
 import { formatCurrency } from '@/lib/utils';
 import { toast } from 'sonner';
-import { getUserProfile } from '@/lib/cloudflare-api';
+import { getUserProfile, getSales } from '@/lib/cloudflare-api';
 import { hasAIAccess } from '@/lib/subscription-helpers';
 import { UserProfile } from '@/lib/types';
 import Link from 'next/link';
+import { AIInsightsSection } from '@/components/analytics/ai-insights-section';
+import { ProductRecommendationsSection } from '@/components/analytics/product-recommendations-section';
+import { CustomerRFMSection } from '@/components/analytics/customer-rfm-section';
 
 export default function AnalyticsPage() {
   const { getToken } = useAuth();
@@ -82,6 +86,35 @@ export default function AnalyticsPage() {
   const productsToOrder = analytics.filter(p => p.recommended_order_quantity > 0);
 
   const totalRevenue = analytics.reduce((sum, p) => sum + p.total_revenue, 0);
+  const totalSales = analytics.reduce((sum, p) => sum + p.total_quantity_sold, 0);
+  const avgTicket = totalSales > 0 ? totalRevenue / totalSales : 0;
+
+  // Preparar datos para IA
+  const salesData = {
+    totalRevenue,
+    totalSales,
+    topProducts: topSelling.slice(0, 3).map(p => ({
+      name: p.product_name,
+      revenue: p.total_revenue,
+      quantity: p.total_quantity_sold,
+    })),
+    criticalProducts: criticalProducts.length,
+    avgTicket,
+  };
+
+  const customerData = {
+    totalCustomers: 0, // Se calculará en el componente RFM
+    newCustomers: 0,
+    returningCustomers: 0,
+    avgPurchaseFrequency: 0,
+  };
+
+  const inventoryForRecommendations = analytics.slice(0, 20).map(p => ({
+    name: p.product_name,
+    category: '', // Podrías agregar categoría si la tienes
+    stock: p.current_stock,
+    salesVelocity: p.sales_velocity,
+  }));
 
   if (loading) {
     return (
@@ -184,11 +217,11 @@ export default function AnalyticsPage() {
       <div className="flex flex-col md:flex-row md:justify-between md:items-center gap-4">
         <div>
           <h1 className="text-2xl md:text-3xl font-bold flex items-center gap-2">
-            <Brain className="h-8 w-8 text-blue-600" />
-            Análisis Inteligente de Ventas
+            <Brain className="h-8 w-8 text-purple-600" />
+            Análisis Inteligente con IA
           </h1>
           <p className="text-gray-500 text-sm md:text-base">
-            Predicciones y recomendaciones basadas en IA
+            Insights, predicciones y recomendaciones personalizadas
           </p>
         </div>
         <div className="flex gap-2">
@@ -209,6 +242,34 @@ export default function AnalyticsPage() {
           </Button>
         </div>
       </div>
+
+      {/* Tabs para diferentes secciones */}
+      <Tabs defaultValue="overview" className="w-full">
+        <TabsList className="grid w-full grid-cols-5 lg:w-auto">
+          <TabsTrigger value="overview">
+            <BarChart className="h-4 w-4 mr-2" />
+            Overview
+          </TabsTrigger>
+          <TabsTrigger value="insights">
+            <Brain className="h-4 w-4 mr-2" />
+            Insights IA
+          </TabsTrigger>
+          <TabsTrigger value="customers">
+            <Users className="h-4 w-4 mr-2" />
+            Clientes
+          </TabsTrigger>
+          <TabsTrigger value="trends">
+            <ShoppingBag className="h-4 w-4 mr-2" />
+            Tendencias
+          </TabsTrigger>
+          <TabsTrigger value="inventory">
+            <Package className="h-4 w-4 mr-2" />
+            Inventario
+          </TabsTrigger>
+        </TabsList>
+
+        {/* Tab: Overview */}
+        <TabsContent value="overview" className="space-y-6">
 
       {/* Estadísticas Generales */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
@@ -432,6 +493,140 @@ export default function AnalyticsPage() {
           </ul>
         </CardContent>
       </Card>
+        </TabsContent>
+
+        {/* Tab: Insights IA */}
+        <TabsContent value="insights" className="space-y-6">
+          <AIInsightsSection
+            salesData={salesData}
+            customerData={customerData}
+            daysAnalyzed={daysToAnalyze}
+          />
+        </TabsContent>
+
+        {/* Tab: Clientes */}
+        <TabsContent value="customers" className="space-y-6">
+          <CustomerRFMSection
+            getToken={getToken}
+            daysAnalyzed={daysToAnalyze}
+          />
+        </TabsContent>
+
+        {/* Tab: Tendencias */}
+        <TabsContent value="trends" className="space-y-6">
+          <ProductRecommendationsSection
+            currentInventory={inventoryForRecommendations}
+            storeType="Tienda General"
+          />
+        </TabsContent>
+
+        {/* Tab: Inventario */}
+        <TabsContent value="inventory" className="space-y-6">
+          {/* Productos Críticos */}
+          {criticalProducts.length > 0 && (
+            <Card className="border-red-200 bg-red-50">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2 text-red-800">
+                  <AlertTriangle className="h-5 w-5" />
+                  Productos Críticos - ¡Acción Inmediata Requerida!
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-3">
+                  {criticalProducts.map((product) => (
+                    <div
+                      key={product.product_id}
+                      className="bg-white p-4 rounded-lg border border-red-200"
+                    >
+                      <div className="flex justify-between items-start mb-2">
+                        <div>
+                          <p className="font-semibold text-lg">{product.product_name}</p>
+                          <p className="text-sm text-gray-600">{product.product_barcode}</p>
+                        </div>
+                        <span className="bg-red-600 text-white px-3 py-1 rounded-full text-xs font-semibold">
+                          URGENTE
+                        </span>
+                      </div>
+                      <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-sm">
+                        <div>
+                          <span className="text-gray-500">Cantidad Actual:</span>
+                          <p className="font-semibold text-red-600">{product.current_stock}</p>
+                        </div>
+                        <div>
+                          <span className="text-gray-500">Velocidad:</span>
+                          <p className="font-semibold">{product.sales_velocity} und/día</p>
+                        </div>
+                        <div>
+                          <span className="text-gray-500">Días hasta agotarse:</span>
+                          <p className="font-semibold text-red-600">{product.days_until_stockout}</p>
+                        </div>
+                        <div>
+                          <span className="text-gray-500">Pedir:</span>
+                          <p className="font-bold text-blue-600 text-lg">
+                            {product.recommended_order_quantity} unidades
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Productos en Advertencia */}
+          {warningProducts.length > 0 && (
+            <Card className="border-yellow-200 bg-yellow-50">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2 text-yellow-800">
+                  <AlertTriangle className="h-5 w-5" />
+                  Productos en Advertencia - Planear Pedido Pronto
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-3">
+                  {warningProducts.map((product) => (
+                    <div
+                      key={product.product_id}
+                      className="bg-white p-4 rounded-lg border border-yellow-200"
+                    >
+                      <div className="flex justify-between items-start mb-2">
+                        <div>
+                          <p className="font-semibold">{product.product_name}</p>
+                          <p className="text-sm text-gray-600">{product.product_barcode}</p>
+                        </div>
+                        <span className="bg-yellow-500 text-white px-3 py-1 rounded-full text-xs font-semibold">
+                          ADVERTENCIA
+                        </span>
+                      </div>
+                      <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-sm">
+                        <div>
+                          <span className="text-gray-500">Disponible:</span>
+                          <p className="font-semibold">{product.current_stock}</p>
+                        </div>
+                        <div>
+                          <span className="text-gray-500">Días restantes:</span>
+                          <p className="font-semibold">{product.days_until_stockout}</p>
+                        </div>
+                        <div>
+                          <span className="text-gray-500">Velocidad:</span>
+                          <p className="font-semibold">{product.sales_velocity} und/día</p>
+                        </div>
+                        <div>
+                          <span className="text-gray-500">Pedir:</span>
+                          <p className="font-bold text-blue-600">
+                            {product.recommended_order_quantity} unidades
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+          )}
+        </TabsContent>
+      </Tabs>
     </div>
   );
 }
