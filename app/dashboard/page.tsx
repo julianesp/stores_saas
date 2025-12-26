@@ -15,9 +15,13 @@ import {
   getTopProducts,
   getInventoryAlerts,
   getExpiringProducts,
+  getExpiringProductsList,
   DashboardMetrics,
   TopProduct
 } from '@/lib/dashboard-helpers';
+import { Product } from '@/lib/cloudflare-api';
+import { differenceInDays } from 'date-fns';
+import Link from 'next/link';
 
 export default function DashboardPage() {
   const { user } = useUser();
@@ -42,6 +46,7 @@ export default function DashboardPage() {
   });
   const [topProducts, setTopProducts] = useState<TopProduct[]>([]);
   const [expiringProductsCount, setExpiringProductsCount] = useState(0);
+  const [expiringProducts, setExpiringProducts] = useState<Product[]>([]);
   const [seeding, setSeeding] = useState(false);
   const [cleaning, setCleaning] = useState(false);
 
@@ -78,15 +83,17 @@ export default function DashboardPage() {
           });
         } else {
           // Fetch store metrics for regular users
-          const [dashboardMetrics, products, expiringCount] = await Promise.all([
+          const [dashboardMetrics, products, expiringCount, expiringProductsList] = await Promise.all([
             getDashboardMetrics(getToken),
             getTopProducts(4, getToken),
             getExpiringProducts(getToken),
+            getExpiringProductsList(getToken),
           ]);
 
           setMetrics(dashboardMetrics);
           setTopProducts(products);
           setExpiringProductsCount(expiringCount);
+          setExpiringProducts(expiringProductsList.slice(0, 5)); // Primeros 5
         }
 
         setLoading(false);
@@ -459,6 +466,102 @@ export default function DashboardPage() {
           </CardContent>
         </Card>
       </div>
+
+      {/* Productos Próximos a Vencer - Alerta Destacada */}
+      {expiringProducts.length > 0 && (
+        <Card className="border-2 border-red-300 bg-gradient-to-r from-red-50 via-orange-50 to-yellow-50 shadow-lg">
+          <CardHeader className="pb-3 bg-gradient-to-r from-red-100 to-orange-100 border-b-2 border-red-200">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="p-2 bg-red-600 rounded-lg animate-pulse">
+                  <AlertTriangle className="h-6 w-6 text-white" />
+                </div>
+                <div>
+                  <CardTitle className="text-lg md:text-xl font-bold text-red-900">
+                    ⚠️ Productos Próximos a Vencer
+                  </CardTitle>
+                  <p className="text-sm text-red-700 mt-1">
+                    {expiringProducts.length} productos vencen en los próximos 30 días
+                  </p>
+                </div>
+              </div>
+              <Link href="/dashboard/offers">
+                <Button variant="destructive" size="sm" className="hidden md:flex">
+                  Ver Ofertas
+                </Button>
+              </Link>
+            </div>
+          </CardHeader>
+          <CardContent className="pt-4">
+            <div className="space-y-3">
+              {expiringProducts.map(product => {
+                const daysToExpire = differenceInDays(
+                  new Date(product.expiration_date!),
+                  new Date()
+                );
+
+                // Determinar color según días restantes
+                let bgColor = 'bg-yellow-50 border-yellow-300';
+                let textColor = 'text-yellow-900';
+                let badgeColor = 'bg-yellow-600';
+
+                if (daysToExpire <= 7) {
+                  bgColor = 'bg-red-50 border-red-300';
+                  textColor = 'text-red-900';
+                  badgeColor = 'bg-red-600';
+                } else if (daysToExpire <= 15) {
+                  bgColor = 'bg-orange-50 border-orange-300';
+                  textColor = 'text-orange-900';
+                  badgeColor = 'bg-orange-600';
+                }
+
+                return (
+                  <div
+                    key={product.id}
+                    className={`flex flex-col md:flex-row md:items-center justify-between p-4 border-2 rounded-lg ${bgColor} hover:shadow-md transition-all`}
+                  >
+                    <div className="flex-1 mb-2 md:mb-0">
+                      <div className="flex items-center gap-2 mb-1">
+                        <h3 className={`font-bold ${textColor}`}>{product.name}</h3>
+                        <span className={`px-2 py-1 ${badgeColor} text-white text-xs font-bold rounded-full`}>
+                          {daysToExpire} {daysToExpire === 1 ? 'día' : 'días'}
+                        </span>
+                      </div>
+                      <div className="flex flex-wrap gap-3 text-sm text-gray-700">
+                        <span>📦 Stock: <strong>{product.stock}</strong> unidades</span>
+                        <span>💰 Precio: <strong>{formatCurrency(product.sale_price)}</strong></span>
+                        <span>📅 Vence: <strong>{new Date(product.expiration_date!).toLocaleDateString('es-CO')}</strong></span>
+                      </div>
+                    </div>
+                    <div className="flex gap-2 md:ml-4">
+                      <Link href="/dashboard/offers">
+                        <Button size="sm" variant="outline" className="text-xs">
+                          Crear Oferta
+                        </Button>
+                      </Link>
+                      <Link href={`/dashboard/products/${product.id}`}>
+                        <Button size="sm" variant="default" className="text-xs">
+                          Ver Producto
+                        </Button>
+                      </Link>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+
+            {expiringProductsCount > 5 && (
+              <div className="mt-4 text-center">
+                <Link href="/dashboard/offers">
+                  <Button variant="destructive" className="w-full md:w-auto">
+                    Ver todos los {expiringProductsCount} productos próximos a vencer →
+                  </Button>
+                </Link>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      )}
 
       {/* Alertas y acciones rápidas */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-3 md:gap-4">

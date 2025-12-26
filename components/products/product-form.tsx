@@ -79,10 +79,7 @@ export function ProductForm({ initialData, productId }: ProductFormProps) {
     formState: { errors },
   } = useForm<ProductFormData>({
     resolver: zodResolver(productSchema),
-    defaultValues: initialData || {
-      stock: 0,
-      min_stock: 10,
-    },
+    defaultValues: initialData || {},
   });
 
   // Obtener la ref del register de react-hook-form
@@ -558,7 +555,10 @@ export function ProductForm({ initialData, productId }: ProductFormProps) {
                 id="cost_price"
                 type="number"
                 step="0.01"
-                {...register("cost_price", { valueAsNumber: true })}
+                {...register("cost_price", {
+                  valueAsNumber: true,
+                  setValueAs: (value) => value === "" ? 0 : Number(value)
+                })}
                 placeholder="0.00"
               />
               {errors.cost_price && (
@@ -574,7 +574,10 @@ export function ProductForm({ initialData, productId }: ProductFormProps) {
                 id="sale_price"
                 type="number"
                 step="0.01"
-                {...register("sale_price", { valueAsNumber: true })}
+                {...register("sale_price", {
+                  valueAsNumber: true,
+                  setValueAs: (value) => value === "" ? 0 : Number(value)
+                })}
                 placeholder="0.00"
               />
               {errors.sale_price && (
@@ -591,7 +594,10 @@ export function ProductForm({ initialData, productId }: ProductFormProps) {
               <Input
                 id="stock"
                 type="number"
-                {...register("stock", { valueAsNumber: true })}
+                {...register("stock", {
+                  valueAsNumber: true,
+                  setValueAs: (value) => value === "" ? 0 : Number(value)
+                })}
                 placeholder="0"
               />
               {errors.stock && (
@@ -604,7 +610,10 @@ export function ProductForm({ initialData, productId }: ProductFormProps) {
               <Input
                 id="min_stock"
                 type="number"
-                {...register("min_stock", { valueAsNumber: true })}
+                {...register("min_stock", {
+                  valueAsNumber: true,
+                  setValueAs: (value) => value === "" ? 10 : Number(value)
+                })}
                 placeholder="10"
               />
               {errors.min_stock && (
