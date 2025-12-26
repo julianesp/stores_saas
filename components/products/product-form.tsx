@@ -71,7 +71,6 @@ export function ProductForm({ initialData, productId }: ProductFormProps) {
   const scannerRef = useRef<Html5Qrcode | null>(null);
   const hasScannedRef = useRef(false); // Flag para evitar múltiples escaneos
   const scannerElementId = "barcode-scanner";
-  const barcodeInputRef = useRef<HTMLInputElement>(null);
 
   const {
     register,
@@ -85,6 +84,22 @@ export function ProductForm({ initialData, productId }: ProductFormProps) {
       min_stock: 10,
     },
   });
+
+  // Obtener la ref del register de react-hook-form
+  const { ref: barcodeRegisterRef, ...barcodeRegisterRest } = register("barcode", {
+    setValueAs: (value) => value?.trim() || undefined,
+  });
+
+  // Ref personalizada para el input de código de barras
+  const barcodeInputRef = useRef<HTMLInputElement>(null);
+
+  // Combinar las refs (una del register y otra personalizada)
+  const setBarcodeRef = (element: HTMLInputElement | null) => {
+    barcodeRegisterRef(element);
+    if (barcodeInputRef) {
+      (barcodeInputRef as React.MutableRefObject<HTMLInputElement | null>).current = element;
+    }
+  };
 
   const startScanner = async () => {
     try {
@@ -249,14 +264,12 @@ export function ProductForm({ initialData, productId }: ProductFormProps) {
   const onSubmit = async (data: ProductFormData) => {
     setLoading(true);
     try {
-      // COMENTADO: Funcionalidad de imágenes deshabilitada
-      // const productData: any = {
-      //   ...data,
-      //   images: productImages,
-      // };
       const productData: any = {
         ...data,
       };
+
+      // Log para debugging - verificar que el código de barras esté presente
+      console.log('📦 Datos del producto antes de limpiar:', productData);
 
       // Limpiar campos vacíos para evitar errores en la base de datos
       // Convertir strings vacíos a undefined
@@ -275,6 +288,9 @@ export function ProductForm({ initialData, productId }: ProductFormProps) {
       if (productData.expiration_date === "") {
         productData.expiration_date = undefined;
       }
+
+      // Log después de limpiar
+      console.log('✅ Datos del producto a enviar:', productData);
 
       if (productId) {
         await updateProduct(productId, productData, getToken);
@@ -311,10 +327,8 @@ export function ProductForm({ initialData, productId }: ProductFormProps) {
                 <div className="relative flex-1">
                   <Input
                     id="barcode"
-                    {...register("barcode", {
-                      setValueAs: (value) => value?.trim() || undefined,
-                    })}
-                    ref={barcodeInputRef}
+                    {...barcodeRegisterRest}
+                    ref={setBarcodeRef}
                     placeholder="Escanea o escribe el código"
                     className="pr-10"
                     autoFocus={!productId}
