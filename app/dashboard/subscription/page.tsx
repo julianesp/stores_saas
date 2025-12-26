@@ -87,11 +87,17 @@ export default function SubscriptionPage() {
         });
       }
 
-      // Configurar y abrir el checkout de ePayco
+      // Configurar y abrir el checkout de ePayco con sessionParams v2
+      const isProduction = process.env.NEXT_PUBLIC_EPAYCO_ENV === "production";
+
       const checkout = (window as any).ePayco.checkout.configure({
         sessionId: data.sessionId,
         type: "onpage",
-        test: process.env.NEXT_PUBLIC_EPAYCO_ENV !== "production",
+        test: !isProduction,
+        sessionParams: {
+          mode: isProduction ? 'production' : 'sandbox',
+          version: 'v2'
+        }
       });
 
       checkout.onCreated(() => {
