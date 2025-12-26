@@ -192,47 +192,52 @@ export async function createEPaycoCheckout(
 
     // Paso 2: Crear sesión de checkout
     console.log('📝 Creando sesión de checkout...');
+
+    const sessionPayload = {
+      // Información básica de la transacción
+      checkout_version: "2",
+      name: `Suscripción ${plan.name} - Tienda POS`,
+      description: `Suscripción ${plan.name}`,
+      currency: "COP",
+      amount: plan.price,
+      external_id: referenceCode,
+
+      // Configuración regional
+      lang: "ES",
+      country: "CO",
+
+      // URLs de confirmación y respuesta
+      confirmation: confirmationUrl,
+      response: responseUrl,
+      method: "POST", // Método de confirmación
+
+      // Información del comprador para autocompletar formularios
+      billing: {
+        email: userEmail,
+        name: userName,
+        ...(userPhone && {
+          callingCode: "+57",
+          mobilePhone: userPhone,
+        }),
+      },
+
+      // Información adicional
+      extras: {
+        extra1: userProfileId,
+        extra2: planId,
+        extra3: plan.isAddon ? 'true' : 'false',
+      },
+    };
+
+    console.log('📤 Request payload:', JSON.stringify(sessionPayload, null, 2));
+
     const sessionResponse = await fetch('https://apify.epayco.co/payment/session/create', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
         'Authorization': `Bearer ${apifyToken}`,
       },
-      body: JSON.stringify({
-        // Información básica de la transacción
-        checkout_version: "2",
-        name: `Suscripción ${plan.name} - Tienda POS`,
-        description: `Suscripción ${plan.name}`,
-        currency: "COP",
-        amount: plan.price,
-        external_id: referenceCode,
-
-        // Configuración regional
-        lang: "ES",
-        country: "CO",
-
-        // URLs de confirmación y respuesta
-        confirmation: confirmationUrl,
-        response: responseUrl,
-        method: "POST", // Método de confirmación
-
-        // Información del comprador para autocompletar formularios
-        billing: {
-          email: userEmail,
-          name: userName,
-          ...(userPhone && {
-            callingCode: "+57",
-            mobilePhone: userPhone,
-          }),
-        },
-
-        // Información adicional
-        extras: {
-          extra1: userProfileId,
-          extra2: planId,
-          extra3: plan.isAddon ? 'true' : 'false',
-        },
-      }),
+      body: JSON.stringify(sessionPayload),
     });
 
     console.log('🔍 Session Response Status:', sessionResponse.status);
@@ -245,14 +250,18 @@ export async function createEPaycoCheckout(
     }
 
     const sessionData = await sessionResponse.json();
-    console.log('🔍 Session Data:', JSON.stringify(sessionData, null, 2));
+    console.log('🔍 Session Data completo:', JSON.stringify(sessionData, null, 2));
+    console.log('🔍 Session Data keys:', Object.keys(sessionData));
+    console.log('🔍 Session Data.data:', sessionData.data);
+    console.log('🔍 Session Data.data keys:', sessionData.data ? Object.keys(sessionData.data) : 'N/A');
 
-    const sessionId = sessionData.sessionId || sessionData.data?.sessionId;
+    const sessionId = sessionData.sessionId || sessionData.data?.sessionId || sessionData.data?.session_id;
 
     if (!sessionId) {
       console.error('❌ No se recibió sessionId');
-      console.error('❌ Respuesta completa:', sessionData);
-      throw new Error('No se recibió sessionId de ePayco');
+      console.error('❌ Respuesta completa:', JSON.stringify(sessionData, null, 2));
+      console.error('❌ Intenté buscar en: sessionData.sessionId, sessionData.data.sessionId, sessionData.data.session_id');
+      throw new Error(`No se recibió sessionId de ePayco. Respuesta: ${JSON.stringify(sessionData)}`);
     }
 
     console.log('✓ Sesión de checkout creada:', sessionId);
