@@ -194,38 +194,37 @@ export async function createEPaycoCheckout(
     console.log('📝 Creando sesión de checkout...');
 
     const sessionPayload = {
-      // Información básica de la transacción
-      CheckoutVersion: "2",
-      Name: `Suscripción ${plan.name} - Tienda POS`,
-      Description: `Suscripción ${plan.name}`,
-      Currency: "COP",
-      Amount: plan.price,
-      ExternalId: referenceCode,
+      // Información básica de la transacción (snake_case según documentación oficial)
+      checkout_version: "2",
+      name: `Suscripción ${plan.name} - Tienda POS`,
+      description: `Suscripción ${plan.name}`,
+      currency: "COP",
+      amount: plan.price,
 
       // Configuración regional
-      Lang: "ES",
-      Country: "CO",
+      lang: "ES",
+      country: "CO",
 
-      // URLs de confirmación y respuesta (PascalCase requerido por ePayco)
-      Confirmation: confirmationUrl,
-      Response: responseUrl,
-      MethodConfirmation: "POST", // Método de confirmación
+      // URLs de confirmación y respuesta
+      response: responseUrl,
+      confirmation: confirmationUrl,
+      method: "POST", // Método de confirmación
 
       // Información del comprador para autocompletar formularios
-      Billing: {
-        Email: userEmail,
-        Name: userName,
+      billing: {
+        email: userEmail,
+        name: userName,
         ...(userPhone && {
-          CallingCode: "+57",
-          MobilePhone: userPhone,
+          callingCode: "+57",
+          mobilePhone: userPhone,
         }),
       },
 
       // Información adicional
-      Extras: {
-        Extra1: userProfileId,
-        Extra2: planId,
-        Extra3: plan.isAddon ? 'true' : 'false',
+      extras: {
+        extra1: userProfileId,
+        extra2: planId,
+        extra3: plan.isAddon ? 'true' : 'false',
       },
     };
 
