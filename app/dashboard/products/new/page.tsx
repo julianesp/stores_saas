@@ -1,12 +1,12 @@
-'use client';
+"use client";
 
-import { Suspense } from 'react';
-import { useSearchParams } from 'next/navigation';
-import { ProductForm } from '@/components/products/product-form';
+import { Suspense } from "react";
+import { useSearchParams } from "next/navigation";
+import { ProductForm } from "@/components/products/product-form";
 
 function NewProductContent() {
   const searchParams = useSearchParams();
-  const supplierId = searchParams.get('supplier_id');
+  const supplierId = searchParams.get("supplier_id");
 
   return (
     <div className="space-y-6">
@@ -15,7 +15,9 @@ function NewProductContent() {
         <p className="text-gray-500">Crea un nuevo producto en el inventario</p>
       </div>
 
-      <ProductForm initialData={supplierId ? { supplier_id: supplierId } : undefined} />
+      <ProductForm
+        initialData={supplierId ? { supplier_id: supplierId } : undefined}
+      />
     </div>
   );
 }

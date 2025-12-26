@@ -1,32 +1,45 @@
-'use client';
+"use client";
 
-import { useState, useEffect, useRef } from 'react';
-import { useRouter } from 'next/navigation';
-import { useForm } from 'react-hook-form';
-import { zodResolver } from '@hookform/resolvers/zod';
-import * as z from 'zod';
-import { useAuth } from '@clerk/nextjs';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { getCategories, getSuppliers, createProduct, updateProduct, createCategory, createSupplier } from '@/lib/cloudflare-api';
-import { Category, Supplier } from '@/lib/types';
-import { toast } from 'sonner';
-import { Scan, Camera, X, Plus } from 'lucide-react';
+import { useState, useEffect, useRef } from "react";
+import { useRouter } from "next/navigation";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import * as z from "zod";
+import { useAuth } from "@clerk/nextjs";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  getCategories,
+  getSuppliers,
+  createProduct,
+  updateProduct,
+  createCategory,
+  createSupplier,
+} from "@/lib/cloudflare-api";
+import { Category, Supplier } from "@/lib/types";
+import { toast } from "sonner";
+import { Scan, Camera, X, Plus } from "lucide-react";
 // import { ImageUploader } from './image-uploader'; // COMENTADO: Funcionalidad de imágenes deshabilitada
-import { Html5Qrcode } from 'html5-qrcode';
+import { Html5Qrcode } from "html5-qrcode";
 
 const productSchema = z.object({
   barcode: z.string().optional(),
-  name: z.string().min(1, 'El nombre es requerido'),
+  name: z.string().min(1, "El nombre es requerido"),
   description: z.string().optional(),
   category_id: z.string().optional(),
   supplier_id: z.string().optional(),
-  cost_price: z.number().min(0, 'El precio de compra debe ser mayor a 0'),
-  sale_price: z.number().min(0, 'El precio de venta debe ser mayor a 0'),
-  stock: z.number().int().min(0, 'La cantidad disponible debe ser mayor o igual a 0'),
-  min_stock: z.number().int().min(0, 'El mínimo disponible debe ser mayor o igual a 0'),
+  cost_price: z.number().min(0, "El precio de compra debe ser mayor a 0"),
+  sale_price: z.number().min(0, "El precio de venta debe ser mayor a 0"),
+  stock: z
+    .number()
+    .int()
+    .min(0, "La cantidad disponible debe ser mayor o igual a 0"),
+  min_stock: z
+    .number()
+    .int()
+    .min(0, "El mínimo disponible debe ser mayor o igual a 0"),
   expiration_date: z.string().optional(),
 });
 
@@ -45,18 +58,20 @@ export function ProductForm({ initialData, productId }: ProductFormProps) {
   const [suppliers, setSuppliers] = useState<Supplier[]>([]);
   // const [productImages, setProductImages] = useState<string[]>(initialData?.images || []); // COMENTADO: Funcionalidad de imágenes deshabilitada
   const [showScanner, setShowScanner] = useState(false);
+  const [showScannerOptions, setShowScannerOptions] = useState(false); // Modal con opciones de escaneo
   const [showNewCategory, setShowNewCategory] = useState(false);
   const [showNewSupplier, setShowNewSupplier] = useState(false);
-  const [newCategoryName, setNewCategoryName] = useState('');
+  const [newCategoryName, setNewCategoryName] = useState("");
   const [newSupplierData, setNewSupplierData] = useState({
-    name: '',
-    phone: '',
-    email: '',
+    name: "",
+    phone: "",
+    email: "",
   });
   const [isScanning, setIsScanning] = useState(false);
   const scannerRef = useRef<Html5Qrcode | null>(null);
   const hasScannedRef = useRef(false); // Flag para evitar múltiples escaneos
-  const scannerElementId = 'barcode-scanner';
+  const scannerElementId = "barcode-scanner";
+  const barcodeInputRef = useRef<HTMLInputElement>(null);
 
   const {
     register,
@@ -87,12 +102,12 @@ export function ProductForm({ initialData, productId }: ProductFormProps) {
         disableFlip: false, // Permitir flip para mejor detección
         // Formatos soportados (códigos de barras comunes)
         formatsToSupport: [
-          0,  // QR_CODE
-          5,  // EAN_13 (más común en productos)
-          6,  // EAN_8
-          7,  // UPC_A
-          8,  // UPC_E
-          9,  // CODE_39
+          0, // QR_CODE
+          5, // EAN_13 (más común en productos)
+          6, // EAN_8
+          7, // UPC_A
+          8, // UPC_E
+          9, // CODE_39
           10, // CODE_93
           11, // CODE_128
           12, // ITF (Interleaved 2 of 5)
@@ -100,15 +115,15 @@ export function ProductForm({ initialData, productId }: ProductFormProps) {
       };
 
       await scannerRef.current.start(
-        { facingMode: 'environment' },
+        { facingMode: "environment" },
         config,
         (decodedText) => {
           // Código escaneado exitosamente
           // Evitar procesar múltiples veces el mismo escaneo
           if (!hasScannedRef.current) {
             hasScannedRef.current = true;
-            setValue('barcode', decodedText);
-            toast.success('✓ Código escaneado: ' + decodedText);
+            setValue("barcode", decodedText);
+            toast.success("✓ Código escaneado: " + decodedText);
             stopScanner();
           }
         },
@@ -118,8 +133,8 @@ export function ProductForm({ initialData, productId }: ProductFormProps) {
         }
       );
     } catch (err) {
-      console.error('Error starting scanner:', err);
-      toast.error('No se pudo iniciar la cámara. Verifica los permisos.');
+      console.error("Error starting scanner:", err);
+      toast.error("No se pudo iniciar la cámara. Verifica los permisos.");
       setIsScanning(false);
     }
   };
@@ -131,7 +146,7 @@ export function ProductForm({ initialData, productId }: ProductFormProps) {
         scannerRef.current.clear();
       }
     } catch (err) {
-      console.error('Error stopping scanner:', err);
+      console.error("Error stopping scanner:", err);
     } finally {
       setIsScanning(false);
       setShowScanner(false);
@@ -162,48 +177,51 @@ export function ProductForm({ initialData, productId }: ProductFormProps) {
 
   const fetchCategories = async () => {
     try {
-      const data = await getCategories(getToken) as Category[];
+      const data = (await getCategories(getToken)) as Category[];
       // Ordenar por nombre manualmente
       data.sort((a, b) => a.name.localeCompare(b.name));
       setCategories(data);
     } catch (error) {
-      console.error('Error fetching categories:', error);
+      console.error("Error fetching categories:", error);
     }
   };
 
   const fetchSuppliers = async () => {
     try {
-      const data = await getSuppliers(getToken) as Supplier[];
+      const data = (await getSuppliers(getToken)) as Supplier[];
       data.sort((a, b) => a.name.localeCompare(b.name));
       setSuppliers(data);
     } catch (error) {
-      console.error('Error fetching suppliers:', error);
-      toast.error('Error al cargar proveedores');
+      console.error("Error fetching suppliers:", error);
+      toast.error("Error al cargar proveedores");
     }
   };
 
   const handleCreateCategory = async () => {
     if (!newCategoryName.trim()) {
-      toast.error('El nombre de la categoría es requerido');
+      toast.error("El nombre de la categoría es requerido");
       return;
     }
 
     try {
-      const newCategory = await createCategory({ name: newCategoryName.trim() }, getToken) as Category;
-      toast.success('Categoría creada correctamente');
+      const newCategory = (await createCategory(
+        { name: newCategoryName.trim() },
+        getToken
+      )) as Category;
+      toast.success("Categoría creada correctamente");
       await fetchCategories();
-      setValue('category_id', newCategory.id);
-      setNewCategoryName('');
+      setValue("category_id", newCategory.id);
+      setNewCategoryName("");
       setShowNewCategory(false);
     } catch (error) {
-      console.error('Error creating category:', error);
-      toast.error('Error al crear la categoría');
+      console.error("Error creating category:", error);
+      toast.error("Error al crear la categoría");
     }
   };
 
   const handleCreateSupplier = async () => {
     if (!newSupplierData.name.trim()) {
-      toast.error('El nombre del proveedor es requerido');
+      toast.error("El nombre del proveedor es requerido");
       return;
     }
 
@@ -213,15 +231,18 @@ export function ProductForm({ initialData, productId }: ProductFormProps) {
         phone: newSupplierData.phone.trim() || undefined,
         email: newSupplierData.email.trim() || undefined,
       };
-      const newSupplier = await createSupplier(supplierData, getToken) as Supplier;
-      toast.success('Proveedor creado correctamente');
+      const newSupplier = (await createSupplier(
+        supplierData,
+        getToken
+      )) as Supplier;
+      toast.success("Proveedor creado correctamente");
       await fetchSuppliers();
-      setValue('supplier_id', newSupplier.id);
-      setNewSupplierData({ name: '', phone: '', email: '' });
+      setValue("supplier_id", newSupplier.id);
+      setNewSupplierData({ name: "", phone: "", email: "" });
       setShowNewSupplier(false);
     } catch (error) {
-      console.error('Error creating supplier:', error);
-      toast.error('Error al crear el proveedor');
+      console.error("Error creating supplier:", error);
+      toast.error("Error al crear el proveedor");
     }
   };
 
@@ -239,35 +260,35 @@ export function ProductForm({ initialData, productId }: ProductFormProps) {
 
       // Limpiar campos vacíos para evitar errores en la base de datos
       // Convertir strings vacíos a undefined
-      if (productData.category_id === '') {
+      if (productData.category_id === "") {
         productData.category_id = undefined;
       }
-      if (productData.supplier_id === '') {
+      if (productData.supplier_id === "") {
         productData.supplier_id = undefined;
       }
-      if (productData.barcode === '') {
+      if (productData.barcode === "") {
         productData.barcode = undefined;
       }
-      if (productData.description === '') {
+      if (productData.description === "") {
         productData.description = undefined;
       }
-      if (productData.expiration_date === '') {
+      if (productData.expiration_date === "") {
         productData.expiration_date = undefined;
       }
 
       if (productId) {
         await updateProduct(productId, productData, getToken);
-        toast.success('Producto actualizado correctamente');
+        toast.success("Producto actualizado correctamente");
       } else {
         await createProduct(productData, getToken);
-        toast.success('Producto creado correctamente');
+        toast.success("Producto creado correctamente");
       }
 
-      router.push('/dashboard/products');
+      router.push("/dashboard/products");
       router.refresh();
     } catch (error: any) {
-      console.error('Error saving product:', error);
-      toast.error(error.message || 'Error al guardar producto');
+      console.error("Error saving product:", error);
+      toast.error(error.message || "Error al guardar producto");
     } finally {
       setLoading(false);
     }
@@ -290,29 +311,30 @@ export function ProductForm({ initialData, productId }: ProductFormProps) {
                 <div className="relative flex-1">
                   <Input
                     id="barcode"
-                    {...register('barcode', {
+                    {...register("barcode", {
                       setValueAs: (value) => value?.trim() || undefined,
                     })}
+                    ref={barcodeInputRef}
                     placeholder="Escanea o escribe el código"
                     className="pr-10"
                     autoFocus={!productId}
                   />
-                  <div className="absolute right-2 top-1/2 transform -translate-y-1/2 pointer-events-none">
+                  {/* <div className="absolute right-2 top-1/2 transform -translate-y-1/2 pointer-events-none">
                     <Scan className="h-5 w-5 text-blue-600" />
-                  </div>
+                  </div> */}
                 </div>
                 <Button
                   type="button"
-                  onClick={handleOpenScanner}
+                  onClick={() => setShowScannerOptions(true)}
                   className="shrink-0 bg-blue-600 hover:bg-blue-700"
                   size="default"
                 >
-                  <Camera className="h-5 w-5 md:mr-2" />
+                  <Scan className="h-5 w-5 md:mr-2" />
                   <span className="hidden md:inline">Escanear</span>
                 </Button>
               </div>
               <p className="text-xs text-gray-500">
-                Toca el botón de la cámara para escanear con tu móvil
+                Usa el lector USB o la cámara para escanear
               </p>
               {errors.barcode && (
                 <p className="text-sm text-red-600">{errors.barcode.message}</p>
@@ -323,7 +345,7 @@ export function ProductForm({ initialData, productId }: ProductFormProps) {
               <Label htmlFor="name">Nombre *</Label>
               <Input
                 id="name"
-                {...register('name')}
+                {...register("name")}
                 placeholder="Nombre del producto"
               />
               {errors.name && (
@@ -336,7 +358,7 @@ export function ProductForm({ initialData, productId }: ProductFormProps) {
             <Label htmlFor="description">Descripción</Label>
             <textarea
               id="description"
-              {...register('description')}
+              {...register("description")}
               className="w-full min-h-[100px] rounded-md border border-gray-300 px-3 py-2 text-sm"
               placeholder="Descripción del producto..."
             />
@@ -350,7 +372,7 @@ export function ProductForm({ initialData, productId }: ProductFormProps) {
                 <div className="flex gap-2">
                   <select
                     id="category_id"
-                    {...register('category_id')}
+                    {...register("category_id")}
                     className="flex-1 h-9 rounded-md border border-gray-300 px-3 text-sm"
                   >
                     <option value="">Seleccionar categoría</option>
@@ -374,12 +396,14 @@ export function ProductForm({ initialData, productId }: ProductFormProps) {
               ) : (
                 <div className="space-y-2 p-3 bg-blue-50 border border-blue-200 rounded-lg">
                   <div className="flex items-center justify-between mb-2">
-                    <span className="text-sm font-medium text-blue-900">Nueva Categoría</span>
+                    <span className="text-sm font-medium text-blue-900">
+                      Nueva Categoría
+                    </span>
                     <Button
                       type="button"
                       onClick={() => {
                         setShowNewCategory(false);
-                        setNewCategoryName('');
+                        setNewCategoryName("");
                       }}
                       variant="ghost"
                       size="sm"
@@ -393,7 +417,7 @@ export function ProductForm({ initialData, productId }: ProductFormProps) {
                     value={newCategoryName}
                     onChange={(e) => setNewCategoryName(e.target.value)}
                     onKeyDown={(e) => {
-                      if (e.key === 'Enter') {
+                      if (e.key === "Enter") {
                         e.preventDefault();
                         handleCreateCategory();
                       }
@@ -419,7 +443,7 @@ export function ProductForm({ initialData, productId }: ProductFormProps) {
                 <div className="flex gap-2">
                   <select
                     id="supplier_id"
-                    {...register('supplier_id')}
+                    {...register("supplier_id")}
                     className="flex-1 h-9 rounded-md border border-gray-300 px-3 text-sm"
                   >
                     <option value="">Seleccionar proveedor</option>
@@ -443,12 +467,14 @@ export function ProductForm({ initialData, productId }: ProductFormProps) {
               ) : (
                 <div className="space-y-2 p-3 bg-green-50 border border-green-200 rounded-lg">
                   <div className="flex items-center justify-between mb-2">
-                    <span className="text-sm font-medium text-green-900">Nuevo Proveedor</span>
+                    <span className="text-sm font-medium text-green-900">
+                      Nuevo Proveedor
+                    </span>
                     <Button
                       type="button"
                       onClick={() => {
                         setShowNewSupplier(false);
-                        setNewSupplierData({ name: '', phone: '', email: '' });
+                        setNewSupplierData({ name: "", phone: "", email: "" });
                       }}
                       variant="ghost"
                       size="sm"
@@ -460,20 +486,35 @@ export function ProductForm({ initialData, productId }: ProductFormProps) {
                   <Input
                     placeholder="Nombre del proveedor *"
                     value={newSupplierData.name}
-                    onChange={(e) => setNewSupplierData({ ...newSupplierData, name: e.target.value })}
+                    onChange={(e) =>
+                      setNewSupplierData({
+                        ...newSupplierData,
+                        name: e.target.value,
+                      })
+                    }
                     className="h-8"
                   />
                   <Input
                     placeholder="Teléfono"
                     value={newSupplierData.phone}
-                    onChange={(e) => setNewSupplierData({ ...newSupplierData, phone: e.target.value })}
+                    onChange={(e) =>
+                      setNewSupplierData({
+                        ...newSupplierData,
+                        phone: e.target.value,
+                      })
+                    }
                     className="h-8"
                   />
                   <Input
                     placeholder="Email"
                     type="email"
                     value={newSupplierData.email}
-                    onChange={(e) => setNewSupplierData({ ...newSupplierData, email: e.target.value })}
+                    onChange={(e) =>
+                      setNewSupplierData({
+                        ...newSupplierData,
+                        email: e.target.value,
+                      })
+                    }
                     className="h-8"
                   />
                   <Button
@@ -503,11 +544,13 @@ export function ProductForm({ initialData, productId }: ProductFormProps) {
                 id="cost_price"
                 type="number"
                 step="0.01"
-                {...register('cost_price', { valueAsNumber: true })}
+                {...register("cost_price", { valueAsNumber: true })}
                 placeholder="0.00"
               />
               {errors.cost_price && (
-                <p className="text-sm text-red-600">{errors.cost_price.message}</p>
+                <p className="text-sm text-red-600">
+                  {errors.cost_price.message}
+                </p>
               )}
             </div>
 
@@ -517,11 +560,13 @@ export function ProductForm({ initialData, productId }: ProductFormProps) {
                 id="sale_price"
                 type="number"
                 step="0.01"
-                {...register('sale_price', { valueAsNumber: true })}
+                {...register("sale_price", { valueAsNumber: true })}
                 placeholder="0.00"
               />
               {errors.sale_price && (
-                <p className="text-sm text-red-600">{errors.sale_price.message}</p>
+                <p className="text-sm text-red-600">
+                  {errors.sale_price.message}
+                </p>
               )}
             </div>
           </div>
@@ -532,7 +577,7 @@ export function ProductForm({ initialData, productId }: ProductFormProps) {
               <Input
                 id="stock"
                 type="number"
-                {...register('stock', { valueAsNumber: true })}
+                {...register("stock", { valueAsNumber: true })}
                 placeholder="0"
               />
               {errors.stock && (
@@ -545,11 +590,13 @@ export function ProductForm({ initialData, productId }: ProductFormProps) {
               <Input
                 id="min_stock"
                 type="number"
-                {...register('min_stock', { valueAsNumber: true })}
+                {...register("min_stock", { valueAsNumber: true })}
                 placeholder="10"
               />
               {errors.min_stock && (
-                <p className="text-sm text-red-600">{errors.min_stock.message}</p>
+                <p className="text-sm text-red-600">
+                  {errors.min_stock.message}
+                </p>
               )}
             </div>
           </div>
@@ -559,7 +606,7 @@ export function ProductForm({ initialData, productId }: ProductFormProps) {
             <Input
               id="expiration_date"
               type="date"
-              {...register('expiration_date')}
+              {...register("expiration_date")}
             />
           </div>
         </CardContent>
@@ -583,16 +630,85 @@ export function ProductForm({ initialData, productId }: ProductFormProps) {
 
       <div className="flex gap-4">
         <Button type="submit" disabled={loading}>
-          {loading ? 'Guardando...' : productId ? 'Actualizar' : 'Crear'} Producto
+          {loading ? "Guardando..." : productId ? "Actualizar" : "Crear"}{" "}
+          Producto
         </Button>
-        <Button
-          type="button"
-          variant="outline"
-          onClick={() => router.back()}
-        >
+        <Button type="button" variant="outline" onClick={() => router.back()}>
           Cancelar
         </Button>
       </div>
+
+      {/* Modal de Opciones de Escaneo */}
+      {showScannerOptions && (
+        <div className="fixed inset-0  bg-opacity-50 z-50 flex items-center justify-center p-4 backdrop-blur-xs">
+          <Card className="max-w-md w-full">
+            <CardHeader>
+              <div className="flex items-center justify-between">
+                <CardTitle className="flex items-center gap-2">
+                  <Scan className="h-5 w-5 text-blue-600" />
+                  Método de Escaneo
+                </CardTitle>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setShowScannerOptions(false)}
+                  className="h-8 w-8 p-0"
+                >
+                  <X className="h-4 w-4" />
+                </Button>
+              </div>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-3">
+                <p className="text-sm text-gray-600 mb-4">
+                  Selecciona cómo deseas escanear el código de barras:
+                </p>
+
+                {/* Botón Lector USB */}
+                <Button
+                  type="button"
+                  onClick={() => {
+                    setShowScannerOptions(false);
+                    // Enfocar el campo para que el lector USB pueda escribir
+                    setTimeout(() => {
+                      barcodeInputRef.current?.focus();
+                      barcodeInputRef.current?.select();
+                    }, 100);
+                  }}
+                  className="w-full h-20 bg-blue-600 hover:bg-blue-700 flex items-center justify-start gap-4 px-6"
+                >
+                  <Scan className="h-8 w-8" />
+                  <div className="text-left">
+                    <div className="font-semibold text-base">Lector USB</div>
+                    <div className="text-xs opacity-90">
+                      Usa tu lector de código de barras
+                    </div>
+                  </div>
+                </Button>
+
+                {/* Botón Cámara */}
+                <Button
+                  type="button"
+                  onClick={() => {
+                    setShowScannerOptions(false);
+                    handleOpenScanner();
+                  }}
+                  className="w-full h-20 bg-purple-600 hover:bg-purple-700 flex items-center justify-start gap-4 px-6"
+                >
+                  <Camera className="h-8 w-8" />
+                  <div className="text-left">
+                    <div className="font-semibold text-base">Cámara</div>
+                    <div className="text-xs opacity-90">
+                      Escanea con la cámara del dispositivo
+                    </div>
+                  </div>
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      )}
 
       {/* Modal del Escáner de Códigos de Barras - HTML5-QRCode (Optimizado) */}
       {showScanner && (
@@ -627,7 +743,7 @@ export function ProductForm({ initialData, productId }: ProductFormProps) {
               <div
                 id={scannerElementId}
                 className="w-full rounded-lg overflow-hidden"
-                style={{ minHeight: '300px' }}
+                style={{ minHeight: "300px" }}
               ></div>
 
               <div className="mt-4 flex items-center justify-between">
@@ -635,7 +751,9 @@ export function ProductForm({ initialData, productId }: ProductFormProps) {
                   {isScanning && (
                     <>
                       <div className="h-2 w-2 bg-green-500 rounded-full animate-pulse"></div>
-                      <span className="text-sm text-gray-600">Escaneando...</span>
+                      <span className="text-sm text-gray-600">
+                        Escaneando...
+                      </span>
                     </>
                   )}
                 </div>

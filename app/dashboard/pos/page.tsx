@@ -97,6 +97,7 @@ export default function POSPage() {
   });
   const [scanSuccess, setScanSuccess] = useState(false);
   const [showCameraScanner, setShowCameraScanner] = useState(false);
+  const [showBarcodeInput, setShowBarcodeInput] = useState(false); // Mostrar input para lector USB
   const [lastCameraScannedCode, setLastCameraScannedCode] =
     useState<string>("");
   const barcodeRef = useRef<HTMLInputElement>(null);
@@ -874,7 +875,7 @@ export default function POSPage() {
             }`}
           >
             <CardContent className="pt-6">
-              <form onSubmit={handleBarcodeSearch} className="space-y-3">
+              <div className="space-y-3">
                 <div className="flex items-center gap-3 mb-2">
                   <div
                     className={`p-2 rounded-lg transition-colors ${
@@ -892,73 +893,118 @@ export default function POSPage() {
                     <p className="text-xs text-gray-600">
                       {scanSuccess
                         ? "Escanea el siguiente producto"
-                        : "Escanea o escribe el código de barras"}
+                        : "Selecciona tu método de escaneo"}
                     </p>
                   </div>
                 </div>
-                {/* Input de código de barras */}
-                <div className="relative">
-                  <Input
-                    ref={barcodeRef}
-                    value={barcodeInput}
-                    onChange={(e) => setBarcodeInput(e.target.value)}
-                    placeholder="Escanea aquí el código de barras..."
-                    className={`h-12 md:h-14 text-xs md:text-sm font-mono tracking-wider border-2 focus:ring-2 pl-10 md:pl-12 transition-colors ${
-                      scanSuccess
-                        ? "border-green-300 focus:border-green-500 focus:ring-green-200"
-                        : "border-blue-300 focus:border-blue-500 focus:ring-blue-200"
-                    }`}
-                    autoComplete="off"
-                  />
-                  <div className="absolute left-3 top-1/2 transform -translate-y-1/2 pointer-events-none">
-                    <Scan
-                      className={`h-5 w-5 md:h-6 md:w-6 ${
-                        scanSuccess
-                          ? "text-green-600"
-                          : "text-blue-600 animate-pulse"
-                      }`}
-                    />
-                  </div>
-                </div>
 
-                {/* Botones de acción */}
-                <div className="flex gap-2 md:gap-2">
-                  <Button
-                    type="button"
-                    size="lg"
-                    onClick={() => setShowCameraScanner(true)}
-                    className="flex-1 h-11 md:h-14 bg-purple-600 hover:bg-purple-700 transition-colors"
-                    title="Escanear con cámara"
-                  >
-                    <Camera className="h-5 w-5 mr-2" />
-                    <span className="text-sm md:text-base">Cámara</span>
-                  </Button>
-                  <Button
-                    type="submit"
-                    size="lg"
-                    className={`flex-1 h-11 md:h-14 transition-colors ${
-                      scanSuccess
-                        ? "bg-green-600 hover:bg-green-700"
-                        : "bg-blue-600 hover:bg-blue-700"
-                    }`}
-                  >
-                    <Search className="h-5 w-5 mr-2" />
-                    <span className="text-sm md:text-base">Agregar</span>
-                  </Button>
-                </div>
-                <div className="flex items-center gap-2 text-xs text-gray-500">
-                  <div
-                    className={`h-1.5 w-1.5 rounded-full ${
-                      scanSuccess ? "bg-green-500 animate-ping" : "bg-green-500"
-                    }`}
-                  ></div>
-                  <span>
-                    {scanSuccess
-                      ? "Producto agregado al carrito"
-                      : "Listo para escanear - Presiona Enter o click en Agregar"}
-                  </span>
-                </div>
-              </form>
+                {/* Botones de selección de método de escaneo */}
+                {!showBarcodeInput && !showCameraScanner && (
+                  <div className="grid grid-cols-2 gap-3">
+                    <Button
+                      type="button"
+                      size="lg"
+                      onClick={() => {
+                        setShowBarcodeInput(true);
+                        // Auto-enfocar el input después de un pequeño delay
+                        setTimeout(() => barcodeRef.current?.focus(), 100);
+                      }}
+                      className="h-20 md:h-24 bg-blue-600 hover:bg-blue-700 transition-colors flex-col gap-2"
+                      title="Escanear con lector USB"
+                    >
+                      <Scan className="h-6 w-6 md:h-8 md:w-8" />
+                      <div className="text-center">
+                        <div className="text-sm md:text-base font-semibold">Lector USB</div>
+                        <div className="text-xs opacity-90">Conectado</div>
+                      </div>
+                    </Button>
+                    <Button
+                      type="button"
+                      size="lg"
+                      onClick={() => setShowCameraScanner(true)}
+                      className="h-20 md:h-24 bg-purple-600 hover:bg-purple-700 transition-colors flex-col gap-2"
+                      title="Escanear con cámara"
+                    >
+                      <Camera className="h-6 w-6 md:h-8 md:w-8" />
+                      <div className="text-center">
+                        <div className="text-sm md:text-base font-semibold">Cámara</div>
+                        <div className="text-xs opacity-90">Del dispositivo</div>
+                      </div>
+                    </Button>
+                  </div>
+                )}
+
+                {/* Formulario de escaneo con lector USB */}
+                {showBarcodeInput && (
+                  <form onSubmit={handleBarcodeSearch} className="space-y-3">
+                    {/* Input de código de barras */}
+                    <div className="relative">
+                      <Input
+                        ref={barcodeRef}
+                        value={barcodeInput}
+                        onChange={(e) => setBarcodeInput(e.target.value)}
+                        placeholder="Escanea aquí el código de barras..."
+                        className={`h-12 md:h-14 text-xs md:text-sm font-mono tracking-wider border-2 focus:ring-2 pl-10 md:pl-12 transition-colors ${
+                          scanSuccess
+                            ? "border-green-300 focus:border-green-500 focus:ring-green-200"
+                            : "border-blue-300 focus:border-blue-500 focus:ring-blue-200"
+                        }`}
+                        autoComplete="off"
+                      />
+                      <div className="absolute left-3 top-1/2 transform -translate-y-1/2 pointer-events-none">
+                        <Scan
+                          className={`h-5 w-5 md:h-6 md:w-6 ${
+                            scanSuccess
+                              ? "text-green-600"
+                              : "text-blue-600 animate-pulse"
+                          }`}
+                        />
+                      </div>
+                    </div>
+
+                    {/* Botones de acción */}
+                    <div className="flex gap-2">
+                      <Button
+                        type="button"
+                        size="lg"
+                        variant="outline"
+                        onClick={() => {
+                          setShowBarcodeInput(false);
+                          setBarcodeInput("");
+                        }}
+                        className="flex-1 h-11 md:h-14"
+                      >
+                        <X className="h-5 w-5 mr-2" />
+                        <span className="text-sm md:text-base">Cancelar</span>
+                      </Button>
+                      <Button
+                        type="submit"
+                        size="lg"
+                        className={`flex-1 h-11 md:h-14 transition-colors ${
+                          scanSuccess
+                            ? "bg-green-600 hover:bg-green-700"
+                            : "bg-blue-600 hover:bg-blue-700"
+                        }`}
+                      >
+                        <Search className="h-5 w-5 mr-2" />
+                        <span className="text-sm md:text-base">Agregar</span>
+                      </Button>
+                    </div>
+                    <div className="flex items-center gap-2 text-xs text-gray-500">
+                      <div
+                        className={`h-1.5 w-1.5 rounded-full ${
+                          scanSuccess ? "bg-green-500 animate-ping" : "bg-green-500"
+                        }`}
+                      ></div>
+                      <span>
+                        {scanSuccess
+                          ? "Producto agregado al carrito"
+                          : "Listo para escanear - Presiona Enter o click en Agregar"}
+                      </span>
+                    </div>
+                  </form>
+                )}
+              </div>
             </CardContent>
           </Card>
 
