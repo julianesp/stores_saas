@@ -1,4 +1,4 @@
-import { GetTokenFn, getProducts, getSales, getCustomers } from './cloudflare-api';
+import { GetTokenFn, getProducts, getSales, getCustomers, Product } from './cloudflare-api';
 
 export interface DashboardMetrics {
   dailySales: number;
@@ -209,5 +209,32 @@ export async function getExpiringProducts(getToken: GetTokenFn): Promise<number>
   } catch (error) {
     console.error('Error getting expiring products:', error);
     return 0;
+  }
+}
+
+/**
+ * Obtiene la lista de productos próximos a vencer (30 días)
+ */
+export async function getExpiringProductsList(getToken: GetTokenFn): Promise<Product[]> {
+  try {
+    const allProducts = await getProducts(getToken);
+    const now = new Date();
+    const thirtyDaysFromNow = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000);
+
+    const expiringProducts = allProducts.filter(p => {
+      if (!p.expiration_date) return false;
+      const expirationDate = new Date(p.expiration_date);
+      return expirationDate > now && expirationDate <= thirtyDaysFromNow;
+    });
+
+    // Ordenar por fecha de vencimiento (más próximos primero)
+    return expiringProducts.sort((a, b) => {
+      const dateA = new Date(a.expiration_date!);
+      const dateB = new Date(b.expiration_date!);
+      return dateA.getTime() - dateB.getTime();
+    });
+  } catch (error) {
+    console.error('Error getting expiring products list:', error);
+    return [];
   }
 }
