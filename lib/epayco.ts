@@ -261,7 +261,10 @@ export async function createEPaycoCheckout(
       console.error('❌ No se recibió sessionId');
       console.error('❌ Respuesta completa:', JSON.stringify(sessionData, null, 2));
       console.error('❌ Intenté buscar en: sessionData.sessionId, sessionData.data.sessionId, sessionData.data.session_id');
-      throw new Error(`No se recibió sessionId de ePayco. Respuesta: ${JSON.stringify(sessionData)}`);
+
+      // Si ePayco devolvió un error, incluirlo en el mensaje
+      const errorDetail = sessionData.textResponse || sessionData.message || sessionData.error || 'Sin detalles';
+      throw new Error(`No se recibió sessionId de ePayco. Error: ${errorDetail}. Respuesta completa: ${JSON.stringify(sessionData)}`);
     }
 
     console.log('✓ Sesión de checkout creada:', sessionId);
