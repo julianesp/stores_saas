@@ -136,12 +136,19 @@ export async function createEPaycoCheckout(
 
   try {
     // Paso 1: Autenticar con Apify y obtener token
-    const publicKey = EPAYCO_CONFIG.publicKey; // La PUBLIC_KEY para Apify
-    const privateKey = EPAYCO_CONFIG.privateKey; // La PRIVATE_KEY
+    // Limpiar las keys de cualquier salto de línea o espacios
+    const publicKey = EPAYCO_CONFIG.publicKey?.trim().replace(/\n/g, ''); // La PUBLIC_KEY para Apify
+    const privateKey = EPAYCO_CONFIG.privateKey?.trim().replace(/\n/g, ''); // La PRIVATE_KEY
 
     console.log('🔐 Iniciando autenticación con ePayco Apify...');
     console.log('🔍 Debug - Public Key exists:', !!publicKey);
     console.log('🔍 Debug - Private Key exists:', !!privateKey);
+    console.log('🔍 Debug - Public Key value:', publicKey);
+    console.log('🔍 Debug - Private Key value:', privateKey);
+    console.log('🔍 Debug - Public Key length:', publicKey?.length);
+    console.log('🔍 Debug - Private Key length:', privateKey?.length);
+    console.log('🔍 Debug - Public Key has newline:', publicKey?.includes('\n'));
+    console.log('🔍 Debug - Private Key has newline:', privateKey?.includes('\n'));
 
     if (!publicKey || !privateKey) {
       console.error('❌ Faltan credenciales de ePayco');
