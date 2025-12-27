@@ -6,7 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Switch } from '@/components/ui/switch';
-import { Settings, Save, Plus, Trash2, Award } from 'lucide-react';
+import { Settings, Save, Plus, Trash2, Award, FileText, Info, ExternalLink } from 'lucide-react';
 import { LoyaltySettings, LoyaltyTier } from '@/lib/types';
 import { formatCurrency } from '@/lib/utils';
 import { toast } from 'sonner';
@@ -294,6 +294,91 @@ export default function ConfigPage() {
 
       {/* Reportes Automáticos */}
       <AutoReportsConfig />
+
+      {/* Facturación Electrónica */}
+      <Card className="border-blue-200 bg-blue-50/30">
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <FileText className="h-5 w-5 text-blue-600" />
+            Facturación Electrónica DIAN
+          </CardTitle>
+          <CardDescription>
+            Información sobre facturación electrónica ante la DIAN
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          {/* Mensaje informativo principal */}
+          <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+            <div className="flex gap-3">
+              <Info className="h-5 w-5 text-blue-600 flex-shrink-0 mt-0.5" />
+              <div className="space-y-2">
+                <p className="font-semibold text-blue-900">Recibos de Venta Internos</p>
+                <p className="text-sm text-blue-800">
+                  Este sistema genera <strong>recibos de venta internos</strong> que son perfectos para:
+                </p>
+                <ul className="text-sm text-blue-800 list-disc list-inside space-y-1 ml-2">
+                  <li>Pequeños negocios y tiendas de barrio</li>
+                  <li>Control interno de ventas e inventario</li>
+                  <li>Negocios que no requieren facturación electrónica</li>
+                  <li>Régimen simple de tributación</li>
+                </ul>
+              </div>
+            </div>
+          </div>
+
+          {/* Información sobre facturación electrónica */}
+          <div className="bg-white border border-gray-200 rounded-lg p-4">
+            <h4 className="font-semibold text-gray-900 mb-3">¿Necesitas Facturación Electrónica DIAN?</h4>
+            <p className="text-sm text-gray-700 mb-3">
+              Si tu negocio está <strong>obligado por la DIAN</strong> a emitir facturas electrónicas,
+              debes contratar un proveedor tecnológico autorizado. Podemos integrar este sistema con:
+            </p>
+
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mb-4">
+              <div className="border rounded-lg p-3 hover:border-blue-300 transition-colors">
+                <p className="font-semibold text-sm text-gray-900">Alegra</p>
+                <p className="text-xs text-gray-600 mt-1">Popular y fácil de usar</p>
+              </div>
+              <div className="border rounded-lg p-3 hover:border-blue-300 transition-colors">
+                <p className="font-semibold text-sm text-gray-900">Siigo</p>
+                <p className="text-xs text-gray-600 mt-1">Robusto y confiable</p>
+              </div>
+              <div className="border rounded-lg p-3 hover:border-blue-300 transition-colors">
+                <p className="font-semibold text-sm text-gray-900">Otros</p>
+                <p className="text-xs text-gray-600 mt-1">FacturaBee, Soenac, etc.</p>
+              </div>
+            </div>
+
+            <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3">
+              <p className="text-sm text-yellow-900">
+                <strong>Nota importante:</strong> La facturación electrónica es responsabilidad
+                del comerciante. Tú debes tramitar la resolución de facturación ante la DIAN y
+                contratar el proveedor tecnológico. Nosotros solo integramos el sistema.
+              </p>
+            </div>
+          </div>
+
+          {/* CTA para contactar */}
+          <div className="flex flex-col sm:flex-row gap-3">
+            <Button
+              variant="outline"
+              className="flex-1"
+              onClick={() => window.open('https://wa.me/1234567890?text=Hola,%20necesito%20ayuda%20con%20facturación%20electrónica', '_blank')}
+            >
+              <ExternalLink className="h-4 w-4 mr-2" />
+              Contactar para Integración
+            </Button>
+            <Button
+              variant="outline"
+              className="flex-1"
+              onClick={() => window.open('https://www.dian.gov.co/impuestos/factura-electronica/Paginas/default.aspx', '_blank')}
+            >
+              <Info className="h-4 w-4 mr-2" />
+              Más Info sobre DIAN
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
 
       {/* Información adicional */}
       <Card>

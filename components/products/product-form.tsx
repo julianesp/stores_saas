@@ -21,7 +21,7 @@ import {
 import { Category, Supplier } from "@/lib/types";
 import { toast } from "sonner";
 import { Scan, Camera, X, Plus } from "lucide-react";
-// import { ImageUploader } from './image-uploader'; // COMENTADO: Funcionalidad de imágenes deshabilitada
+import { ImageUploader } from './image-uploader';
 import { Html5Qrcode } from "html5-qrcode";
 
 const productSchema = z.object({
@@ -56,7 +56,7 @@ export function ProductForm({ initialData, productId }: ProductFormProps) {
   const [loading, setLoading] = useState(false);
   const [categories, setCategories] = useState<Category[]>([]);
   const [suppliers, setSuppliers] = useState<Supplier[]>([]);
-  // const [productImages, setProductImages] = useState<string[]>(initialData?.images || []); // COMENTADO: Funcionalidad de imágenes deshabilitada
+  const [productImages, setProductImages] = useState<string[]>(initialData?.images || []);
   const [showScanner, setShowScanner] = useState(false);
   const [showScannerOptions, setShowScannerOptions] = useState(false); // Modal con opciones de escaneo
   const [showNewCategory, setShowNewCategory] = useState(false);
@@ -263,6 +263,7 @@ export function ProductForm({ initialData, productId }: ProductFormProps) {
     try {
       const productData: any = {
         ...data,
+        images: productImages, // Incluir imágenes
       };
 
       // Log para debugging - verificar que el código de barras esté presente
@@ -635,7 +636,6 @@ export function ProductForm({ initialData, productId }: ProductFormProps) {
         </CardContent>
       </Card>
 
-      {/* COMENTADO: Funcionalidad de subida de imágenes deshabilitada temporalmente
       <Card>
         <CardHeader>
           <CardTitle>Imagen del Producto</CardTitle>
@@ -649,7 +649,6 @@ export function ProductForm({ initialData, productId }: ProductFormProps) {
           />
         </CardContent>
       </Card>
-      */}
 
       <div className="flex gap-4">
         <Button type="submit" disabled={loading}>

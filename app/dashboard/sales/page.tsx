@@ -1,23 +1,25 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { useAuth } from '@clerk/nextjs';
+import { useAuth, useUser } from '@clerk/nextjs';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
-import { Receipt, Eye, Download, FileSpreadsheet, Brain } from 'lucide-react';
+import { Receipt, Eye, Download, FileSpreadsheet, Brain, FileText, Printer } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { getProducts, getCustomers, getSales, getAllUserProfiles } from '@/lib/cloudflare-api';
-import { SaleWithRelations, Sale, Customer, UserProfile, SaleItem, Product } from '@/lib/types';
+import { getProducts, getCustomers, getSales, getAllUserProfiles, getUserProfile } from '@/lib/cloudflare-api';
+import { SaleWithRelations, Sale, Customer, UserProfile, SaleItem, Product, SaleItemWithProduct } from '@/lib/types';
 import { formatCurrency } from '@/lib/utils';
 import { toast } from 'sonner';
 import { Timestamp } from 'firebase/firestore';
 import { exportSalesToExcel, exportSalesByDateRange, exportSalesForPredictions } from '@/lib/excel-export';
+import { InvoiceModal } from '@/components/sales/invoice-modal';
 
 export default function SalesPage() {
   const { getToken } = useAuth();
+  const { user } = useUser();
 
   const [sales, setSales] = useState<SaleWithRelations[]>([]);
   const [loading, setLoading] = useState(true);
@@ -28,9 +30,26 @@ export default function SalesPage() {
   const [selectedSale, setSelectedSale] = useState<SaleWithRelations | null>(null);
   const [showDetailModal, setShowDetailModal] = useState(false);
 
+  // Estados para el modal de factura
+  const [showInvoiceModal, setShowInvoiceModal] = useState(false);
+  const [invoiceSale, setInvoiceSale] = useState<Sale | null>(null);
+  const [invoiceSaleItems, setInvoiceSaleItems] = useState<SaleItemWithProduct[]>([]);
+  const [invoiceCustomer, setInvoiceCustomer] = useState<Customer | null>(null);
+  const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
+
   useEffect(() => {
     fetchSales();
+    fetchUserProfile();
   }, [filter]);
+
+  const fetchUserProfile = async () => {
+    try {
+      const profile = await getUserProfile(getToken);
+      setUserProfile(profile);
+    } catch (error) {
+      console.error('Error fetching user profile:', error);
+    }
+  };
 
   const fetchSales = async () => {
     try {
@@ -160,6 +179,13 @@ export default function SalesPage() {
 
     exportSalesByDateRange(sales, startDate, endDate);
     toast.success(`Exportadas ${filteredSales.length} ventas del rango seleccionado`);
+  };
+
+  const handleShowInvoice = (sale: SaleWithRelations) => {
+    setInvoiceSale(sale as Sale);
+    setInvoiceSaleItems(sale.items || []);
+    setInvoiceCustomer(sale.customer || null);
+    setShowInvoiceModal(true);
   };
 
   return (
@@ -366,18 +392,28 @@ export default function SalesPage() {
                             </span>
                           )}
                         </td>
-                        <td className="py-3 px-4 text-center">
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            onClick={() => {
-                              setSelectedSale(sale);
-                              setShowDetailModal(true);
-                            }}
-                          >
-                            <Eye className="h-4 w-4 mr-1" />
-                            Ver Detalle
-                          </Button>
+                        <td className="py-3 px-4">
+                          <div className="flex gap-2 justify-center">
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => {
+                                setSelectedSale(sale);
+                                setShowDetailModal(true);
+                              }}
+                              title="Ver productos"
+                            >
+                              <Eye className="h-4 w-4" />
+                            </Button>
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => handleShowInvoice(sale)}
+                              title="Ver factura"
+                            >
+                              <FileText className="h-4 w-4" />
+                            </Button>
+                          </div>
                         </td>
                       </tr>
                     ))}
@@ -452,18 +488,27 @@ export default function SalesPage() {
                         </div>
                       </div>
 
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        className="w-full"
-                        onClick={() => {
-                          setSelectedSale(sale);
-                          setShowDetailModal(true);
-                        }}
-                      >
-                        <Eye className="h-4 w-4 mr-1" />
-                        Ver Detalle de Productos
-                      </Button>
+                      <div className="grid grid-cols-2 gap-2">
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => {
+                            setSelectedSale(sale);
+                            setShowDetailModal(true);
+                          }}
+                        >
+                          <Eye className="h-4 w-4 mr-1" />
+                          Ver Productos
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => handleShowInvoice(sale)}
+                        >
+                          <FileText className="h-4 w-4 mr-1" />
+                          Ver Factura
+                        </Button>
+                      </div>
                     </CardContent>
                   </Card>
                 ))}
@@ -472,6 +517,19 @@ export default function SalesPage() {
           )}
         </CardContent>
       </Card>
+
+      {/* Modal de Factura */}
+      {userProfile && invoiceSale && (
+        <InvoiceModal
+          open={showInvoiceModal}
+          onOpenChange={setShowInvoiceModal}
+          sale={invoiceSale}
+          saleItems={invoiceSaleItems}
+          customer={invoiceCustomer}
+          storeInfo={userProfile}
+          cashierName={user?.fullName || undefined}
+        />
+      )}
 
       {/* Modal de detalle de venta */}
       {showDetailModal && selectedSale && (
