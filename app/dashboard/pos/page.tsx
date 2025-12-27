@@ -616,10 +616,14 @@ export default function POSPage() {
         });
       }
 
-      // Mostrar mensaje personalizado
+      // Mostrar mensaje personalizado - SIEMPRE con opción de factura
+      let htmlContent = `
+        <p class="text-lg mb-2">Venta #${sale.sale_number}</p>
+      `;
+
+      // Agregar información de cliente si existe
       if (selectedCustomer) {
-        let htmlContent = `
-          <p class="text-lg mb-2">Venta #${sale.sale_number}</p>
+        htmlContent += `
           ${
             appliedDiscount > 0
               ? `
@@ -685,58 +689,63 @@ export default function POSPage() {
             </div>
           `;
         }
-
-        // Agregar botón para generar factura
-        htmlContent += `
-          <div class="mt-4 pt-3 border-t border-gray-200">
-            <button id="generate-invoice-btn" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 px-4 rounded flex items-center justify-center gap-2">
-              📄 Generar Factura
-            </button>
-          </div>
-        `;
-
-        await Swal.custom({
-          title:
-            paymentMethod === "credito"
-              ? "Venta a Crédito Registrada"
-              : "Venta Completada",
-          html: htmlContent,
-          icon: "success",
-          confirmButtonText: "Aceptar",
-          didOpen: () => {
-            // Agregar evento al botón de factura
-            const invoiceBtn = document.getElementById("generate-invoice-btn");
-            if (invoiceBtn) {
-              invoiceBtn.addEventListener("click", () => {
-                // Cerrar el SweetAlert y abrir el modal de factura
-                Swal.close();
-                // Guardar la información de la venta para la factura
-                setLastSale(sale);
-                // Construir los items con la información del producto
-                const saleItemsWithProducts: SaleItemWithProduct[] = cart.map(
-                  (cartItem) => ({
-                    id: "", // Se genera en la API
-                    user_profile_id: (sale as Sale).user_profile_id,
-                    sale_id: sale.id,
-                    product_id: cartItem.product.id,
-                    quantity: cartItem.quantity,
-                    unit_price: cartItem.product.sale_price,
-                    discount: 0,
-                    subtotal: cartItem.product.sale_price * cartItem.quantity,
-                    created_at: new Date().toISOString(),
-                    product: cartItem.product,
-                  })
-                );
-                setLastSaleItems(saleItemsWithProducts);
-                setLastSaleCustomer(selectedCustomer);
-                setShowInvoiceModal(true);
-              });
-            }
-          },
-        });
       } else {
-        await Swal.saleCompleted(sale.sale_number, total);
+        // Sin cliente seleccionado
+        htmlContent += `
+          <p class="text-2xl font-bold text-green-600 mb-3">Total: ${formatCurrency(
+            total
+          )}</p>
+        `;
       }
+
+      // Agregar botón para generar factura (PARA TODAS LAS VENTAS)
+      htmlContent += `
+        <div class="mt-4 pt-3 border-t border-gray-200">
+          <button id="generate-invoice-btn" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 px-4 rounded flex items-center justify-center gap-2">
+            📄 Generar Factura
+          </button>
+        </div>
+      `;
+
+      await Swal.custom({
+        title:
+          paymentMethod === "credito"
+            ? "Venta a Crédito Registrada"
+            : "Venta Completada",
+        html: htmlContent,
+        icon: "success",
+        confirmButtonText: "Aceptar",
+        didOpen: () => {
+          // Agregar evento al botón de factura
+          const invoiceBtn = document.getElementById("generate-invoice-btn");
+          if (invoiceBtn) {
+            invoiceBtn.addEventListener("click", () => {
+              // Cerrar el SweetAlert y abrir el modal de factura
+              Swal.close();
+              // Guardar la información de la venta para la factura
+              setLastSale(sale);
+              // Construir los items con la información del producto
+              const saleItemsWithProducts: SaleItemWithProduct[] = cart.map(
+                (cartItem) => ({
+                  id: "", // Se genera en la API
+                  user_profile_id: (sale as Sale).user_profile_id,
+                  sale_id: sale.id,
+                  product_id: cartItem.product.id,
+                  quantity: cartItem.quantity,
+                  unit_price: cartItem.product.sale_price,
+                  discount: 0,
+                  subtotal: cartItem.product.sale_price * cartItem.quantity,
+                  created_at: new Date().toISOString(),
+                  product: cartItem.product,
+                })
+              );
+              setLastSaleItems(saleItemsWithProducts);
+              setLastSaleCustomer(selectedCustomer);
+              setShowInvoiceModal(true);
+            });
+          }
+        },
+      });
 
       // Limpiar el carrito y estados
       setCart([]);

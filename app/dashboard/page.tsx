@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import { useUser, useAuth } from '@clerk/nextjs';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { DollarSign, ShoppingCart, Package, TrendingUp, Users, AlertTriangle, Store, Activity, Crown, Calendar, Database, Trash2 } from 'lucide-react';
+import { DollarSign, ShoppingCart, Package, TrendingUp, Users, AlertTriangle, Store, Activity, Crown, Calendar, Database, Trash2, FileText, Info } from 'lucide-react';
 import { getUserProfileByClerkId } from '@/lib/cloudflare-subscription-helpers';
 import { getAllUserProfiles } from '@/lib/cloudflare-api';
 import { UserProfile } from '@/lib/types';
@@ -642,6 +642,36 @@ export default function DashboardPage() {
           </CardContent>
         </Card>
       </div>
+
+      {/* Banner informativo sobre Facturación Electrónica */}
+      <Card className="border-blue-200 bg-gradient-to-r from-blue-50 to-indigo-50">
+        <CardContent className="p-4 md:p-6">
+          <div className="flex flex-col md:flex-row items-start md:items-center gap-4">
+            <div className="flex-shrink-0">
+              <div className="p-3 bg-blue-600 rounded-lg">
+                <FileText className="h-6 w-6 text-white" />
+              </div>
+            </div>
+            <div className="flex-1">
+              <h3 className="font-semibold text-blue-900 mb-1 text-sm md:text-base">
+                💡 Sobre Facturación Electrónica DIAN
+              </h3>
+              <p className="text-sm text-blue-800 mb-2">
+                Este sistema genera <strong>recibos de venta internos</strong> perfectos para control de tu negocio.
+                Si necesitas <strong>facturación electrónica ante la DIAN</strong>, podemos integrar el sistema con proveedores como Alegra o Siigo.
+              </p>
+              <div className="flex flex-col sm:flex-row gap-2">
+                <Link href="/dashboard/config">
+                  <Button variant="outline" size="sm" className="text-xs bg-white hover:bg-blue-50">
+                    <Info className="h-3 w-3 mr-1" />
+                    Más Información
+                  </Button>
+                </Link>
+              </div>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
     </div>
   );
 }

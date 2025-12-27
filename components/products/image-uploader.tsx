@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import Image from 'next/image';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
@@ -24,6 +24,10 @@ export function ImageUploader({
   const [images, setImages] = useState<string[]>(initialImages);
   const [uploading, setUploading] = useState(false);
   const [loadingIndex, setLoadingIndex] = useState<number | null>(null);
+  const [showCamera, setShowCamera] = useState(false);
+  const videoRef = useRef<HTMLVideoElement>(null);
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const streamRef = useRef<MediaStream | null>(null);
 
   // Sincronizar estado interno con initialImages cuando cambien
   useEffect(() => {
@@ -176,6 +180,108 @@ export function ImageUploader({
     }
   };
 
+  // Iniciar cámara
+  const startCamera = async () => {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({
+        video: { facingMode: 'environment', width: { ideal: 1280 }, height: { ideal: 720 } },
+        audio: false
+      });
+
+      streamRef.current = stream;
+      if (videoRef.current) {
+        videoRef.current.srcObject = stream;
+      }
+      setShowCamera(true);
+    } catch (error) {
+      console.error('Error accessing camera:', error);
+      toast.error('No se pudo acceder a la cámara. Verifica los permisos.');
+    }
+  };
+
+  // Detener cámara
+  const stopCamera = () => {
+    if (streamRef.current) {
+      streamRef.current.getTracks().forEach(track => track.stop());
+      streamRef.current = null;
+    }
+    setShowCamera(false);
+  };
+
+  // Tomar foto
+  const capturePhoto = async () => {
+    if (!videoRef.current || !canvasRef.current) return;
+
+    const video = videoRef.current;
+    const canvas = canvasRef.current;
+    const context = canvas.getContext('2d');
+
+    if (!context) return;
+
+    // Configurar canvas al tamaño del video
+    canvas.width = video.videoWidth;
+    canvas.height = video.videoHeight;
+
+    // Dibujar el frame actual del video en el canvas
+    context.drawImage(video, 0, 0, canvas.width, canvas.height);
+
+    // Convertir canvas a blob
+    canvas.toBlob(async (blob) => {
+      if (!blob) {
+        toast.error('Error al capturar foto');
+        return;
+      }
+
+      // Crear archivo desde el blob
+      const file = new File([blob], `photo-${Date.now()}.jpg`, { type: 'image/jpeg' });
+
+      // Detener cámara
+      stopCamera();
+
+      // Subir la foto
+      setUploading(true);
+      try {
+        const formData = new FormData();
+        formData.append('file', file);
+        formData.append('folder', `products/${productId || 'temp'}`);
+
+        toast.info('Subiendo foto...', { duration: 2000 });
+
+        const response = await fetch('/api/upload-image', {
+          method: 'POST',
+          body: formData,
+        });
+
+        if (!response.ok) {
+          throw new Error('Error al subir imagen');
+        }
+
+        const data = await response.json();
+        if (!data.success || !data.secure_url) {
+          throw new Error('Respuesta inválida del servidor');
+        }
+
+        const newImages = [...images, data.secure_url];
+        setImages(newImages);
+        onChange(newImages);
+
+        toast.success('Foto agregada correctamente');
+      } catch (error) {
+        console.error('Error uploading photo:', error);
+        toast.error('Error al subir foto');
+      } finally {
+        setUploading(false);
+      }
+    }, 'image/jpeg', 0.9);
+  };
+
+  // Limpiar stream al desmontar
+  useEffect(() => {
+    return () => {
+      stopCamera();
+    };
+  }, []);
+
   return (
     <div className="space-y-4">
       {/* Grid de imágenes */}
@@ -244,28 +350,42 @@ export function ImageUploader({
             disabled={uploading}
           />
 
-          {/* Botón de galería */}
-          <label
-            htmlFor="image-upload"
-            className={`inline-flex items-center justify-center w-full rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium transition-colors hover:bg-gray-50 ${
-              uploading ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'
-            }`}
-          >
-            {uploading ? (
-              <>
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                Subiendo...
-              </>
-            ) : (
-              <>
-                <Upload className="mr-2 h-4 w-4" />
-                Seleccionar desde Galería ({images.length}/{maxImages})
-              </>
-            )}
-          </label>
+          {/* Botones principales */}
+          <div className="grid grid-cols-2 gap-3">
+            {/* Botón de cámara */}
+            <Button
+              type="button"
+              onClick={startCamera}
+              disabled={uploading}
+              className="w-full bg-purple-600 hover:bg-purple-700"
+            >
+              <Camera className="mr-2 h-4 w-4" />
+              Tomar Foto
+            </Button>
+
+            {/* Botón de galería */}
+            <label
+              htmlFor="image-upload"
+              className={`inline-flex items-center justify-center rounded-md border border-gray-300 bg-blue-600 text-white px-4 py-2 text-sm font-medium transition-colors hover:bg-blue-700 ${
+                uploading ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'
+              }`}
+            >
+              {uploading ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Subiendo...
+                </>
+              ) : (
+                <>
+                  <Upload className="mr-2 h-4 w-4" />
+                  Galería
+                </>
+              )}
+            </label>
+          </div>
 
           <p className="text-xs text-gray-500 text-center">
-            Máximo {maxImages} {maxImages === 1 ? 'imagen' : 'imágenes'} • JPG, PNG o WEBP • Máx 5MB por imagen
+            {images.length}/{maxImages} {maxImages === 1 ? 'imagen' : 'imágenes'} • JPG, PNG o WEBP • Máx 5MB
           </p>
         </div>
       )}
@@ -276,6 +396,83 @@ export function ImageUploader({
           <p className="text-sm text-green-800 text-center">
             ✓ {maxImages === 1 ? 'Imagen agregada' : `Máximo de imágenes alcanzado (${maxImages}/${maxImages})`}
           </p>
+        </div>
+      )}
+
+      {/* Modal de Cámara */}
+      {showCamera && (
+        <div className="fixed inset-0 bg-black bg-opacity-90 z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-lg max-w-3xl w-full overflow-hidden">
+            {/* Header */}
+            <div className="bg-purple-600 text-white p-4 flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <Camera className="h-6 w-6" />
+                <h2 className="text-xl font-bold">Tomar Foto del Producto</h2>
+              </div>
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                onClick={stopCamera}
+                className="text-white hover:bg-purple-700"
+              >
+                <X className="h-6 w-6" />
+              </Button>
+            </div>
+
+            {/* Video preview */}
+            <div className="relative bg-black">
+              <video
+                ref={videoRef}
+                autoPlay
+                playsInline
+                className="w-full max-h-[60vh] object-contain"
+              />
+
+              {/* Canvas oculto para capturar la imagen */}
+              <canvas ref={canvasRef} className="hidden" />
+
+              {/* Guías visuales */}
+              <div className="absolute inset-0 pointer-events-none">
+                <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 border-2 border-white border-dashed w-3/4 h-3/4 rounded-lg opacity-50"></div>
+              </div>
+            </div>
+
+            {/* Footer con botones */}
+            <div className="p-4 bg-gray-50">
+              <div className="flex gap-3 justify-center">
+                <Button
+                  type="button"
+                  onClick={stopCamera}
+                  variant="outline"
+                  className="min-w-[120px]"
+                >
+                  Cancelar
+                </Button>
+                <Button
+                  type="button"
+                  onClick={capturePhoto}
+                  disabled={uploading}
+                  className="min-w-[120px] bg-purple-600 hover:bg-purple-700"
+                >
+                  {uploading ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      Subiendo...
+                    </>
+                  ) : (
+                    <>
+                      <Camera className="mr-2 h-4 w-4" />
+                      Capturar Foto
+                    </>
+                  )}
+                </Button>
+              </div>
+              <p className="text-xs text-gray-500 text-center mt-3">
+                Centra el producto dentro del recuadro y presiona Capturar Foto
+              </p>
+            </div>
+          </div>
         </div>
       )}
     </div>
