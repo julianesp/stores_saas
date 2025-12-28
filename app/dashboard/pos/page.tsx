@@ -30,6 +30,8 @@ import {
   getCategories,
   createSale,
   getUserProfile,
+  getActiveOffers,
+  Offer,
 } from "@/lib/cloudflare-api";
 import {
   Product,
@@ -63,6 +65,9 @@ import Link from "next/link";
 interface CartItem {
   product: Product;
   quantity: number;
+  originalPrice?: number;
+  discountPercentage?: number;
+  hasOffer?: boolean;
 }
 
 export default function POSPage() {
@@ -74,6 +79,7 @@ export default function POSPage() {
   const [cart, setCart] = useState<CartItem[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
   const [barcodeInput, setBarcodeInput] = useState("");
+  const [activeOffers, setActiveOffers] = useState<Offer[]>([]);
   const [paymentMethod, setPaymentMethod] = useState<
     "efectivo" | "tarjeta" | "transferencia" | "credito"
   >("efectivo");
@@ -151,6 +157,34 @@ export default function POSPage() {
     }
   };
 
+  const fetchOffers = useCallback(async () => {
+    try {
+      const offers = await getActiveOffers(getToken);
+      setActiveOffers(offers || []);
+    } catch (error) {
+      console.error("Error fetching offers:", error);
+      // Si no hay ofertas o hay un error, simplemente usar un array vacío
+      // Esto permite que el POS funcione normalmente sin ofertas
+      setActiveOffers([]);
+    }
+  }, [getToken]);
+
+  const getProductOffer = useCallback((productId: string): Offer | undefined => {
+    return activeOffers.find(offer => offer.product_id === productId && offer.is_active === 1);
+  }, [activeOffers]);
+
+  const getProductWithOffer = useCallback((product: Product): Product => {
+    const offer = getProductOffer(product.id);
+    if (offer && offer.discount_percentage > 0) {
+      const discountAmount = (product.sale_price * offer.discount_percentage) / 100;
+      return {
+        ...product,
+        sale_price: product.sale_price - discountAmount,
+      };
+    }
+    return product;
+  }, [getProductOffer]);
+
   const fetchProducts = useCallback(async () => {
     try {
       const data = (await getProducts(getToken)) as Product[];
@@ -199,13 +233,14 @@ export default function POSPage() {
   }, [getToken]);
 
   useEffect(() => {
+    fetchOffers();
     fetchProducts();
     fetchCustomers();
     fetchCategories();
     fetchUserProfile();
     // Auto-focus en el input de código de barras
     barcodeRef.current?.focus();
-  }, [fetchProducts, fetchCustomers, fetchCategories, fetchUserProfile]);
+  }, [fetchOffers, fetchProducts, fetchCustomers, fetchCategories, fetchUserProfile]);
 
   const handleBarcodeSearch = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -282,7 +317,23 @@ export default function POSPage() {
             : item
         );
       }
-      return [...prev, { product, quantity: 1 }];
+
+      // Verificar si el producto tiene una oferta activa
+      const offer = getProductOffer(product.id);
+      const hasOffer = offer && offer.discount_percentage > 0;
+      const originalPrice = product.sale_price;
+      const discountPercentage = hasOffer ? offer!.discount_percentage : 0;
+
+      // Aplicar descuento si existe
+      const productWithOffer = hasOffer ? getProductWithOffer(product) : product;
+
+      return [...prev, {
+        product: productWithOffer,
+        quantity: 1,
+        originalPrice: hasOffer ? originalPrice : undefined,
+        discountPercentage: hasOffer ? discountPercentage : undefined,
+        hasOffer: hasOffer,
+      }];
     });
   };
 
@@ -485,13 +536,20 @@ export default function POSPage() {
       }
 
       // Agregar items a la venta (la API de Cloudflare los crea automáticamente)
-      const itemsPayload = cart.map((cartItem) => ({
-        product_id: cartItem.product.id,
-        quantity: cartItem.quantity,
-        unit_price: cartItem.product.sale_price,
-        discount: 0,
-        subtotal: cartItem.product.sale_price * cartItem.quantity,
-      }));
+      const itemsPayload = cart.map((cartItem) => {
+        // Calcular el descuento por oferta si existe
+        const itemDiscount = cartItem.hasOffer && cartItem.originalPrice
+          ? (cartItem.originalPrice - cartItem.product.sale_price) * cartItem.quantity
+          : 0;
+
+        return {
+          product_id: cartItem.product.id,
+          quantity: cartItem.quantity,
+          unit_price: cartItem.product.sale_price,
+          discount: itemDiscount,
+          subtotal: cartItem.product.sale_price * cartItem.quantity,
+        };
+      });
       saleData.items = itemsPayload;
 
       // Validación básica antes de enviar al API para evitar errores de D1 por valores undefined
@@ -616,10 +674,47 @@ export default function POSPage() {
         });
       }
 
+      // Verificar si hay productos con descuento por oferta
+      const itemsWithOffer = cart.filter(item => item.hasOffer);
+      const totalOfferDiscount = itemsWithOffer.reduce((sum, item) => {
+        if (item.originalPrice) {
+          return sum + ((item.originalPrice - item.product.sale_price) * item.quantity);
+        }
+        return sum;
+      }, 0);
+
       // Mostrar mensaje personalizado - SIEMPRE con opción de factura
       let htmlContent = `
         <p class="text-lg mb-2">Venta #${sale.sale_number}</p>
       `;
+
+      // Mostrar información de productos con ofertas
+      if (itemsWithOffer.length > 0) {
+        htmlContent += `
+          <div class="bg-orange-50 border-2 border-orange-300 rounded-lg p-3 mb-3">
+            <p class="text-sm font-bold text-orange-800 mb-2">🏷️ Descuentos Aplicados</p>
+            <div class="space-y-1">
+        `;
+        itemsWithOffer.forEach(item => {
+          const itemDiscount = item.originalPrice ? (item.originalPrice - item.product.sale_price) * item.quantity : 0;
+          htmlContent += `
+            <div class="flex justify-between items-center text-xs">
+              <span class="text-gray-700">
+                ${item.product.name} <span class="font-semibold text-orange-600">(-${item.discountPercentage}%)</span>
+              </span>
+              <span class="text-orange-700 font-semibold">-${formatCurrency(itemDiscount)}</span>
+            </div>
+          `;
+        });
+        htmlContent += `
+            </div>
+            <div class="mt-2 pt-2 border-t border-orange-200 flex justify-between text-sm font-bold">
+              <span class="text-orange-800">Total Ahorrado:</span>
+              <span class="text-orange-600">${formatCurrency(totalOfferDiscount)}</span>
+            </div>
+          </div>
+        `;
+      }
 
       // Agregar información de cliente si existe
       if (selectedCustomer) {
@@ -1059,16 +1154,27 @@ export default function POSPage() {
               </div>
 
               <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-3 xl:grid-cols-4 gap-2 md:gap-3 max-h-[400px] md:max-h-[500px] overflow-y-auto">
-                {filteredProducts.length > 0 ? (
-                  filteredProducts.map((product) => (
+                {filteredProducts.length > 0 ?
+                  filteredProducts.map((product) => {
+                    const offer = getProductOffer(product.id);
+                    const hasOffer = offer && offer.discount_percentage > 0;
+                    const originalPrice = product.sale_price;
+                    const discountedPrice = hasOffer ? product.sale_price - (product.sale_price * offer.discount_percentage / 100) : product.sale_price;
+
+                    return (
                     <Card
                       key={product.id}
-                      className="cursor-pointer hover:border-blue-500 transition-colors"
+                      className={`cursor-pointer hover:border-blue-500 transition-colors ${hasOffer ? 'border-2 border-orange-400' : ''}`}
                       onClick={() => addToCart(product)}
                     >
                       <CardContent className="p-2 md:p-4">
                         {/* Imagen del producto */}
                         <div className="relative w-full aspect-square mb-2 bg-gray-50 rounded-md overflow-hidden">
+                          {hasOffer && (
+                            <div className="absolute top-0 right-0 z-10 bg-orange-600 text-white text-xs font-bold px-2 py-1 rounded-bl-md">
+                              -{offer.discount_percentage}%
+                            </div>
+                          )}
                           {product.images && product.images.length > 0 ? (
                             <Image
                               src={product.images[0]}
@@ -1087,16 +1193,30 @@ export default function POSPage() {
                         <h4 className="font-medium text-xs md:text-sm mb-1 line-clamp-2">
                           {product.name}
                         </h4>
-                        <p className="text-sm md:text-lg font-bold text-blue-600">
-                          {formatCurrency(product.sale_price)}
-                        </p>
+                        <div>
+                          {hasOffer ? (
+                            <>
+                              <p className="text-xs text-gray-400 line-through">
+                                {formatCurrency(originalPrice)}
+                              </p>
+                              <p className="text-sm md:text-lg font-bold text-orange-600">
+                                {formatCurrency(discountedPrice)}
+                              </p>
+                            </>
+                          ) : (
+                            <p className="text-sm md:text-lg font-bold text-blue-600">
+                              {formatCurrency(product.sale_price)}
+                            </p>
+                          )}
+                        </div>
                         <p className="text-xs text-gray-500">
                           Disponible: {product.stock}
                         </p>
                       </CardContent>
                     </Card>
-                  ))
-                ) : (
+                    );
+                  })
+                 : (
                   <div className="col-span-full flex flex-col items-center justify-center py-12 text-center">
                     <Package className="h-16 w-16 text-gray-300 mb-4" />
                     <h3 className="text-lg font-semibold text-gray-700 mb-2">
@@ -1374,16 +1494,30 @@ export default function POSPage() {
                   cart.map((item) => (
                     <div
                       key={item.product.id}
-                      className="flex items-center gap-1 md:gap-2 p-2 border rounded"
+                      className={`flex items-center gap-1 md:gap-2 p-2 border rounded ${item.hasOffer ? 'bg-orange-50 border-orange-300' : ''}`}
                     >
                       <div className="flex-1 min-w-0">
-                        <p className="font-medium text-xs md:text-sm truncate">
-                          {item.product.name}
-                        </p>
-                        <p className="text-xs md:text-sm text-gray-500">
-                          {formatCurrency(item.product.sale_price)} x{" "}
-                          {item.quantity}
-                        </p>
+                        <div className="flex items-center gap-1">
+                          <p className="font-medium text-xs md:text-sm truncate">
+                            {item.product.name}
+                          </p>
+                          {item.hasOffer && (
+                            <span className="text-xs bg-orange-600 text-white px-1.5 py-0.5 rounded font-bold">
+                              -{item.discountPercentage}%
+                            </span>
+                          )}
+                        </div>
+                        <div className="text-xs md:text-sm">
+                          {item.hasOffer && item.originalPrice && (
+                            <span className="text-gray-400 line-through mr-1">
+                              {formatCurrency(item.originalPrice)}
+                            </span>
+                          )}
+                          <span className={item.hasOffer ? 'text-orange-600 font-semibold' : 'text-gray-500'}>
+                            {formatCurrency(item.product.sale_price)} x{" "}
+                            {item.quantity}
+                          </span>
+                        </div>
                       </div>
                       <div className="flex items-center gap-0.5 md:gap-1 shrink-0">
                         <Button
