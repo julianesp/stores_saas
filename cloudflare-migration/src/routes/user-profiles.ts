@@ -33,6 +33,9 @@ app.get('/', async (c) => {
       is_superadmin: !!result.is_superadmin,
       has_ai_addon: !!result.has_ai_addon,
       auto_reports_enabled: !!result.auto_reports_enabled,
+      store_enabled: !!result.store_enabled,
+      store_shipping_enabled: !!result.store_shipping_enabled,
+      store_pickup_enabled: !!result.store_pickup_enabled,
     };
 
     return c.json<APIResponse<UserProfile>>({
@@ -127,7 +130,27 @@ app.put('/:id', async (c) => {
       'last_payment_date',
       'next_billing_date',
       'loyalty_points',
-      'loyalty_tier'
+      'loyalty_tier',
+      // Storefront configuration fields
+      'store_slug',
+      'store_name',
+      'store_description',
+      'store_logo_url',
+      'store_banner_url',
+      'store_primary_color',
+      'store_secondary_color',
+      'store_whatsapp',
+      'store_facebook',
+      'store_instagram',
+      'store_address',
+      'store_city',
+      'store_phone',
+      'store_email',
+      'store_enabled',
+      'store_terms',
+      'store_shipping_enabled',
+      'store_pickup_enabled',
+      'store_min_order',
     ];
 
     const updates: string[] = [];
@@ -171,6 +194,9 @@ app.put('/:id', async (c) => {
       is_superadmin: !!updated!.is_superadmin,
       has_ai_addon: !!updated!.has_ai_addon,
       auto_reports_enabled: !!updated!.auto_reports_enabled,
+      store_enabled: !!updated!.store_enabled,
+      store_shipping_enabled: !!updated!.store_shipping_enabled,
+      store_pickup_enabled: !!updated!.store_pickup_enabled,
     };
 
     return c.json<APIResponse<UserProfile>>({
