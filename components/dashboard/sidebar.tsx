@@ -119,6 +119,12 @@ const storeMenuItems = [
     roles: ['admin'],
   },
   {
+    title: 'Pedidos Web',
+    href: '/dashboard/web-orders',
+    icon: ShoppingCart,
+    roles: ['admin'],
+  },
+  {
     title: 'Inventario',
     href: '/dashboard/inventory',
     icon: Scan,

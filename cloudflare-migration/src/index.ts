@@ -24,6 +24,8 @@ import webhooksRoutes from './routes/webhooks';
 import adminStatsRoutes from './routes/admin-stats';
 import storefrontRoutes from './routes/storefront';
 import shippingZonesRoutes from './routes/shipping-zones';
+import wompiRoutes from './routes/wompi';
+import subscriptionsRoutes from './routes/subscriptions';
 
 const app = new Hono<{ Bindings: Env }>();
 
@@ -68,11 +70,23 @@ app.get('/', (c) => {
 // Webhooks (NO auth middleware - verifican su propio secret)
 app.route('/api/webhooks', webhooksRoutes);
 
+// Wompi webhook (NO auth - Wompi verifica con signature)
+app.post('/api/wompi/webhook', wompiRoutes);
+
+// Subscriptions webhook (NO auth - Wompi verifica con signature)
+app.post('/api/subscriptions/webhook', subscriptionsRoutes);
+
 // Storefront public API (NO auth required - endpoints públicos para tiendas online)
 app.route('/api/storefront', storefrontRoutes);
 
 // Apply authentication middleware to all API routes
 app.use('/api/*', authMiddleware);
+
+// Wompi routes (protected - requieren autenticación del tenant)
+app.route('/api/wompi', wompiRoutes);
+
+// Subscriptions routes (protected - requieren autenticación)
+app.route('/api/subscriptions', subscriptionsRoutes);
 
 // API Routes (all protected by auth)
 app.route('/api/products', productsRoutes);

@@ -76,10 +76,18 @@ export function ProductForm({ initialData, productId }: ProductFormProps) {
     register,
     handleSubmit,
     setValue,
+    watch,
     formState: { errors },
   } = useForm<ProductFormData>({
     resolver: zodResolver(productSchema),
-    defaultValues: initialData || {},
+    defaultValues: initialData
+      ? {
+          ...initialData,
+          // Asegurarse de que los IDs se mantengan como están (no convertirlos a string vacío)
+          category_id: initialData.category_id || "",
+          supplier_id: initialData.supplier_id || "",
+        }
+      : {},
   });
 
   // Obtener la ref del register de react-hook-form
@@ -186,6 +194,41 @@ export function ProductForm({ initialData, productId }: ProductFormProps) {
     fetchCategories();
     fetchSuppliers();
   }, []);
+
+  // Asegurar que los valores de category_id y supplier_id se mantengan cuando se edita
+  // Este efecto se ejecuta cuando las categorías y proveedores se cargan
+  useEffect(() => {
+    if (initialData && productId && (categories.length > 0 || suppliers.length > 0)) {
+      console.log('🔍 Datos iniciales del producto:', {
+        category_id: initialData.category_id,
+        supplier_id: initialData.supplier_id,
+        categoriesLoaded: categories.length,
+        suppliersLoaded: suppliers.length,
+      });
+
+      if (initialData.category_id && categories.length > 0) {
+        // Verificar que la categoría exista en la lista
+        const categoryExists = categories.find(cat => cat.id === initialData.category_id);
+        if (categoryExists) {
+          setValue("category_id", initialData.category_id, { shouldValidate: true });
+          console.log('✅ Categoría establecida:', initialData.category_id);
+        } else {
+          console.warn('⚠️ La categoría no existe en la lista:', initialData.category_id);
+        }
+      }
+
+      if (initialData.supplier_id && suppliers.length > 0) {
+        // Verificar que el proveedor exista en la lista
+        const supplierExists = suppliers.find(sup => sup.id === initialData.supplier_id);
+        if (supplierExists) {
+          setValue("supplier_id", initialData.supplier_id, { shouldValidate: true });
+          console.log('✅ Proveedor establecido:', initialData.supplier_id);
+        } else {
+          console.warn('⚠️ El proveedor no existe en la lista:', initialData.supplier_id);
+        }
+      }
+    }
+  }, [categories, suppliers, initialData, productId, setValue]);
 
   const fetchCategories = async () => {
     try {

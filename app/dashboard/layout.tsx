@@ -7,6 +7,7 @@ import { Sidebar } from '@/components/dashboard/sidebar';
 import { Header } from '@/components/dashboard/header';
 import { TrialBanner } from '@/components/subscription/trial-banner';
 import { SubscriptionExpiredModal } from '@/components/subscription/expired-modal';
+import { ExpirationAlert } from '@/components/subscription/expiration-alert';
 import { checkSubscriptionStatus, getUserProfileByClerkId } from '@/lib/cloudflare-subscription-helpers';
 import { SubscriptionStatus } from '@/lib/types';
 
@@ -148,8 +149,21 @@ export default function DashboardLayout({
           )}
 
         <Header onMenuClick={() => setSidebarOpen(!sidebarOpen)} />
-          
+
         <main className="flex-1 overflow-y-auto bg-gray-50 p-4 md:p-6">
+          {/* Alerta de expiración cuando faltan 3 días o menos */}
+          {!loading &&
+            !isSuperAdmin &&
+            subscriptionInfo?.daysLeft !== undefined &&
+            subscriptionInfo.daysLeft <= 3 && (
+              <div className="mb-4">
+                <ExpirationAlert
+                  type={subscriptionInfo.status === 'trial' ? 'trial' : 'subscription'}
+                  daysLeft={subscriptionInfo.daysLeft}
+                />
+              </div>
+            )}
+
           {children}
         </main>
       </div>

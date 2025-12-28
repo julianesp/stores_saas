@@ -32,6 +32,10 @@ export interface StoreConfig {
   store_shipping_enabled?: number;
   store_pickup_enabled?: number;
   store_min_order?: number;
+  store_nequi_number?: string;
+  wompi_public_key?: string;
+  wompi_private_key?: string;
+  wompi_enabled?: number;
 }
 
 export interface StoreProduct {
@@ -152,6 +156,13 @@ export interface OrderResponse {
   order_number: string;
   total: number;
   store_whatsapp?: string;
+  wompi_enabled?: boolean;
+}
+
+export interface WompiPaymentLinkResponse {
+  payment_link_id: string;
+  checkout_url: string;
+  expires_at?: string;
 }
 
 export async function createOrder(slug: string, orderData: CreateOrderData): Promise<OrderResponse> {
@@ -190,4 +201,41 @@ export interface ShippingZonePublic {
 
 export async function getStoreShippingZones(slug: string): Promise<ShippingZonePublic[]> {
   return fetchStorefrontAPI<ShippingZonePublic[]>(`/api/storefront/shipping-zones/${slug}`);
+}
+
+/**
+ * Create Wompi payment link for an order (public endpoint)
+ */
+export async function createWompiPaymentLink(
+  slug: string,
+  orderData: {
+    order_id: string;
+    order_number: string;
+    amount_in_cents: number;
+    customer_email?: string;
+    customer_name?: string;
+  }
+): Promise<WompiPaymentLinkResponse> {
+  const url = `${WORKER_URL}/api/storefront/wompi/create-payment-link/${slug}`;
+
+  const response = await fetch(url, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(orderData),
+  });
+
+  if (!response.ok) {
+    const errorData = await response.json().catch(() => ({}));
+    throw new Error(errorData.error || `Error ${response.status}`);
+  }
+
+  const data: APIResponse<WompiPaymentLinkResponse> = await response.json();
+
+  if (!data.success) {
+    throw new Error(data.error || 'Failed to create payment link');
+  }
+
+  return data.data as WompiPaymentLinkResponse;
 }
