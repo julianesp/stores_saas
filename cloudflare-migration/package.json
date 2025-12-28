@@ -31,6 +31,7 @@
     "wrangler": "^3.94.0"
   },
   "dependencies": {
+    "@radix-ui/react-dialog": "^1.1.15",
     "firebase-admin": "^13.6.0",
     "hono": "^4.0.0",
     "jose": "^5.2.0"

@@ -12,6 +12,7 @@ import { getUserProfile, updateUserProfile } from '@/lib/cloudflare-api';
 import { UserProfile } from '@/lib/types';
 import { toast } from 'sonner';
 import { Store, Palette, Share2, MapPin, Eye, ExternalLink } from 'lucide-react';
+import { ShippingZonesManager } from '@/components/store-config/shipping-zones-manager';
 
 export default function StoreConfigPage() {
   const { getToken } = useAuth();
@@ -493,6 +494,9 @@ export default function StoreConfigPage() {
           />
         </CardContent>
       </Card>
+
+      {/* Zonas de Envío */}
+      <ShippingZonesManager />
 
       {/* Botones de acción */}
       <div className="flex gap-3">

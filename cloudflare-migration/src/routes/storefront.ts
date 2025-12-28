@@ -360,4 +360,46 @@ app.post('/orders/:slug', async (c) => {
   }
 });
 
+// GET /api/storefront/shipping-zones/:slug - Obtener zonas de envío activas de una tienda
+app.get('/shipping-zones/:slug', async (c) => {
+  const slug = c.req.param('slug');
+
+  try {
+    // Verificar que la tienda existe y está activa
+    const store = await c.env.DB.prepare(
+      'SELECT id FROM user_profiles WHERE store_slug = ? AND store_enabled = 1'
+    )
+      .bind(slug)
+      .first<{ id: string }>();
+
+    if (!store) {
+      return c.json<APIResponse>({
+        success: false,
+        error: 'Store not found or disabled',
+      }, 404);
+    }
+
+    // Obtener zonas de envío activas
+    const result = await c.env.DB.prepare(
+      `SELECT id, zone_name, shipping_cost
+       FROM shipping_zones
+       WHERE tenant_id = ? AND is_active = 1
+       ORDER BY zone_name ASC`
+    )
+      .bind(store.id)
+      .all();
+
+    return c.json<APIResponse>({
+      success: true,
+      data: result.results,
+    });
+  } catch (error) {
+    console.error('Error fetching shipping zones:', error);
+    return c.json<APIResponse>({
+      success: false,
+      error: 'Failed to fetch shipping zones',
+    }, 500);
+  }
+});
+
 export default app;

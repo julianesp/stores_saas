@@ -178,3 +178,16 @@ export async function createOrder(slug: string, orderData: CreateOrderData): Pro
 
   return data.data as OrderResponse;
 }
+
+/**
+ * Get active shipping zones for a store
+ */
+export interface ShippingZonePublic {
+  id: string;
+  zone_name: string;
+  shipping_cost: number;
+}
+
+export async function getStoreShippingZones(slug: string): Promise<ShippingZonePublic[]> {
+  return fetchStorefrontAPI<ShippingZonePublic[]>(`/api/storefront/shipping-zones/${slug}`);
+}

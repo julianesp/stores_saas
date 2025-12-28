@@ -9,6 +9,8 @@ import {
   createOrder,
   CreateOrderData,
   calculateDiscountedPrice,
+  getStoreShippingZones,
+  ShippingZonePublic,
 } from '@/lib/storefront-api';
 import { formatCurrency } from '@/lib/utils';
 import {
@@ -30,6 +32,13 @@ import { Textarea } from '@/components/ui/textarea';
 import { Card, CardContent } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import { toast } from 'sonner';
 
 interface CartItem {
@@ -48,6 +57,7 @@ export default function CheckoutPage() {
 
   const [config, setConfig] = useState<StoreConfig | null>(null);
   const [cart, setCart] = useState<CartItem[]>([]);
+  const [shippingZones, setShippingZones] = useState<ShippingZonePublic[]>([]);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [orderCompleted, setOrderCompleted] = useState(false);
@@ -58,7 +68,7 @@ export default function CheckoutPage() {
   const [customerEmail, setCustomerEmail] = useState('');
   const [deliveryMethod, setDeliveryMethod] = useState<'pickup' | 'shipping'>('pickup');
   const [deliveryAddress, setDeliveryAddress] = useState('');
-  const [shippingCost, setShippingCost] = useState('');
+  const [selectedZoneId, setSelectedZoneId] = useState('');
   const [notes, setNotes] = useState('');
 
   // Datos del pedido completado
@@ -73,8 +83,12 @@ export default function CheckoutPage() {
   const loadConfigAndCart = async () => {
     try {
       setLoading(true);
-      const configData = await getStoreConfig(slug);
+      const [configData, zonesData] = await Promise.all([
+        getStoreConfig(slug),
+        getStoreShippingZones(slug),
+      ]);
       setConfig(configData);
+      setShippingZones(zonesData);
 
       // Establecer método de entrega por defecto según configuración
       if (configData.store_pickup_enabled && !configData.store_shipping_enabled) {
@@ -126,7 +140,8 @@ export default function CheckoutPage() {
     }
     return sum;
   }, 0);
-  const shippingAmount = deliveryMethod === 'shipping' && shippingCost ? parseFloat(shippingCost) || 0 : 0;
+  const selectedZone = shippingZones.find((z) => z.id === selectedZoneId);
+  const shippingAmount = deliveryMethod === 'shipping' && selectedZone ? selectedZone.shipping_cost : 0;
   const total = subtotal + shippingAmount;
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -143,9 +158,15 @@ export default function CheckoutPage() {
       return;
     }
 
-    if (deliveryMethod === 'shipping' && !deliveryAddress.trim()) {
-      toast.error('Por favor ingresa la dirección de entrega');
-      return;
+    if (deliveryMethod === 'shipping') {
+      if (!deliveryAddress.trim()) {
+        toast.error('Por favor ingresa la dirección de entrega');
+        return;
+      }
+      if (!selectedZoneId) {
+        toast.error('Por favor selecciona una zona de envío');
+        return;
+      }
     }
 
     if (config?.store_min_order && total < config.store_min_order) {
@@ -219,8 +240,13 @@ export default function CheckoutPage() {
       message += `📧 *Email:* ${customerEmail}\n`;
     }
     message += `\n🚚 *Método de entrega:* ${deliveryMethod === 'pickup' ? 'Recogida en tienda' : 'Envío a domicilio'}\n`;
-    if (deliveryMethod === 'shipping' && deliveryAddress) {
-      message += `📍 *Dirección:* ${deliveryAddress}\n`;
+    if (deliveryMethod === 'shipping') {
+      if (deliveryAddress) {
+        message += `📍 *Dirección:* ${deliveryAddress}\n`;
+      }
+      if (selectedZone) {
+        message += `🗺️ *Zona:* ${selectedZone.zone_name}\n`;
+      }
     }
 
     message += `\n📦 *Productos:*\n`;
@@ -505,18 +531,29 @@ export default function CheckoutPage() {
                       </div>
 
                       <div>
-                        <Label htmlFor="shipping-cost">Costo de envío (opcional)</Label>
-                        <Input
-                          id="shipping-cost"
-                          type="number"
-                          placeholder="Ej: 5000"
-                          value={shippingCost}
-                          onChange={(e) => setShippingCost(e.target.value)}
-                          min="0"
-                          step="100"
-                        />
+                        <Label htmlFor="shipping-zone">Zona de envío *</Label>
+                        {shippingZones.length > 0 ? (
+                          <Select value={selectedZoneId} onValueChange={setSelectedZoneId}>
+                            <SelectTrigger>
+                              <SelectValue placeholder="Selecciona tu zona" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {shippingZones.map((zone) => (
+                                <SelectItem key={zone.id} value={zone.id}>
+                                  {zone.zone_name} - {formatCurrency(zone.shipping_cost)}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        ) : (
+                          <div className="p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
+                            <p className="text-sm text-yellow-800">
+                              No hay zonas de envío configuradas. Contacta a la tienda por WhatsApp.
+                            </p>
+                          </div>
+                        )}
                         <p className="text-xs text-gray-500 mt-1">
-                          Si conoces el costo del envío (mototaxi, etc.), ingrésalo aquí. Si no, déjalo en blanco y se coordinará por WhatsApp.
+                          El costo de envío se agregará al total de tu pedido
                         </p>
                       </div>
                     </div>

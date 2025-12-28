@@ -23,6 +23,7 @@ import paymentTransactionsRoutes from './routes/payment-transactions';
 import webhooksRoutes from './routes/webhooks';
 import adminStatsRoutes from './routes/admin-stats';
 import storefrontRoutes from './routes/storefront';
+import shippingZonesRoutes from './routes/shipping-zones';
 
 const app = new Hono<{ Bindings: Env }>();
 
@@ -85,6 +86,7 @@ app.route('/api/user-profiles', userProfilesRoutes);
 app.route('/api/credit-payments', creditPaymentsRoutes);
 app.route('/api/offers', offersRoutes);
 app.route('/api/payment-transactions', paymentTransactionsRoutes);
+app.route('/api/shipping-zones', shippingZonesRoutes);
 app.route('/api/admin', adminStatsRoutes);
 
 // 404 handler
