@@ -5,7 +5,7 @@
 
 import { Hono } from 'hono';
 import type { Env, Tenant, APIResponse } from '../types';
-import { TenantDB } from '../utils/db-helpers';
+import { TenantDB, generateId } from '../utils/db-helpers';
 
 const app = new Hono<{ Bindings: Env }>();
 
@@ -235,6 +235,126 @@ app.get('/categories/:slug', async (c) => {
     return c.json<APIResponse>({
       success: false,
       error: 'Failed to fetch categories',
+    }, 500);
+  }
+});
+
+// POST /api/storefront/orders/:slug - Crear pedido desde storefront (sin autenticación)
+app.post('/orders/:slug', async (c) => {
+  const slug = c.req.param('slug');
+
+  try {
+    const body = await c.req.json();
+
+    // Validar campos requeridos
+    if (!body.customer_name || !body.customer_phone || !body.items || body.items.length === 0 || !body.delivery_method) {
+      return c.json<APIResponse>({
+        success: false,
+        error: 'Missing required fields: customer_name, customer_phone, items, delivery_method',
+      }, 400);
+    }
+
+    // Verificar que la tienda existe y está activa
+    const store = await c.env.DB.prepare(
+      'SELECT id, store_name, store_whatsapp FROM user_profiles WHERE store_slug = ? AND store_enabled = 1'
+    )
+      .bind(slug)
+      .first<{ id: string; store_name?: string; store_whatsapp?: string }>();
+
+    if (!store) {
+      return c.json<APIResponse>({
+        success: false,
+        error: 'Store not found or disabled',
+      }, 404);
+    }
+
+    const tenantDB = new TenantDB(c.env.DB, store.id);
+
+    // Generar número de pedido
+    const now = new Date();
+    const dateStr = now.toISOString().split('T')[0].replace(/-/g, '');
+    const saleCount = await tenantDB.count('sales');
+    const orderNumber = `WEB-${dateStr}-${String(saleCount + 1).padStart(6, '0')}`;
+
+    // Calcular totales
+    const subtotal = body.items.reduce((sum: number, item: any) => {
+      return sum + (item.unit_price * item.quantity);
+    }, 0);
+
+    const discount = body.items.reduce((sum: number, item: any) => {
+      if (item.discount_percentage && item.discount_percentage > 0) {
+        const itemTotal = item.unit_price * item.quantity;
+        const discountAmount = itemTotal * (item.discount_percentage / 100);
+        return sum + discountAmount;
+      }
+      return sum;
+    }, 0);
+
+    const total = subtotal - discount;
+
+    // Crear venta/pedido
+    const saleData: any = {
+      id: generateId('sale'),
+      sale_number: orderNumber,
+      cashier_id: store.id, // El dueño de la tienda como "cajero"
+      customer_id: null, // Sin customer_id porque no está registrado
+      subtotal: subtotal,
+      tax: 0,
+      discount: discount,
+      total: total,
+      payment_method: 'pendiente', // El pago se coordinará por WhatsApp
+      status: 'pendiente', // Estado inicial del pedido
+      points_earned: 0,
+      notes: `Pedido web - Cliente: ${body.customer_name}\nTeléfono: ${body.customer_phone}\n${body.customer_email ? `Email: ${body.customer_email}\n` : ''}Entrega: ${body.delivery_method === 'pickup' ? 'Recogida en tienda' : 'Envío a domicilio'}\n${body.delivery_address ? `Dirección: ${body.delivery_address}\n` : ''}${body.notes ? `Notas: ${body.notes}` : ''}`,
+      payment_status: 'pendiente',
+      amount_paid: 0,
+      amount_pending: total,
+      due_date: null,
+    };
+
+    // Insertar venta
+    await tenantDB.insert('sales', saleData);
+
+    // Insertar items del pedido
+    const itemsToInsert = body.items.map((item: any) => ({
+      id: generateId('item'),
+      sale_id: saleData.id,
+      product_id: item.product_id,
+      quantity: item.quantity,
+      unit_price: item.unit_price,
+      discount: item.discount_percentage ? (item.unit_price * item.quantity * item.discount_percentage / 100) : 0,
+      subtotal: item.unit_price * item.quantity - (item.discount_percentage ? (item.unit_price * item.quantity * item.discount_percentage / 100) : 0),
+    }));
+
+    await tenantDB.batchInsert('sale_items', itemsToInsert);
+
+    // Actualizar stock de productos
+    for (const item of body.items) {
+      const product = await tenantDB.getById<any>('products', item.product_id);
+      if (product) {
+        const newStock = product.stock - item.quantity;
+        await tenantDB.update('products', item.product_id, {
+          stock: newStock
+        });
+      }
+    }
+
+    // Retornar pedido creado
+    return c.json<APIResponse>({
+      success: true,
+      data: {
+        order_id: saleData.id,
+        order_number: orderNumber,
+        total: total,
+        store_whatsapp: store.store_whatsapp,
+      },
+      message: 'Order created successfully',
+    }, 201);
+  } catch (error: any) {
+    console.error('Error creating order:', error);
+    return c.json<APIResponse>({
+      success: false,
+      error: error.message || 'Failed to create order',
     }, 500);
   }
 });
