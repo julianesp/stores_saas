@@ -303,7 +303,7 @@ app.post('/orders/:slug', async (c) => {
       tax: 0,
       discount: discount,
       total: total,
-      payment_method: 'pendiente', // El pago se coordinará por WhatsApp
+      payment_method: 'transferencia', // Pago por transferencia (Nequi, etc.)
       status: 'pendiente', // Estado inicial del pedido
       points_earned: 0,
       notes: `Pedido web - Cliente: ${body.customer_name}\nTeléfono: ${body.customer_phone}\n${body.customer_email ? `Email: ${body.customer_email}\n` : ''}Entrega: ${body.delivery_method === 'pickup' ? 'Recogida en tienda' : 'Envío a domicilio'}\n${body.delivery_address ? `Dirección: ${body.delivery_address}\n` : ''}${shippingCost > 0 ? `Costo de envío: $${shippingCost.toFixed(0)}\n` : ''}${body.notes ? `Notas: ${body.notes}` : ''}`,

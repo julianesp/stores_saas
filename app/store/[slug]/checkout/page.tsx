@@ -1,8 +1,8 @@
-'use client';
+"use client";
 
-import { useState, useEffect } from 'react';
-import { useParams, useRouter } from 'next/navigation';
-import Link from 'next/link';
+import { useState, useEffect } from "react";
+import { useParams, useRouter } from "next/navigation";
+import Link from "next/link";
 import {
   getStoreConfig,
   StoreConfig,
@@ -11,8 +11,8 @@ import {
   calculateDiscountedPrice,
   getStoreShippingZones,
   ShippingZonePublic,
-} from '@/lib/storefront-api';
-import { formatCurrency } from '@/lib/utils';
+} from "@/lib/storefront-api";
+import { formatCurrency } from "@/lib/utils";
 import {
   ArrowLeft,
   ShoppingCart,
@@ -25,21 +25,23 @@ import {
   MessageSquare,
   Loader2,
   CheckCircle2,
-} from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Textarea } from '@/components/ui/textarea';
-import { Card, CardContent } from '@/components/ui/card';
-import { Label } from '@/components/ui/label';
-import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
+  FileText,
+  Download,
+} from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import { Card, CardContent } from "@/components/ui/card";
+import { Label } from "@/components/ui/label";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from '@/components/ui/select';
-import { toast } from 'sonner';
+} from "@/components/ui/select";
+import { toast } from "sonner";
 
 interface CartItem {
   id: string;
@@ -63,18 +65,20 @@ export default function CheckoutPage() {
   const [orderCompleted, setOrderCompleted] = useState(false);
 
   // Datos del formulario
-  const [customerName, setCustomerName] = useState('');
-  const [customerPhone, setCustomerPhone] = useState('');
-  const [customerEmail, setCustomerEmail] = useState('');
-  const [deliveryMethod, setDeliveryMethod] = useState<'pickup' | 'shipping'>('pickup');
-  const [deliveryAddress, setDeliveryAddress] = useState('');
-  const [selectedZoneId, setSelectedZoneId] = useState('');
-  const [notes, setNotes] = useState('');
+  const [customerName, setCustomerName] = useState("");
+  const [customerPhone, setCustomerPhone] = useState("");
+  const [customerEmail, setCustomerEmail] = useState("");
+  const [deliveryMethod, setDeliveryMethod] = useState<"pickup" | "shipping">(
+    "pickup"
+  );
+  const [deliveryAddress, setDeliveryAddress] = useState("");
+  const [selectedZoneId, setSelectedZoneId] = useState("");
+  const [notes, setNotes] = useState("");
 
   // Datos del pedido completado
-  const [orderNumber, setOrderNumber] = useState('');
+  const [orderNumber, setOrderNumber] = useState("");
   const [orderTotal, setOrderTotal] = useState(0);
-  const [storeWhatsApp, setStoreWhatsApp] = useState('');
+  const [storeWhatsApp, setStoreWhatsApp] = useState("");
 
   useEffect(() => {
     loadConfigAndCart();
@@ -91,10 +95,16 @@ export default function CheckoutPage() {
       setShippingZones(zonesData);
 
       // Establecer método de entrega por defecto según configuración
-      if (configData.store_pickup_enabled && !configData.store_shipping_enabled) {
-        setDeliveryMethod('pickup');
-      } else if (!configData.store_pickup_enabled && configData.store_shipping_enabled) {
-        setDeliveryMethod('shipping');
+      if (
+        configData.store_pickup_enabled &&
+        !configData.store_shipping_enabled
+      ) {
+        setDeliveryMethod("pickup");
+      } else if (
+        !configData.store_pickup_enabled &&
+        configData.store_shipping_enabled
+      ) {
+        setDeliveryMethod("shipping");
       }
 
       // Cargar carrito desde localStorage
@@ -116,8 +126,8 @@ export default function CheckoutPage() {
         router.push(`/store/${slug}/cart`);
       }
     } catch (err: any) {
-      console.error('Error loading checkout:', err);
-      toast.error('Error al cargar el checkout');
+      console.error("Error loading checkout:", err);
+      toast.error("Error al cargar el checkout");
     } finally {
       setLoading(false);
     }
@@ -131,17 +141,30 @@ export default function CheckoutPage() {
     return finalPrice * item.quantity;
   };
 
-  const subtotal = cart.reduce((sum, item) => sum + calculateItemTotal(item), 0);
+  // Calcular subtotal SIN descuentos (precio original)
+  const subtotalOriginal = cart.reduce(
+    (sum, item) => sum + (item.price * item.quantity),
+    0
+  );
+
+  // Calcular total de descuentos
   const totalDiscount = cart.reduce((sum, item) => {
     if (item.discount_percentage && item.discount_percentage > 0) {
       const originalTotal = item.price * item.quantity;
-      const discountedTotal = calculateItemTotal(item);
-      return sum + (originalTotal - discountedTotal);
+      const discountAmount = originalTotal * (item.discount_percentage / 100);
+      return sum + discountAmount;
     }
     return sum;
   }, 0);
+
+  // Subtotal con descuentos aplicados
+  const subtotal = subtotalOriginal - totalDiscount;
+
   const selectedZone = shippingZones.find((z) => z.id === selectedZoneId);
-  const shippingAmount = deliveryMethod === 'shipping' && selectedZone ? selectedZone.shipping_cost : 0;
+  const shippingAmount =
+    deliveryMethod === "shipping" && selectedZone
+      ? selectedZone.shipping_cost
+      : 0;
   const total = subtotal + shippingAmount;
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -149,28 +172,30 @@ export default function CheckoutPage() {
 
     // Validaciones
     if (!customerName.trim()) {
-      toast.error('Por favor ingresa tu nombre');
+      toast.error("Por favor ingresa tu nombre");
       return;
     }
 
     if (!customerPhone.trim()) {
-      toast.error('Por favor ingresa tu teléfono');
+      toast.error("Por favor ingresa tu teléfono");
       return;
     }
 
-    if (deliveryMethod === 'shipping') {
+    if (deliveryMethod === "shipping") {
       if (!deliveryAddress.trim()) {
-        toast.error('Por favor ingresa la dirección de entrega');
+        toast.error("Por favor ingresa la dirección de entrega");
         return;
       }
       if (!selectedZoneId) {
-        toast.error('Por favor selecciona una zona de envío');
+        toast.error("Por favor selecciona una zona de envío");
         return;
       }
     }
 
     if (config?.store_min_order && total < config.store_min_order) {
-      toast.error(`El pedido mínimo es de ${formatCurrency(config.store_min_order)}`);
+      toast.error(
+        `El pedido mínimo es de ${formatCurrency(config.store_min_order)}`
+      );
       return;
     }
 
@@ -183,11 +208,13 @@ export default function CheckoutPage() {
         customer_phone: customerPhone.trim(),
         customer_email: customerEmail.trim() || undefined,
         delivery_method: deliveryMethod,
-        delivery_address: deliveryMethod === 'shipping' ? deliveryAddress.trim() : undefined,
+        delivery_address:
+          deliveryMethod === "shipping" ? deliveryAddress.trim() : undefined,
         shipping_cost: shippingAmount > 0 ? shippingAmount : undefined,
         notes: notes.trim() || undefined,
         items: cart.map((item) => {
-          const hasOffer = item.discount_percentage && item.discount_percentage > 0;
+          const hasOffer =
+            item.discount_percentage && item.discount_percentage > 0;
           const finalPrice = hasOffer
             ? calculateDiscountedPrice(item.price, item.discount_percentage!)
             : item.price;
@@ -208,7 +235,7 @@ export default function CheckoutPage() {
       // Guardar datos del pedido
       setOrderNumber(response.order_number);
       setOrderTotal(response.total);
-      setStoreWhatsApp(response.store_whatsapp || config?.store_whatsapp || '');
+      setStoreWhatsApp(response.store_whatsapp || config?.store_whatsapp || "");
 
       // Limpiar carrito
       localStorage.removeItem(`cart_${slug}`);
@@ -217,10 +244,10 @@ export default function CheckoutPage() {
       // Marcar como completado
       setOrderCompleted(true);
 
-      toast.success('¡Pedido realizado con éxito!');
+      toast.success("¡Pedido realizado con éxito!");
     } catch (err: any) {
-      console.error('Error creating order:', err);
-      toast.error(err.message || 'Error al crear el pedido');
+      console.error("Error creating order:", err);
+      toast.error(err.message || "Error al crear el pedido");
     } finally {
       setSubmitting(false);
     }
@@ -229,7 +256,7 @@ export default function CheckoutPage() {
   const sendWhatsAppMessage = () => {
     if (!storeWhatsApp) return;
 
-    const phone = storeWhatsApp.replace(/\D/g, '');
+    const phone = storeWhatsApp.replace(/\D/g, "");
 
     // Generar mensaje detallado
     let message = `🛍️ *Nuevo Pedido Web*\n\n`;
@@ -239,8 +266,10 @@ export default function CheckoutPage() {
     if (customerEmail) {
       message += `📧 *Email:* ${customerEmail}\n`;
     }
-    message += `\n🚚 *Método de entrega:* ${deliveryMethod === 'pickup' ? 'Recogida en tienda' : 'Envío a domicilio'}\n`;
-    if (deliveryMethod === 'shipping') {
+    message += `\n🚚 *Método de entrega:* ${
+      deliveryMethod === "pickup" ? "Recogida en tienda" : "Envío a domicilio"
+    }\n`;
+    if (deliveryMethod === "shipping") {
       if (deliveryAddress) {
         message += `📍 *Dirección:* ${deliveryAddress}\n`;
       }
@@ -256,7 +285,9 @@ export default function CheckoutPage() {
         ? calculateDiscountedPrice(item.price, item.discount_percentage!)
         : item.price;
 
-      message += `• ${item.name} x${item.quantity} - ${formatCurrency(finalPrice * item.quantity)}`;
+      message += `• ${item.name} x${item.quantity} - ${formatCurrency(
+        finalPrice * item.quantity
+      )}`;
       if (hasOffer) {
         message += ` _(${item.discount_percentage}% OFF)_`;
       }
@@ -278,7 +309,118 @@ export default function CheckoutPage() {
     message += `\n_Esperando confirmación y coordinación de pago_ 🙏`;
 
     const encodedMessage = encodeURIComponent(message);
-    window.open(`https://wa.me/${phone}?text=${encodedMessage}`, '_blank');
+    window.open(`https://wa.me/${phone}?text=${encodedMessage}`, "_blank");
+  };
+
+  const downloadInvoice = () => {
+    // Generar contenido de la factura en formato texto
+    let invoiceText = `FACTURA ELECTRÓNICA\n`;
+    invoiceText += `${"=".repeat(50)}\n\n`;
+
+    // Información de la tienda
+    invoiceText += `${config?.store_name || "Tienda"}\n`;
+    if (config?.store_address) {
+      invoiceText += `${config.store_address}\n`;
+    }
+    if (config?.store_phone) {
+      invoiceText += `Tel: ${config.store_phone}\n`;
+    }
+    if (config?.store_email) {
+      invoiceText += `Email: ${config.store_email}\n`;
+    }
+    invoiceText += `\n${"=".repeat(50)}\n\n`;
+
+    // Información del pedido
+    invoiceText += `PEDIDO: ${orderNumber}\n`;
+    invoiceText += `Fecha: ${new Date().toLocaleDateString("es-CO", {
+      year: "numeric",
+      month: "long",
+      day: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
+    })}\n\n`;
+
+    // Información del cliente
+    invoiceText += `CLIENTE:\n`;
+    invoiceText += `Nombre: ${customerName}\n`;
+    invoiceText += `Teléfono: ${customerPhone}\n`;
+    if (customerEmail) {
+      invoiceText += `Email: ${customerEmail}\n`;
+    }
+    invoiceText += `\n${"=".repeat(50)}\n\n`;
+
+    // Método de entrega
+    invoiceText += `MÉTODO DE ENTREGA:\n`;
+    invoiceText += deliveryMethod === "pickup"
+      ? "Recogida en tienda\n"
+      : `Envío a domicilio\n`;
+    if (deliveryMethod === "shipping") {
+      if (deliveryAddress) {
+        invoiceText += `Dirección: ${deliveryAddress}\n`;
+      }
+      if (selectedZone) {
+        invoiceText += `Zona: ${selectedZone.zone_name}\n`;
+      }
+    }
+    invoiceText += `\n${"=".repeat(50)}\n\n`;
+
+    // Productos
+    invoiceText += `PRODUCTOS:\n\n`;
+    invoiceText += `${"Item".padEnd(30)} ${"Cant".padEnd(6)} ${"P.Unit".padEnd(12)} ${"Total".padEnd(12)}\n`;
+    invoiceText += `${"-".repeat(60)}\n`;
+
+    cart.forEach((item) => {
+      const hasOffer = item.discount_percentage && item.discount_percentage > 0;
+      const finalPrice = hasOffer
+        ? calculateDiscountedPrice(item.price, item.discount_percentage!)
+        : item.price;
+      const itemTotal = finalPrice * item.quantity;
+
+      invoiceText += `${item.name.padEnd(30)} ${String(item.quantity).padEnd(6)} ${formatCurrency(finalPrice).padEnd(12)} ${formatCurrency(itemTotal).padEnd(12)}\n`;
+      if (hasOffer) {
+        invoiceText += `  (${item.discount_percentage}% OFF - Precio original: ${formatCurrency(item.price)})\n`;
+      }
+    });
+
+    invoiceText += `\n${"-".repeat(60)}\n\n`;
+
+    // Totales
+    if (totalDiscount > 0) {
+      invoiceText += `Subtotal:                                ${formatCurrency(subtotalOriginal)}\n`;
+      invoiceText += `Descuentos:                             -${formatCurrency(totalDiscount)}\n`;
+      invoiceText += `Subtotal con descuentos:                 ${formatCurrency(subtotal)}\n`;
+    } else {
+      invoiceText += `Subtotal:                                ${formatCurrency(subtotal)}\n`;
+    }
+
+    if (shippingAmount > 0) {
+      invoiceText += `Envío:                                   ${formatCurrency(shippingAmount)}\n`;
+    }
+
+    invoiceText += `\n${"=".repeat(60)}\n`;
+    invoiceText += `TOTAL:                                   ${formatCurrency(orderTotal)}\n`;
+    invoiceText += `${"=".repeat(60)}\n`;
+
+    if (notes) {
+      invoiceText += `\nNOTAS ADICIONALES:\n${notes}\n`;
+    }
+
+    invoiceText += `\n\nGracias por su compra!\n`;
+    invoiceText += `Estado del pedido: PENDIENTE\n`;
+    invoiceText += `Contacte a la tienda para coordinar el pago\n`;
+
+    // Crear blob y descargar
+    const blob = new Blob([invoiceText], { type: "text/plain;charset=utf-8" });
+    const url = window.URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = `factura_${orderNumber.replace(/[^a-zA-Z0-9]/g, "_")}.txt`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    window.URL.revokeObjectURL(url);
+
+    toast.success("Factura descargada exitosamente");
   };
 
   if (loading) {
@@ -297,7 +439,9 @@ export default function CheckoutPage() {
       <div className="min-h-screen flex items-center justify-center bg-gray-50">
         <div className="text-center max-w-md p-8">
           <ShoppingCart className="h-16 w-16 text-gray-400 mx-auto mb-4" />
-          <h1 className="text-2xl font-bold text-gray-800 mb-2">Tienda no encontrada</h1>
+          <h1 className="text-2xl font-bold text-gray-800 mb-2">
+            Tienda no encontrada
+          </h1>
           <Link href="/">
             <Button>Volver al inicio</Button>
           </Link>
@@ -306,8 +450,8 @@ export default function CheckoutPage() {
     );
   }
 
-  const primaryColor = config.store_primary_color || '#3B82F6';
-  const secondaryColor = config.store_secondary_color || '#10B981';
+  const primaryColor = config.store_primary_color || "#3B82F6";
+  const secondaryColor = config.store_secondary_color || "#10B981";
 
   // Vista de pedido completado
   if (orderCompleted) {
@@ -331,7 +475,10 @@ export default function CheckoutPage() {
                 className="w-20 h-20 rounded-full mx-auto mb-6 flex items-center justify-center"
                 style={{ backgroundColor: `${secondaryColor}20` }}
               >
-                <CheckCircle2 className="h-12 w-12" style={{ color: secondaryColor }} />
+                <CheckCircle2
+                  className="h-12 w-12"
+                  style={{ color: secondaryColor }}
+                />
               </div>
 
               <h2 className="text-3xl font-bold mb-2">¡Pedido Realizado!</h2>
@@ -341,47 +488,67 @@ export default function CheckoutPage() {
 
               <div className="bg-gray-50 rounded-lg p-6 mb-6">
                 <p className="text-sm text-gray-600 mb-1">Número de pedido</p>
-                <p className="text-2xl font-bold" style={{ color: primaryColor }}>
+                <p
+                  className="text-2xl font-bold"
+                  style={{ color: primaryColor }}
+                >
                   {orderNumber}
                 </p>
-                <p className="text-3xl font-bold mt-4">{formatCurrency(orderTotal)}</p>
+                <p className="text-3xl font-bold mt-4">
+                  {formatCurrency(orderTotal)}
+                </p>
               </div>
 
               <div className="space-y-4">
                 <div className="p-4 bg-blue-50 rounded-lg">
                   <p className="text-sm text-gray-700">
-                    📋 <strong>Siguiente paso:</strong> Envía los detalles de tu pedido por WhatsApp para coordinar el pago y la entrega
+                    📋 <strong>Siguiente paso:</strong> Envía los detalles de tu
+                    pedido por WhatsApp para coordinar el pago y la entrega
                   </p>
                 </div>
 
-                {storeWhatsApp && (
-                  <Button
-                    size="lg"
-                    className="w-full text-lg"
-                    style={{ backgroundColor: '#25D366' }}
-                    onClick={sendWhatsAppMessage}
-                  >
-                    <MessageSquare className="h-5 w-5 mr-2" />
-                    Enviar pedido por WhatsApp
-                  </Button>
-                )}
+                <div className="grid grid-cols-1 gap-3">
+                  {storeWhatsApp && (
+                    <Button
+                      size="lg"
+                      className="w-full text-lg"
+                      style={{ backgroundColor: "#25D366" }}
+                      onClick={sendWhatsAppMessage}
+                    >
+                      <MessageSquare className="h-5 w-5 mr-2" />
+                      Enviar pedido por WhatsApp
+                    </Button>
+                  )}
 
-                <Link href={`/store/${slug}`}>
-                  <Button variant="outline" size="lg" className="w-full">
-                    Volver a la tienda
+                  <Button
+                    variant="outline"
+                    size="lg"
+                    className="w-full"
+                    onClick={downloadInvoice}
+                  >
+                    <Download className="h-5 w-5 mr-2" />
+                    Descargar Factura Electrónica
                   </Button>
-                </Link>
+
+                  <Link href={`/store/${slug}`}>
+                    <Button variant="outline" size="lg" className="w-full">
+                      Volver a la tienda
+                    </Button>
+                  </Link>
+                </div>
               </div>
 
               <div className="mt-8 p-4 bg-gray-50 rounded-lg text-left text-sm text-gray-600">
                 <p className="font-semibold mb-2">Información importante:</p>
                 <ul className="space-y-1 list-disc list-inside">
                   <li>Tu pedido está en estado "pendiente"</li>
-                  <li>Contacta a la tienda por WhatsApp para coordinar el pago</li>
                   <li>
-                    {deliveryMethod === 'pickup'
-                      ? 'Recoge tu pedido en la tienda una vez confirmado el pago'
-                      : 'El envío se coordinará una vez confirmado el pago'}
+                    Contacta a la tienda por WhatsApp para coordinar el pago
+                  </li>
+                  <li>
+                    {deliveryMethod === "pickup"
+                      ? "Recoge tu pedido en la tienda una vez confirmado el pago"
+                      : "El envío se coordinará una vez confirmado el pago"}
                   </li>
                 </ul>
               </div>
@@ -472,11 +639,17 @@ export default function CheckoutPage() {
               <Card>
                 <CardContent className="pt-6">
                   <h2 className="text-xl font-bold mb-4 flex items-center gap-2">
-                    <Truck className="h-5 w-5" style={{ color: primaryColor }} />
+                    <Truck
+                      className="h-5 w-5"
+                      style={{ color: primaryColor }}
+                    />
                     Método de Entrega
                   </h2>
 
-                  <RadioGroup value={deliveryMethod} onValueChange={(value: any) => setDeliveryMethod(value)}>
+                  <RadioGroup
+                    value={deliveryMethod}
+                    onValueChange={(value: any) => setDeliveryMethod(value)}
+                  >
                     <div className="flex items-center space-x-3 p-4 border rounded-lg">
                       <RadioGroupItem value="pickup" id="pickup" />
                       <Label htmlFor="pickup" className="flex-1 cursor-pointer">
@@ -499,7 +672,10 @@ export default function CheckoutPage() {
 
                     <div className="flex items-center space-x-3 p-4 border rounded-lg">
                       <RadioGroupItem value="shipping" id="shipping" />
-                      <Label htmlFor="shipping" className="flex-1 cursor-pointer">
+                      <Label
+                        htmlFor="shipping"
+                        className="flex-1 cursor-pointer"
+                      >
                         <div className="flex items-center gap-2">
                           <Truck className="h-5 w-5" />
                           <div>
@@ -513,7 +689,7 @@ export default function CheckoutPage() {
                     </div>
                   </RadioGroup>
 
-                  {deliveryMethod === 'shipping' && (
+                  {deliveryMethod === "shipping" && (
                     <div className="mt-4 space-y-4">
                       <div>
                         <Label htmlFor="address">Dirección de entrega *</Label>
@@ -522,7 +698,7 @@ export default function CheckoutPage() {
                           placeholder="Ej: Calle 123 #45-67, Barrio Centro, Apartamento 301"
                           value={deliveryAddress}
                           onChange={(e) => setDeliveryAddress(e.target.value)}
-                          required={deliveryMethod === 'shipping'}
+                          required={deliveryMethod === "shipping"}
                           rows={3}
                         />
                         <p className="text-xs text-gray-500 mt-1">
@@ -533,14 +709,18 @@ export default function CheckoutPage() {
                       <div>
                         <Label htmlFor="shipping-zone">Zona de envío *</Label>
                         {shippingZones.length > 0 ? (
-                          <Select value={selectedZoneId} onValueChange={setSelectedZoneId}>
-                            <SelectTrigger>
+                          <Select
+                            value={selectedZoneId}
+                            onValueChange={setSelectedZoneId}
+                          >
+                            <SelectTrigger className="bg-white border-amber-50">
                               <SelectValue placeholder="Selecciona tu zona" />
                             </SelectTrigger>
-                            <SelectContent>
+                            <SelectContent className="bg-black ">
                               {shippingZones.map((zone) => (
-                                <SelectItem key={zone.id} value={zone.id}>
-                                  {zone.zone_name} - {formatCurrency(zone.shipping_cost)}
+                                <SelectItem key={zone.id} value={zone.id} className="hover:bg-gray-800 hover:text-2xl transition-all delay-75">
+                                  {zone.zone_name} -{" "}
+                                  {formatCurrency(zone.shipping_cost)}
                                 </SelectItem>
                               ))}
                             </SelectContent>
@@ -548,7 +728,8 @@ export default function CheckoutPage() {
                         ) : (
                           <div className="p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
                             <p className="text-sm text-yellow-800">
-                              No hay zonas de envío configuradas. Contacta a la tienda por WhatsApp.
+                              No hay zonas de envío configuradas. Contacta a la
+                              tienda por WhatsApp.
                             </p>
                           </div>
                         )}
@@ -565,7 +746,10 @@ export default function CheckoutPage() {
               <Card>
                 <CardContent className="pt-6">
                   <h2 className="text-xl font-bold mb-4 flex items-center gap-2">
-                    <MessageSquare className="h-5 w-5" style={{ color: primaryColor }} />
+                    <MessageSquare
+                      className="h-5 w-5"
+                      style={{ color: primaryColor }}
+                    />
                     Notas Adicionales
                   </h2>
 
@@ -588,17 +772,30 @@ export default function CheckoutPage() {
                   {/* Productos */}
                   <div className="space-y-3 mb-4 max-h-64 overflow-y-auto">
                     {cart.map((item) => {
-                      const hasOffer = item.discount_percentage && item.discount_percentage > 0;
+                      const hasOffer =
+                        item.discount_percentage &&
+                        item.discount_percentage > 0;
                       const finalPrice = hasOffer
-                        ? calculateDiscountedPrice(item.price, item.discount_percentage!)
+                        ? calculateDiscountedPrice(
+                            item.price,
+                            item.discount_percentage!
+                          )
                         : item.price;
 
                       return (
-                        <div key={item.id} className="flex justify-between text-sm">
+                        <div
+                          key={item.id}
+                          className="flex justify-between text-sm"
+                        >
                           <div className="flex-1">
                             <p className="font-medium">{item.name}</p>
                             <p className="text-gray-600">
                               {item.quantity} x {formatCurrency(finalPrice)}
+                              {hasOffer && (
+                                <span className="ml-2 text-xs italic line-through text-gray-400">
+                                  {formatCurrency(item.price)}
+                                </span>
+                              )}
                             </p>
                             {hasOffer && (
                               <span
@@ -618,18 +815,28 @@ export default function CheckoutPage() {
                   </div>
 
                   <div className="border-t pt-4 space-y-2">
-                    <div className="flex justify-between text-gray-600">
-                      <span>Subtotal:</span>
-                      <span>{formatCurrency(subtotal)}</span>
-                    </div>
-
-                    {totalDiscount > 0 && (
-                      <div
-                        className="flex justify-between font-semibold"
-                        style={{ color: secondaryColor }}
-                      >
-                        <span>Descuentos:</span>
-                        <span>-{formatCurrency(totalDiscount)}</span>
+                    {totalDiscount > 0 ? (
+                      <>
+                        <div className="flex justify-between text-gray-600">
+                          <span>Subtotal:</span>
+                          <span>{formatCurrency(subtotalOriginal)}</span>
+                        </div>
+                        <div
+                          className="flex justify-between font-semibold"
+                          style={{ color: secondaryColor }}
+                        >
+                          <span>Descuentos:</span>
+                          <span>-{formatCurrency(totalDiscount)}</span>
+                        </div>
+                        <div className="flex justify-between text-gray-600 font-medium">
+                          <span>Subtotal con descuentos:</span>
+                          <span>{formatCurrency(subtotal)}</span>
+                        </div>
+                      </>
+                    ) : (
+                      <div className="flex justify-between text-gray-600">
+                        <span>Subtotal:</span>
+                        <span>{formatCurrency(subtotal)}</span>
                       </div>
                     )}
 
@@ -657,7 +864,8 @@ export default function CheckoutPage() {
                       </p>
                       {total < config.store_min_order && (
                         <p className="text-sm font-semibold text-orange-600 mt-1">
-                          Faltan {formatCurrency(config.store_min_order - total)}
+                          Faltan{" "}
+                          {formatCurrency(config.store_min_order - total)}
                         </p>
                       )}
                     </div>
@@ -668,7 +876,12 @@ export default function CheckoutPage() {
                     size="lg"
                     className="w-full mt-6 text-lg"
                     style={{ backgroundColor: primaryColor }}
-                    disabled={submitting || (config.store_min_order ? total < config.store_min_order : false)}
+                    disabled={
+                      submitting ||
+                      (config.store_min_order
+                        ? total < config.store_min_order
+                        : false)
+                    }
                   >
                     {submitting ? (
                       <>
@@ -684,7 +897,8 @@ export default function CheckoutPage() {
                   </Button>
 
                   <p className="text-xs text-gray-500 text-center mt-4">
-                    Al confirmar, se creará tu pedido y podrás enviarlo por WhatsApp para coordinar el pago
+                    Al confirmar, se creará tu pedido y podrás enviarlo por
+                    WhatsApp para coordinar el pago
                   </p>
                 </CardContent>
               </Card>
