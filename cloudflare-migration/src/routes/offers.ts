@@ -44,6 +44,63 @@ app.get('/', async (c) => {
   }
 });
 
+// GET /api/offers/active - Get all active offers (DEBE IR ANTES DE /:id)
+app.get('/active', async (c) => {
+  const tenant: Tenant = c.get('tenant');
+  const now = new Date().toISOString();
+
+  try {
+    const result = await c.env.DB.prepare(
+      `SELECT * FROM offers
+       WHERE tenant_id = ?
+         AND is_active = 1
+         AND start_date <= ?
+         AND end_date >= ?
+       ORDER BY created_at DESC`
+    )
+      .bind(tenant.id, now, now)
+      .all();
+
+    return c.json<APIResponse<Offer[]>>({
+      success: true,
+      data: result.results as Offer[],
+    });
+  } catch (error) {
+    console.error('Error fetching active offers:', error);
+    return c.json<APIResponse>({
+      success: false,
+      error: 'Failed to fetch active offers',
+    }, 500);
+  }
+});
+
+// GET /api/offers/product/:productId - Get all offers for a product (DEBE IR ANTES DE /:id)
+app.get('/product/:productId', async (c) => {
+  const tenant: Tenant = c.get('tenant');
+  const productId = c.req.param('productId');
+
+  try {
+    const result = await c.env.DB.prepare(
+      `SELECT * FROM offers
+       WHERE tenant_id = ? AND product_id = ?
+       ORDER BY created_at DESC`
+    )
+      .bind(tenant.id, productId)
+      .all();
+
+    return c.json<APIResponse<Offer[]>>({
+      success: true,
+      data: result.results as Offer[],
+    });
+  } catch (error) {
+    console.error('Error fetching product offers:', error);
+    return c.json<APIResponse>({
+      success: false,
+      error: 'Failed to fetch product offers',
+    }, 500);
+  }
+});
+
 // GET /api/offers/:id - Get single offer
 app.get('/:id', async (c) => {
   const tenant: Tenant = c.get('tenant');
@@ -270,63 +327,6 @@ app.delete('/:id', async (c) => {
     return c.json<APIResponse>({
       success: false,
       error: 'Failed to delete offer',
-    }, 500);
-  }
-});
-
-// GET /api/offers/product/:productId - Get all offers for a product
-app.get('/product/:productId', async (c) => {
-  const tenant: Tenant = c.get('tenant');
-  const productId = c.req.param('productId');
-
-  try {
-    const result = await c.env.DB.prepare(
-      `SELECT * FROM offers
-       WHERE tenant_id = ? AND product_id = ?
-       ORDER BY created_at DESC`
-    )
-      .bind(tenant.id, productId)
-      .all();
-
-    return c.json<APIResponse<Offer[]>>({
-      success: true,
-      data: result.results as Offer[],
-    });
-  } catch (error) {
-    console.error('Error fetching product offers:', error);
-    return c.json<APIResponse>({
-      success: false,
-      error: 'Failed to fetch product offers',
-    }, 500);
-  }
-});
-
-// GET /api/offers/active - Get all active offers
-app.get('/active', async (c) => {
-  const tenant: Tenant = c.get('tenant');
-  const now = new Date().toISOString();
-
-  try {
-    const result = await c.env.DB.prepare(
-      `SELECT * FROM offers
-       WHERE tenant_id = ?
-         AND is_active = 1
-         AND start_date <= ?
-         AND end_date >= ?
-       ORDER BY created_at DESC`
-    )
-      .bind(tenant.id, now, now)
-      .all();
-
-    return c.json<APIResponse<Offer[]>>({
-      success: true,
-      data: result.results as Offer[],
-    });
-  } catch (error) {
-    console.error('Error fetching active offers:', error);
-    return c.json<APIResponse>({
-      success: false,
-      error: 'Failed to fetch active offers',
     }, 500);
   }
 });
