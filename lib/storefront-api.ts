@@ -126,3 +126,54 @@ export function parseProductImages(images?: string): string[] {
     return [];
   }
 }
+
+/**
+ * Create order from storefront
+ */
+export interface CreateOrderData {
+  customer_name: string;
+  customer_phone: string;
+  customer_email?: string;
+  delivery_method: 'pickup' | 'shipping';
+  delivery_address?: string;
+  notes?: string;
+  items: Array<{
+    product_id: string;
+    product_name: string;
+    quantity: number;
+    unit_price: number;
+    discount_percentage?: number;
+  }>;
+}
+
+export interface OrderResponse {
+  order_id: string;
+  order_number: string;
+  total: number;
+  store_whatsapp?: string;
+}
+
+export async function createOrder(slug: string, orderData: CreateOrderData): Promise<OrderResponse> {
+  const url = `${WORKER_URL}/api/storefront/orders/${slug}`;
+
+  const response = await fetch(url, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(orderData),
+  });
+
+  if (!response.ok) {
+    const errorData = await response.json().catch(() => ({}));
+    throw new Error(errorData.error || `Error ${response.status}`);
+  }
+
+  const data: APIResponse<OrderResponse> = await response.json();
+
+  if (!data.success) {
+    throw new Error(data.error || 'Failed to create order');
+  }
+
+  return data.data as OrderResponse;
+}
