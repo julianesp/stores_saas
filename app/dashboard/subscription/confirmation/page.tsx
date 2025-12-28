@@ -12,75 +12,87 @@ function ConfirmationContent() {
   const searchParams = useSearchParams();
   const router = useRouter();
 
-  // Wompi envía el transaction ID en la query string
+  // Wompi puede enviar el transaction ID en la query string (o no)
   const transactionId = searchParams.get("id");
 
   const [loading, setLoading] = useState(true);
   const [transactionStatus, setTransactionStatus] = useState<"PENDING" | "APPROVED" | "DECLINED" | "ERROR">("PENDING");
 
   useEffect(() => {
-    if (transactionId) {
-      // Dar tiempo para que el webhook procese el pago
-      setTimeout(() => {
-        checkPaymentStatus();
-      }, 2000);
-    } else {
-      setTransactionStatus("ERROR");
-      setLoading(false);
-    }
+    // Siempre verificar el estado, con o sin transaction ID
+    setTimeout(() => {
+      checkPaymentStatus();
+    }, 2000);
   }, [transactionId]);
 
   const checkPaymentStatus = async () => {
     try {
-      // Obtener la public key de Wompi desde las variables de entorno
-      const wompiPublicKey = process.env.NEXT_PUBLIC_WOMPI_PUBLIC_KEY;
+      if (transactionId) {
+        // Si hay transaction ID, consultar directamente a Wompi
+        const wompiPublicKey = process.env.NEXT_PUBLIC_WOMPI_PUBLIC_KEY;
 
-      if (!wompiPublicKey) {
-        console.error("Wompi public key not configured");
-        setTransactionStatus("ERROR");
-        setLoading(false);
-        return;
-      }
-
-      // Consultar directamente a Wompi la transacción
-      const response = await fetch(`https://production.wompi.co/v1/transactions/${transactionId}`, {
-        headers: {
-          'Authorization': `Bearer ${wompiPublicKey}`,
-        },
-      });
-
-      if (!response.ok) {
-        throw new Error("Error al consultar transacción en Wompi");
-      }
-
-      const data = await response.json();
-      console.log("Transaction data from Wompi:", data);
-
-      // Verificar el estado
-      if (data.data?.status === "APPROVED") {
-        setTransactionStatus("APPROVED");
-
-        // Llamar al backend para activar la suscripción
-        try {
-          await fetch("/api/subscriptions/verify-payment", {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-            },
-            body: JSON.stringify({
-              transactionId,
-            }),
-          });
-        } catch (err) {
-          console.error("Error activating subscription:", err);
-          // No mostramos error porque el pago sí fue exitoso
+        if (!wompiPublicKey) {
+          console.error("Wompi public key not configured");
+          setTransactionStatus("ERROR");
+          setLoading(false);
+          return;
         }
-      } else if (data.data?.status === "DECLINED") {
-        setTransactionStatus("DECLINED");
-      } else if (data.data?.status === "PENDING") {
-        setTransactionStatus("PENDING");
+
+        const response = await fetch(`https://production.wompi.co/v1/transactions/${transactionId}`, {
+          headers: {
+            'Authorization': `Bearer ${wompiPublicKey}`,
+          },
+        });
+
+        if (!response.ok) {
+          throw new Error("Error al consultar transacción en Wompi");
+        }
+
+        const data = await response.json();
+        console.log("Transaction data from Wompi:", data);
+
+        if (data.data?.status === "APPROVED") {
+          setTransactionStatus("APPROVED");
+
+          // Llamar al backend para activar la suscripción
+          try {
+            await fetch("/api/subscriptions/verify-payment", {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+              },
+              body: JSON.stringify({
+                transactionId,
+              }),
+            });
+          } catch (err) {
+            console.error("Error activating subscription:", err);
+          }
+        } else if (data.data?.status === "DECLINED") {
+          setTransactionStatus("DECLINED");
+        } else if (data.data?.status === "PENDING") {
+          setTransactionStatus("PENDING");
+        } else {
+          setTransactionStatus("ERROR");
+        }
       } else {
-        setTransactionStatus("ERROR");
+        // Si NO hay transaction ID, verificar el perfil del usuario
+        // (el webhook ya debería haber activado la suscripción)
+        const profileResponse = await fetch("/api/user-profiles");
+
+        if (profileResponse.ok) {
+          const profileData = await profileResponse.json();
+
+          // Verificar si la suscripción está activa
+          if (profileData.subscription_status === "active") {
+            setTransactionStatus("APPROVED");
+          } else {
+            // Todavía pendiente, dar más tiempo
+            setTransactionStatus("PENDING");
+          }
+        } else {
+          setTransactionStatus("ERROR");
+        }
       }
     } catch (error) {
       console.error("Error checking payment:", error);
