@@ -98,9 +98,14 @@ export default function StorefrontPage() {
     }
   };
 
-  const filteredProducts = products.filter((product) =>
-    product.name.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  // Filtrar y eliminar duplicados
+  const filteredProducts = products
+    .filter((product) =>
+      product.name.toLowerCase().includes(searchTerm.toLowerCase())
+    )
+    .filter((product, index, self) =>
+      index === self.findIndex((p) => p.id === product.id)
+    );
 
   const openWhatsApp = () => {
     if (config?.store_whatsapp) {
