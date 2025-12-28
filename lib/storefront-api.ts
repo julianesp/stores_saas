@@ -136,6 +136,7 @@ export interface CreateOrderData {
   customer_email?: string;
   delivery_method: 'pickup' | 'shipping';
   delivery_address?: string;
+  shipping_cost?: number;
   notes?: string;
   items: Array<{
     product_id: string;

@@ -290,7 +290,8 @@ app.post('/orders/:slug', async (c) => {
       return sum;
     }, 0);
 
-    const total = subtotal - discount;
+    const shippingCost = body.shipping_cost ? parseFloat(body.shipping_cost) : 0;
+    const total = subtotal - discount + shippingCost;
 
     // Crear venta/pedido
     const saleData: any = {
@@ -305,7 +306,7 @@ app.post('/orders/:slug', async (c) => {
       payment_method: 'pendiente', // El pago se coordinará por WhatsApp
       status: 'pendiente', // Estado inicial del pedido
       points_earned: 0,
-      notes: `Pedido web - Cliente: ${body.customer_name}\nTeléfono: ${body.customer_phone}\n${body.customer_email ? `Email: ${body.customer_email}\n` : ''}Entrega: ${body.delivery_method === 'pickup' ? 'Recogida en tienda' : 'Envío a domicilio'}\n${body.delivery_address ? `Dirección: ${body.delivery_address}\n` : ''}${body.notes ? `Notas: ${body.notes}` : ''}`,
+      notes: `Pedido web - Cliente: ${body.customer_name}\nTeléfono: ${body.customer_phone}\n${body.customer_email ? `Email: ${body.customer_email}\n` : ''}Entrega: ${body.delivery_method === 'pickup' ? 'Recogida en tienda' : 'Envío a domicilio'}\n${body.delivery_address ? `Dirección: ${body.delivery_address}\n` : ''}${shippingCost > 0 ? `Costo de envío: $${shippingCost.toFixed(0)}\n` : ''}${body.notes ? `Notas: ${body.notes}` : ''}`,
       payment_status: 'pendiente',
       amount_paid: 0,
       amount_pending: total,

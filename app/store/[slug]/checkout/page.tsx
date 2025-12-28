@@ -58,6 +58,7 @@ export default function CheckoutPage() {
   const [customerEmail, setCustomerEmail] = useState('');
   const [deliveryMethod, setDeliveryMethod] = useState<'pickup' | 'shipping'>('pickup');
   const [deliveryAddress, setDeliveryAddress] = useState('');
+  const [shippingCost, setShippingCost] = useState('');
   const [notes, setNotes] = useState('');
 
   // Datos del pedido completado
@@ -125,7 +126,8 @@ export default function CheckoutPage() {
     }
     return sum;
   }, 0);
-  const total = subtotal;
+  const shippingAmount = deliveryMethod === 'shipping' && shippingCost ? parseFloat(shippingCost) || 0 : 0;
+  const total = subtotal + shippingAmount;
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -161,6 +163,7 @@ export default function CheckoutPage() {
         customer_email: customerEmail.trim() || undefined,
         delivery_method: deliveryMethod,
         delivery_address: deliveryMethod === 'shipping' ? deliveryAddress.trim() : undefined,
+        shipping_cost: shippingAmount > 0 ? shippingAmount : undefined,
         notes: notes.trim() || undefined,
         items: cart.map((item) => {
           const hasOffer = item.discount_percentage && item.discount_percentage > 0;
@@ -236,6 +239,9 @@ export default function CheckoutPage() {
 
     if (totalDiscount > 0) {
       message += `\n💰 *Descuentos:* -${formatCurrency(totalDiscount)}\n`;
+    }
+    if (shippingAmount > 0) {
+      message += `🚚 *Costo de envío:* ${formatCurrency(shippingAmount)}\n`;
     }
     message += `\n💵 *TOTAL:* ${formatCurrency(orderTotal)}\n`;
 
@@ -445,60 +451,74 @@ export default function CheckoutPage() {
                   </h2>
 
                   <RadioGroup value={deliveryMethod} onValueChange={(value: any) => setDeliveryMethod(value)}>
-                    {config.store_pickup_enabled === 1 && (
-                      <div className="flex items-center space-x-3 p-4 border rounded-lg">
-                        <RadioGroupItem value="pickup" id="pickup" />
-                        <Label htmlFor="pickup" className="flex-1 cursor-pointer">
-                          <div className="flex items-center gap-2">
-                            <Store className="h-5 w-5" />
-                            <div>
-                              <p className="font-semibold">Recogida en tienda</p>
-                              <p className="text-sm text-gray-600">
-                                Recoge tu pedido en la tienda
+                    <div className="flex items-center space-x-3 p-4 border rounded-lg">
+                      <RadioGroupItem value="pickup" id="pickup" />
+                      <Label htmlFor="pickup" className="flex-1 cursor-pointer">
+                        <div className="flex items-center gap-2">
+                          <Store className="h-5 w-5" />
+                          <div>
+                            <p className="font-semibold">Recogida en tienda</p>
+                            <p className="text-sm text-gray-600">
+                              Recoge tu pedido en la tienda
+                            </p>
+                            {config.store_address && (
+                              <p className="text-xs text-gray-500 mt-1">
+                                {config.store_address}
                               </p>
-                              {config.store_address && (
-                                <p className="text-xs text-gray-500 mt-1">
-                                  {config.store_address}
-                                </p>
-                              )}
-                            </div>
+                            )}
                           </div>
-                        </Label>
-                      </div>
-                    )}
+                        </div>
+                      </Label>
+                    </div>
 
-                    {config.store_shipping_enabled === 1 && (
-                      <div className="flex items-center space-x-3 p-4 border rounded-lg">
-                        <RadioGroupItem value="shipping" id="shipping" />
-                        <Label htmlFor="shipping" className="flex-1 cursor-pointer">
-                          <div className="flex items-center gap-2">
-                            <Truck className="h-5 w-5" />
-                            <div>
-                              <p className="font-semibold">Envío a domicilio</p>
-                              <p className="text-sm text-gray-600">
-                                Te lo enviamos a tu dirección
-                              </p>
-                            </div>
+                    <div className="flex items-center space-x-3 p-4 border rounded-lg">
+                      <RadioGroupItem value="shipping" id="shipping" />
+                      <Label htmlFor="shipping" className="flex-1 cursor-pointer">
+                        <div className="flex items-center gap-2">
+                          <Truck className="h-5 w-5" />
+                          <div>
+                            <p className="font-semibold">Envío a domicilio</p>
+                            <p className="text-sm text-gray-600">
+                              Te lo enviamos a tu dirección (costo adicional)
+                            </p>
                           </div>
-                        </Label>
-                      </div>
-                    )}
+                        </div>
+                      </Label>
+                    </div>
                   </RadioGroup>
 
                   {deliveryMethod === 'shipping' && (
-                    <div className="mt-4">
-                      <Label htmlFor="address">Dirección de entrega *</Label>
-                      <Textarea
-                        id="address"
-                        placeholder="Ej: Calle 123 #45-67, Barrio Centro, Apartamento 301"
-                        value={deliveryAddress}
-                        onChange={(e) => setDeliveryAddress(e.target.value)}
-                        required={deliveryMethod === 'shipping'}
-                        rows={3}
-                      />
-                      <p className="text-xs text-gray-500 mt-1">
-                        Incluye todos los detalles necesarios para la entrega
-                      </p>
+                    <div className="mt-4 space-y-4">
+                      <div>
+                        <Label htmlFor="address">Dirección de entrega *</Label>
+                        <Textarea
+                          id="address"
+                          placeholder="Ej: Calle 123 #45-67, Barrio Centro, Apartamento 301"
+                          value={deliveryAddress}
+                          onChange={(e) => setDeliveryAddress(e.target.value)}
+                          required={deliveryMethod === 'shipping'}
+                          rows={3}
+                        />
+                        <p className="text-xs text-gray-500 mt-1">
+                          Incluye todos los detalles necesarios para la entrega
+                        </p>
+                      </div>
+
+                      <div>
+                        <Label htmlFor="shipping-cost">Costo de envío (opcional)</Label>
+                        <Input
+                          id="shipping-cost"
+                          type="number"
+                          placeholder="Ej: 5000"
+                          value={shippingCost}
+                          onChange={(e) => setShippingCost(e.target.value)}
+                          min="0"
+                          step="100"
+                        />
+                        <p className="text-xs text-gray-500 mt-1">
+                          Si conoces el costo del envío (mototaxi, etc.), ingrésalo aquí. Si no, déjalo en blanco y se coordinará por WhatsApp.
+                        </p>
+                      </div>
                     </div>
                   )}
                 </CardContent>
@@ -573,6 +593,13 @@ export default function CheckoutPage() {
                       >
                         <span>Descuentos:</span>
                         <span>-{formatCurrency(totalDiscount)}</span>
+                      </div>
+                    )}
+
+                    {shippingAmount > 0 && (
+                      <div className="flex justify-between text-gray-600">
+                        <span>Envío:</span>
+                        <span>{formatCurrency(shippingAmount)}</span>
                       </div>
                     )}
 
