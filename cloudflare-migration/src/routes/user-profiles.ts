@@ -36,6 +36,7 @@ app.get('/', async (c) => {
       store_enabled: !!result.store_enabled,
       store_shipping_enabled: !!result.store_shipping_enabled,
       store_pickup_enabled: !!result.store_pickup_enabled,
+      wompi_enabled: !!result.wompi_enabled,
     };
 
     return c.json<APIResponse<UserProfile>>({
@@ -151,6 +152,11 @@ app.put('/:id', async (c) => {
       'store_shipping_enabled',
       'store_pickup_enabled',
       'store_min_order',
+      'store_nequi_number',
+      // Wompi payment configuration
+      'wompi_public_key',
+      'wompi_private_key',
+      'wompi_enabled',
     ];
 
     const updates: string[] = [];
@@ -197,6 +203,7 @@ app.put('/:id', async (c) => {
       store_enabled: !!updated!.store_enabled,
       store_shipping_enabled: !!updated!.store_shipping_enabled,
       store_pickup_enabled: !!updated!.store_pickup_enabled,
+      wompi_enabled: !!updated!.wompi_enabled,
     };
 
     return c.json<APIResponse<UserProfile>>({

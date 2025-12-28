@@ -215,4 +215,80 @@ app.post('/', async (c) => {
   }
 });
 
+// PUT /api/sales/:id - Update sale (mainly for confirming web orders)
+app.put('/:id', async (c) => {
+  const tenant: Tenant = c.get('tenant');
+  const saleId = c.req.param('id');
+
+  try {
+    const body = await c.req.json();
+    const tenantDB = new TenantDB(c.env.DB, tenant.id);
+
+    // Obtener la venta actual
+    const existingSale = await tenantDB.getById<Sale>('sales', saleId);
+    if (!existingSale) {
+      return c.json<APIResponse>({
+        success: false,
+        error: 'Sale not found',
+      }, 404);
+    }
+
+    // Verificar si es un pedido web que se está confirmando
+    const isWebOrder = existingSale.sale_number.startsWith('WEB-');
+    const isConfirmingPayment = body.status === 'completada' && existingSale.status === 'pendiente';
+
+    // Si es un pedido web que se está confirmando, descontar inventario
+    if (isWebOrder && isConfirmingPayment) {
+      // Obtener los items del pedido
+      const items = await tenantDB.query<SaleItem>('sale_items', 'sale_id = ?', [saleId]);
+
+      // Descontar stock de cada producto
+      for (const item of items) {
+        const product = await tenantDB.getById<any>('products', item.product_id);
+        if (product) {
+          const newStock = product.stock - item.quantity;
+
+          // Validar que hay suficiente stock
+          if (newStock < 0) {
+            return c.json<APIResponse>({
+              success: false,
+              error: `No hay suficiente stock para el producto ${product.name}. Stock actual: ${product.stock}, requerido: ${item.quantity}`,
+            }, 400);
+          }
+
+          await tenantDB.update('products', item.product_id, {
+            stock: newStock
+          });
+        }
+      }
+    }
+
+    // Actualizar la venta
+    const updateData: any = {};
+    if (body.status !== undefined) updateData.status = body.status;
+    if (body.payment_status !== undefined) updateData.payment_status = body.payment_status;
+    if (body.amount_paid !== undefined) updateData.amount_paid = body.amount_paid;
+    if (body.amount_pending !== undefined) updateData.amount_pending = body.amount_pending;
+    if (body.notes !== undefined) updateData.notes = body.notes;
+
+    await tenantDB.update('sales', saleId, updateData);
+
+    // Obtener venta actualizada
+    const updatedSale = await tenantDB.getById<Sale>('sales', saleId);
+    const items = await tenantDB.query<SaleItem>('sale_items', 'sale_id = ?', [saleId]);
+
+    return c.json<APIResponse<Sale & { items: SaleItem[] }>>({
+      success: true,
+      data: { ...updatedSale!, items },
+      message: 'Sale updated successfully',
+    });
+  } catch (error: any) {
+    console.error('Error updating sale:', error);
+    return c.json<APIResponse>({
+      success: false,
+      error: error.message || 'Failed to update sale',
+    }, 500);
+  }
+});
+
 export default app;

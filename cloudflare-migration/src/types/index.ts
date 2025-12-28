@@ -10,6 +10,16 @@ export interface Env {
   ENVIRONMENT: string;
   CLERK_SECRET_KEY?: string;
   CLERK_PUBLISHABLE_KEY?: string;
+
+  // Wompi credentials for SaaS subscriptions (Admin account)
+  ADMIN_WOMPI_PUBLIC_KEY?: string;
+  ADMIN_WOMPI_PRIVATE_KEY?: string;
+
+  // CRON secret for scheduled tasks
+  CRON_SECRET?: string;
+
+  // D1 shared database
+  DB: D1Database;
 }
 
 // Tenant information

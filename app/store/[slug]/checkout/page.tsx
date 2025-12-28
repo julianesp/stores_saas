@@ -11,6 +11,7 @@ import {
   calculateDiscountedPrice,
   getStoreShippingZones,
   ShippingZonePublic,
+  createWompiPaymentLink,
 } from "@/lib/storefront-api";
 import { formatCurrency } from "@/lib/utils";
 import {
@@ -79,6 +80,10 @@ export default function CheckoutPage() {
   const [orderNumber, setOrderNumber] = useState("");
   const [orderTotal, setOrderTotal] = useState(0);
   const [storeWhatsApp, setStoreWhatsApp] = useState("");
+  const [storeNequiNumber, setStoreNequiNumber] = useState("");
+  const [wompiEnabled, setWompiEnabled] = useState(false);
+  const [wompiCheckoutUrl, setWompiCheckoutUrl] = useState("");
+  const [creatingPaymentLink, setCreatingPaymentLink] = useState(false);
 
   useEffect(() => {
     loadConfigAndCart();
@@ -236,6 +241,29 @@ export default function CheckoutPage() {
       setOrderNumber(response.order_number);
       setOrderTotal(response.total);
       setStoreWhatsApp(response.store_whatsapp || config?.store_whatsapp || "");
+      setStoreNequiNumber(config?.store_nequi_number || "");
+      setWompiEnabled(response.wompi_enabled || false);
+
+      // Si Wompi está habilitado, crear payment link
+      if (response.wompi_enabled && response.total >= 10000) {
+        try {
+          setCreatingPaymentLink(true);
+          const paymentLink = await createWompiPaymentLink(slug, {
+            order_id: response.order_id,
+            order_number: response.order_number,
+            amount_in_cents: Math.round(response.total * 100),
+            customer_email: customerEmail.trim() || undefined,
+            customer_name: customerName.trim(),
+          });
+          setWompiCheckoutUrl(paymentLink.checkout_url);
+        } catch (error: any) {
+          console.error("Error creating Wompi payment link:", error);
+          // No bloqueamos el flujo, solo mostramos warning
+          toast.warning("No se pudo crear el link de pago automático");
+        } finally {
+          setCreatingPaymentLink(false);
+        }
+      }
 
       // Limpiar carrito
       localStorage.removeItem(`cart_${slug}`);
@@ -500,14 +528,86 @@ export default function CheckoutPage() {
               </div>
 
               <div className="space-y-4">
-                <div className="p-4 bg-blue-50 rounded-lg">
-                  <p className="text-sm text-gray-700">
-                    📋 <strong>Siguiente paso:</strong> Envía los detalles de tu
-                    pedido por WhatsApp para coordinar el pago y la entrega
-                  </p>
-                </div>
+                {/* Instrucciones según método de pago */}
+                {wompiEnabled && wompiCheckoutUrl ? (
+                  <div className="p-4 bg-green-50 border border-green-200 rounded-lg">
+                    <p className="text-sm text-green-800">
+                      ✅ <strong>Link de pago creado!</strong> Haz clic en Pagar con Wompi para completar tu pago con Nequi, PSE, tarjeta y más.
+                    </p>
+                  </div>
+                ) : wompiEnabled && creatingPaymentLink ? (
+                  <div className="p-4 bg-blue-50 rounded-lg">
+                    <p className="text-sm text-gray-700">
+                      <Loader2 className="inline h-4 w-4 mr-2 animate-spin" />
+                      <strong>Creando link de pago...</strong>
+                    </p>
+                  </div>
+                ) : wompiEnabled && orderTotal < 10000 ? (
+                  <div className="p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
+                    <p className="text-sm text-yellow-800">
+                      ⚠️ <strong>Monto menor al mínimo:</strong> El pago online requiere un mínimo de $10,000. Contacta a la tienda por WhatsApp para coordinar el pago.
+                    </p>
+                  </div>
+                ) : storeNequiNumber ? (
+                  <>
+                    <div className="p-4 bg-blue-50 rounded-lg">
+                      <p className="text-sm text-gray-700">
+                        📋 <strong>Siguiente paso:</strong> Realiza el pago por Nequi y envía el comprobante por WhatsApp
+                      </p>
+                    </div>
+
+                    <div className="p-4 bg-purple-50 border border-purple-200 rounded-lg">
+                      <p className="text-sm font-semibold text-purple-900 mb-2">
+                        💳 Número de Nequi / Cuenta:
+                      </p>
+                      <div className="flex items-center justify-between bg-white px-4 py-3 rounded-lg">
+                        <p className="text-2xl font-bold text-purple-700">
+                          {storeNequiNumber}
+                        </p>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => {
+                            navigator.clipboard.writeText(storeNequiNumber);
+                            toast.success("Número copiado al portapapeles");
+                          }}
+                          className="text-purple-600 hover:text-purple-700 hover:bg-purple-100"
+                        >
+                          Copiar
+                        </Button>
+                      </div>
+                      <p className="text-xs text-purple-700 mt-2 text-center">
+                        Monto a transferir: <strong>{formatCurrency(orderTotal)}</strong>
+                      </p>
+                    </div>
+                  </>
+                ) : (
+                  <div className="p-4 bg-blue-50 rounded-lg">
+                    <p className="text-sm text-gray-700">
+                      📋 <strong>Siguiente paso:</strong> Envía los detalles de tu pedido por WhatsApp para coordinar el pago y la entrega
+                    </p>
+                  </div>
+                )}
 
                 <div className="grid grid-cols-1 gap-3">
+                  {/* Botón de pago con Wompi (prioridad máxima) */}
+                  {wompiEnabled && wompiCheckoutUrl && (
+                    <Button
+                      size="lg"
+                      className="w-full text-lg"
+                      style={{ backgroundColor: "#6D28D9" }}
+                      onClick={() => {
+                        window.location.href = wompiCheckoutUrl;
+                      }}
+                    >
+                      <svg className="h-5 w-5 mr-2" viewBox="0 0 24 24" fill="currentColor">
+                        <path d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" fill="none"/>
+                      </svg>
+                      Pagar con Wompi (Nequi, PSE, Tarjetas)
+                    </Button>
+                  )}
+
+                  {/* Botón de WhatsApp */}
                   {storeWhatsApp && (
                     <Button
                       size="lg"
@@ -516,10 +616,11 @@ export default function CheckoutPage() {
                       onClick={sendWhatsAppMessage}
                     >
                       <MessageSquare className="h-5 w-5 mr-2" />
-                      Enviar pedido por WhatsApp
+                      {wompiEnabled && wompiCheckoutUrl ? "Contactar tienda por WhatsApp" : "Enviar pedido por WhatsApp"}
                     </Button>
                   )}
 
+                  {/* Botón de descargar factura */}
                   <Button
                     variant="outline"
                     size="lg"
@@ -530,6 +631,7 @@ export default function CheckoutPage() {
                     Descargar Factura Electrónica
                   </Button>
 
+                  {/* Botón volver a la tienda */}
                   <Link href={`/store/${slug}`}>
                     <Button variant="outline" size="lg" className="w-full">
                       Volver a la tienda
@@ -541,7 +643,7 @@ export default function CheckoutPage() {
               <div className="mt-8 p-4 bg-gray-50 rounded-lg text-left text-sm text-gray-600">
                 <p className="font-semibold mb-2">Información importante:</p>
                 <ul className="space-y-1 list-disc list-inside">
-                  <li>Tu pedido está en estado "pendiente"</li>
+                  <li>Tu pedido está en estado pendiente</li>
                   <li>
                     Contacta a la tienda por WhatsApp para coordinar el pago
                   </li>

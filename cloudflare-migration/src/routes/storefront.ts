@@ -30,6 +30,7 @@ interface StoreConfig {
   store_shipping_enabled?: number;
   store_pickup_enabled?: number;
   store_min_order?: number;
+  store_nequi_number?: string;
 }
 
 // GET /api/storefront/config/:slug - Obtener configuración pública de una tienda por slug
@@ -46,7 +47,8 @@ app.get('/config/:slug', async (c) => {
         store_whatsapp, store_facebook, store_instagram,
         store_address, store_city, store_phone, store_email,
         store_enabled, store_terms,
-        store_shipping_enabled, store_pickup_enabled, store_min_order
+        store_shipping_enabled, store_pickup_enabled, store_min_order,
+        store_nequi_number
       FROM user_profiles
       WHERE store_slug = ? AND store_enabled = 1`
     )
@@ -256,10 +258,10 @@ app.post('/orders/:slug', async (c) => {
 
     // Verificar que la tienda existe y está activa
     const store = await c.env.DB.prepare(
-      'SELECT id, store_name, store_whatsapp FROM user_profiles WHERE store_slug = ? AND store_enabled = 1'
+      'SELECT id, store_name, store_whatsapp, wompi_enabled FROM user_profiles WHERE store_slug = ? AND store_enabled = 1'
     )
       .bind(slug)
-      .first<{ id: string; store_name?: string; store_whatsapp?: string }>();
+      .first<{ id: string; store_name?: string; store_whatsapp?: string; wompi_enabled: number }>();
 
     if (!store) {
       return c.json<APIResponse>({
@@ -329,16 +331,8 @@ app.post('/orders/:slug', async (c) => {
 
     await tenantDB.batchInsert('sale_items', itemsToInsert);
 
-    // Actualizar stock de productos
-    for (const item of body.items) {
-      const product = await tenantDB.getById<any>('products', item.product_id);
-      if (product) {
-        const newStock = product.stock - item.quantity;
-        await tenantDB.update('products', item.product_id, {
-          stock: newStock
-        });
-      }
-    }
+    // NO descontar inventario todavía - esperamos confirmación de pago del dueño
+    // El inventario se descontará cuando el dueño confirme el pago en el dashboard
 
     // Retornar pedido creado
     return c.json<APIResponse>({
@@ -348,6 +342,7 @@ app.post('/orders/:slug', async (c) => {
         order_number: orderNumber,
         total: total,
         store_whatsapp: store.store_whatsapp,
+        wompi_enabled: !!store.wompi_enabled,
       },
       message: 'Order created successfully',
     }, 201);
@@ -398,6 +393,119 @@ app.get('/shipping-zones/:slug', async (c) => {
     return c.json<APIResponse>({
       success: false,
       error: 'Failed to fetch shipping zones',
+    }, 500);
+  }
+});
+
+// POST /api/storefront/wompi/create-payment-link/:slug - Crear payment link de Wompi (público)
+app.post('/wompi/create-payment-link/:slug', async (c) => {
+  const slug = c.req.param('slug');
+
+  try {
+    const body = await c.req.json();
+    const { order_id, order_number, amount_in_cents, customer_email, customer_name } = body;
+
+    if (!order_id || !order_number || !amount_in_cents) {
+      return c.json<APIResponse>({
+        success: false,
+        error: 'Missing required fields: order_id, order_number, amount_in_cents',
+      }, 400);
+    }
+
+    // Verificar que la tienda existe, está activa y tiene Wompi habilitado
+    const store = await c.env.DB.prepare(
+      'SELECT id, wompi_public_key, wompi_private_key, wompi_enabled FROM user_profiles WHERE store_slug = ? AND store_enabled = 1'
+    )
+      .bind(slug)
+      .first<{ id: string; wompi_public_key?: string; wompi_private_key?: string; wompi_enabled: number }>();
+
+    if (!store) {
+      return c.json<APIResponse>({
+        success: false,
+        error: 'Store not found or disabled',
+      }, 404);
+    }
+
+    if (!store.wompi_enabled) {
+      return c.json<APIResponse>({
+        success: false,
+        error: 'Wompi payments not enabled for this store',
+      }, 400);
+    }
+
+    if (!store.wompi_private_key) {
+      return c.json<APIResponse>({
+        success: false,
+        error: 'Wompi credentials not configured',
+      }, 400);
+    }
+
+    // Validar monto mínimo
+    if (amount_in_cents < 1000000) {
+      return c.json<APIResponse>({
+        success: false,
+        error: 'El monto mínimo para pagos con Wompi es de $10,000 COP',
+      }, 400);
+    }
+
+    // Construir redirect_url para después del pago
+    // Wompi redirigirá aquí después de que el cliente complete el pago
+    const redirectUrl = `https://tienda-pos.vercel.app/store/${slug}/payment-confirmation`;
+
+    // Crear el payment link en Wompi
+    const wompiResponse = await fetch('https://production.wompi.co/v1/payment_links', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${store.wompi_private_key}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        name: `Pedido ${order_number}`,
+        description: `Pago del pedido ${order_number}${customer_name ? ` - ${customer_name}` : ''}`,
+        single_use: true,
+        collect_shipping: false,
+        currency: 'COP',
+        amount_in_cents: amount_in_cents,
+        sku: order_id,
+        redirect_url: redirectUrl,
+      }),
+    });
+
+    if (!wompiResponse.ok) {
+      const errorData = await wompiResponse.json().catch(() => ({}));
+      console.error('Wompi API error:', errorData);
+      return c.json<APIResponse>({
+        success: false,
+        error: errorData.error?.reason || 'Error al crear el link de pago en Wompi',
+      }, 500);
+    }
+
+    const wompiData = await wompiResponse.json();
+    const checkoutUrl = `https://checkout.wompi.co/l/${wompiData.data.id}`;
+
+    // Guardar referencia del payment link en las notas del pedido
+    await c.env.DB.prepare(
+      `UPDATE sales
+       SET notes = COALESCE(notes, '') || '\nWompi Payment Link ID: ' || ?
+       WHERE id = ? AND tenant_id = ?`
+    )
+      .bind(wompiData.data.id, order_id, store.id)
+      .run();
+
+    return c.json<APIResponse>({
+      success: true,
+      data: {
+        payment_link_id: wompiData.data.id,
+        checkout_url: checkoutUrl,
+        expires_at: wompiData.data.expires_at,
+      },
+    });
+
+  } catch (error: any) {
+    console.error('Error creating Wompi payment link:', error);
+    return c.json<APIResponse>({
+      success: false,
+      error: error.message || 'Failed to create payment link',
     }, 500);
   }
 });

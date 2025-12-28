@@ -103,10 +103,8 @@ export default function ProductDetailPage() {
       localStorage.setItem(cartKey, JSON.stringify(cart));
       toast.success(`${quantity} ${quantity === 1 ? 'producto agregado' : 'productos agregados'} al carrito`);
 
-      // Redirigir al carrito
-      setTimeout(() => {
-        router.push(`/store/${slug}/cart`);
-      }, 1000);
+      // Resetear cantidad a 1
+      setQuantity(1);
     } catch (err) {
       console.error('Error adding to cart:', err);
       toast.error('Error al agregar al carrito');
@@ -234,8 +232,8 @@ export default function ProductDetailPage() {
                         : 'border-gray-200 hover:border-gray-300'
                     }`}
                     style={{
-                      ringColor: selectedImage === index ? primaryColor : undefined,
-                    }}
+                      '--tw-ring-color': selectedImage === index ? primaryColor : undefined,
+                    } as React.CSSProperties}
                   >
                     <Image
                       src={image}

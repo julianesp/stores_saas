@@ -474,6 +474,34 @@ export interface UserProfile {
   auto_reports_enabled?: boolean;
   auto_reports_time?: string;
   auto_reports_email?: string;
+
+  // Configuración del Storefront (Tienda Online)
+  store_slug?: string;
+  store_name?: string;
+  store_description?: string;
+  store_logo_url?: string;
+  store_banner_url?: string;
+  store_primary_color?: string;
+  store_secondary_color?: string;
+  store_whatsapp?: string;
+  store_facebook?: string;
+  store_instagram?: string;
+  store_address?: string;
+  store_city?: string;
+  store_phone?: string;
+  store_email?: string;
+  store_enabled?: boolean;
+  store_terms?: string;
+  store_shipping_enabled?: boolean;
+  store_pickup_enabled?: boolean;
+  store_min_order?: number;
+  store_nequi_number?: string;
+
+  // Configuración de Wompi
+  wompi_public_key?: string;
+  wompi_private_key?: string;
+  wompi_enabled?: boolean;
+
   created_at: string;
   updated_at: string;
 }
@@ -489,6 +517,13 @@ export async function getSaleById(id: string, getToken: GetTokenFn): Promise<Sal
 export async function createSale(data: Partial<Sale>, getToken: GetTokenFn): Promise<Sale> {
   return fetchAPI<Sale>('/api/sales', getToken, {
     method: 'POST',
+    body: JSON.stringify(data),
+  });
+}
+
+export async function updateSale(id: string, data: Partial<Sale>, getToken: GetTokenFn): Promise<Sale> {
+  return fetchAPI<Sale>(`/api/sales/${id}`, getToken, {
+    method: 'PUT',
     body: JSON.stringify(data),
   });
 }

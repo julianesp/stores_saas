@@ -45,6 +45,12 @@ export interface UserProfile {
   store_shipping_enabled?: boolean; // Envío a domicilio habilitado
   store_pickup_enabled?: boolean; // Recogida en tienda habilitada
   store_min_order?: number; // Pedido mínimo
+  store_nequi_number?: string; // Número de Nequi o cuenta bancaria
+
+  // Configuración de pagos con Wompi
+  wompi_public_key?: string; // Public Key de Wompi del comercio
+  wompi_private_key?: string; // Private Key de Wompi del comercio (sensible)
+  wompi_enabled?: boolean; // Si Wompi está activado como método de pago
 
   created_at: string;
   updated_at: string;

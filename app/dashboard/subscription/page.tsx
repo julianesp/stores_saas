@@ -2,124 +2,99 @@
 
 import { useState, useEffect } from "react";
 import { useUser, useAuth } from "@clerk/nextjs";
-import {
-  Check,
-  Loader2,
-  Smartphone,
-  CreditCard,
-  Building2,
-} from "lucide-react";
+import { Check, Loader2, CreditCard } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { SUBSCRIPTION_PLANS } from "@/lib/epayco";
-import {
-  checkSubscriptionStatus,
-  getUserProfileByClerkId,
-} from "@/lib/cloudflare-subscription-helpers";
-import { SubscriptionStatus } from "@/lib/types";
+import { getUserProfile } from "@/lib/cloudflare-api";
+import { UserProfile } from "@/lib/types";
 import { toast } from "sonner";
 import { formatCurrency } from "@/lib/utils";
 
-export default function SubscriptionPage() {
+// Planes de suscripción
+const SUBSCRIPTION_PLANS = [
+  {
+    id: "plan-basico",
+    name: "Plan Básico",
+    price: 29900,
+    popular: true,
+    features: [
+      "Gestión completa de inventario",
+      "Punto de venta (POS)",
+      "Gestión de clientes",
+      "Reportes y estadísticas básicas",
+      "Soporte técnico por email",
+      "Actualizaciones automáticas",
+    ],
+  },
+  {
+    id: "plan-premium",
+    name: "Plan Premium",
+    price: 39900,
+    popular: false,
+    features: [
+      "Todo lo del Plan Básico",
+      "Tienda Online personalizable",
+      "Múltiples métodos de pago",
+      "Reportes avanzados",
+      "Soporte prioritario",
+      "Integración con WhatsApp",
+      "Zonas de envío configurables",
+    ],
+  },
+];
+
+export default function SubscriptionPageWompi() {
   const { user } = useUser();
   const { getToken } = useAuth();
   const [loading, setLoading] = useState(false);
-  const [subscriptionStatus, setSubscriptionStatus] =
-    useState<SubscriptionStatus | null>(null);
+  const [profile, setProfile] = useState<UserProfile | null>(null);
   const [selectedPlan, setSelectedPlan] = useState<string | null>(null);
-  const [selectedMethod, setSelectedMethod] = useState<string | null>(null);
 
   useEffect(() => {
-    async function fetchStatus() {
-      if (user && getToken) {
-        const status = await checkSubscriptionStatus(getToken);
-        setSubscriptionStatus(status);
+    async function fetchProfile() {
+      if (getToken) {
+        try {
+          const data = await getUserProfile(getToken);
+          setProfile(data);
+        } catch (error) {
+          console.error("Error loading profile:", error);
+        }
       }
     }
-    fetchStatus();
-  }, [user, getToken]);
+    fetchProfile();
+  }, [getToken]);
 
-  const handleSubscribe = async (
-    planId: string,
-    paymentMethod: "NEQUI" | null = null
-  ) => {
+  const handleSubscribe = async (planId: string) => {
     if (!user) return;
 
     setLoading(true);
     setSelectedPlan(planId);
-    setSelectedMethod(paymentMethod);
 
     try {
-      // Llamar a la API para crear la sesión de pago con ePayco
-      const response = await fetch("/api/subscription/create-payment", {
+      // Llamar a la API local que luego llama al worker
+      const response = await fetch("/api/subscriptions/create-payment-link", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
           planId,
-          paymentMethod,
         }),
       });
 
       if (!response.ok) {
-        throw new Error("Error al crear el pago");
+        const errorData = await response.json();
+        throw new Error(errorData.error || "Error al crear el link de pago");
       }
 
       const data = await response.json();
 
-      // Verificar que recibimos el sessionId para Smart Checkout
-      if (!data.sessionId) {
-        throw new Error(data.error || "No se recibió el sessionId de ePayco");
+      if (!data.success || !data.data?.checkout_url) {
+        throw new Error("No se recibió el link de pago");
       }
 
-      console.log("✓ SessionId recibido:", data.sessionId);
-
-      // Cargar el script de ePayco si no está cargado
-      if (!(window as any).ePayco) {
-        await new Promise<void>((resolve, reject) => {
-          const script = document.createElement("script");
-          script.src = "https://checkout.epayco.co/checkout-v2.js";
-          script.onload = () => resolve();
-          script.onerror = () =>
-            reject(new Error("Error al cargar ePayco SDK"));
-          document.head.appendChild(script);
-        });
-      }
-
-      // Configurar y abrir el checkout de ePayco con sessionParams v2
-      const isProduction = process.env.NEXT_PUBLIC_EPAYCO_ENV === "production";
-
-      const checkout = (window as any).ePayco.checkout.configure({
-        sessionId: data.sessionId,
-        type: "onpage",
-        test: !isProduction,
-        sessionParams: {
-          mode: isProduction ? 'production' : 'sandbox',
-          version: 'v2'
-        }
-      });
-
-      checkout.onCreated(() => {
-        console.log("✓ Checkout de ePayco creado");
-      });
-
-      checkout.onErrors((errors: any) => {
-        console.error("❌ Errores en checkout:", errors);
-        toast.error("Error al procesar el pago");
-        setLoading(false);
-        setSelectedPlan(null);
-        setSelectedMethod(null);
-      });
-
-      checkout.onClosed(() => {
-        console.log("Checkout cerrado");
-        setLoading(false);
-        setSelectedPlan(null);
-        setSelectedMethod(null);
-      });
-
-      checkout.open();
+      // Redirigir al checkout de Wompi
+      window.location.href = data.data.checkout_url;
     } catch (error) {
       console.error("Error:", error);
       const errorMessage =
@@ -127,13 +102,32 @@ export default function SubscriptionPage() {
       toast.error(errorMessage);
       setLoading(false);
       setSelectedPlan(null);
-      setSelectedMethod(null);
     }
   };
 
-  const isButtonLoading = (planId: string, method: string | null) => {
-    return loading && selectedPlan === planId && selectedMethod === method;
+  const getDaysLeft = () => {
+    if (!profile?.trial_end_date) return 0;
+    const endDate = new Date(profile.trial_end_date);
+    const today = new Date();
+    const diffTime = endDate.getTime() - today.getTime();
+    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+    return Math.max(0, diffDays);
   };
+
+  const getSubscriptionStatus = () => {
+    if (!profile) return null;
+
+    const daysLeft = getDaysLeft();
+    const status = profile.subscription_status;
+
+    return {
+      status,
+      daysLeft,
+      nextBillingDate: profile.next_billing_date,
+    };
+  };
+
+  const subscriptionStatus = getSubscriptionStatus();
 
   return (
     <div className="space-y-6">
@@ -201,21 +195,26 @@ export default function SubscriptionPage() {
         </CardHeader>
         <CardContent>
           <div className="flex flex-wrap gap-4 items-center">
-            <div className="flex items-center gap-2 text-sm font-medium">
-              <Smartphone className="h-5 w-5 text-purple-600" />
+            <div className="flex items-center gap-2 text-sm font-medium text-purple-600">
+              <svg className="h-5 w-5" viewBox="0 0 24 24" fill="currentColor">
+                <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2z" />
+              </svg>
               <span>Nequi</span>
             </div>
             <div className="flex items-center gap-2 text-sm">
               <CreditCard className="h-5 w-5 text-blue-600" />
               <span>Tarjetas (Visa, Mastercard)</span>
             </div>
-            <div className="flex items-center gap-2 text-sm">
-              <Building2 className="h-5 w-5 text-green-600" />
+            <div className="flex items-center gap-2 text-sm text-green-600">
+              <svg className="h-5 w-5" fill="currentColor" viewBox="0 0 24 24">
+                <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2z" />
+              </svg>
               <span>PSE</span>
             </div>
             <div className="flex items-center gap-2 text-sm">
-              <Building2 className="h-5 w-5 text-yellow-600" />
-              <span>Bancolombia</span>
+              <span className="text-xs bg-gray-200 px-2 py-1 rounded">
+                Procesado por Wompi
+              </span>
             </div>
           </div>
         </CardContent>
@@ -223,15 +222,11 @@ export default function SubscriptionPage() {
 
       {/* Planes */}
       <div className="grid md:grid-cols-2 gap-6 max-w-4xl mx-auto">
-        {SUBSCRIPTION_PLANS.filter((plan) => !plan.isAddon).map((plan) => (
+        {SUBSCRIPTION_PLANS.map((plan) => (
           <Card
             key={plan.id}
             className={`relative ${
               plan.popular ? "border-blue-500 border-2 shadow-lg" : ""
-            } ${
-              plan.isAddon
-                ? "border-purple-300 bg-gradient-to-br from-purple-50 to-white"
-                : ""
             }`}
           >
             {plan.popular && (
@@ -241,15 +236,6 @@ export default function SubscriptionPage() {
                 </span>
               </div>
             )}
-            {/* TEMPORALMENTE DESHABILITADO - En desarrollo
-            {plan.isAddon && (
-              <div className="absolute -top-6 left-1/2 transform -translate-x-1/2">
-                <span className="bg-gradient-to-r from-purple-600 to-pink-600 text-white px-4 py-1 rounded-full text-sm font-medium flex items-center gap-1 ">
-                  ✨ Potencia tu Negocio con IA
-                </span>
-              </div>
-            )}
-            */}
 
             <CardHeader>
               <CardTitle className="text-2xl">{plan.name}</CardTitle>
@@ -271,45 +257,37 @@ export default function SubscriptionPage() {
                 ))}
               </ul>
 
-              {/* Botón de Nequi */}
+              {/* Botón de pago con Wompi */}
               <Button
                 className="w-full bg-purple-600 hover:bg-purple-700"
                 size="lg"
-                onClick={() => handleSubscribe(plan.id, "NEQUI")}
-                disabled={isButtonLoading(plan.id, "NEQUI")}
+                onClick={() => handleSubscribe(plan.id)}
+                disabled={loading && selectedPlan === plan.id}
               >
-                {isButtonLoading(plan.id, "NEQUI") ? (
+                {loading && selectedPlan === plan.id ? (
                   <>
                     <Loader2 className="mr-2 h-5 w-5 animate-spin" />
-                    Procesando...
-                  </>
-                ) : (
-                  <>
-                    <Smartphone className="mr-2 h-5 w-5" />
-                    Pagar con Nequi
-                  </>
-                )}
-              </Button>
-
-              {/* Botón de otros métodos */}
-              <Button
-                className="w-full"
-                size="lg"
-                variant="outline"
-                onClick={() => handleSubscribe(plan.id, null)}
-                disabled={isButtonLoading(plan.id, null)}
-              >
-                {isButtonLoading(plan.id, null) ? (
-                  <>
-                    <Loader2 className="mr-2 h-5 w-5 animate-spin" />
-                    Procesando...
+                    Creando link de pago...
                   </>
                 ) : subscriptionStatus?.status === "active" ? (
-                  "Plan Actual"
+                  "Renovar Plan"
                 ) : (
                   <>
-                    <CreditCard className="mr-2 h-5 w-5" />
-                    Otros métodos (Tarjeta, PSE, etc.)
+                    <svg
+                      className="mr-2 h-5 w-5"
+                      viewBox="0 0 24 24"
+                      fill="currentColor"
+                    >
+                      <path
+                        d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z"
+                        stroke="white"
+                        strokeWidth="2"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        fill="none"
+                      />
+                    </svg>
+                    Suscribirse con Wompi
                   </>
                 )}
               </Button>
@@ -318,52 +296,27 @@ export default function SubscriptionPage() {
         ))}
       </div>
 
-      {/* Verificación manual de pago */}
-      <Card className="max-w-4xl mx-auto bg-gradient-to-r from-blue-50 to-purple-50 border-blue-200">
-        <CardContent className="pt-6">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="font-medium text-blue-900">
-                ¿Ya pagaste y tu suscripción no se activó?
-              </p>
-              <p className="text-sm text-blue-700 mt-1">
-                Verifica tu pago manualmente ingresando el ID de transacción de
-                ePayco
-              </p>
-            </div>
-            <Button
-              variant="outline"
-              onClick={() =>
-                (window.location.href =
-                  "/dashboard/subscription/verify-payment")
-              }
-              className="border-blue-300 hover:bg-blue-100"
-            >
-              Verificar Pago
-            </Button>
-          </div>
-        </CardContent>
-      </Card>
-
       {/* Información adicional */}
       <Card className="max-w-4xl mx-auto">
         <CardContent className="pt-6">
           <div className="space-y-3 text-sm text-gray-600">
             <p>
-              ✓ <strong>Pago seguro</strong> procesado por ePayco
+              ✓ <strong>Pago seguro</strong> procesado por Wompi
             </p>
             <p>
-              ✓ <strong>Pago con Nequi</strong> - La forma más rápida y fácil de
-              pagar
+              ✓ <strong>Múltiples métodos de pago</strong> - Nequi, PSE,
+              tarjetas
             </p>
             <p>
               ✓ <strong>Facturación mensual</strong> automática
             </p>
-            <p>
-              ✓ <strong>Cancela cuando quieras</strong> sin penalizaciones
-            </p>
+            
             <p>
               ✓ <strong>Soporte técnico</strong> incluido en todos los planes
+            </p>
+            <p className="text-xs text-gray-500 mt-4 pt-4 border-t">
+              Los pagos son procesados de forma segura por Wompi. Después de
+              completar tu pago, tu suscripción se activará automáticamente.
             </p>
           </div>
         </CardContent>
