@@ -32,29 +32,55 @@ function ConfirmationContent() {
 
   const checkPaymentStatus = async () => {
     try {
-      // Consultar el estado de la transacción
-      const response = await fetch("/api/subscriptions/verify-payment", {
-        method: "POST",
+      // Obtener la public key de Wompi desde las variables de entorno
+      const wompiPublicKey = process.env.NEXT_PUBLIC_WOMPI_PUBLIC_KEY;
+
+      if (!wompiPublicKey) {
+        console.error("Wompi public key not configured");
+        setTransactionStatus("ERROR");
+        setLoading(false);
+        return;
+      }
+
+      // Consultar directamente a Wompi la transacción
+      const response = await fetch(`https://production.wompi.co/v1/transactions/${transactionId}`, {
         headers: {
-          "Content-Type": "application/json",
+          'Authorization': `Bearer ${wompiPublicKey}`,
         },
-        body: JSON.stringify({
-          transactionId,
-        }),
       });
 
       if (!response.ok) {
-        throw new Error("Error al verificar el pago");
+        throw new Error("Error al consultar transacción en Wompi");
       }
 
       const data = await response.json();
+      console.log("Transaction data from Wompi:", data);
 
-      if (data.isApproved) {
+      // Verificar el estado
+      if (data.data?.status === "APPROVED") {
         setTransactionStatus("APPROVED");
-      } else if (data.status === "DECLINED") {
+
+        // Llamar al backend para activar la suscripción
+        try {
+          await fetch("/api/subscriptions/verify-payment", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+              transactionId,
+            }),
+          });
+        } catch (err) {
+          console.error("Error activating subscription:", err);
+          // No mostramos error porque el pago sí fue exitoso
+        }
+      } else if (data.data?.status === "DECLINED") {
         setTransactionStatus("DECLINED");
-      } else {
+      } else if (data.data?.status === "PENDING") {
         setTransactionStatus("PENDING");
+      } else {
+        setTransactionStatus("ERROR");
       }
     } catch (error) {
       console.error("Error checking payment:", error);
