@@ -25,6 +25,27 @@ export interface UserProfile {
   auto_reports_time?: string; // Hora para generar reportes (formato HH:MM)
   auto_reports_email?: string; // Email para enviar reportes (opcional)
 
+  // Configuración del Storefront (Tienda Online)
+  store_slug?: string; // URL única de la tienda (ej: mi-tienda)
+  store_name?: string; // Nombre público de la tienda
+  store_description?: string; // Descripción de la tienda
+  store_logo_url?: string; // Logo de la tienda
+  store_banner_url?: string; // Banner principal
+  store_primary_color?: string; // Color principal (#hex)
+  store_secondary_color?: string; // Color secundario (#hex)
+  store_whatsapp?: string; // WhatsApp de contacto
+  store_facebook?: string; // URL de Facebook
+  store_instagram?: string; // URL de Instagram
+  store_address?: string; // Dirección física
+  store_city?: string; // Ciudad
+  store_phone?: string; // Teléfono de contacto
+  store_email?: string; // Email de contacto
+  store_enabled?: boolean; // Tienda online activa/inactiva
+  store_terms?: string; // Términos y condiciones
+  store_shipping_enabled?: boolean; // Envío a domicilio habilitado
+  store_pickup_enabled?: boolean; // Recogida en tienda habilitada
+  store_min_order?: number; // Pedido mínimo
+
   created_at: string;
   updated_at: string;
 }

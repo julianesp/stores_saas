@@ -22,6 +22,7 @@ import offersRoutes from './routes/offers';
 import paymentTransactionsRoutes from './routes/payment-transactions';
 import webhooksRoutes from './routes/webhooks';
 import adminStatsRoutes from './routes/admin-stats';
+import storefrontRoutes from './routes/storefront';
 
 const app = new Hono<{ Bindings: Env }>();
 
@@ -65,6 +66,9 @@ app.get('/', (c) => {
 
 // Webhooks (NO auth middleware - verifican su propio secret)
 app.route('/api/webhooks', webhooksRoutes);
+
+// Storefront public API (NO auth required - endpoints públicos para tiendas online)
+app.route('/api/storefront', storefrontRoutes);
 
 // Apply authentication middleware to all API routes
 app.use('/api/*', authMiddleware);
