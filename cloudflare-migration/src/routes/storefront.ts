@@ -214,12 +214,12 @@ app.get('/categories/:slug', async (c) => {
     // Obtener categorías con count de productos
     const result = await c.env.DB.prepare(
       `SELECT
-        c.id, c.name, c.description, c.color,
+        c.id, c.name, c.description,
         COUNT(p.id) as product_count
       FROM categories c
       LEFT JOIN products p ON c.id = p.category_id AND c.tenant_id = p.tenant_id AND p.stock > 0
       WHERE c.tenant_id = ?
-      GROUP BY c.id, c.name, c.description, c.color
+      GROUP BY c.id, c.name, c.description
       HAVING product_count > 0
       ORDER BY c.name ASC`
     )
