@@ -51,7 +51,6 @@ export interface StoreCategory {
   id: string;
   name: string;
   description?: string;
-  color?: string;
   product_count: number;
 }
 
