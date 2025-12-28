@@ -23,6 +23,7 @@ import {
   Receipt,
   Lock,
   Sparkles,
+  Store,
 } from 'lucide-react';
 import { getUserProfileByClerkId, hasAIAccess } from '@/lib/cloudflare-subscription-helpers';
 import { UserProfile } from '@/lib/types';
@@ -109,6 +110,12 @@ const storeMenuItems = [
     title: 'Ofertas',
     href: '/dashboard/offers',
     icon: Percent,
+    roles: ['admin'],
+  },
+  {
+    title: 'Tienda Online',
+    href: '/dashboard/store-config',
+    icon: Store,
     roles: ['admin'],
   },
   {
