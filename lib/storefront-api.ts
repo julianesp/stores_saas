@@ -1,0 +1,129 @@
+/**
+ * API functions for public storefront (no authentication required)
+ */
+
+const WORKER_URL = process.env.NEXT_PUBLIC_WORKER_URL || 'https://tienda-pos-api.julii1295.workers.dev';
+
+interface APIResponse<T = any> {
+  success: boolean;
+  data?: T;
+  error?: string;
+  message?: string;
+}
+
+export interface StoreConfig {
+  id: string;
+  store_slug?: string;
+  store_name?: string;
+  store_description?: string;
+  store_logo_url?: string;
+  store_banner_url?: string;
+  store_primary_color?: string;
+  store_secondary_color?: string;
+  store_whatsapp?: string;
+  store_facebook?: string;
+  store_instagram?: string;
+  store_address?: string;
+  store_city?: string;
+  store_phone?: string;
+  store_email?: string;
+  store_enabled?: number;
+  store_terms?: string;
+  store_shipping_enabled?: number;
+  store_pickup_enabled?: number;
+  store_min_order?: number;
+}
+
+export interface StoreProduct {
+  id: string;
+  name: string;
+  description?: string;
+  sale_price: number;
+  stock: number;
+  images?: string;
+  category_id?: string;
+  category_name?: string;
+  discount_percentage?: number;
+  offer_id?: string;
+}
+
+export interface StoreCategory {
+  id: string;
+  name: string;
+  description?: string;
+  color?: string;
+  product_count: number;
+}
+
+async function fetchStorefrontAPI<T>(endpoint: string): Promise<T> {
+  const url = `${WORKER_URL}${endpoint}`;
+
+  const response = await fetch(url, {
+    method: 'GET',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+  });
+
+  if (!response.ok) {
+    const errorData = await response.json().catch(() => ({}));
+    throw new Error(errorData.error || `Error ${response.status}`);
+  }
+
+  const data: APIResponse<T> = await response.json();
+
+  if (!data.success) {
+    throw new Error(data.error || 'API request failed');
+  }
+
+  return data.data as T;
+}
+
+/**
+ * Get store configuration by slug
+ */
+export async function getStoreConfig(slug: string): Promise<StoreConfig> {
+  return fetchStorefrontAPI<StoreConfig>(`/api/storefront/config/${slug}`);
+}
+
+/**
+ * Get store products
+ */
+export async function getStoreProducts(slug: string, categoryId?: string): Promise<StoreProduct[]> {
+  const params = categoryId ? `?category=${categoryId}` : '';
+  return fetchStorefrontAPI<StoreProduct[]>(`/api/storefront/products/${slug}${params}`);
+}
+
+/**
+ * Get single product details
+ */
+export async function getStoreProduct(slug: string, productId: string): Promise<StoreProduct> {
+  return fetchStorefrontAPI<StoreProduct>(`/api/storefront/product/${slug}/${productId}`);
+}
+
+/**
+ * Get store categories
+ */
+export async function getStoreCategories(slug: string): Promise<StoreCategory[]> {
+  return fetchStorefrontAPI<StoreCategory[]>(`/api/storefront/categories/${slug}`);
+}
+
+/**
+ * Calculate price with discount
+ */
+export function calculateDiscountedPrice(originalPrice: number, discountPercentage: number): number {
+  return originalPrice - (originalPrice * discountPercentage / 100);
+}
+
+/**
+ * Format product images (parse JSON string to array)
+ */
+export function parseProductImages(images?: string): string[] {
+  if (!images) return [];
+  try {
+    const parsed = JSON.parse(images);
+    return Array.isArray(parsed) ? parsed : [];
+  } catch {
+    return [];
+  }
+}
