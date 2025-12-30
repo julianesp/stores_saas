@@ -16,7 +16,6 @@ import {
 } from '@/lib/storefront-api';
 import { formatCurrency } from '@/lib/utils';
 import {
-  ShoppingCart,
   Search,
   Phone,
   MapPin,
@@ -25,7 +24,6 @@ import {
   Instagram,
   Package,
   Filter,
-  X,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -46,23 +44,8 @@ export default function StorefrontPage() {
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const [showFilters, setShowFilters] = useState(false);
 
-  // Carrito (temporal - en localStorage)
-  const [cartCount, setCartCount] = useState(0);
-
   useEffect(() => {
     loadStore();
-  }, [slug]);
-
-  useEffect(() => {
-    // Cargar contador del carrito desde localStorage
-    const savedCart = localStorage.getItem(`cart_${slug}`);
-    if (savedCart) {
-      try {
-        const cart = JSON.parse(savedCart);
-        const count = cart.reduce((sum: number, item: any) => sum + item.quantity, 0);
-        setCartCount(count);
-      } catch {}
-    }
   }, [slug]);
 
   const loadStore = async () => {
@@ -147,79 +130,22 @@ export default function StorefrontPage() {
   const secondaryColor = config.store_secondary_color || '#10B981';
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      {/* Header */}
-      <header
-        className="sticky top-0 z-50 bg-white shadow-md"
-        style={{ borderBottom: `4px solid ${primaryColor}` }}
-      >
+    <div className="bg-gray-50">
+      {/* Búsqueda y banner */}
+      <div className="bg-white shadow-sm">
         <div className="max-w-7xl mx-auto px-4 py-4">
-          <div className="flex items-center justify-between">
-            {/* Logo y nombre */}
-            <div className="flex items-center gap-3">
-              {config.store_logo_url ? (
-                <Image
-                  src={config.store_logo_url}
-                  alt={config.store_name || 'Logo'}
-                  width={50}
-                  height={50}
-                  className="rounded-lg object-contain"
-                />
-              ) : (
-                <div
-                  className="w-12 h-12 rounded-lg flex items-center justify-center text-white font-bold text-xl"
-                  style={{ backgroundColor: primaryColor }}
-                >
-                  {config.store_name?.charAt(0) || 'T'}
-                </div>
-              )}
-              <div>
-                <h1 className="text-xl md:text-2xl font-bold text-black">
-                  {config.store_name}
-                </h1>
-                {config.store_description && (
-                  <p className="text-sm text-black  hidden md:block">
-                    {config.store_description}
-                  </p>
-                )}
-              </div>
-            </div>
-
-            {/* Carrito */}
-            <Link href={`/store/${slug}/cart`}>
-              <Button
-                variant="outline"
-                className="relative"
-                style={{ borderColor: primaryColor, color: primaryColor }}
-              >
-                <ShoppingCart className="h-5 w-5" />
-                {cartCount > 0 && (
-                  <span
-                    className="absolute -top-2 -right-2 text-white text-xs font-bold rounded-full w-5 h-5 flex items-center justify-center"
-                    style={{ backgroundColor: secondaryColor }}
-                  >
-                    {cartCount}
-                  </span>
-                )}
-              </Button>
-            </Link>
-          </div>
-
-          {/* Búsqueda */}
-          <div className="mt-4">
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-black h-5 w-5" />
-              <Input
-                type="text"
-                placeholder="Buscar productos..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="pl-10"
-              />
-            </div>
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-5 w-5" />
+            <Input
+              type="text"
+              placeholder="Buscar productos..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="pl-10"
+            />
           </div>
         </div>
-      </header>
+      </div>
 
       {/* Banner */}
       {config.store_banner_url && (
@@ -293,9 +219,9 @@ export default function StorefrontPage() {
 
               {/* Información de contacto */}
               {(config.store_phone || config.store_email || config.store_address) && (
-                <Card>
+                <Card id="info">
                   <CardContent className="pt-6">
-                    <h2 className="font-bold text-lg mb-4">Contacto</h2>
+                    <h2 className="font-bold text-lg mb-4">Información de la tienda</h2>
                     <div className="space-y-3 text-sm">
                       {config.store_phone && (
                         <div className="flex items-start gap-2">
@@ -356,14 +282,14 @@ export default function StorefrontPage() {
           </div>
 
           {/* Productos */}
-          <div className="lg:col-span-3">
+          <div className="lg:col-span-3" id="productos">
             <div className="flex items-center justify-between mb-6">
-              <h2 className="text-2xl font-bold text-black">
+              <h2 className="text-2xl font-bold text-gray-900">
                 {selectedCategory
                   ? categories.find((c) => c.id === selectedCategory)?.name
                   : 'Todos los productos'}
               </h2>
-              <p className="text-black">{filteredProducts.length} productos</p>
+              <p className="text-gray-600">{filteredProducts.length} productos</p>
             </div>
 
             {filteredProducts.length === 0 ? (
@@ -455,23 +381,6 @@ export default function StorefrontPage() {
           <Phone className="h-6 w-6 text-white" />
         </button>
       )}
-
-      {/* Footer */}
-      <footer className="bg-gray-900 text-white mt-12 py-8">
-        <div className="max-w-7xl mx-auto px-4 text-center">
-          <p className="text-black">
-            © {new Date().getFullYear()} {config.store_name}. Todos los derechos reservados.
-          </p>
-          {config.store_terms && (
-            <Link
-              href={`/store/${slug}/terms`}
-              className="text-sm text-black hover:text-white mt-2 inline-block"
-            >
-              Términos y Condiciones
-            </Link>
-          )}
-        </div>
-      </footer>
     </div>
   );
 }

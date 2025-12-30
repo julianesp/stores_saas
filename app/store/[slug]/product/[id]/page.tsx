@@ -14,13 +14,12 @@ import {
 } from '@/lib/storefront-api';
 import { formatCurrency } from '@/lib/utils';
 import {
-  ArrowLeft,
-  ShoppingCart,
   Plus,
   Minus,
   Package,
   Phone,
   Tag,
+  ShoppingCart,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
@@ -126,7 +125,7 @@ export default function ProductDetailPage() {
       <div className="min-h-screen flex items-center justify-center bg-gray-50">
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
-          <p className="text-gray-600">Cargando producto...</p>
+          <p className="text-black">Cargando producto...</p>
         </div>
       </div>
     );
@@ -136,9 +135,9 @@ export default function ProductDetailPage() {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-50">
         <div className="text-center max-w-md p-8">
-          <Package className="h-16 w-16 text-gray-400 mx-auto mb-4" />
-          <h1 className="text-2xl font-bold text-gray-800 mb-2">Producto no encontrado</h1>
-          <p className="text-gray-600 mb-4">{error || 'El producto que buscas no existe'}</p>
+          <Package className="h-16 w-16 text-black mx-auto mb-4" />
+          <h1 className="text-2xl font-bold text-black mb-2">Producto no encontrado</h1>
+          <p className="text-black mb-4">{error || 'El producto que buscas no existe'}</p>
           <Link href={`/store/${slug}`}>
             <Button>Volver a la tienda</Button>
           </Link>
@@ -158,34 +157,7 @@ export default function ProductDetailPage() {
   const secondaryColor = config.store_secondary_color || '#10B981';
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      {/* Header simple */}
-      <header
-        className="sticky top-0 z-50 bg-white shadow-md"
-        style={{ borderBottom: `4px solid ${primaryColor}` }}
-      >
-        <div className="max-w-7xl mx-auto px-4 py-4">
-          <div className="flex items-center justify-between">
-            <Link href={`/store/${slug}`}>
-              <Button variant="ghost" className="gap-2">
-                <ArrowLeft className="h-5 w-5" />
-                Volver a la tienda
-              </Button>
-            </Link>
-
-            <Link href={`/store/${slug}/cart`}>
-              <Button
-                variant="outline"
-                style={{ borderColor: primaryColor, color: primaryColor }}
-              >
-                <ShoppingCart className="h-5 w-5 mr-2" />
-                Carrito
-              </Button>
-            </Link>
-          </div>
-        </div>
-      </header>
-
+    <div className="bg-gray-50">
       <div className="max-w-7xl mx-auto px-4 py-8">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
           {/* Galería de imágenes */}
@@ -212,7 +184,7 @@ export default function ProductDetailPage() {
                     />
                   ) : (
                     <div className="w-full h-full flex items-center justify-center">
-                      <Package className="h-32 w-32 text-gray-300" />
+                      <Package className="h-32 w-32 text-black" />
                     </div>
                   )}
                 </div>
@@ -255,12 +227,12 @@ export default function ProductDetailPage() {
                   {product.category_name}
                 </p>
               )}
-              <h1 className="text-3xl md:text-4xl font-bold text-gray-900 mb-4">
+              <h1 className="text-3xl md:text-4xl font-bold text-black mb-4">
                 {product.name}
               </h1>
 
               {product.description && (
-                <p className="text-gray-600 text-lg">{product.description}</p>
+                <p className="text-black text-lg">{product.description}</p>
               )}
             </div>
 
@@ -271,7 +243,7 @@ export default function ProductDetailPage() {
                   {hasOffer && (
                     <div className="flex items-center gap-2">
                       <Tag className="h-5 w-5" style={{ color: secondaryColor }} />
-                      <span className="text-lg text-gray-500 line-through">
+                      <span className="text-lg text-black line-through">
                         {formatCurrency(originalPrice)}
                       </span>
                       <span
@@ -290,7 +262,7 @@ export default function ProductDetailPage() {
             </Card>
 
             {/* Stock */}
-            <div className="flex items-center gap-2 text-gray-600">
+            <div className="flex items-center gap-2 text-black">
               <Package className="h-5 w-5" />
               <span>
                 {product.stock > 0
@@ -302,7 +274,7 @@ export default function ProductDetailPage() {
             {/* Cantidad */}
             {product.stock > 0 && (
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
+                <label className="block text-sm font-medium text-black mb-2">
                   Cantidad
                 </label>
                 <div className="flex items-center gap-3">
@@ -364,7 +336,7 @@ export default function ProductDetailPage() {
               <Card>
                 <CardContent className="pt-6">
                   <h3 className="font-semibold mb-3">Opciones de entrega</h3>
-                  <div className="space-y-2 text-sm text-gray-600">
+                  <div className="space-y-2 text-sm text-black">
                     {config.store_pickup_enabled && (
                       <div className="flex items-start gap-2">
                         <div className="w-1.5 h-1.5 rounded-full mt-2" style={{ backgroundColor: primaryColor }} />
@@ -378,7 +350,7 @@ export default function ProductDetailPage() {
                       </div>
                     )}
                     {config.store_min_order && config.store_min_order > 0 && (
-                      <p className="text-xs text-gray-500 mt-2">
+                      <p className="text-xs text-black mt-2">
                         Pedido mínimo: {formatCurrency(config.store_min_order)}
                       </p>
                     )}
