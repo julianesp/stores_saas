@@ -186,9 +186,10 @@ export function Sidebar({ isMobile = false, onLinkClick }: SidebarProps) {
   // Seleccionar el menú correcto según el tipo de usuario
   const menuItems = isSuperAdmin ? superAdminMenuItems : storeMenuItems;
 
+  // Mostrar sidebar en pantallas >= 768px (md breakpoint)
   const sidebarClasses = isMobile
     ? "flex w-full md:w-64 flex-col bg-gray-900 text-white h-full"
-    : "hidden md:flex md:w-64 md:flex-col bg-gray-900 text-white";
+    : "hidden md:flex w-64 flex-col bg-gray-900 text-white flex-shrink-0";
 
   return (
     <aside className={sidebarClasses}>
