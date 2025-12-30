@@ -1,6 +1,6 @@
 import { Metadata } from 'next';
 import { getStoreConfig } from '@/lib/storefront-api';
-import { notFound } from 'next/navigation';
+import { StoreLayoutWrapper } from '@/components/store';
 
 interface StoreLayoutProps {
   children: React.ReactNode;
@@ -25,5 +25,5 @@ export async function generateMetadata({ params }: StoreLayoutProps): Promise<Me
 }
 
 export default function StoreLayout({ children }: StoreLayoutProps) {
-  return <>{children}</>;
+  return <StoreLayoutWrapper>{children}</StoreLayoutWrapper>;
 }
