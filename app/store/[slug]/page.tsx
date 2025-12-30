@@ -120,7 +120,7 @@ export default function StorefrontPage() {
       <div className="min-h-screen flex items-center justify-center bg-gray-50">
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
-          <p className="text-gray-600">Cargando tienda...</p>
+          <p className="text-black">Cargando tienda...</p>
         </div>
       </div>
     );
@@ -130,9 +130,9 @@ export default function StorefrontPage() {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-50">
         <div className="text-center max-w-md p-8">
-          <Package className="h-16 w-16 text-gray-400 mx-auto mb-4" />
-          <h1 className="text-2xl font-bold text-gray-800 mb-2">Tienda no encontrada</h1>
-          <p className="text-gray-600 mb-4">
+          <Package className="h-16 w-16 text-black mx-auto mb-4" />
+          <h1 className="text-2xl font-bold text-black mb-2">Tienda no encontrada</h1>
+          <p className="text-black mb-4">
             {error || 'La tienda que buscas no existe o está inactiva'}
           </p>
           <Link href="/">
@@ -174,11 +174,11 @@ export default function StorefrontPage() {
                 </div>
               )}
               <div>
-                <h1 className="text-xl md:text-2xl font-bold text-gray-900">
+                <h1 className="text-xl md:text-2xl font-bold text-black">
                   {config.store_name}
                 </h1>
                 {config.store_description && (
-                  <p className="text-sm text-gray-600 hidden md:block">
+                  <p className="text-sm text-black  hidden md:block">
                     {config.store_description}
                   </p>
                 )}
@@ -208,7 +208,7 @@ export default function StorefrontPage() {
           {/* Búsqueda */}
           <div className="mt-4">
             <div className="relative">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-5 w-5" />
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-black h-5 w-5" />
               <Input
                 type="text"
                 placeholder="Buscar productos..."
@@ -259,7 +259,7 @@ export default function StorefrontPage() {
                       className={`w-full text-left px-3 py-2 rounded-lg transition-colors ${
                         selectedCategory === null
                           ? 'font-semibold'
-                          : 'text-gray-600 hover:bg-gray-100'
+                          : 'text-black hover:bg-gray-100'
                       }`}
                       style={{
                         backgroundColor: selectedCategory === null ? primaryColor : 'transparent',
@@ -275,7 +275,7 @@ export default function StorefrontPage() {
                         className={`w-full text-left px-3 py-2 rounded-lg transition-colors flex justify-between items-center ${
                           selectedCategory === category.id
                             ? 'font-semibold'
-                            : 'text-gray-600 hover:bg-gray-100'
+                            : 'text-black hover:bg-gray-100'
                         }`}
                         style={{
                           backgroundColor:
@@ -314,7 +314,7 @@ export default function StorefrontPage() {
                           <MapPin className="h-4 w-4 mt-0.5" style={{ color: primaryColor }} />
                           <div>
                             <p>{config.store_address}</p>
-                            {config.store_city && <p className="text-gray-600">{config.store_city}</p>}
+                            {config.store_city && <p className="text-black">{config.store_city}</p>}
                           </div>
                         </div>
                       )}
@@ -358,18 +358,18 @@ export default function StorefrontPage() {
           {/* Productos */}
           <div className="lg:col-span-3">
             <div className="flex items-center justify-between mb-6">
-              <h2 className="text-2xl font-bold">
+              <h2 className="text-2xl font-bold text-black">
                 {selectedCategory
                   ? categories.find((c) => c.id === selectedCategory)?.name
                   : 'Todos los productos'}
               </h2>
-              <p className="text-gray-600">{filteredProducts.length} productos</p>
+              <p className="text-black">{filteredProducts.length} productos</p>
             </div>
 
             {filteredProducts.length === 0 ? (
               <div className="text-center py-12">
-                <Package className="h-16 w-16 text-gray-400 mx-auto mb-4" />
-                <p className="text-gray-600 text-lg">No hay productos disponibles</p>
+                <Package className="h-16 w-16 text-black mx-auto mb-4" />
+                <p className="text-black text-lg">No hay productos disponibles</p>
               </div>
             ) : (
               <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
@@ -404,7 +404,7 @@ export default function StorefrontPage() {
                               />
                             ) : (
                               <div className="w-full h-full flex items-center justify-center">
-                                <Package className="h-16 w-16 text-gray-300" />
+                                <Package className="h-16 w-16 text-black" />
                               </div>
                             )}
                           </div>
@@ -417,7 +417,7 @@ export default function StorefrontPage() {
 
                             <div className="space-y-1">
                               {hasOffer && (
-                                <p className="text-xs md:text-sm text-gray-400 line-through">
+                                <p className="text-xs md:text-sm text-black line-through">
                                   {formatCurrency(originalPrice)}
                                 </p>
                               )}
@@ -429,7 +429,7 @@ export default function StorefrontPage() {
                               </p>
                             </div>
 
-                            <p className="text-xs text-gray-500 mt-2">
+                            <p className="text-xs text-black mt-2">
                               {product.stock > 0 ? `${product.stock} disponibles` : 'Agotado'}
                             </p>
                           </div>
@@ -459,13 +459,13 @@ export default function StorefrontPage() {
       {/* Footer */}
       <footer className="bg-gray-900 text-white mt-12 py-8">
         <div className="max-w-7xl mx-auto px-4 text-center">
-          <p className="text-gray-400">
+          <p className="text-black">
             © {new Date().getFullYear()} {config.store_name}. Todos los derechos reservados.
           </p>
           {config.store_terms && (
             <Link
               href={`/store/${slug}/terms`}
-              className="text-sm text-gray-400 hover:text-white mt-2 inline-block"
+              className="text-sm text-black hover:text-white mt-2 inline-block"
             >
               Términos y Condiciones
             </Link>
