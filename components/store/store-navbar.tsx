@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
+import Image from 'next/image';
 import { useParams, usePathname } from 'next/navigation';
 import { ShoppingCart, Menu, X, Store, Home, Package, Info } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -69,13 +70,24 @@ export function StoreNavbar({ config }: StoreNavbarProps) {
       <div className="max-w-7xl mx-auto px-4">
         <div className="flex items-center justify-between h-16">
           {/* Logo y nombre */}
-          <Link href={`/store/${slug}`} className="flex items-center gap-2 group">
-            <div
-              className="p-2 rounded-lg transition-transform group-hover:scale-110"
-              style={{ backgroundColor: `${primaryColor}20` }}
-            >
-              <Store className="h-6 w-6" style={{ color: primaryColor }} />
-            </div>
+          <Link href={`/store/${slug}`} className="flex items-center gap-3 group">
+            {config.store_logo_url ? (
+              <div className="relative w-12 h-12 rounded-lg overflow-hidden transition-transform group-hover:scale-105">
+                <Image
+                  src={config.store_logo_url}
+                  alt={storeName}
+                  fill
+                  className="object-contain"
+                />
+              </div>
+            ) : (
+              <div
+                className="p-2 rounded-lg transition-transform group-hover:scale-110"
+                style={{ backgroundColor: `${primaryColor}20` }}
+              >
+                <Store className="h-6 w-6" style={{ color: primaryColor }} />
+              </div>
+            )}
             <span className="text-xl font-bold text-gray-900 hidden sm:block">
               {storeName}
             </span>
