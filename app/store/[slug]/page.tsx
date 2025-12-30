@@ -147,16 +147,48 @@ export default function StorefrontPage() {
         </div>
       </div>
 
-      {/* Banner */}
-      {config.store_banner_url && (
-        <div className="relative w-full h-48 md:h-64">
+      {/* Hero Section con Banner */}
+      {config.store_banner_url ? (
+        <div className="relative w-full h-64 md:h-96 lg:h-[500px]">
           <Image
             src={config.store_banner_url}
-            alt="Banner"
+            alt={`Banner de ${config.store_name}`}
             fill
             className="object-cover"
             priority
           />
+          {/* Overlay con información de la tienda */}
+          <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/20 to-transparent">
+            <div className="max-w-7xl mx-auto px-4 h-full flex items-end pb-8 md:pb-12">
+              <div className="text-white">
+                <h1 className="text-3xl md:text-5xl font-bold mb-2">
+                  {config.store_name}
+                </h1>
+                {config.store_description && (
+                  <p className="text-lg md:text-xl text-white/90 max-w-2xl">
+                    {config.store_description}
+                  </p>
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
+      ) : (
+        /* Hero alternativo sin banner */
+        <div
+          className="relative w-full py-12 md:py-16"
+          style={{ backgroundColor: `${primaryColor}15` }}
+        >
+          <div className="max-w-7xl mx-auto px-4 text-center">
+            <h1 className="text-3xl md:text-5xl font-bold mb-4" style={{ color: primaryColor }}>
+              {config.store_name}
+            </h1>
+            {config.store_description && (
+              <p className="text-lg md:text-xl text-gray-700 max-w-2xl mx-auto">
+                {config.store_description}
+              </p>
+            )}
+          </div>
         </div>
       )}
 
