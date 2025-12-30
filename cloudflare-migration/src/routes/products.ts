@@ -159,8 +159,14 @@ app.put('/:id', async (c) => {
       }, 404);
     }
 
+    // Prepare update data - serialize images array to JSON string if present
+    const updateData = { ...body };
+    if (updateData.images && Array.isArray(updateData.images)) {
+      updateData.images = JSON.stringify(updateData.images);
+    }
+
     // Update product
-    await tenantDB.update('products', productId, body);
+    await tenantDB.update('products', productId, updateData);
 
     const product = await tenantDB.getById<Product>('products', productId);
 
