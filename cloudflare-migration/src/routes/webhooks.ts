@@ -8,6 +8,27 @@ import type { Env, APIResponse } from '../types';
 
 const app = new Hono<{ Bindings: Env }>();
 
+// GET /api/webhooks/wompi/config - Debug endpoint para verificar configuración
+app.get('/wompi/config', async (c) => {
+  try {
+    return c.json<APIResponse>({
+      success: true,
+      data: {
+        webhook_url: 'https://tienda-pos-api.julian-mendieta24.workers.dev/api/webhooks/wompi',
+        expected_secret: c.env.WOMPI_EVENTS_SECRET || 'prod_events_QqwC3D3DQxyCyvjMo1O4VFRIT6DaJ2ZZ',
+        wompi_public_key: c.env.WOMPI_PUBLIC_KEY ? 'configurada' : 'NO configurada',
+        wompi_private_key: c.env.WOMPI_PRIVATE_KEY ? 'configurada' : 'NO configurada',
+        instructions: 'Configure este webhook URL en Wompi Dashboard: Settings > API Keys > Eventos',
+      },
+    });
+  } catch (error: any) {
+    return c.json<APIResponse>({
+      success: false,
+      error: error.message,
+    }, 500);
+  }
+});
+
 // POST /api/webhooks/wompi - Procesar webhook de Wompi
 app.post('/wompi', async (c) => {
   try {
@@ -28,43 +49,68 @@ app.post('/wompi', async (c) => {
     console.log('📨 Wompi webhook event received:', event.event);
     console.log('Transaction data:', event.data);
 
+    // 🔄 REENVIAR EVENTO A NEURAI.DEV
+    // Neurai.dev ya tiene configurado este webhook y debe seguir funcionando
+    try {
+      console.log('📤 Forwarding event to Neurai.dev...');
+      const neuraiResponse = await fetch('https://neurai.dev/api/payments/confirmation', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-Webhook-Secret': expectedSecret,
+        },
+        body: JSON.stringify(event),
+      });
+
+      if (neuraiResponse.ok) {
+        console.log('✅ Event forwarded to Neurai.dev successfully');
+      } else {
+        console.warn(`⚠️ Failed to forward to Neurai.dev: ${neuraiResponse.status}`);
+      }
+    } catch (error) {
+      console.error('❌ Error forwarding to Neurai.dev:', error);
+      // No fallar si Neurai no responde, continuar procesando para tienda-pos
+    }
+
     // Procesar según el tipo de evento
     if (event.event === 'transaction.updated') {
-      const transaction = event.data;
-      const { id, status, reference, amount_in_cents, payment_method_type } = transaction;
+      const transaction = event.data.transaction;
+      const { id, status, reference, amount_in_cents, payment_method_type, payment_link_id } = transaction;
 
       console.log(`🔄 Processing transaction ${id} with status: ${status}`);
+      console.log(`Reference: ${reference}, Payment Link ID: ${payment_link_id}`);
 
-      // Determinar el tipo de transacción según el reference
-      // - Suscripciones: SUB-{primeros8chars}-{timestamp}
-      // - Ventas web: WEB-{date}-{number}
-      const referenceParts = reference.split('-');
-      if (referenceParts.length < 2) {
-        console.error('❌ Invalid reference format:', reference);
-        return c.json<APIResponse>({
-          success: false,
-          error: 'Invalid reference format',
-        }, 400);
-      }
+      // Si la transacción viene de un payment link, buscar por el SKU en lugar del reference
+      if (payment_link_id) {
+        console.log(`💳 Transaction from payment link: ${payment_link_id}`);
 
-      const referenceType = referenceParts[0]; // 'SUB' o 'WEB'
+        // Obtener información del payment link para obtener el SKU (order_id)
+        const paymentLink = event.data.payment_link;
+        const sku = paymentLink?.sku;
 
-      // 🛒 PROCESAR VENTA WEB
-      if (referenceType === 'WEB') {
-        console.log(`🛒 Processing web order: ${reference}`);
+        if (!sku) {
+          console.error('❌ Payment link has no SKU');
+          return c.json<APIResponse>({
+            success: false,
+            error: 'Payment link has no SKU',
+          }, 400);
+        }
 
-        // Buscar la venta por sale_number
+        console.log(`🛒 Processing web order with SKU: ${sku}`);
+
+        // Buscar la venta por ID (el SKU contiene el order_id)
         const sale = await c.env.DB.prepare(
-          `SELECT id, tenant_id, total, status FROM sales WHERE sale_number = ?`
-        ).bind(reference).first<{
+          `SELECT id, tenant_id, total, status, sale_number FROM sales WHERE id = ?`
+        ).bind(sku).first<{
           id: string;
           tenant_id: string;
           total: number;
           status: string;
+          sale_number: string;
         }>();
 
         if (!sale) {
-          console.error('❌ Sale not found for reference:', reference);
+          console.error('❌ Sale not found for SKU:', sku);
           return c.json<APIResponse>({
             success: false,
             error: 'Sale not found',
@@ -113,7 +159,7 @@ app.post('/wompi', async (c) => {
             message: 'Web order completed and inventory updated',
             data: {
               saleId: sale.id,
-              orderNumber: reference,
+              orderNumber: sale.sale_number,
               status: 'completada',
             },
           });
@@ -138,27 +184,38 @@ app.post('/wompi', async (c) => {
             message: 'Payment declined for web order',
             data: {
               saleId: sale.id,
-              orderNumber: reference,
+              orderNumber: sale.sale_number,
               status: 'pendiente',
             },
           });
         }
 
         // Para estados pendientes, solo registrar
-        console.log(`⏳ Web order ${reference} status is ${status}, waiting for completion`);
+        console.log(`⏳ Web order ${sale.sale_number} status is ${status}, waiting for completion`);
 
         return c.json<APIResponse>({
           success: true,
           message: 'Transaction recorded, awaiting completion',
           data: {
             saleId: sale.id,
-            orderNumber: reference,
+            orderNumber: sale.sale_number,
             transactionStatus: status,
           },
         });
       }
 
-      // 💳 PROCESAR SUSCRIPCIÓN
+      // 💳 PROCESAR SUSCRIPCIÓN (transacciones directas, no de payment links)
+      // Determinar el tipo de transacción según el reference
+      // - Suscripciones: SUB-{primeros8chars}-{timestamp}
+      const referenceParts = reference.split('-');
+      if (referenceParts.length < 2 || referenceParts[0] !== 'SUB') {
+        console.error('❌ Invalid reference format for subscription:', reference);
+        return c.json<APIResponse>({
+          success: true,
+          message: 'Transaction received but not processed (unknown type)',
+        });
+      }
+
       const userIdPrefix = referenceParts[1]; // Primeros 8 caracteres del user_profile_id
 
       // Buscar el user_profile

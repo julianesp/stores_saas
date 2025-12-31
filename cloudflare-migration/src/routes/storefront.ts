@@ -511,4 +511,66 @@ app.post('/wompi/create-payment-link/:slug', async (c) => {
   }
 });
 
+// GET /api/storefront/:slug/order/:orderNumber/status - Debug endpoint para verificar estado de orden
+app.get('/:slug/order/:orderNumber/status', async (c) => {
+  try {
+    const orderNumber = c.req.param('orderNumber');
+
+    // Buscar la orden
+    const sale = await c.env.DB.prepare(
+      `SELECT
+        id, sale_number, total, status, payment_status,
+        amount_paid, amount_pending, notes, created_at
+       FROM sales
+       WHERE sale_number = ?`
+    ).bind(orderNumber).first<{
+      id: string;
+      sale_number: string;
+      total: number;
+      status: string;
+      payment_status: string;
+      amount_paid: number;
+      amount_pending: number;
+      notes: string;
+      created_at: string;
+    }>();
+
+    if (!sale) {
+      return c.json<APIResponse>({
+        success: false,
+        error: 'Order not found',
+      }, 404);
+    }
+
+    // Extraer Wompi Payment Link ID de las notas
+    const wompiLinkMatch = sale.notes?.match(/Wompi Payment Link ID: (.+)/);
+    const wompiLinkId = wompiLinkMatch ? wompiLinkMatch[1].trim() : null;
+
+    return c.json<APIResponse>({
+      success: true,
+      data: {
+        order: {
+          id: sale.id,
+          sale_number: sale.sale_number,
+          total: sale.total,
+          status: sale.status,
+          payment_status: sale.payment_status,
+          amount_paid: sale.amount_paid,
+          amount_pending: sale.amount_pending,
+          created_at: sale.created_at,
+        },
+        wompi_link_id: wompiLinkId,
+        notes: sale.notes,
+      },
+    });
+
+  } catch (error: any) {
+    console.error('Error checking order status:', error);
+    return c.json<APIResponse>({
+      success: false,
+      error: error.message || 'Failed to check order status',
+    }, 500);
+  }
+});
+
 export default app;
