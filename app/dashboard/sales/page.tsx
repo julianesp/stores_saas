@@ -132,6 +132,24 @@ export default function SalesPage() {
 
   const totalSales = sales.reduce((sum, sale) => sum + sale.total, 0);
 
+  // Función para extraer información del cliente desde las notas (para ventas web)
+  const extractCustomerInfoFromNotes = (notes: string) => {
+    if (!notes) return null;
+
+    const info: { name?: string; phone?: string; email?: string } = {};
+
+    const nameMatch = notes.match(/Cliente: (.+)/);
+    if (nameMatch) info.name = nameMatch[1].trim();
+
+    const phoneMatch = notes.match(/Teléfono: (.+)/);
+    if (phoneMatch) info.phone = phoneMatch[1].trim();
+
+    const emailMatch = notes.match(/Email: (.+)/);
+    if (emailMatch) info.email = emailMatch[1].trim();
+
+    return info.name ? info : null;
+  };
+
   const handleExportAll = () => {
     if (sales.length === 0) {
       toast.error('No hay ventas para exportar');
@@ -363,6 +381,21 @@ export default function SalesPage() {
                                 <p className="text-xs text-gray-500">{sale.customer.phone}</p>
                               )}
                             </div>
+                          ) : sale.sale_number.startsWith('WEB-') ? (
+                            (() => {
+                              const webCustomer = extractCustomerInfoFromNotes(sale.notes || '');
+                              return webCustomer ? (
+                                <div>
+                                  <p className="font-medium text-sm">{webCustomer.name}</p>
+                                  {webCustomer.phone && (
+                                    <p className="text-xs text-gray-500">{webCustomer.phone}</p>
+                                  )}
+                                  <span className="text-xs bg-blue-100 text-blue-700 px-1 rounded">Web</span>
+                                </div>
+                              ) : (
+                                <span className="text-gray-400 text-sm">Sin cliente</span>
+                              );
+                            })()
                           ) : (
                             <span className="text-gray-400 text-sm">Sin cliente</span>
                           )}
@@ -459,15 +492,33 @@ export default function SalesPage() {
                       </div>
 
                       {/* Cliente */}
-                      {sale.customer && (
-                        <div className="mb-3 bg-blue-50 border border-blue-100 rounded p-2">
-                          <span className="text-xs text-gray-500">Cliente:</span>
-                          <p className="font-medium text-sm">{sale.customer.name}</p>
-                          {sale.customer.phone && (
-                            <p className="text-xs text-gray-500">{sale.customer.phone}</p>
-                          )}
-                        </div>
-                      )}
+                      {(() => {
+                        const customer = sale.customer;
+                        const webCustomer = sale.sale_number.startsWith('WEB-')
+                          ? extractCustomerInfoFromNotes(sale.notes || '')
+                          : null;
+
+                        if (customer || webCustomer) {
+                          return (
+                            <div className="mb-3 bg-blue-50 border border-blue-100 rounded p-2">
+                              <div className="flex justify-between items-start">
+                                <span className="text-xs text-gray-500">Cliente:</span>
+                                {sale.sale_number.startsWith('WEB-') && (
+                                  <span className="text-xs bg-blue-600 text-white px-2 py-0.5 rounded">Web</span>
+                                )}
+                              </div>
+                              <p className="font-medium text-sm">{customer?.name || webCustomer?.name}</p>
+                              {(customer?.phone || webCustomer?.phone) && (
+                                <p className="text-xs text-gray-500">{customer?.phone || webCustomer?.phone}</p>
+                              )}
+                              {webCustomer?.email && (
+                                <p className="text-xs text-gray-500">{webCustomer.email}</p>
+                              )}
+                            </div>
+                          );
+                        }
+                        return null;
+                      })()}
 
                       <div className="grid grid-cols-2 gap-2 text-sm mb-3">
                         <div>
@@ -570,23 +621,40 @@ export default function SalesPage() {
                   </CardContent>
                 </Card>
 
-                {selectedSale.customer && (
-                  <Card>
-                    <CardContent className="pt-4">
-                      <h3 className="font-semibold mb-2 text-sm text-gray-600">Cliente</h3>
-                      <p className="font-medium">{selectedSale.customer.name}</p>
-                      {selectedSale.customer.phone && (
-                        <p className="text-sm text-gray-500">{selectedSale.customer.phone}</p>
-                      )}
-                      {selectedSale.customer.email && (
-                        <p className="text-sm text-gray-500">{selectedSale.customer.email}</p>
-                      )}
-                      <p className="text-xs text-blue-600 mt-1">
-                        {selectedSale.customer.loyalty_points} puntos de lealtad
-                      </p>
-                    </CardContent>
-                  </Card>
-                )}
+                {(() => {
+                  const customer = selectedSale.customer;
+                  const webCustomer = selectedSale.sale_number.startsWith('WEB-')
+                    ? extractCustomerInfoFromNotes(selectedSale.notes || '')
+                    : null;
+
+                  if (customer || webCustomer) {
+                    return (
+                      <Card>
+                        <CardContent className="pt-4">
+                          <div className="flex justify-between items-start mb-2">
+                            <h3 className="font-semibold text-sm text-gray-600">Cliente</h3>
+                            {selectedSale.sale_number.startsWith('WEB-') && (
+                              <span className="text-xs bg-blue-600 text-white px-2 py-0.5 rounded">Venta Web</span>
+                            )}
+                          </div>
+                          <p className="font-medium">{customer?.name || webCustomer?.name}</p>
+                          {(customer?.phone || webCustomer?.phone) && (
+                            <p className="text-sm text-gray-500">{customer?.phone || webCustomer?.phone}</p>
+                          )}
+                          {(customer?.email || webCustomer?.email) && (
+                            <p className="text-sm text-gray-500">{customer?.email || webCustomer?.email}</p>
+                          )}
+                          {customer && (
+                            <p className="text-xs text-blue-600 mt-1">
+                              {customer.loyalty_points} puntos de lealtad
+                            </p>
+                          )}
+                        </CardContent>
+                      </Card>
+                    );
+                  }
+                  return null;
+                })()}
 
                 <Card>
                   <CardContent className="pt-4">
