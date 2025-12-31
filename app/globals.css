@@ -24,3 +24,22 @@ body {
   color: var(--foreground);
   font-family: Arial, Helvetica, sans-serif;
 }
+
+/* Ajustar posición de toasts para que no tapen el botón del carrito */
+[data-sonner-toaster] {
+  top: 80px !important;
+}
+
+/* En móviles, ajustar aún más */
+@media (max-width: 640px) {
+  [data-sonner-toaster] {
+    top: 70px !important;
+  }
+}
+
+/* En tablets */
+@media (min-width: 641px) and (max-width: 1024px) {
+  [data-sonner-toaster] {
+    top: 75px !important;
+  }
+}

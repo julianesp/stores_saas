@@ -626,7 +626,7 @@ export default function StoreConfigPage() {
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="minOrder">Pedido Mínimo (COP)</Label>
+            <Label htmlFor="minOrder">Pedido Mínimo en Tienda Online (COP)</Label>
             <Input
               id="minOrder"
               type="number"
@@ -636,6 +636,19 @@ export default function StoreConfigPage() {
               min="0"
               step="1000"
             />
+            <div className="flex items-center justify-between">
+              <p className="text-xs text-gray-500">
+                Monto mínimo que los clientes deben gastar para completar un pedido en la tienda online.
+              </p>
+              {storeMinOrder > 0 && (
+                <p className="text-sm font-semibold text-blue-600">
+                  ${storeMinOrder.toLocaleString('es-CO')}
+                </p>
+              )}
+            </div>
+            <p className="text-xs text-gray-400 italic">
+              💡 Tip: Dejar en 0 para no establecer mínimo. Recomendado: $2,000 - $5,000 COP
+            </p>
           </div>
         </CardContent>
       </Card>

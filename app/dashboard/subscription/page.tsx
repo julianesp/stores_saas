@@ -34,7 +34,8 @@ const SUBSCRIPTION_PLANS = [
     features: [
       "Todo lo del Plan Básico",
       "Tienda Online personalizable",
-      "Múltiples métodos de pago",
+      "Análisis con Inteligencia Artificial",
+      "Múltiples métodos de pago (Wompi)",
       "Reportes avanzados",
       "Soporte prioritario",
       "Integración con WhatsApp",

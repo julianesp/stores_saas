@@ -28,11 +28,11 @@ app.post('/create-payment-link', async (c) => {
       }, 400);
     }
 
-    // Validar monto mínimo de Wompi (10,000 COP = 1,000,000 centavos)
-    if (amount_in_cents < 1000000) {
+    // Validar monto mínimo de Wompi (2,000 COP = 200,000 centavos)
+    if (amount_in_cents < 200000) {
       return c.json<APIResponse<null>>({
         success: false,
-        error: 'El monto mínimo para pagos con Wompi es de $10,000 COP',
+        error: 'El monto mínimo para pagos con Wompi es de $2,000 COP',
         data: null
       }, 400);
     }

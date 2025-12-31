@@ -55,7 +55,16 @@ export default function RootLayout({
           className={`${geistSans.variable} ${geistMono.variable} antialiased `}
         >
           {children}
-          <Toaster position="top-right" richColors />
+          <Toaster
+            position="top-right"
+            richColors
+            toastOptions={{
+              style: {
+                marginTop: '10px',
+              },
+              className: 'toast-below-cart',
+            }}
+          />
         </body>
       </html>
     </ClerkProvider>

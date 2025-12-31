@@ -18,16 +18,12 @@ import {
   ArrowLeft,
   ShoppingCart,
   User,
-  Phone,
-  Mail,
+  Loader2,
+  CheckCircle2,
   MapPin,
   Store,
   Truck,
   MessageSquare,
-  Loader2,
-  CheckCircle2,
-  FileText,
-  Download,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -148,7 +144,7 @@ export default function CheckoutPage() {
 
   // Calcular subtotal SIN descuentos (precio original)
   const subtotalOriginal = cart.reduce(
-    (sum, item) => sum + (item.price * item.quantity),
+    (sum, item) => sum + item.price * item.quantity,
     0
   );
 
@@ -245,7 +241,7 @@ export default function CheckoutPage() {
       setWompiEnabled(response.wompi_enabled || false);
 
       // Si Wompi está habilitado, crear payment link
-      if (response.wompi_enabled && response.total >= 10000) {
+      if (response.wompi_enabled && response.total >= 2000) {
         try {
           setCreatingPaymentLink(true);
           const paymentLink = await createWompiPaymentLink(slug, {
@@ -279,176 +275,6 @@ export default function CheckoutPage() {
     } finally {
       setSubmitting(false);
     }
-  };
-
-  const sendWhatsAppMessage = () => {
-    if (!storeWhatsApp) return;
-
-    const phone = storeWhatsApp.replace(/\D/g, "");
-
-    // Generar mensaje detallado
-    let message = `🛍️ *Nuevo Pedido Web*\n\n`;
-    message += `📋 *Pedido:* ${orderNumber}\n`;
-    message += `👤 *Cliente:* ${customerName}\n`;
-    message += `📱 *Teléfono:* ${customerPhone}\n`;
-    if (customerEmail) {
-      message += `📧 *Email:* ${customerEmail}\n`;
-    }
-    message += `\n🚚 *Método de entrega:* ${
-      deliveryMethod === "pickup" ? "Recogida en tienda" : "Envío a domicilio"
-    }\n`;
-    if (deliveryMethod === "shipping") {
-      if (deliveryAddress) {
-        message += `📍 *Dirección:* ${deliveryAddress}\n`;
-      }
-      if (selectedZone) {
-        message += `🗺️ *Zona:* ${selectedZone.zone_name}\n`;
-      }
-    }
-
-    message += `\n📦 *Productos:*\n`;
-    cart.forEach((item) => {
-      const hasOffer = item.discount_percentage && item.discount_percentage > 0;
-      const finalPrice = hasOffer
-        ? calculateDiscountedPrice(item.price, item.discount_percentage!)
-        : item.price;
-
-      message += `• ${item.name} x${item.quantity} - ${formatCurrency(
-        finalPrice * item.quantity
-      )}`;
-      if (hasOffer) {
-        message += ` _(${item.discount_percentage}% OFF)_`;
-      }
-      message += `\n`;
-    });
-
-    if (totalDiscount > 0) {
-      message += `\n💰 *Descuentos:* -${formatCurrency(totalDiscount)}\n`;
-    }
-    if (shippingAmount > 0) {
-      message += `🚚 *Costo de envío:* ${formatCurrency(shippingAmount)}\n`;
-    }
-    message += `\n💵 *TOTAL:* ${formatCurrency(orderTotal)}\n`;
-
-    if (notes) {
-      message += `\n📝 *Notas adicionales:*\n${notes}\n`;
-    }
-
-    message += `\n_Esperando confirmación y coordinación de pago_ 🙏`;
-
-    const encodedMessage = encodeURIComponent(message);
-    window.open(`https://wa.me/${phone}?text=${encodedMessage}`, "_blank");
-  };
-
-  const downloadInvoice = () => {
-    // Generar contenido de la factura en formato texto
-    let invoiceText = `FACTURA ELECTRÓNICA\n`;
-    invoiceText += `${"=".repeat(50)}\n\n`;
-
-    // Información de la tienda
-    invoiceText += `${config?.store_name || "Tienda"}\n`;
-    if (config?.store_address) {
-      invoiceText += `${config.store_address}\n`;
-    }
-    if (config?.store_phone) {
-      invoiceText += `Tel: ${config.store_phone}\n`;
-    }
-    if (config?.store_email) {
-      invoiceText += `Email: ${config.store_email}\n`;
-    }
-    invoiceText += `\n${"=".repeat(50)}\n\n`;
-
-    // Información del pedido
-    invoiceText += `PEDIDO: ${orderNumber}\n`;
-    invoiceText += `Fecha: ${new Date().toLocaleDateString("es-CO", {
-      year: "numeric",
-      month: "long",
-      day: "numeric",
-      hour: "2-digit",
-      minute: "2-digit",
-    })}\n\n`;
-
-    // Información del cliente
-    invoiceText += `CLIENTE:\n`;
-    invoiceText += `Nombre: ${customerName}\n`;
-    invoiceText += `Teléfono: ${customerPhone}\n`;
-    if (customerEmail) {
-      invoiceText += `Email: ${customerEmail}\n`;
-    }
-    invoiceText += `\n${"=".repeat(50)}\n\n`;
-
-    // Método de entrega
-    invoiceText += `MÉTODO DE ENTREGA:\n`;
-    invoiceText += deliveryMethod === "pickup"
-      ? "Recogida en tienda\n"
-      : `Envío a domicilio\n`;
-    if (deliveryMethod === "shipping") {
-      if (deliveryAddress) {
-        invoiceText += `Dirección: ${deliveryAddress}\n`;
-      }
-      if (selectedZone) {
-        invoiceText += `Zona: ${selectedZone.zone_name}\n`;
-      }
-    }
-    invoiceText += `\n${"=".repeat(50)}\n\n`;
-
-    // Productos
-    invoiceText += `PRODUCTOS:\n\n`;
-    invoiceText += `${"Item".padEnd(30)} ${"Cant".padEnd(6)} ${"P.Unit".padEnd(12)} ${"Total".padEnd(12)}\n`;
-    invoiceText += `${"-".repeat(60)}\n`;
-
-    cart.forEach((item) => {
-      const hasOffer = item.discount_percentage && item.discount_percentage > 0;
-      const finalPrice = hasOffer
-        ? calculateDiscountedPrice(item.price, item.discount_percentage!)
-        : item.price;
-      const itemTotal = finalPrice * item.quantity;
-
-      invoiceText += `${item.name.padEnd(30)} ${String(item.quantity).padEnd(6)} ${formatCurrency(finalPrice).padEnd(12)} ${formatCurrency(itemTotal).padEnd(12)}\n`;
-      if (hasOffer) {
-        invoiceText += `  (${item.discount_percentage}% OFF - Precio original: ${formatCurrency(item.price)})\n`;
-      }
-    });
-
-    invoiceText += `\n${"-".repeat(60)}\n\n`;
-
-    // Totales
-    if (totalDiscount > 0) {
-      invoiceText += `Subtotal:                                ${formatCurrency(subtotalOriginal)}\n`;
-      invoiceText += `Descuentos:                             -${formatCurrency(totalDiscount)}\n`;
-      invoiceText += `Subtotal con descuentos:                 ${formatCurrency(subtotal)}\n`;
-    } else {
-      invoiceText += `Subtotal:                                ${formatCurrency(subtotal)}\n`;
-    }
-
-    if (shippingAmount > 0) {
-      invoiceText += `Envío:                                   ${formatCurrency(shippingAmount)}\n`;
-    }
-
-    invoiceText += `\n${"=".repeat(60)}\n`;
-    invoiceText += `TOTAL:                                   ${formatCurrency(orderTotal)}\n`;
-    invoiceText += `${"=".repeat(60)}\n`;
-
-    if (notes) {
-      invoiceText += `\nNOTAS ADICIONALES:\n${notes}\n`;
-    }
-
-    invoiceText += `\n\nGracias por su compra!\n`;
-    invoiceText += `Estado del pedido: PENDIENTE\n`;
-    invoiceText += `Contacte a la tienda para coordinar el pago\n`;
-
-    // Crear blob y descargar
-    const blob = new Blob([invoiceText], { type: "text/plain;charset=utf-8" });
-    const url = window.URL.createObjectURL(blob);
-    const link = document.createElement("a");
-    link.href = url;
-    link.download = `factura_${orderNumber.replace(/[^a-zA-Z0-9]/g, "_")}.txt`;
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    window.URL.revokeObjectURL(url);
-
-    toast.success("Factura descargada exitosamente");
   };
 
   if (loading) {
@@ -532,7 +358,9 @@ export default function CheckoutPage() {
                 {wompiEnabled && wompiCheckoutUrl ? (
                   <div className="p-4 bg-green-50 border border-green-200 rounded-lg">
                     <p className="text-sm text-green-800">
-                      ✅ <strong>Link de pago creado!</strong> Haz clic en Pagar con Wompi para completar tu pago con Nequi, PSE, tarjeta y más.
+                      ✅ <strong>Link de pago creado!</strong> Haz clic en Pagar
+                      con Wompi para completar tu pago con Nequi, PSE, tarjeta y
+                      más.
                     </p>
                   </div>
                 ) : wompiEnabled && creatingPaymentLink ? (
@@ -542,17 +370,20 @@ export default function CheckoutPage() {
                       <strong>Creando link de pago...</strong>
                     </p>
                   </div>
-                ) : wompiEnabled && orderTotal < 10000 ? (
+                ) : wompiEnabled && orderTotal < 2000 ? (
                   <div className="p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
                     <p className="text-sm text-yellow-800">
-                      ⚠️ <strong>Monto menor al mínimo:</strong> El pago online requiere un mínimo de $10,000. Contacta a la tienda por WhatsApp para coordinar el pago.
+                      ⚠️ <strong>Monto menor al mínimo:</strong> El pago online
+                      con Wompi requiere un mínimo de {formatCurrency(2000)}.
+                      Contacta a la tienda por WhatsApp para coordinar el pago.
                     </p>
                   </div>
                 ) : storeNequiNumber ? (
                   <>
                     <div className="p-4 bg-blue-50 rounded-lg">
                       <p className="text-sm text-gray-700">
-                        📋 <strong>Siguiente paso:</strong> Realiza el pago por Nequi y envía el comprobante por WhatsApp
+                        📋 <strong>Siguiente paso:</strong> Realiza el pago por
+                        Nequi y envía el comprobante por WhatsApp
                       </p>
                     </div>
 
@@ -577,14 +408,16 @@ export default function CheckoutPage() {
                         </Button>
                       </div>
                       <p className="text-xs text-purple-700 mt-2 text-center">
-                        Monto a transferir: <strong>{formatCurrency(orderTotal)}</strong>
+                        Monto a transferir:{" "}
+                        <strong>{formatCurrency(orderTotal)}</strong>
                       </p>
                     </div>
                   </>
                 ) : (
                   <div className="p-4 bg-blue-50 rounded-lg">
                     <p className="text-sm text-gray-700">
-                      📋 <strong>Siguiente paso:</strong> Envía los detalles de tu pedido por WhatsApp para coordinar el pago y la entrega
+                      📋 <strong>Siguiente paso:</strong> Envía los detalles de
+                      tu pedido por WhatsApp para coordinar el pago y la entrega
                     </p>
                   </div>
                 )}
@@ -600,36 +433,23 @@ export default function CheckoutPage() {
                         window.location.href = wompiCheckoutUrl;
                       }}
                     >
-                      <svg className="h-5 w-5 mr-2" viewBox="0 0 24 24" fill="currentColor">
-                        <path d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" fill="none"/>
+                      <svg
+                        className="h-5 w-5 mr-2"
+                        viewBox="0 0 24 24"
+                        fill="currentColor"
+                      >
+                        <path
+                          d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z"
+                          stroke="currentColor"
+                          strokeWidth="2"
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          fill="none"
+                        />
                       </svg>
                       Pagar con Wompi (Nequi, PSE, Tarjetas)
                     </Button>
                   )}
-
-                  {/* Botón de WhatsApp */}
-                  {storeWhatsApp && (
-                    <Button
-                      size="lg"
-                      className="w-full text-lg"
-                      style={{ backgroundColor: "#25D366" }}
-                      onClick={sendWhatsAppMessage}
-                    >
-                      <MessageSquare className="h-5 w-5 mr-2" />
-                      {wompiEnabled && wompiCheckoutUrl ? "Contactar tienda por WhatsApp" : "Enviar pedido por WhatsApp"}
-                    </Button>
-                  )}
-
-                  {/* Botón de descargar factura */}
-                  <Button
-                    variant="outline"
-                    size="lg"
-                    className="w-full"
-                    onClick={downloadInvoice}
-                  >
-                    <Download className="h-5 w-5 mr-2" />
-                    Descargar Factura Electrónica
-                  </Button>
 
                   {/* Botón volver a la tienda */}
                   <Link href={`/store/${slug}`}>
@@ -750,7 +570,9 @@ export default function CheckoutPage() {
 
                   <RadioGroup
                     value={deliveryMethod}
-                    onValueChange={(value: any) => setDeliveryMethod(value)}
+                    onValueChange={(value) =>
+                      setDeliveryMethod(value as "pickup" | "shipping")
+                    }
                   >
                     <div className="flex items-center space-x-3 p-4 border rounded-lg">
                       <RadioGroupItem value="pickup" id="pickup" />
@@ -820,7 +642,11 @@ export default function CheckoutPage() {
                             </SelectTrigger>
                             <SelectContent className="bg-black ">
                               {shippingZones.map((zone) => (
-                                <SelectItem key={zone.id} value={zone.id} className="hover:bg-gray-800 hover:text-2xl transition-all delay-75">
+                                <SelectItem
+                                  key={zone.id}
+                                  value={zone.id}
+                                  className="hover:bg-gray-800 hover:text-2xl transition-all delay-75"
+                                >
                                   {zone.zone_name} -{" "}
                                   {formatCurrency(zone.shipping_cost)}
                                 </SelectItem>

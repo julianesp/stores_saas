@@ -394,3 +394,120 @@ export interface PurchaseOrderWithItems extends PurchaseOrder {
 export interface PurchaseOrderItemWithProduct extends PurchaseOrderItem {
   product?: Product;
 }
+
+// ============================================================
+// EMAIL SYSTEM TYPES
+// ============================================================
+
+export type EmailType =
+  | 'subscription_reminder'
+  | 'daily_report'
+  | 'stock_alert'
+  | 'cart_abandoned'
+  | 'new_product_campaign'
+  | 'general';
+
+export type EmailStatus = 'pending' | 'sent' | 'failed' | 'bounced';
+
+export interface EmailLog {
+  id: string;
+  user_profile_id: string;
+  email_type: EmailType;
+  recipient_email: string;
+  subject: string;
+  status: EmailStatus;
+  error_message?: string;
+  sent_at?: string;
+  created_at: string;
+  metadata?: string; // JSON string with extra data
+}
+
+export interface AbandonedCart {
+  id: string;
+  user_profile_id: string;
+  cart_id: string;
+  customer_email: string;
+  customer_name?: string;
+  total_amount: number;
+  items_count: number;
+  first_email_sent: boolean;
+  second_email_sent: boolean;
+  third_email_sent: boolean;
+  recovered: boolean;
+  abandoned_at: string;
+  recovered_at?: string;
+  created_at: string;
+}
+
+export interface StockAlertSubscription {
+  id: string;
+  user_profile_id: string;
+  product_id: string;
+  customer_email: string;
+  customer_name?: string;
+  notified: boolean;
+  created_at: string;
+  notified_at?: string;
+}
+
+export interface EmailPreferences {
+  id: string;
+  user_profile_id: string;
+  daily_reports_enabled: boolean;
+  daily_reports_time: string; // HH:MM format
+  subscription_reminders_enabled: boolean;
+  stock_alerts_enabled: boolean;
+  abandoned_cart_emails_enabled: boolean;
+  from_name?: string; // Sender name
+  from_email?: string; // Reply-to email
+  created_at: string;
+  updated_at: string;
+}
+
+// Email template data types
+export interface SubscriptionReminderData {
+  user_name: string;
+  days_left: number;
+  next_billing_date: string;
+  plan_price: number;
+  payment_link: string;
+}
+
+export interface DailyReportData {
+  store_name: string;
+  date: string;
+  total_sales: number;
+  total_revenue: number;
+  top_products: Array<{
+    name: string;
+    quantity: number;
+    revenue: number;
+  }>;
+  low_stock_products: Array<{
+    name: string;
+    current_stock: number;
+    min_stock: number;
+  }>;
+}
+
+export interface StockAlertData {
+  product_name: string;
+  product_image?: string;
+  product_url: string;
+  store_name: string;
+}
+
+export interface AbandonedCartData {
+  customer_name: string;
+  cart_items: Array<{
+    product_name: string;
+    quantity: number;
+    price: number;
+    image?: string;
+  }>;
+  cart_total: number;
+  discount_code?: string;
+  discount_percentage?: number;
+  cart_url: string;
+  store_name: string;
+}

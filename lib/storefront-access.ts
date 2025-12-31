@@ -88,20 +88,21 @@ export function getStorefrontBlockMessage(reason?: string): {
         title: '🏪 Tienda Online - Plan Premium',
         html: `
           <p class="text-lg mb-4">
-            La <strong>Tienda Online</strong> solo está disponible con el <strong>Plan Premium</strong> y durante los <strong>15 días de prueba gratuita</strong>.
+            La <strong>Tienda Online</strong> y el <strong>Análisis con IA</strong> solo están disponibles con el <strong>Plan Premium</strong> y durante los <strong>15 días de prueba gratuita</strong>.
           </p>
           <p class="text-gray-600">
-            Con el Plan Premium podrás:
+            Con el Plan Premium obtienes:
           </p>
           <ul class="text-left text-gray-700 mt-2 space-y-1">
-            <li>✅ Tener tu propia tienda online personalizable</li>
-            <li>✅ Vender tus productos 24/7</li>
-            <li>✅ Aceptar múltiples métodos de pago</li>
-            <li>✅ Configurar zonas de envío</li>
-            <li>✅ Integración con WhatsApp</li>
+            <li>✅ Tienda online personalizable (vende 24/7)</li>
+            <li>✅ Análisis con Inteligencia Artificial</li>
+            <li>✅ Múltiples métodos de pago (Wompi, Nequi, PSE, tarjetas)</li>
+            <li>✅ Reportes avanzados y exportables</li>
+            <li>✅ Zonas de envío configurables</li>
+            <li>✅ Soporte prioritario</li>
           </ul>
           <p class="mt-4 text-sm text-gray-500">
-            ¿Quieres seguir usando este servicio? Actualiza tu plan ahora.
+            ¿Quieres acceder a estas funcionalidades? Actualiza tu plan ahora.
           </p>
         `,
       };
@@ -122,13 +123,13 @@ export function getStorefrontBlockMessage(reason?: string): {
     case 'no_subscription':
     default:
       return {
-        title: '🏪 Tienda Online - Premium',
+        title: '🏪 Tienda Online + IA - Premium',
         html: `
           <p class="text-lg mb-4">
-            El acceso a la <strong>Tienda Online</strong> solo está disponible con el <strong>Plan Premium</strong> y durante los <strong>15 días de prueba gratuita</strong>.
+            El acceso a la <strong>Tienda Online</strong> y <strong>Análisis con IA</strong> solo está disponible con el <strong>Plan Premium</strong> y durante los <strong>15 días de prueba gratuita</strong>.
           </p>
           <p class="text-gray-600">
-            Si quieres seguir usando este servicio, por favor, adquiere el Plan Premium.
+            Adquiere el Plan Premium para acceder a todas estas funcionalidades.
           </p>
         `,
       };

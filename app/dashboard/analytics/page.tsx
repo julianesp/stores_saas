@@ -17,6 +17,7 @@ import Link from 'next/link';
 import { AIInsightsSection } from '@/components/analytics/ai-insights-section';
 import { ProductRecommendationsSection } from '@/components/analytics/product-recommendations-section';
 import { CustomerRFMSection } from '@/components/analytics/customer-rfm-section';
+import AdvancedMetricsDashboard from '@/components/analytics/advanced-metrics-dashboard';
 
 export default function AnalyticsPage() {
   const { getToken } = useAuth();
@@ -187,12 +188,12 @@ export default function AnalyticsPage() {
                 </div>
 
                 <div className="mb-6">
-                  <p className="text-3xl font-bold text-purple-600 mb-2">
-                    Solo $9,900/mes
+                  <p className="text-2xl font-bold text-purple-600 mb-2">
+                    Incluido en el Plan Premium
                   </p>
                   <p className="text-sm text-gray-500">
                     {isActive
-                      ? 'Complementa tu suscripción actual con IA'
+                      ? 'Actualiza al Plan Premium para usar Análisis IA'
                       : '✨ GRATIS durante los 15 días de prueba'}
                   </p>
                 </div>
@@ -200,7 +201,7 @@ export default function AnalyticsPage() {
                 <Link href="/dashboard/subscription">
                   <Button size="lg" className="bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white px-8">
                     <Sparkles className="mr-2 h-5 w-5" />
-                    {isActive ? 'Agregar Análisis IA a mi Plan' : 'Ver Planes y Activar Prueba Gratis'}
+                    {isActive ? 'Actualizar a Plan Premium' : 'Ver Planes y Activar Prueba Gratis'}
                   </Button>
                 </Link>
               </>
@@ -245,10 +246,14 @@ export default function AnalyticsPage() {
 
       {/* Tabs para diferentes secciones */}
       <Tabs defaultValue="overview" className="w-full">
-        <TabsList className="grid w-full grid-cols-5 lg:w-auto">
+        <TabsList className="grid w-full grid-cols-6 lg:w-auto">
           <TabsTrigger value="overview">
             <BarChart className="h-4 w-4 mr-2" />
             Overview
+          </TabsTrigger>
+          <TabsTrigger value="advanced">
+            <TrendingUp className="h-4 w-4 mr-2" />
+            Avanzado
           </TabsTrigger>
           <TabsTrigger value="insights">
             <Brain className="h-4 w-4 mr-2" />
@@ -493,6 +498,11 @@ export default function AnalyticsPage() {
           </ul>
         </CardContent>
       </Card>
+        </TabsContent>
+
+        {/* Tab: Métricas Avanzadas */}
+        <TabsContent value="advanced" className="space-y-6">
+          <AdvancedMetricsDashboard />
         </TabsContent>
 
         {/* Tab: Insights IA */}

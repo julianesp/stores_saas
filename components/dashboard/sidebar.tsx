@@ -24,6 +24,8 @@ import {
   Lock,
   Sparkles,
   Store,
+  Mail,
+  TrendingUp,
 } from 'lucide-react';
 import { getUserProfileByClerkId, hasAIAccess } from '@/lib/cloudflare-subscription-helpers';
 import { UserProfile } from '@/lib/types';
@@ -130,13 +132,18 @@ const storeMenuItems = [
     icon: Scan,
     roles: ['admin'],
   },
-  // TEMPORALMENTE DESHABILITADO - En desarrollo
-  // {
-  //   title: 'Análisis IA',
-  //   href: '/dashboard/analytics',
-  //   icon: Brain,
-  //   roles: ['admin'],
-  // },
+  {
+    title: 'Análisis IA',
+    href: '/dashboard/analytics',
+    icon: Brain,
+    roles: ['admin'],
+  },
+  {
+    title: 'Email Marketing',
+    href: '/dashboard/email-settings',
+    icon: Mail,
+    roles: ['admin'],
+  },
 ];
 
 interface SidebarProps {

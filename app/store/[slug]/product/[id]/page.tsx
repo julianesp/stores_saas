@@ -1,9 +1,9 @@
-'use client';
+"use client";
 
-import { useState, useEffect } from 'react';
-import { useParams, useRouter } from 'next/navigation';
-import Image from 'next/image';
-import Link from 'next/link';
+import { useState, useEffect } from "react";
+import { useParams, useRouter } from "next/navigation";
+import Image from "next/image";
+import Link from "next/link";
 import {
   getStoreConfig,
   getStoreProduct,
@@ -11,19 +11,12 @@ import {
   StoreProduct,
   calculateDiscountedPrice,
   parseProductImages,
-} from '@/lib/storefront-api';
-import { formatCurrency } from '@/lib/utils';
-import {
-  Plus,
-  Minus,
-  Package,
-  Phone,
-  Tag,
-  ShoppingCart,
-} from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import { Card, CardContent } from '@/components/ui/card';
-import { toast } from 'sonner';
+} from "@/lib/storefront-api";
+import { formatCurrency } from "@/lib/utils";
+import { Plus, Minus, Package, Phone, Tag, ShoppingCart } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
+import { toast } from "sonner";
 
 export default function ProductDetailPage() {
   const params = useParams();
@@ -54,9 +47,13 @@ export default function ProductDetailPage() {
 
       setConfig(configData);
       setProduct(productData);
-    } catch (err: any) {
-      console.error('Error loading product:', err);
-      setError(err.message || 'Error al cargar el producto');
+    } catch (err: unknown) {
+      console.error("Error loading product:", err);
+      if (err instanceof Error) {
+        setError(err.message);
+      } else {
+        setError(String(err) || "Error al cargar el producto");
+      }
     } finally {
       setLoading(false);
     }
@@ -67,25 +64,44 @@ export default function ProductDetailPage() {
 
     try {
       // Obtener carrito actual
+      type CartItem = {
+        id: string;
+        name: string;
+        price: number;
+        quantity: number;
+        stock: number;
+        image: string | null;
+        discount_percentage: number;
+      };
+
       const cartKey = `cart_${slug}`;
       const savedCart = localStorage.getItem(cartKey);
-      let cart = savedCart ? JSON.parse(savedCart) : [];
+      let cart: CartItem[] = [];
+
+      if (savedCart) {
+        try {
+          cart = JSON.parse(savedCart) as CartItem[];
+        } catch (e) {
+          console.warn("Invalid cart in localStorage, resetting", e);
+          cart = [];
+        }
+      }
 
       // Verificar si el producto ya está en el carrito
-      const existingIndex = cart.findIndex((item: any) => item.id === product.id);
+      const existingIndex = cart.findIndex((item) => item.id === product.id);
 
       if (existingIndex >= 0) {
         // Actualizar cantidad
         const newQuantity = cart[existingIndex].quantity + quantity;
         if (newQuantity > product.stock) {
-          toast.error('No hay suficiente stock disponible');
+          toast.error("No hay suficiente stock disponible");
           return;
         }
         cart[existingIndex].quantity = newQuantity;
       } else {
         // Agregar nuevo producto
         if (quantity > product.stock) {
-          toast.error('No hay suficiente stock disponible');
+          toast.error("No hay suficiente stock disponible");
           return;
         }
         cart.push({
@@ -93,6 +109,7 @@ export default function ProductDetailPage() {
           name: product.name,
           price: product.sale_price,
           quantity: quantity,
+          stock: product.stock,
           image: parseProductImages(product.images)[0] || null,
           discount_percentage: product.discount_percentage || 0,
         });
@@ -100,23 +117,29 @@ export default function ProductDetailPage() {
 
       // Guardar carrito
       localStorage.setItem(cartKey, JSON.stringify(cart));
-      toast.success(`${quantity} ${quantity === 1 ? 'producto agregado' : 'productos agregados'} al carrito`);
+      toast.success(
+        `${quantity} ${
+          quantity === 1 ? "producto agregado" : "productos agregados"
+        } al carrito`
+      );
 
       // Resetear cantidad a 1
       setQuantity(1);
     } catch (err) {
-      console.error('Error adding to cart:', err);
-      toast.error('Error al agregar al carrito');
+      console.error("Error adding to cart:", err);
+      toast.error("Error al agregar al carrito");
     }
   };
 
   const openWhatsApp = () => {
     if (config?.store_whatsapp && product) {
-      const phone = config.store_whatsapp.replace(/\D/g, '');
+      const phone = config.store_whatsapp.replace(/\D/g, "");
       const message = encodeURIComponent(
-        `Hola! Estoy interesado en: ${product.name}\nPrecio: ${formatCurrency(product.sale_price)}`
+        `Hola! Estoy interesado en: ${product.name}\nPrecio: ${formatCurrency(
+          product.sale_price
+        )}`
       );
-      window.open(`https://wa.me/${phone}?text=${message}`, '_blank');
+      window.open(`https://wa.me/${phone}?text=${message}`, "_blank");
     }
   };
 
@@ -136,8 +159,12 @@ export default function ProductDetailPage() {
       <div className="min-h-screen flex items-center justify-center bg-gray-50">
         <div className="text-center max-w-md p-8">
           <Package className="h-16 w-16 text-black mx-auto mb-4" />
-          <h1 className="text-2xl font-bold text-black mb-2">Producto no encontrado</h1>
-          <p className="text-black mb-4">{error || 'El producto que buscas no existe'}</p>
+          <h1 className="text-2xl font-bold text-black mb-2">
+            Producto no encontrado
+          </h1>
+          <p className="text-black mb-4">
+            {error || "El producto que buscas no existe"}
+          </p>
           <Link href={`/store/${slug}`}>
             <Button>Volver a la tienda</Button>
           </Link>
@@ -147,14 +174,15 @@ export default function ProductDetailPage() {
   }
 
   const images = parseProductImages(product.images);
-  const hasOffer = product.discount_percentage && product.discount_percentage > 0;
+  const hasOffer =
+    product.discount_percentage && product.discount_percentage > 0;
   const originalPrice = product.sale_price;
   const finalPrice = hasOffer
     ? calculateDiscountedPrice(originalPrice, product.discount_percentage!)
     : originalPrice;
 
-  const primaryColor = config.store_primary_color || '#3B82F6';
-  const secondaryColor = config.store_secondary_color || '#10B981';
+  const primaryColor = config.store_primary_color || "#3B82F6";
+  const secondaryColor = config.store_secondary_color || "#10B981";
 
   return (
     <div className="bg-gray-50">
@@ -200,12 +228,15 @@ export default function ProductDetailPage() {
                     onClick={() => setSelectedImage(index)}
                     className={`relative aspect-square bg-gray-100 rounded-lg overflow-hidden border-2 transition-all ${
                       selectedImage === index
-                        ? 'ring-2 ring-offset-2'
-                        : 'border-gray-200 hover:border-gray-300'
+                        ? "ring-2 ring-offset-2"
+                        : "border-gray-200 hover:border-gray-300"
                     }`}
-                    style={{
-                      '--tw-ring-color': selectedImage === index ? primaryColor : undefined,
-                    } as React.CSSProperties}
+                    style={
+                      {
+                        "--tw-ring-color":
+                          selectedImage === index ? primaryColor : undefined,
+                      } as React.CSSProperties
+                    }
                   >
                     <Image
                       src={image}
@@ -223,7 +254,10 @@ export default function ProductDetailPage() {
           <div className="space-y-6">
             <div>
               {product.category_name && (
-                <p className="text-sm font-medium mb-2" style={{ color: primaryColor }}>
+                <p
+                  className="text-sm font-medium mb-2"
+                  style={{ color: primaryColor }}
+                >
                   {product.category_name}
                 </p>
               )}
@@ -242,19 +276,28 @@ export default function ProductDetailPage() {
                 <div className="space-y-2">
                   {hasOffer && (
                     <div className="flex items-center gap-2">
-                      <Tag className="h-5 w-5" style={{ color: secondaryColor }} />
+                      <Tag
+                        className="h-5 w-5"
+                        style={{ color: secondaryColor }}
+                      />
                       <span className="text-lg text-black line-through">
                         {formatCurrency(originalPrice)}
                       </span>
                       <span
                         className="text-sm font-bold px-2 py-1 rounded"
-                        style={{ backgroundColor: secondaryColor, color: 'white' }}
+                        style={{
+                          backgroundColor: secondaryColor,
+                          color: "white",
+                        }}
                       >
                         -{product.discount_percentage}%
                       </span>
                     </div>
                   )}
-                  <p className="text-4xl font-bold" style={{ color: hasOffer ? secondaryColor : primaryColor }}>
+                  <p
+                    className="text-4xl font-bold"
+                    style={{ color: hasOffer ? secondaryColor : primaryColor }}
+                  >
                     {formatCurrency(finalPrice)}
                   </p>
                 </div>
@@ -267,7 +310,7 @@ export default function ProductDetailPage() {
               <span>
                 {product.stock > 0
                   ? `${product.stock} unidades disponibles`
-                  : 'Sin stock'}
+                  : "Sin stock"}
               </span>
             </div>
 
@@ -286,11 +329,15 @@ export default function ProductDetailPage() {
                   >
                     <Minus className="h-4 w-4" />
                   </Button>
-                  <span className="text-2xl font-bold w-16 text-center">{quantity}</span>
+                  <span className="text-2xl font-bold w-16 text-center">
+                    {quantity}
+                  </span>
                   <Button
                     variant="outline"
                     size="icon"
-                    onClick={() => setQuantity(Math.min(product.stock, quantity + 1))}
+                    onClick={() =>
+                      setQuantity(Math.min(product.stock, quantity + 1))
+                    }
                     disabled={quantity >= product.stock}
                   >
                     <Plus className="h-4 w-4" />
@@ -322,7 +369,7 @@ export default function ProductDetailPage() {
                   size="lg"
                   variant="outline"
                   className="w-full text-lg"
-                  style={{ borderColor: '#25D366', color: '#25D366' }}
+                  style={{ borderColor: "#25D366", color: "#25D366" }}
                   onClick={openWhatsApp}
                 >
                   <Phone className="h-5 w-5 mr-2" />
@@ -339,13 +386,19 @@ export default function ProductDetailPage() {
                   <div className="space-y-2 text-sm text-black">
                     {config.store_pickup_enabled && (
                       <div className="flex items-start gap-2">
-                        <div className="w-1.5 h-1.5 rounded-full mt-2" style={{ backgroundColor: primaryColor }} />
+                        <div
+                          className="w-1.5 h-1.5 rounded-full mt-2"
+                          style={{ backgroundColor: primaryColor }}
+                        />
                         <span>Recogida en tienda disponible</span>
                       </div>
                     )}
                     {config.store_shipping_enabled && (
                       <div className="flex items-start gap-2">
-                        <div className="w-1.5 h-1.5 rounded-full mt-2" style={{ backgroundColor: primaryColor }} />
+                        <div
+                          className="w-1.5 h-1.5 rounded-full mt-2"
+                          style={{ backgroundColor: primaryColor }}
+                        />
                         <span>Envío a domicilio disponible</span>
                       </div>
                     )}

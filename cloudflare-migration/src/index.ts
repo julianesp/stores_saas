@@ -7,6 +7,7 @@ import { Hono } from 'hono';
 import { cors } from 'hono/cors';
 import type { Env } from './types';
 import { authMiddleware } from './middleware/auth';
+import type { ScheduledEvent, ExecutionContext } from '@cloudflare/workers-types';
 
 // Import routes
 import productsRoutes from './routes/products';
@@ -26,6 +27,7 @@ import storefrontRoutes from './routes/storefront';
 import shippingZonesRoutes from './routes/shipping-zones';
 import wompiRoutes from './routes/wompi';
 import subscriptionsRoutes from './routes/subscriptions';
+import emailRoutes from './routes/email';
 
 const app = new Hono<{ Bindings: Env }>();
 
@@ -102,6 +104,7 @@ app.route('/api/offers', offersRoutes);
 app.route('/api/payment-transactions', paymentTransactionsRoutes);
 app.route('/api/shipping-zones', shippingZonesRoutes);
 app.route('/api/admin', adminStatsRoutes);
+app.route('/api/email', emailRoutes);
 
 // 404 handler
 app.notFound((c) => {
@@ -123,4 +126,63 @@ app.onError((err, c) => {
   }, 500);
 });
 
-export default app;
+/**
+ * Scheduled handler para Cron Triggers
+ * Ejecuta los trabajos programados de email marketing
+ */
+async function scheduled(event: ScheduledEvent, env: Env, ctx: ExecutionContext) {
+  console.log('Cron trigger fired:', event.cron);
+
+  // Helper para hacer requests internos
+  const makeRequest = async (path: string) => {
+    try {
+      const request = new Request(`https://internal/${path}`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
+
+      const response = await app.fetch(request, env, ctx);
+      return await response.json();
+    } catch (error) {
+      console.error(`Error in ${path}:`, error);
+      return { success: false, error: error instanceof Error ? error.message : 'Unknown error' };
+    }
+  };
+
+  // Ejecutar tareas según el horario
+  const hour = new Date().getUTCHours();
+
+  // 9 AM UTC - Recordatorios de suscripción
+  if (hour === 9) {
+    console.log('Running subscription reminders...');
+    const result = await makeRequest('api/email/subscription-reminders');
+    console.log('Subscription reminders result:', result);
+  }
+
+  // Cada hora - Reportes diarios (verifican preferencias internas)
+  console.log('Running daily reports check...');
+  const reportsResult = await makeRequest('api/email/daily-reports');
+  console.log('Daily reports result:', reportsResult);
+
+  // Cada 2 horas - Alertas de stock (solo en horas pares)
+  if (hour % 2 === 0) {
+    console.log('Running stock alerts...');
+    const stockResult = await makeRequest('api/email/stock-alerts');
+    console.log('Stock alerts result:', stockResult);
+  }
+
+  // Cada hora - Carritos abandonados
+  console.log('Running abandoned carts check...');
+  const cartsResult = await makeRequest('api/email/abandoned-carts');
+  console.log('Abandoned carts result:', cartsResult);
+
+  console.log('Cron jobs completed');
+}
+
+// Export default compatible con ambos fetch y scheduled
+export default {
+  fetch: app.fetch,
+  scheduled,
+};

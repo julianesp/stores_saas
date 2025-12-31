@@ -38,6 +38,13 @@ export default function WebOrdersPage() {
 
   useEffect(() => {
     loadOrders();
+
+    // Auto-refresh cada 30 segundos para mostrar cambios de estado de pago
+    const interval = setInterval(() => {
+      loadOrders();
+    }, 30000); // 30 segundos
+
+    return () => clearInterval(interval);
   }, []);
 
   const loadOrders = async () => {

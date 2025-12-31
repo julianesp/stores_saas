@@ -223,17 +223,35 @@ export async function getUserProfileByClerkId(clerkUserId: string): Promise<User
 /**
  * Verifica si un usuario tiene acceso a las funcionalidades de IA
  * Durante el período de prueba, todos tienen acceso gratis
- * Después del trial, solo quienes paguen el addon
+ * Con Plan Premium activo, tienen acceso incluido
+ * Plan Básico NO tiene acceso a IA
  */
 export function hasAIAccess(userProfile: UserProfile): boolean {
+  // Super admin siempre tiene acceso
+  if (userProfile.is_superadmin) {
+    return true;
+  }
+
   // Durante el período de prueba, acceso gratis a IA
   if (userProfile.subscription_status === 'trial') {
     return true;
   }
 
-  // Con suscripción activa, solo si tienen el addon
+  // Con suscripción activa
   if (userProfile.subscription_status === 'active') {
-    return userProfile.has_ai_addon === true;
+    // Plan Premium incluye IA
+    if (userProfile.plan_id === 'plan-premium') {
+      return true;
+    }
+
+    // Plan Básico NO tiene acceso a IA
+    if (userProfile.plan_id === 'plan-basico') {
+      return false;
+    }
+
+    // Si tiene suscripción activa pero no se identificó el plan,
+    // dar acceso por defecto (compatibilidad con suscripciones antiguas)
+    return true;
   }
 
   // Sin suscripción válida, sin acceso

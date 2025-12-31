@@ -21,6 +21,7 @@ import {
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
+import { Input } from '@/components/ui/input';
 import { toast } from 'sonner';
 
 interface CartItem {
@@ -28,6 +29,7 @@ interface CartItem {
   name: string;
   price: number;
   quantity: number;
+  stock: number; // Agregar stock para validación
   image: string | null;
   discount_percentage?: number;
 }
@@ -73,13 +75,62 @@ export default function CartPage() {
   const updateQuantity = (itemId: string, newQuantity: number) => {
     if (newQuantity < 1) return;
 
-    const updatedCart = cart.map((item) =>
-      item.id === itemId ? { ...item, quantity: newQuantity } : item
+    // Encontrar el producto para verificar el stock
+    const item = cart.find((i) => i.id === itemId);
+    if (!item) return;
+
+    // Validar que no exceda el stock disponible
+    if (newQuantity > item.stock) {
+      toast.error(`Solo hay ${item.stock} unidades disponibles de este producto`);
+      return;
+    }
+
+    const updatedCart = cart.map((cartItem) =>
+      cartItem.id === itemId ? { ...cartItem, quantity: newQuantity } : cartItem
     );
 
     setCart(updatedCart);
     localStorage.setItem(`cart_${slug}`, JSON.stringify(updatedCart));
     toast.success('Cantidad actualizada');
+  };
+
+  const handleQuantityInput = (itemId: string, value: string) => {
+    // Permitir campo vacío temporalmente mientras el usuario escribe
+    if (value === '') {
+      // Actualizar solo visualmente, sin guardar en localStorage todavía
+      const updatedCart = cart.map((cartItem) =>
+        cartItem.id === itemId ? { ...cartItem, quantity: 0 } : cartItem
+      );
+      setCart(updatedCart);
+      return;
+    }
+
+    // Permitir solo números
+    const numericValue = value.replace(/[^0-9]/g, '');
+
+    if (numericValue === '') return;
+
+    const quantity = parseInt(numericValue, 10);
+
+    if (isNaN(quantity) || quantity < 1) return;
+
+    // Encontrar el producto para verificar el stock
+    const item = cart.find((i) => i.id === itemId);
+    if (!item) return;
+
+    // Si excede el stock, ajustar al máximo disponible
+    const finalQuantity = Math.min(quantity, item.stock);
+
+    if (quantity > item.stock) {
+      toast.error(`Solo hay ${item.stock} unidades disponibles. Ajustando al máximo.`);
+    }
+
+    const updatedCart = cart.map((cartItem) =>
+      cartItem.id === itemId ? { ...cartItem, quantity: finalQuantity } : cartItem
+    );
+
+    setCart(updatedCart);
+    localStorage.setItem(`cart_${slug}`, JSON.stringify(updatedCart));
   };
 
   const removeItem = (itemId: string) => {
@@ -285,36 +336,67 @@ export default function CartPage() {
                             </div>
 
                             {/* Selector de cantidad */}
-                            <div className="flex items-center gap-3">
-                              <Button
-                                variant="outline"
-                                size="icon"
-                                onClick={() =>
-                                  updateQuantity(item.id, item.quantity - 1)
-                                }
-                                disabled={item.quantity <= 1}
-                              >
-                                <Minus className="h-4 w-4" />
-                              </Button>
-                              <span className="text-lg font-semibold w-12 text-center">
-                                {item.quantity}
-                              </span>
-                              <Button
-                                variant="outline"
-                                size="icon"
-                                onClick={() =>
-                                  updateQuantity(item.id, item.quantity + 1)
-                                }
-                              >
-                                <Plus className="h-4 w-4" />
-                              </Button>
+                            <div className="space-y-2">
+                              <div className="flex items-center gap-3">
+                                <Button
+                                  variant="outline"
+                                  size="icon"
+                                  onClick={() =>
+                                    updateQuantity(item.id, item.quantity - 1)
+                                  }
+                                  disabled={item.quantity <= 1}
+                                >
+                                  <Minus className="h-4 w-4" />
+                                </Button>
+                                <Input
+                                  type="text"
+                                  inputMode="numeric"
+                                  value={item.quantity === 0 ? '' : String(item.quantity)}
+                                  onChange={(e) =>
+                                    handleQuantityInput(item.id, e.target.value)
+                                  }
+                                  onBlur={(e) => {
+                                    // Si el campo está vacío al perder foco, restaurar a 1
+                                    if (!e.target.value || parseInt(e.target.value) < 1) {
+                                      updateQuantity(item.id, 1);
+                                    }
+                                  }}
+                                  onFocus={(e) => e.target.select()}
+                                  className="w-16 text-center text-lg font-semibold"
+                                  min="1"
+                                  max={item.stock}
+                                  placeholder="0"
+                                />
+                                <Button
+                                  variant="outline"
+                                  size="icon"
+                                  onClick={() =>
+                                    updateQuantity(item.id, item.quantity + 1)
+                                  }
+                                  disabled={item.quantity >= item.stock}
+                                >
+                                  <Plus className="h-4 w-4" />
+                                </Button>
 
-                              <div className="ml-auto">
-                                <p className="text-sm text-gray-600">Subtotal:</p>
-                                <p className="text-lg font-bold">
-                                  {formatCurrency(itemTotal)}
-                                </p>
+                                <div className="ml-auto">
+                                  <p className="text-sm text-gray-600">Subtotal:</p>
+                                  <p className="text-lg font-bold">
+                                    {formatCurrency(itemTotal)}
+                                  </p>
+                                </div>
                               </div>
+                              {/* Indicador de stock */}
+                              <p className="text-xs text-gray-500">
+                                {item.quantity >= item.stock ? (
+                                  <span className="text-orange-600 font-semibold">
+                                    ⚠️ Stock máximo alcanzado ({item.stock} disponibles)
+                                  </span>
+                                ) : (
+                                  <span>
+                                    Disponibles: {item.stock} unidades
+                                  </span>
+                                )}
+                              </p>
                             </div>
                           </div>
                         </div>

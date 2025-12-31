@@ -170,6 +170,7 @@ export async function authMiddleware(c: Context<{ Bindings: Env }>, next: Next) 
     // Attach tenant to context
     c.set('tenant', tenant);
     c.set('clerkUserId', clerkUserId);
+    c.set('userProfileId', userProfile.id);
 
     await next();
   } catch (error) {

@@ -39,3 +39,13 @@ database_id = "9d71dfad-5c36-4dac-9c4a-b0716ebe3d20"
 # [[routes]]
 # pattern = "api.tudominio.com/*"
 # zone_name = "tudominio.com"
+
+# Cron Triggers para automatización de emails
+# Docs: https://developers.cloudflare.com/workers/configuration/cron-triggers/
+[triggers]
+crons = [
+  "0 9 * * *",    # Recordatorios de suscripción - 9 AM diario
+  "0 */1 * * *",  # Reportes diarios - cada hora (verifica preferencias)
+  "0 */2 * * *",  # Alertas de stock - cada 2 horas
+  "0 * * * *"     # Carritos abandonados - cada hora
+]

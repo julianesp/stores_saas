@@ -440,11 +440,11 @@ app.post('/wompi/create-payment-link/:slug', async (c) => {
       }, 400);
     }
 
-    // Validar monto mínimo
-    if (amount_in_cents < 1000000) {
+    // Validar monto mínimo (2,000 COP = 200,000 centavos)
+    if (amount_in_cents < 200000) {
       return c.json<APIResponse>({
         success: false,
-        error: 'El monto mínimo para pagos con Wompi es de $10,000 COP',
+        error: 'El monto mínimo para pagos con Wompi es de $2,000 COP',
       }, 400);
     }
 
@@ -466,6 +466,7 @@ app.post('/wompi/create-payment-link/:slug', async (c) => {
         collect_shipping: false,
         currency: 'COP',
         amount_in_cents: amount_in_cents,
+        reference: order_number, // CLAVE: Usar order_number como referencia para identificar en webhook
         sku: order_id,
         redirect_url: redirectUrl,
       }),
