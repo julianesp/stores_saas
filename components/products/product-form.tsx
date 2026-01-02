@@ -598,6 +598,7 @@ export function ProductForm({ initialData, productId }: ProductFormProps) {
               <Input
                 id="cost_price"
                 type="number"
+                inputMode="decimal"
                 step="0.01"
                 {...register("cost_price", {
                   valueAsNumber: true,
@@ -617,6 +618,7 @@ export function ProductForm({ initialData, productId }: ProductFormProps) {
               <Input
                 id="sale_price"
                 type="number"
+                inputMode="decimal"
                 step="0.01"
                 {...register("sale_price", {
                   valueAsNumber: true,
@@ -638,6 +640,7 @@ export function ProductForm({ initialData, productId }: ProductFormProps) {
               <Input
                 id="stock"
                 type="number"
+                inputMode="numeric"
                 {...register("stock", {
                   valueAsNumber: true,
                   setValueAs: (value) => value === "" ? 0 : Number(value)
@@ -654,6 +657,7 @@ export function ProductForm({ initialData, productId }: ProductFormProps) {
               <Input
                 id="min_stock"
                 type="number"
+                inputMode="numeric"
                 {...register("min_stock", {
                   valueAsNumber: true,
                   setValueAs: (value) => value === "" ? 10 : Number(value)

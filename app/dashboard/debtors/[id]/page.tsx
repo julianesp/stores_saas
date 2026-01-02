@@ -449,6 +449,7 @@ export default function DebtorDetailPage() {
                   <Input
                     id="amount"
                     type="number"
+                    inputMode="numeric"
                     value={paymentAmount}
                     onChange={(e) => setPaymentAmount(e.target.value)}
                     placeholder="0"
@@ -517,6 +518,7 @@ export default function DebtorDetailPage() {
                 <Input
                   id="credit_limit"
                   type="number"
+                  inputMode="numeric"
                   value={newCreditLimit}
                   onChange={(e) => setNewCreditLimit(e.target.value)}
                   placeholder="0"

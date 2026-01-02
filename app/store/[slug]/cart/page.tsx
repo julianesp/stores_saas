@@ -1,15 +1,15 @@
-'use client';
+"use client";
 
-import { useState, useEffect } from 'react';
-import { useParams, useRouter } from 'next/navigation';
-import Image from 'next/image';
-import Link from 'next/link';
+import { useState, useEffect } from "react";
+import { useParams, useRouter } from "next/navigation";
+import Image from "next/image";
+import Link from "next/link";
 import {
   getStoreConfig,
   StoreConfig,
   calculateDiscountedPrice,
-} from '@/lib/storefront-api';
-import { formatCurrency } from '@/lib/utils';
+} from "@/lib/storefront-api";
+import { formatCurrency } from "@/lib/utils";
 import {
   ArrowLeft,
   Plus,
@@ -18,11 +18,11 @@ import {
   ShoppingCart,
   Package,
   CreditCard,
-} from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import { Card, CardContent } from '@/components/ui/card';
-import { Input } from '@/components/ui/input';
-import { toast } from 'sonner';
+} from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { toast } from "sonner";
 
 interface CartItem {
   id: string;
@@ -65,8 +65,8 @@ export default function CartPage() {
         }
       }
     } catch (err: any) {
-      console.error('Error loading cart:', err);
-      toast.error('Error al cargar el carrito');
+      console.error("Error loading cart:", err);
+      toast.error("Error al cargar el carrito");
     } finally {
       setLoading(false);
     }
@@ -81,7 +81,9 @@ export default function CartPage() {
 
     // Validar que no exceda el stock disponible
     if (newQuantity > item.stock) {
-      toast.error(`Solo hay ${item.stock} unidades disponibles de este producto`);
+      toast.error(
+        `Solo hay ${item.stock} unidades disponibles de este producto`
+      );
       return;
     }
 
@@ -91,12 +93,12 @@ export default function CartPage() {
 
     setCart(updatedCart);
     localStorage.setItem(`cart_${slug}`, JSON.stringify(updatedCart));
-    toast.success('Cantidad actualizada');
+    toast.success("Cantidad actualizada");
   };
 
   const handleQuantityInput = (itemId: string, value: string) => {
     // Permitir campo vacío temporalmente mientras el usuario escribe
-    if (value === '') {
+    if (value === "") {
       // Actualizar solo visualmente, sin guardar en localStorage todavía
       const updatedCart = cart.map((cartItem) =>
         cartItem.id === itemId ? { ...cartItem, quantity: 0 } : cartItem
@@ -106,9 +108,9 @@ export default function CartPage() {
     }
 
     // Permitir solo números
-    const numericValue = value.replace(/[^0-9]/g, '');
+    const numericValue = value.replace(/[^0-9]/g, "");
 
-    if (numericValue === '') return;
+    if (numericValue === "") return;
 
     const quantity = parseInt(numericValue, 10);
 
@@ -122,11 +124,15 @@ export default function CartPage() {
     const finalQuantity = Math.min(quantity, item.stock);
 
     if (quantity > item.stock) {
-      toast.error(`Solo hay ${item.stock} unidades disponibles. Ajustando al máximo.`);
+      toast.error(
+        `Solo hay ${item.stock} unidades disponibles. Ajustando al máximo.`
+      );
     }
 
     const updatedCart = cart.map((cartItem) =>
-      cartItem.id === itemId ? { ...cartItem, quantity: finalQuantity } : cartItem
+      cartItem.id === itemId
+        ? { ...cartItem, quantity: finalQuantity }
+        : cartItem
     );
 
     setCart(updatedCart);
@@ -137,13 +143,13 @@ export default function CartPage() {
     const updatedCart = cart.filter((item) => item.id !== itemId);
     setCart(updatedCart);
     localStorage.setItem(`cart_${slug}`, JSON.stringify(updatedCart));
-    toast.success('Producto eliminado del carrito');
+    toast.success("Producto eliminado del carrito");
   };
 
   const clearCart = () => {
     setCart([]);
     localStorage.removeItem(`cart_${slug}`);
-    toast.success('Carrito vaciado');
+    toast.success("Carrito vaciado");
   };
 
   const calculateItemTotal = (item: CartItem): number => {
@@ -154,7 +160,10 @@ export default function CartPage() {
     return finalPrice * item.quantity;
   };
 
-  const subtotal = cart.reduce((sum, item) => sum + calculateItemTotal(item), 0);
+  const subtotal = cart.reduce(
+    (sum, item) => sum + calculateItemTotal(item),
+    0
+  );
   const totalDiscount = cart.reduce((sum, item) => {
     if (item.discount_percentage && item.discount_percentage > 0) {
       const originalTotal = item.price * item.quantity;
@@ -204,8 +213,8 @@ export default function CartPage() {
     );
   }
 
-  const primaryColor = config.store_primary_color || '#3B82F6';
-  const secondaryColor = config.store_secondary_color || '#10B981';
+  const primaryColor = config.store_primary_color || "#3B82F6";
+  const secondaryColor = config.store_secondary_color || "#10B981";
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -224,12 +233,19 @@ export default function CartPage() {
             </Link>
 
             <div className="flex items-center gap-2">
-              <ShoppingCart className="h-5 w-5" style={{ color: primaryColor }} />
+              <ShoppingCart
+                className="h-5 w-5"
+                style={{ color: primaryColor }}
+              />
               <h1 className="text-xl font-bold">Carrito de Compras</h1>
             </div>
 
             {cart.length > 0 && (
-              <Button variant="ghost" onClick={clearCart} className="text-red-600">
+              <Button
+                variant="ghost"
+                onClick={clearCart}
+                className="text-red-600"
+              >
                 <Trash2 className="h-5 w-5 mr-2" />
                 Vaciar
               </Button>
@@ -263,16 +279,20 @@ export default function CartPage() {
               </h2>
 
               {cart.map((item) => {
-                const hasOffer = item.discount_percentage && item.discount_percentage > 0;
+                const hasOffer =
+                  item.discount_percentage && item.discount_percentage > 0;
                 const finalPrice = hasOffer
-                  ? calculateDiscountedPrice(item.price, item.discount_percentage!)
+                  ? calculateDiscountedPrice(
+                      item.price,
+                      item.discount_percentage!
+                    )
                   : item.price;
                 const itemTotal = calculateItemTotal(item);
 
                 return (
                   <Card
                     key={item.id}
-                    className={hasOffer ? 'border-2' : ''}
+                    className={hasOffer ? "border-2" : ""}
                     style={hasOffer ? { borderColor: secondaryColor } : {}}
                   >
                     <CardContent className="p-4">
@@ -297,7 +317,9 @@ export default function CartPage() {
                         <div className="flex-1">
                           <div className="flex justify-between items-start mb-2">
                             <div>
-                              <h3 className="font-semibold text-lg">{item.name}</h3>
+                              <h3 className="font-semibold text-lg">
+                                {item.name}
+                              </h3>
                               {hasOffer && (
                                 <span
                                   className="text-xs font-bold px-2 py-1 rounded text-white"
@@ -328,7 +350,9 @@ export default function CartPage() {
                               <p
                                 className="text-xl font-bold"
                                 style={{
-                                  color: hasOffer ? secondaryColor : primaryColor,
+                                  color: hasOffer
+                                    ? secondaryColor
+                                    : primaryColor,
                                 }}
                               >
                                 {formatCurrency(finalPrice)}
@@ -351,13 +375,20 @@ export default function CartPage() {
                                 <Input
                                   type="text"
                                   inputMode="numeric"
-                                  value={item.quantity === 0 ? '' : String(item.quantity)}
+                                  value={
+                                    item.quantity === 0
+                                      ? ""
+                                      : String(item.quantity)
+                                  }
                                   onChange={(e) =>
                                     handleQuantityInput(item.id, e.target.value)
                                   }
                                   onBlur={(e) => {
                                     // Si el campo está vacío al perder foco, restaurar a 1
-                                    if (!e.target.value || parseInt(e.target.value) < 1) {
+                                    if (
+                                      !e.target.value ||
+                                      parseInt(e.target.value) < 1
+                                    ) {
                                       updateQuantity(item.id, 1);
                                     }
                                   }}
@@ -379,7 +410,9 @@ export default function CartPage() {
                                 </Button>
 
                                 <div className="ml-auto">
-                                  <p className="text-sm text-gray-600">Subtotal:</p>
+                                  <p className="text-sm text-gray-600">
+                                    Subtotal:
+                                  </p>
                                   <p className="text-lg font-bold">
                                     {formatCurrency(itemTotal)}
                                   </p>
@@ -389,7 +422,8 @@ export default function CartPage() {
                               <p className="text-xs text-gray-500">
                                 {item.quantity >= item.stock ? (
                                   <span className="text-orange-600 font-semibold">
-                                    ⚠️ Stock máximo alcanzado ({item.stock} disponibles)
+                                    ⚠️ Stock máximo alcanzado ({item.stock}{" "}
+                                    disponibles)
                                   </span>
                                 ) : (
                                   <span>
@@ -446,7 +480,8 @@ export default function CartPage() {
                       </p>
                       {total < config.store_min_order && (
                         <p className="text-sm font-semibold text-orange-600 mt-1">
-                          Faltan {formatCurrency(config.store_min_order - total)} para
+                          Faltan{" "}
+                          {formatCurrency(config.store_min_order - total)} para
                           el mínimo
                         </p>
                       )}
@@ -469,7 +504,8 @@ export default function CartPage() {
                   </Button>
 
                   {/* Información de entrega */}
-                  {(config.store_shipping_enabled || config.store_pickup_enabled) && (
+                  {(config.store_shipping_enabled ||
+                    config.store_pickup_enabled) && (
                     <div className="mt-6 pt-6 border-t">
                       <h3 className="font-semibold mb-3 text-sm">
                         Opciones de entrega

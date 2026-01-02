@@ -630,6 +630,7 @@ export default function StoreConfigPage() {
             <Input
               id="minOrder"
               type="number"
+              inputMode="numeric"
               value={storeMinOrder}
               onChange={(e) => setStoreMinOrder(Number(e.target.value))}
               placeholder="0"

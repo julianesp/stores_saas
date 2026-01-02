@@ -780,6 +780,7 @@ export default function SuperAdminPage() {
               <label className="text-sm font-medium">Días a agregar</label>
               <Input
                 type="number"
+                inputMode="numeric"
                 min="1"
                 max="365"
                 value={extendTrialDialog.days}

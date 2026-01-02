@@ -215,6 +215,7 @@ export default function ConfigPage() {
                       </label>
                       <Input
                         type="number"
+                        inputMode="numeric"
                         value={tier.min_amount}
                         onChange={(e) => handleUpdateTier(index, 'min_amount', Number(e.target.value))}
                         placeholder="0"
@@ -231,6 +232,7 @@ export default function ConfigPage() {
                       </label>
                       <Input
                         type="number"
+                        inputMode="numeric"
                         value={tier.max_amount === Infinity ? '' : tier.max_amount}
                         onChange={(e) => handleUpdateTier(
                           index,
@@ -251,6 +253,7 @@ export default function ConfigPage() {
                       </label>
                       <Input
                         type="number"
+                        inputMode="numeric"
                         value={tier.points}
                         onChange={(e) => handleUpdateTier(index, 'points', Number(e.target.value))}
                         placeholder="0"

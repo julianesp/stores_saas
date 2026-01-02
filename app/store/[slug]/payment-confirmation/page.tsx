@@ -3,7 +3,13 @@
 import { useState, useEffect } from "react";
 import { useParams, useSearchParams } from "next/navigation";
 import Link from "next/link";
-import { CheckCircle2, Loader2, AlertCircle, Download, MessageSquare } from "lucide-react";
+import {
+  CheckCircle2,
+  Loader2,
+  AlertCircle,
+  Download,
+  MessageSquare,
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { getStoreConfig, StoreConfig } from "@/lib/storefront-api";
@@ -21,7 +27,9 @@ export default function PaymentConfirmationPage() {
 
   const [config, setConfig] = useState<StoreConfig | null>(null);
   const [loading, setLoading] = useState(true);
-  const [transactionStatus, setTransactionStatus] = useState<"PENDING" | "APPROVED" | "DECLINED" | "ERROR">("PENDING");
+  const [transactionStatus, setTransactionStatus] = useState<
+    "PENDING" | "APPROVED" | "DECLINED" | "ERROR"
+  >("PENDING");
   const [transactionData, setTransactionData] = useState<any>(null);
   const [verificationAttempts, setVerificationAttempts] = useState(0);
 
@@ -33,7 +41,9 @@ export default function PaymentConfirmationPage() {
   useEffect(() => {
     const timeout = setTimeout(() => {
       if (loading && transactionId) {
-        console.warn("Timeout de verificación alcanzado. Asumiendo pago exitoso.");
+        console.warn(
+          "Timeout de verificación alcanzado. Asumiendo pago exitoso."
+        );
         setTransactionStatus("APPROVED");
         // Crear datos básicos de transacción desde el URL
         setTransactionData({
@@ -62,7 +72,10 @@ export default function PaymentConfirmationPage() {
 
       // Si hay transaction ID, consultar el estado en Wompi
       if (transactionId && configData.wompi_public_key) {
-        await checkTransactionStatus(transactionId, configData.wompi_public_key);
+        await checkTransactionStatus(
+          transactionId,
+          configData.wompi_public_key
+        );
       }
     } catch (error) {
       console.error("Error loading data:", error);
@@ -74,9 +87,13 @@ export default function PaymentConfirmationPage() {
 
   const checkTransactionStatus = async (txId: string, publicKey: string) => {
     try {
-      setVerificationAttempts(prev => prev + 1);
+      setVerificationAttempts((prev) => prev + 1);
 
-      console.log(`Verificando transacción ${txId} (intento ${verificationAttempts + 1})...`);
+      console.log(
+        `Verificando transacción ${txId} (intento ${
+          verificationAttempts + 1
+        })...`
+      );
 
       // Crear un timeout de 10 segundos para la llamada fetch
       const controller = new AbortController();
@@ -84,10 +101,13 @@ export default function PaymentConfirmationPage() {
 
       try {
         // Consultar transacción en Wompi - la API pública no requiere autenticación para consultar
-        const response = await fetch(`https://production.wompi.co/v1/transactions/${txId}`, {
-          method: 'GET',
-          signal: controller.signal,
-        });
+        const response = await fetch(
+          `https://production.wompi.co/v1/transactions/${txId}`,
+          {
+            method: "GET",
+            signal: controller.signal,
+          }
+        );
 
         clearTimeout(timeoutId);
 
@@ -101,10 +121,14 @@ export default function PaymentConfirmationPage() {
             return;
           }
         } else {
-          console.error(`Error HTTP ${response.status} al verificar transacción`);
+          console.error(
+            `Error HTTP ${response.status} al verificar transacción`
+          );
           // Si la API falla pero tenemos transaction ID, asumir éxito
           if (verificationAttempts >= 2) {
-            console.warn("Múltiples intentos fallidos. Asumiendo pago exitoso.");
+            console.warn(
+              "Múltiples intentos fallidos. Asumiendo pago exitoso."
+            );
             setTransactionStatus("APPROVED");
             setTransactionData({
               id: txId,
@@ -114,13 +138,15 @@ export default function PaymentConfirmationPage() {
               created_at: new Date().toISOString(),
               payment_method_type: "wompi",
             });
-            toast.info("Pago procesado exitosamente. Si tienes dudas, contacta a la tienda.");
+            toast.info(
+              "Pago procesado exitosamente. Si tienes dudas, contacta a la tienda."
+            );
           }
         }
       } catch (fetchError: any) {
         clearTimeout(timeoutId);
 
-        if (fetchError.name === 'AbortError') {
+        if (fetchError.name === "AbortError") {
           console.error("Timeout al verificar transacción");
         } else {
           console.error("Error en fetch:", fetchError);
@@ -138,7 +164,9 @@ export default function PaymentConfirmationPage() {
             created_at: new Date().toISOString(),
             payment_method_type: "wompi",
           });
-          toast.info("Pago procesado exitosamente. Si tienes dudas, contacta a la tienda.");
+          toast.info(
+            "Pago procesado exitosamente. Si tienes dudas, contacta a la tienda."
+          );
         }
       }
     } catch (error) {
@@ -218,7 +246,9 @@ export default function PaymentConfirmationPage() {
       doc.setTextColor(255, 255, 255);
       doc.setFontSize(14);
       doc.setFont("helvetica", "bold");
-      doc.text("✓ PAGO APROBADO", pageWidth / 2, yPosition + 5, { align: "center" });
+      doc.text("✓ PAGO APROBADO", pageWidth / 2, yPosition + 5, {
+        align: "center",
+      });
 
       yPosition += 25;
 
@@ -257,21 +287,27 @@ export default function PaymentConfirmationPage() {
       doc.setFont("helvetica", "bold");
       doc.text("Fecha y Hora:", 20, yPosition);
       doc.setFont("helvetica", "normal");
-      doc.text(new Date(transactionData.created_at).toLocaleString("es-CO", {
-        year: "numeric",
-        month: "long",
-        day: "numeric",
-        hour: "2-digit",
-        minute: "2-digit",
-        second: "2-digit"
-      }), 70, yPosition);
+      doc.text(
+        new Date(transactionData.created_at).toLocaleString("es-CO", {
+          year: "numeric",
+          month: "long",
+          day: "numeric",
+          hour: "2-digit",
+          minute: "2-digit",
+          second: "2-digit",
+        }),
+        70,
+        yPosition
+      );
       yPosition += 7;
 
       // Método de pago
       doc.setFont("helvetica", "bold");
       doc.text("Método de Pago:", 20, yPosition);
       doc.setFont("helvetica", "normal");
-      const paymentMethod = transactionData.payment_method_type?.replace("_", " ").toUpperCase();
+      const paymentMethod = transactionData.payment_method_type
+        ?.replace("_", " ")
+        .toUpperCase();
       doc.text(paymentMethod || "N/A", 70, yPosition);
       yPosition += 7;
 
@@ -280,7 +316,11 @@ export default function PaymentConfirmationPage() {
         doc.setFont("helvetica", "bold");
         doc.text("Código de Aprobación:", 20, yPosition);
         doc.setFont("helvetica", "normal");
-        doc.text(transactionData.payment_method.extra.external_identifier, 70, yPosition);
+        doc.text(
+          transactionData.payment_method.extra.external_identifier,
+          70,
+          yPosition
+        );
         yPosition += 7;
       }
 
@@ -298,8 +338,12 @@ export default function PaymentConfirmationPage() {
 
         doc.setFontSize(18);
         doc.setTextColor(primaryColor);
-        const totalAmount = formatCurrency(transactionData.amount_in_cents / 100);
-        doc.text(totalAmount, pageWidth - 25, yPosition + 7, { align: "right" });
+        const totalAmount = formatCurrency(
+          transactionData.amount_in_cents / 100
+        );
+        doc.text(totalAmount, pageWidth - 25, yPosition + 7, {
+          align: "right",
+        });
 
         yPosition += 30;
       } else {
@@ -310,7 +354,11 @@ export default function PaymentConfirmationPage() {
         doc.setFontSize(10);
         doc.setFont("helvetica", "italic");
         doc.setTextColor(100, 100, 100);
-        doc.text("Monto: Consulta con la tienda para detalles del pago", 25, yPosition + 5);
+        doc.text(
+          "Monto: Consulta con la tienda para detalles del pago",
+          25,
+          yPosition + 5
+        );
 
         yPosition += 20;
       }
@@ -319,12 +367,13 @@ export default function PaymentConfirmationPage() {
       doc.setTextColor(100, 100, 100);
       doc.setFontSize(9);
       doc.setFont("helvetica", "italic");
-      const noteText = "Este comprobante confirma que tu pago fue procesado exitosamente. " +
-                       "Guarda este documento para cualquier referencia futura.";
+      const noteText =
+        "Este comprobante confirma que tu pago fue procesado exitosamente. " +
+        "Guarda este documento para cualquier referencia futura.";
       const noteLines = doc.splitTextToSize(noteText, pageWidth - 40);
       doc.text(noteLines, 20, yPosition);
 
-      yPosition += (noteLines.length * 5) + 10;
+      yPosition += noteLines.length * 5 + 10;
 
       // Footer
       doc.setDrawColor(200, 200, 200);
@@ -333,9 +382,19 @@ export default function PaymentConfirmationPage() {
       yPosition += 8;
       doc.setFontSize(8);
       doc.setFont("helvetica", "normal");
-      doc.text("Procesado por Wompi - Pagos seguros en Colombia", pageWidth / 2, yPosition, { align: "center" });
+      doc.text(
+        "Procesado por Wompi - Pagos seguros en Colombia",
+        pageWidth / 2,
+        yPosition,
+        { align: "center" }
+      );
       yPosition += 5;
-      doc.text(`Generado el ${new Date().toLocaleString("es-CO")}`, pageWidth / 2, yPosition, { align: "center" });
+      doc.text(
+        `Generado el ${new Date().toLocaleString("es-CO")}`,
+        pageWidth / 2,
+        yPosition,
+        { align: "center" }
+      );
 
       // Marca de agua (opcional)
       doc.setTextColor(200, 200, 200);
@@ -366,9 +425,13 @@ export default function PaymentConfirmationPage() {
     message += `💳 *ID Transacción:* ${transactionData.id}\n`;
     message += `📋 *Referencia:* ${transactionData.reference}\n`;
     if (transactionData.amount_in_cents > 0) {
-      message += `💰 *Monto:* ${formatCurrency(transactionData.amount_in_cents / 100)}\n`;
+      message += `💰 *Monto:* ${formatCurrency(
+        transactionData.amount_in_cents / 100
+      )}\n`;
     }
-    message += `📅 *Fecha:* ${new Date(transactionData.created_at).toLocaleString("es-CO")}\n`;
+    message += `📅 *Fecha:* ${new Date(
+      transactionData.created_at
+    ).toLocaleString("es-CO")}\n`;
 
     if (transactionData.payment_method?.extra?.external_identifier) {
       message += `🔑 *Código:* ${transactionData.payment_method.extra.external_identifier}\n`;
@@ -419,36 +482,60 @@ export default function PaymentConfirmationPage() {
                   >
                     <CheckCircle2 className="h-12 w-12 text-green-600" />
                   </div>
-                  <h2 className="text-3xl font-bold mb-2 text-green-600">¡Pago Exitoso!</h2>
-                  <p className="text-gray-600">Tu pago ha sido procesado correctamente</p>
+                  <h2 className="text-3xl font-bold mb-2 text-green-600">
+                    ¡Pago Exitoso!
+                  </h2>
+                  <p className="text-gray-600">
+                    Tu pago ha sido procesado correctamente
+                  </p>
                 </div>
 
                 {transactionData && (
                   <div className="bg-gray-50 rounded-lg p-6 mb-6 space-y-3">
                     <div className="flex justify-between text-sm">
                       <span className="text-gray-600">ID de Transacción:</span>
-                      <span className="font-mono font-semibold">{transactionData.id}</span>
+                      <span className="font-mono font-semibold">
+                        {transactionData.id}
+                      </span>
                     </div>
                     <div className="flex justify-between text-sm">
                       <span className="text-gray-600">Referencia:</span>
-                      <span className="font-semibold">{transactionData.reference}</span>
+                      <span className="font-semibold">
+                        {transactionData.reference}
+                      </span>
                     </div>
                     {transactionData.payment_method_type && (
                       <div className="flex justify-between text-sm">
                         <span className="text-gray-600">Método de pago:</span>
-                        <span className="font-semibold capitalize">{transactionData.payment_method_type?.replace("_", " ")}</span>
+                        <span className="font-semibold capitalize">
+                          {transactionData.payment_method_type?.replace(
+                            "_",
+                            " "
+                          )}
+                        </span>
                       </div>
                     )}
                     <div className="flex justify-between text-sm">
                       <span className="text-gray-600">Fecha:</span>
-                      <span className="font-semibold">{new Date(transactionData.created_at).toLocaleString("es-CO")}</span>
+                      <span className="font-semibold">
+                        {new Date(transactionData.created_at).toLocaleString(
+                          "es-CO"
+                        )}
+                      </span>
                     </div>
                     {transactionData.amount_in_cents > 0 && (
                       <div className="border-t pt-3 mt-3">
                         <div className="flex justify-between">
-                          <span className="text-gray-900 font-semibold">Total Pagado:</span>
-                          <span className="text-2xl font-bold" style={{ color: primaryColor }}>
-                            {formatCurrency(transactionData.amount_in_cents / 100)}
+                          <span className="text-gray-900 font-semibold">
+                            Total Pagado:
+                          </span>
+                          <span
+                            className="text-2xl font-bold"
+                            style={{ color: primaryColor }}
+                          >
+                            {formatCurrency(
+                              transactionData.amount_in_cents / 100
+                            )}
                           </span>
                         </div>
                       </div>
@@ -489,7 +576,9 @@ export default function PaymentConfirmationPage() {
                 <div className="mt-6 p-4 bg-blue-50 rounded-lg text-sm text-gray-700">
                   <p className="font-semibold mb-2">✅ ¿Qué sigue?</p>
                   <ul className="space-y-1 list-disc list-inside text-sm">
-                    <li>Tu pago ha sido confirmado y la tienda ha sido notificada</li>
+                    <li>
+                      Tu pago ha sido confirmado y la tienda ha sido notificada
+                    </li>
                     <li>Recibirás información sobre tu pedido pronto</li>
                     <li>Guarda tu comprobante para cualquier referencia</li>
                   </ul>
@@ -501,8 +590,17 @@ export default function PaymentConfirmationPage() {
               <div className="text-center">
                 <Loader2 className="h-16 w-16 animate-spin text-blue-600 mx-auto mb-4" />
                 <h2 className="text-2xl font-bold mb-2">Procesando pago...</h2>
-                <p className="text-gray-600 mb-6">Estamos verificando tu transacción</p>
-                <Button onClick={() => checkTransactionStatus(transactionId!, config!.wompi_public_key!)}>
+                <p className="text-gray-600 mb-6">
+                  Estamos verificando tu transacción
+                </p>
+                <Button
+                  onClick={() =>
+                    checkTransactionStatus(
+                      transactionId!,
+                      config!.wompi_public_key!
+                    )
+                  }
+                >
                   Verificar nuevamente
                 </Button>
               </div>
@@ -513,11 +611,19 @@ export default function PaymentConfirmationPage() {
                 <div className="w-20 h-20 rounded-full mx-auto mb-6 flex items-center justify-center bg-red-100">
                   <AlertCircle className="h-12 w-12 text-red-600" />
                 </div>
-                <h2 className="text-2xl font-bold mb-2 text-red-600">Pago Rechazado</h2>
-                <p className="text-gray-600 mb-6">Tu pago no pudo ser procesado</p>
+                <h2 className="text-2xl font-bold mb-2 text-red-600">
+                  Pago Rechazado
+                </h2>
+                <p className="text-gray-600 mb-6">
+                  Tu pago no pudo ser procesado
+                </p>
                 <div className="space-y-3">
                   <Link href={`/store/${slug}/cart`}>
-                    <Button size="lg" className="w-full" style={{ backgroundColor: primaryColor }}>
+                    <Button
+                      size="lg"
+                      className="w-full"
+                      style={{ backgroundColor: primaryColor }}
+                    >
                       Intentar nuevamente
                     </Button>
                   </Link>
@@ -533,8 +639,12 @@ export default function PaymentConfirmationPage() {
             {transactionStatus === "ERROR" && !transactionId && (
               <div className="text-center">
                 <AlertCircle className="h-16 w-16 text-yellow-600 mx-auto mb-4" />
-                <h2 className="text-2xl font-bold mb-2">No hay información de pago</h2>
-                <p className="text-gray-600 mb-6">No pudimos encontrar los detalles de tu transacción</p>
+                <h2 className="text-2xl font-bold mb-2">
+                  No hay información de pago
+                </h2>
+                <p className="text-gray-600 mb-6">
+                  No pudimos encontrar los detalles de tu transacción
+                </p>
                 <Link href={`/store/${slug}`}>
                   <Button size="lg" style={{ backgroundColor: primaryColor }}>
                     Volver a la tienda

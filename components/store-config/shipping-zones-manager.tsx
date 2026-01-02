@@ -277,6 +277,7 @@ export function ShippingZonesManager() {
               <Input
                 id="shipping-cost"
                 type="number"
+                inputMode="numeric"
                 placeholder="Ej: 5000"
                 value={shippingCost}
                 onChange={(e) => setShippingCost(e.target.value)}

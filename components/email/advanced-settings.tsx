@@ -89,6 +89,7 @@ export function AdvancedSettings({ settings, onUpdate }: AdvancedSettingsProps) 
             <Input
               id="stock-threshold"
               type="number"
+              inputMode="numeric"
               min="1"
               value={settings.stock_threshold || 5}
               onChange={(e) =>
@@ -117,6 +118,7 @@ export function AdvancedSettings({ settings, onUpdate }: AdvancedSettingsProps) 
                 <Input
                   id="cart-time-1"
                   type="number"
+                  inputMode="numeric"
                   min="1"
                   value={settings.cart_email_1_hours || 1}
                   onChange={(e) =>
@@ -134,6 +136,7 @@ export function AdvancedSettings({ settings, onUpdate }: AdvancedSettingsProps) 
                 <Input
                   id="cart-time-2"
                   type="number"
+                  inputMode="numeric"
                   min="1"
                   value={settings.cart_email_2_hours || 24}
                   onChange={(e) =>
@@ -151,6 +154,7 @@ export function AdvancedSettings({ settings, onUpdate }: AdvancedSettingsProps) 
                 <Input
                   id="cart-time-3"
                   type="number"
+                  inputMode="numeric"
                   min="1"
                   value={settings.cart_email_3_hours || 72}
                   onChange={(e) =>

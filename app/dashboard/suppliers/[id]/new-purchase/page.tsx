@@ -341,6 +341,7 @@ export default function NewPurchaseOrderPage() {
                         </label>
                         <Input
                           type="number"
+                          inputMode="numeric"
                           min="1"
                           value={item.quantity}
                           onChange={(e) => updateQuantity(item.product_id, parseInt(e.target.value) || 1)}
@@ -354,6 +355,7 @@ export default function NewPurchaseOrderPage() {
                         </label>
                         <Input
                           type="number"
+                          inputMode="decimal"
                           min="0"
                           step="0.01"
                           value={item.unit_cost}

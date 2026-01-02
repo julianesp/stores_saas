@@ -138,6 +138,7 @@ export function SupplierForm({ initialData, supplierId }: SupplierFormProps) {
                 <Input
                   id="credit_days"
                   type="number"
+                  inputMode="numeric"
                   min="0"
                   {...register('credit_days')}
                   placeholder="30"
@@ -149,6 +150,7 @@ export function SupplierForm({ initialData, supplierId }: SupplierFormProps) {
                 <Input
                   id="credit_limit"
                   type="number"
+                  inputMode="decimal"
                   min="0"
                   step="0.01"
                   {...register('credit_limit')}
@@ -164,6 +166,7 @@ export function SupplierForm({ initialData, supplierId }: SupplierFormProps) {
               <Input
                 id="default_discount"
                 type="number"
+                inputMode="decimal"
                 min="0"
                 max="100"
                 step="0.01"
@@ -177,6 +180,7 @@ export function SupplierForm({ initialData, supplierId }: SupplierFormProps) {
               <Input
                 id="minimum_order"
                 type="number"
+                inputMode="decimal"
                 min="0"
                 step="0.01"
                 {...register('minimum_order')}
@@ -253,6 +257,7 @@ export function SupplierForm({ initialData, supplierId }: SupplierFormProps) {
               <Input
                 id="delivery_days"
                 type="number"
+                inputMode="numeric"
                 min="0"
                 {...register('delivery_days')}
                 placeholder="0"
@@ -264,6 +269,7 @@ export function SupplierForm({ initialData, supplierId }: SupplierFormProps) {
               <Input
                 id="rating"
                 type="number"
+                inputMode="decimal"
                 min="1"
                 max="5"
                 step="0.1"

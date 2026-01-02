@@ -282,7 +282,7 @@ export default function CheckoutPage() {
       <div className="min-h-screen flex items-center justify-center bg-gray-50">
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
-          <p className="text-gray-600">Cargando checkout...</p>
+          <p className="text-black">Cargando checkout...</p>
         </div>
       </div>
     );
@@ -336,12 +336,12 @@ export default function CheckoutPage() {
               </div>
 
               <h2 className="text-3xl font-bold mb-2">¡Pedido Realizado!</h2>
-              <p className="text-gray-600 mb-6">
+              <p className="text-black mb-6">
                 Tu pedido ha sido registrado exitosamente
               </p>
 
               <div className="bg-gray-50 rounded-lg p-6 mb-6">
-                <p className="text-sm text-gray-600 mb-1">Número de pedido</p>
+                <p className="text-sm text-black mb-1">Número de pedido</p>
                 <p
                   className="text-2xl font-bold"
                   style={{ color: primaryColor }}
@@ -460,7 +460,7 @@ export default function CheckoutPage() {
                 </div>
               </div>
 
-              <div className="mt-8 p-4 bg-gray-50 rounded-lg text-left text-sm text-gray-600">
+              <div className="mt-8 p-4 bg-gray-50 rounded-lg text-left text-sm text-black">
                 <p className="font-semibold mb-2">Información importante:</p>
                 <ul className="space-y-1 list-disc list-inside">
                   <li>Tu pedido está en estado pendiente</li>
@@ -493,12 +493,12 @@ export default function CheckoutPage() {
           <div className="flex items-center justify-between">
             <Link href={`/store/${slug}/cart`}>
               <Button variant="ghost" className="gap-2">
-                <ArrowLeft className="h-5 w-5" />
-                Volver al carrito
+                <ArrowLeft className="h-5 w-5 text-black" />
+                <p className="text-black">Volver al carrito</p>
               </Button>
             </Link>
 
-            <h1 className="text-xl font-bold">Finalizar Pedido</h1>
+            <h1 className="text-xl text-black font-bold">Finalizar Pedido</h1>
 
             <div className="w-32"></div>
           </div>
@@ -524,7 +524,7 @@ export default function CheckoutPage() {
                       <Input
                         id="name"
                         type="text"
-                        placeholder="Ej: Juan Pérez"
+                        placeholder="Ej: Nicola Tesla"
                         value={customerName}
                         onChange={(e) => setCustomerName(e.target.value)}
                         required
@@ -536,6 +536,7 @@ export default function CheckoutPage() {
                       <Input
                         id="phone"
                         type="tel"
+                        inputMode="numeric"
                         placeholder="Ej: 3001234567"
                         value={customerPhone}
                         onChange={(e) => setCustomerPhone(e.target.value)}
@@ -581,11 +582,11 @@ export default function CheckoutPage() {
                           <Store className="h-5 w-5" />
                           <div>
                             <p className="font-semibold">Recogida en tienda</p>
-                            <p className="text-sm text-gray-600">
+                            <p className="text-sm text-black">
                               Recoge tu pedido en la tienda
                             </p>
                             {config.store_address && (
-                              <p className="text-xs text-gray-500 mt-1">
+                              <p className="text-xs text-black mt-1">
                                 {config.store_address}
                               </p>
                             )}
@@ -604,7 +605,7 @@ export default function CheckoutPage() {
                           <Truck className="h-5 w-5" />
                           <div>
                             <p className="font-semibold">Envío a domicilio</p>
-                            <p className="text-sm text-gray-600">
+                            <p className="text-sm text-black">
                               Te lo enviamos a tu dirección (costo adicional)
                             </p>
                           </div>
@@ -625,7 +626,7 @@ export default function CheckoutPage() {
                           required={deliveryMethod === "shipping"}
                           rows={3}
                         />
-                        <p className="text-xs text-gray-500 mt-1">
+                        <p className="text-xs text-black mt-1">
                           Incluye todos los detalles necesarios para la entrega
                         </p>
                       </div>
@@ -637,15 +638,15 @@ export default function CheckoutPage() {
                             value={selectedZoneId}
                             onValueChange={setSelectedZoneId}
                           >
-                            <SelectTrigger className="bg-white">
+                            <SelectTrigger className="bg-white text-black">
                               <SelectValue placeholder="Selecciona tu zona" />
                             </SelectTrigger>
-                            <SelectContent className="bg-white">
+                            <SelectContent className="bg-white text-black">
                               {shippingZones.map((zone) => (
                                 <SelectItem
                                   key={zone.id}
                                   value={zone.id}
-                                  className="hover:bg-gray-100 cursor-pointer"
+                                  className="bg-white cursor-pointer text-black"
                                 >
                                   {zone.zone_name} -{" "}
                                   {formatCurrency(zone.shipping_cost)}
@@ -661,7 +662,7 @@ export default function CheckoutPage() {
                             </p>
                           </div>
                         )}
-                        <p className="text-xs text-gray-500 mt-1">
+                        <p className="text-xs text-black mt-1">
                           El costo de envío se agregará al total de tu pedido
                         </p>
                       </div>
@@ -717,7 +718,7 @@ export default function CheckoutPage() {
                         >
                           <div className="flex-1">
                             <p className="font-medium">{item.name}</p>
-                            <p className="text-gray-600">
+                            <p className="text-black">
                               {item.quantity} x {formatCurrency(finalPrice)}
                               {hasOffer && (
                                 <span className="ml-2 text-xs italic line-through text-gray-400">
@@ -745,7 +746,7 @@ export default function CheckoutPage() {
                   <div className="border-t pt-4 space-y-2">
                     {totalDiscount > 0 ? (
                       <>
-                        <div className="flex justify-between text-gray-600">
+                        <div className="flex justify-between text-black">
                           <span>Subtotal:</span>
                           <span>{formatCurrency(subtotalOriginal)}</span>
                         </div>
@@ -756,20 +757,20 @@ export default function CheckoutPage() {
                           <span>Descuentos:</span>
                           <span>-{formatCurrency(totalDiscount)}</span>
                         </div>
-                        <div className="flex justify-between text-gray-600 font-medium">
+                        <div className="flex justify-between text-black font-medium">
                           <span>Subtotal con descuentos:</span>
                           <span>{formatCurrency(subtotal)}</span>
                         </div>
                       </>
                     ) : (
-                      <div className="flex justify-between text-gray-600">
+                      <div className="flex justify-between text-black">
                         <span>Subtotal:</span>
                         <span>{formatCurrency(subtotal)}</span>
                       </div>
                     )}
 
                     {shippingAmount > 0 && (
-                      <div className="flex justify-between text-gray-600">
+                      <div className="flex justify-between text-black">
                         <span>Envío:</span>
                         <span>{formatCurrency(shippingAmount)}</span>
                       </div>
@@ -787,7 +788,7 @@ export default function CheckoutPage() {
 
                   {config.store_min_order && config.store_min_order > 0 && (
                     <div className="mt-4 p-3 bg-blue-50 rounded-lg">
-                      <p className="text-sm text-gray-600">
+                      <p className="text-sm text-black">
                         Pedido mínimo: {formatCurrency(config.store_min_order)}
                       </p>
                       {total < config.store_min_order && (
@@ -824,7 +825,7 @@ export default function CheckoutPage() {
                     )}
                   </Button>
 
-                  <p className="text-xs text-gray-500 text-center mt-4">
+                  <p className="text-xs text-black text-center mt-4">
                     Al confirmar, se creará tu pedido y podrás enviarlo por
                     WhatsApp para coordinar el pago
                   </p>
