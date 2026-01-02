@@ -281,32 +281,34 @@ export default function AnalyticsPage() {
 
       {/* Tabs para diferentes secciones */}
       <Tabs defaultValue="overview" className="w-full">
-        <TabsList className="grid w-full grid-cols-6 lg:w-auto">
-          <TabsTrigger value="overview">
-            <BarChart className="h-4 w-4 mr-2" />
-            Overview
-          </TabsTrigger>
-          <TabsTrigger value="advanced">
-            <TrendingUp className="h-4 w-4 mr-2" />
-            Avanzado
-          </TabsTrigger>
-          <TabsTrigger value="insights">
-            <Brain className="h-4 w-4 mr-2" />
-            Diagnóstico IA
-          </TabsTrigger>
-          <TabsTrigger value="customers">
-            <Users className="h-4 w-4 mr-2" />
-            Clientes
-          </TabsTrigger>
-          <TabsTrigger value="trends">
-            <ShoppingBag className="h-4 w-4 mr-2" />
-            Tendencias
-          </TabsTrigger>
-          <TabsTrigger value="inventory">
-            <Package className="h-4 w-4 mr-2" />
-            Inventario
-          </TabsTrigger>
-        </TabsList>
+        <div className="overflow-x-auto pb-2">
+          <TabsList className="inline-flex w-auto min-w-full lg:min-w-0">
+            <TabsTrigger value="overview" className="shrink-0">
+              <BarChart className="h-4 w-4 lg:mr-2" />
+              <span className="hidden lg:inline">Overview</span>
+            </TabsTrigger>
+            <TabsTrigger value="advanced" className="shrink-0">
+              <TrendingUp className="h-4 w-4 lg:mr-2" />
+              <span className="hidden lg:inline">Avanzado</span>
+            </TabsTrigger>
+            <TabsTrigger value="insights" className="shrink-0">
+              <Brain className="h-4 w-4 lg:mr-2" />
+              <span className="hidden lg:inline">Diagnóstico</span>
+            </TabsTrigger>
+            <TabsTrigger value="customers" className="shrink-0">
+              <Users className="h-4 w-4 lg:mr-2" />
+              <span className="hidden lg:inline">Clientes</span>
+            </TabsTrigger>
+            <TabsTrigger value="trends" className="shrink-0">
+              <ShoppingBag className="h-4 w-4 lg:mr-2" />
+              <span className="hidden lg:inline">Tendencias</span>
+            </TabsTrigger>
+            <TabsTrigger value="inventory" className="shrink-0">
+              <Package className="h-4 w-4 lg:mr-2" />
+              <span className="hidden lg:inline">Inventario</span>
+            </TabsTrigger>
+          </TabsList>
+        </div>
 
         {/* Tab: Overview */}
         <TabsContent value="overview" className="space-y-6">

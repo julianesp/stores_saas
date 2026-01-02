@@ -195,11 +195,11 @@ export default function EmailSettingsPage() {
                 </div>
               )}
 
-              <div className="flex gap-3">
+              <div className="flex flex-col sm:flex-row gap-3">
                 <Button
                   onClick={() => router.push('/dashboard/subscription')}
                   size="lg"
-                  className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700"
+                  className="w-full sm:w-auto bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700"
                 >
                   Ver Planes Premium
                 </Button>
@@ -207,6 +207,7 @@ export default function EmailSettingsPage() {
                   onClick={() => router.push('/dashboard')}
                   variant="outline"
                   size="lg"
+                  className="w-full sm:w-auto"
                 >
                   Volver al Dashboard
                 </Button>
@@ -230,32 +231,34 @@ export default function EmailSettingsPage() {
       </div>
 
       <Tabs defaultValue="settings" className="space-y-6">
-        <TabsList className="grid w-full grid-cols-6">
-          <TabsTrigger value="settings">
-            <Mail className="h-4 w-4 mr-2" />
-            Configuración
-          </TabsTrigger>
-          <TabsTrigger value="stats">
-            <BarChart3 className="h-4 w-4 mr-2" />
-            Estadísticas
-          </TabsTrigger>
-          <TabsTrigger value="history">
-            <FileText className="h-4 w-4 mr-2" />
-            Historial
-          </TabsTrigger>
-          <TabsTrigger value="templates">
-            <Eye className="h-4 w-4 mr-2" />
-            Templates
-          </TabsTrigger>
-          <TabsTrigger value="campaigns">
-            <Sparkles className="h-4 w-4 mr-2" />
-            Campañas
-          </TabsTrigger>
-          <TabsTrigger value="advanced">
-            <Settings className="h-4 w-4 mr-2" />
-            Avanzado
-          </TabsTrigger>
-        </TabsList>
+        <div className="overflow-x-auto pb-2">
+          <TabsList className="inline-flex w-auto min-w-full lg:min-w-0">
+            <TabsTrigger value="settings" className="shrink-0">
+              <Mail className="h-4 w-4 lg:mr-2" />
+              <span className="hidden lg:inline">Configuración</span>
+            </TabsTrigger>
+            <TabsTrigger value="stats" className="shrink-0">
+              <BarChart3 className="h-4 w-4 lg:mr-2" />
+              <span className="hidden lg:inline">Estadísticas</span>
+            </TabsTrigger>
+            <TabsTrigger value="history" className="shrink-0">
+              <FileText className="h-4 w-4 lg:mr-2" />
+              <span className="hidden lg:inline">Historial</span>
+            </TabsTrigger>
+            <TabsTrigger value="templates" className="shrink-0">
+              <Eye className="h-4 w-4 lg:mr-2" />
+              <span className="hidden lg:inline">Templates</span>
+            </TabsTrigger>
+            <TabsTrigger value="campaigns" className="shrink-0">
+              <Sparkles className="h-4 w-4 lg:mr-2" />
+              <span className="hidden lg:inline">Campañas</span>
+            </TabsTrigger>
+            <TabsTrigger value="advanced" className="shrink-0">
+              <Settings className="h-4 w-4 lg:mr-2" />
+              <span className="hidden lg:inline">Avanzado</span>
+            </TabsTrigger>
+          </TabsList>
+        </div>
 
         {/* Tab: Configuración Básica */}
         <TabsContent value="settings" className="space-y-6">
@@ -421,13 +424,13 @@ export default function EmailSettingsPage() {
             </CardContent>
           </Card>
 
-          <div className="flex gap-4">
+          <div className="flex flex-col sm:flex-row gap-3 sm:gap-4">
             <Button
               onClick={handleSendTest}
               disabled={sendingTest}
               variant="outline"
               size="lg"
-              className="flex-1"
+              className="w-full sm:flex-1"
             >
               {sendingTest ? (
                 <>
@@ -445,7 +448,7 @@ export default function EmailSettingsPage() {
             <Button
               onClick={handleSave}
               disabled={saving}
-              className="flex-1"
+              className="w-full sm:flex-1"
               size="lg"
             >
               {saving ? (
@@ -497,6 +500,7 @@ export default function EmailSettingsPage() {
               onClick={handleSave}
               disabled={saving}
               size="lg"
+              className="w-full sm:w-auto"
             >
               {saving ? (
                 <>
