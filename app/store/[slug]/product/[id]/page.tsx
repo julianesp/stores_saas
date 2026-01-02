@@ -16,6 +16,7 @@ import { formatCurrency } from "@/lib/utils";
 import { Plus, Minus, Package, Phone, Tag, ShoppingCart } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
 
 export default function ProductDetailPage() {
@@ -320,7 +321,7 @@ export default function ProductDetailPage() {
                 <label className="block text-sm font-medium text-black mb-2">
                   Cantidad
                 </label>
-                <div className="flex items-center gap-3">
+                <div className="flex items-center gap-3 text-black">
                   <Button
                     variant="outline"
                     size="icon"
@@ -329,9 +330,18 @@ export default function ProductDetailPage() {
                   >
                     <Minus className="h-4 w-4" />
                   </Button>
-                  <span className="text-2xl font-bold w-16 text-center">
-                    {quantity}
-                  </span>
+                  <Input
+                    type="number"
+                    inputMode="numeric"
+                    min="1"
+                    max={product.stock}
+                    value={quantity}
+                    onChange={(e) => {
+                      const value = parseInt(e.target.value) || 1;
+                      setQuantity(Math.min(product.stock, Math.max(1, value)));
+                    }}
+                    className="text-2xl font-bold w-24 text-center"
+                  />
                   <Button
                     variant="outline"
                     size="icon"
@@ -364,7 +374,7 @@ export default function ProductDetailPage() {
                 </Button>
               )}
 
-              {config.store_whatsapp && (
+              {/* {config.store_whatsapp && (
                 <Button
                   size="lg"
                   variant="outline"
@@ -375,7 +385,7 @@ export default function ProductDetailPage() {
                   <Phone className="h-5 w-5 mr-2" />
                   Consultar por WhatsApp
                 </Button>
-              )}
+              )} */}
             </div>
 
             {/* Información de entrega */}

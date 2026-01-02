@@ -226,9 +226,10 @@ export default function CartPage() {
         <div className="max-w-7xl mx-auto px-4 py-4">
           <div className="flex items-center justify-between">
             <Link href={`/store/${slug}`}>
-              <Button variant="ghost" className="gap-2">
+              <Button variant="ghost" className="gap-2 text-black">
                 <ArrowLeft className="h-5 w-5" />
-                Seguir comprando
+                <h2 className="text-black">Seguir comprando</h2>
+                
               </Button>
             </Link>
 
@@ -237,7 +238,7 @@ export default function CartPage() {
                 className="h-5 w-5"
                 style={{ color: primaryColor }}
               />
-              <h1 className="text-xl font-bold">Carrito de Compras</h1>
+              <h1 className="text-xl font-bold text-black">Carrito de Compras</h1>
             </div>
 
             {cart.length > 0 && (
@@ -274,7 +275,7 @@ export default function CartPage() {
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
             {/* Lista de productos */}
             <div className="lg:col-span-2 space-y-4">
-              <h2 className="text-2xl font-bold mb-4">
+              <h2 className="text-2xl font-bold mb-4 text-black">
                 Productos ({cart.length})
               </h2>
 
@@ -300,12 +301,23 @@ export default function CartPage() {
                         {/* Imagen */}
                         <div className="relative w-24 h-24 flex-shrink-0 bg-gray-100 rounded-lg overflow-hidden">
                           {item.image ? (
-                            <Image
-                              src={item.image}
-                              alt={item.name}
-                              fill
-                              className="object-cover"
-                            />
+                            <>
+                              <Image
+                                src={item.image}
+                                alt={item.name}
+                                fill
+                                className="object-cover"
+                              />
+                              {/* Badge de descuento en la imagen */}
+                              {hasOffer && (
+                                <div
+                                  className="absolute top-1 left-1 text-white text-xs font-bold px-2 py-0.5 rounded"
+                                  style={{ backgroundColor: secondaryColor }}
+                                >
+                                  -{item.discount_percentage}%
+                                </div>
+                              )}
+                            </>
                           ) : (
                             <div className="w-full h-full flex items-center justify-center">
                               <Package className="h-12 w-12 text-gray-300" />
@@ -317,12 +329,12 @@ export default function CartPage() {
                         <div className="flex-1">
                           <div className="flex justify-between items-start mb-2">
                             <div>
-                              <h3 className="font-semibold text-lg">
+                              <h3 className="font-semibold text-lg text-black">
                                 {item.name}
                               </h3>
                               {hasOffer && (
                                 <span
-                                  className="text-xs font-bold px-2 py-1 rounded text-white"
+                                  className="text-xs font-bold px-2 py-1 rounded text-white mt-1 inline-block"
                                   style={{ backgroundColor: secondaryColor }}
                                 >
                                   -{item.discount_percentage}% OFF

@@ -1,12 +1,20 @@
-'use client';
+"use client";
 
-import { useState, useEffect } from 'react';
-import Link from 'next/link';
-import Image from 'next/image';
-import { useParams, usePathname } from 'next/navigation';
-import { ShoppingCart, Menu, X, Store, Home, Package, Info } from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import { StoreConfig } from '@/lib/storefront-api';
+import { useState, useEffect } from "react";
+import Link from "next/link";
+import Image from "next/image";
+import { useParams, usePathname } from "next/navigation";
+import {
+  ShoppingCart,
+  Menu,
+  X,
+  Store,
+  Home,
+  Package,
+  Info,
+} from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { StoreConfig } from "@/lib/storefront-api";
 
 interface StoreNavbarProps {
   config: StoreConfig;
@@ -25,14 +33,14 @@ export function StoreNavbar({ config }: StoreNavbarProps) {
 
     // Actualizar contador cuando cambia el localStorage
     const handleStorageChange = () => updateCartCount();
-    window.addEventListener('storage', handleStorageChange);
+    window.addEventListener("storage", handleStorageChange);
 
     // También actualizar cuando se hace foco en la ventana
-    window.addEventListener('focus', updateCartCount);
+    window.addEventListener("focus", updateCartCount);
 
     return () => {
-      window.removeEventListener('storage', handleStorageChange);
-      window.removeEventListener('focus', updateCartCount);
+      window.removeEventListener("storage", handleStorageChange);
+      window.removeEventListener("focus", updateCartCount);
     };
   }, [slug]);
 
@@ -41,36 +49,45 @@ export function StoreNavbar({ config }: StoreNavbarProps) {
       const cartKey = `cart_${slug}`;
       const savedCart = localStorage.getItem(cartKey);
       const cart = savedCart ? JSON.parse(savedCart) : [];
-      const totalItems = cart.reduce((sum: number, item: any) => sum + item.quantity, 0);
+      const totalItems = cart.reduce(
+        (sum: number, item: any) => sum + item.quantity,
+        0
+      );
       setCartCount(totalItems);
     } catch (error) {
-      console.error('Error reading cart:', error);
+      console.error("Error reading cart:", error);
       setCartCount(0);
     }
   };
 
-  const primaryColor = config.store_primary_color || '#3B82F6';
-  const storeName = config.store_name || 'Tienda Online';
+  const primaryColor = config.store_primary_color || "#3B82F6";
+  const storeName = config.store_name || "Tienda Online";
 
   const navigation = [
-    { name: 'Inicio', href: `/store/${slug}`, icon: Home },
-    { name: 'Productos', href: `/store/${slug}#productos`, icon: Package },
-    { name: 'Información', href: `/store/${slug}#info`, icon: Info },
+    { name: "Inicio", href: `/store/${slug}`, icon: Home },
+    { name: "Productos", href: `/store/${slug}#productos`, icon: Package },
+    { name: "Información", href: `/store/${slug}#info`, icon: Info },
   ];
 
   const isActive = (href: string) => {
-    if (href.includes('#')) {
-      return pathname === href.split('#')[0];
+    if (href.includes("#")) {
+      return pathname === href.split("#")[0];
     }
     return pathname === href;
   };
 
   return (
-    <nav className="sticky top-0 z-50 bg-white shadow-md" style={{ borderBottom: `4px solid ${primaryColor}` }}>
+    <nav
+      className="sticky top-0 z-50 bg-white shadow-md"
+      style={{ borderBottom: `4px solid ${primaryColor}` }}
+    >
       <div className="max-w-7xl mx-auto px-4">
         <div className="flex items-center justify-between h-16">
           {/* Logo y nombre */}
-          <Link href={`/store/${slug}`} className="flex items-center gap-3 group">
+          <Link
+            href={`/store/${slug}`}
+            className="flex items-center gap-3 group"
+          >
             {config.store_logo_url ? (
               <div className="relative w-12 h-12 rounded-lg overflow-hidden transition-transform group-hover:scale-105">
                 <Image
@@ -104,11 +121,16 @@ export function StoreNavbar({ config }: StoreNavbarProps) {
                   key={item.name}
                   href={item.href}
                   className={`flex items-center gap-2 px-4 py-2 rounded-lg transition-all ${
-                    active
-                      ? 'font-semibold'
-                      : 'text-gray-600 hover:bg-gray-100'
+                    active ? "font-semibold" : "text-gray-600 hover:bg-gray-100"
                   }`}
-                  style={active ? { color: primaryColor, backgroundColor: `${primaryColor}10` } : {}}
+                  style={
+                    active
+                      ? {
+                          color: primaryColor,
+                          backgroundColor: `${primaryColor}10`,
+                        }
+                      : {}
+                  }
                 >
                   <Icon className="h-4 w-4" />
                   {item.name}
@@ -133,7 +155,7 @@ export function StoreNavbar({ config }: StoreNavbarProps) {
                     className="absolute -top-2 -right-2 h-5 w-5 rounded-full text-white text-xs flex items-center justify-center font-bold"
                     style={{ backgroundColor: primaryColor }}
                   >
-                    {cartCount > 99 ? '99+' : cartCount}
+                    {cartCount > 99 ? "99+" : cartCount}
                   </span>
                 )}
                 <span className="hidden sm:inline ml-2">Carrito</span>
@@ -144,10 +166,14 @@ export function StoreNavbar({ config }: StoreNavbarProps) {
             <Button
               variant="ghost"
               size="sm"
-              className="md:hidden"
+              className="md:hidden text-black "
               onClick={() => setIsMenuOpen(!isMenuOpen)}
             >
-              {isMenuOpen ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
+              {isMenuOpen ? (
+                <X className="h-6 w-6" />
+              ) : (
+                <Menu className="h-6 w-6" />
+              )}
             </Button>
           </div>
         </div>
@@ -165,11 +191,16 @@ export function StoreNavbar({ config }: StoreNavbarProps) {
                   href={item.href}
                   onClick={() => setIsMenuOpen(false)}
                   className={`flex items-center gap-3 px-4 py-3 rounded-lg transition-all ${
-                    active
-                      ? 'font-semibold'
-                      : 'text-gray-600 hover:bg-gray-100'
+                    active ? "font-semibold" : "text-gray-600 hover:bg-gray-100"
                   }`}
-                  style={active ? { color: primaryColor, backgroundColor: `${primaryColor}10` } : {}}
+                  style={
+                    active
+                      ? {
+                          color: primaryColor,
+                          backgroundColor: `${primaryColor}10`,
+                        }
+                      : {}
+                  }
                 >
                   <Icon className="h-5 w-5" />
                   {item.name}

@@ -135,20 +135,20 @@ export default function StorefrontPage() {
       <div className="bg-white shadow-sm">
         <div className="max-w-7xl mx-auto px-4 py-4">
           <div className="relative">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-5 w-5" />
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-black h-5 w-5" />
             <Input
               type="text"
               placeholder="Buscar productos..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="pl-10"
+              className="pl-10 text-gray-700"
             />
           </div>
         </div>
       </div>
 
       {/* Hero Section con Banner */}
-      {config.store_banner_url ? (
+      {/* {config.store_banner_url ? (
         <div className="relative w-full h-64 md:h-96 lg:h-[500px]">
           <Image
             src={config.store_banner_url}
@@ -157,7 +157,7 @@ export default function StorefrontPage() {
             className="object-cover"
             priority
           />
-          {/* Overlay con información de la tienda */}
+          
           <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/20 to-transparent">
             <div className="max-w-7xl mx-auto px-4 h-full flex items-end pb-8 md:pb-12">
               <div className="text-white">
@@ -174,7 +174,7 @@ export default function StorefrontPage() {
           </div>
         </div>
       ) : (
-        /* Hero alternativo sin banner */
+        
         <div
           className="relative w-full py-12 md:py-16"
           style={{ backgroundColor: `${primaryColor}15` }}
@@ -190,20 +190,20 @@ export default function StorefrontPage() {
             )}
           </div>
         </div>
-      )}
+      )} */}
 
       <div className="max-w-7xl mx-auto px-4 py-6">
         <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
           {/* Sidebar - Categorías y filtros */}
           <div className="lg:col-span-1">
-            {/* Botón móvil para mostrar filtros */}
+            
             <Button
               variant="outline"
-              className="w-full lg:hidden mb-4"
+              className="w-full lg:hidden mb-4 text-black"
               onClick={() => setShowFilters(!showFilters)}
             >
-              <Filter className="h-4 w-4 mr-2" />
-              {showFilters ? 'Ocultar Filtros' : 'Mostrar Filtros'}
+              <Filter className="h-4 w-4 mr-2 text-black" />
+              {showFilters ? 'Ocultar categorías' : 'Mostrar categorías'}
             </Button>
 
             <div className={`${showFilters ? 'block' : 'hidden'} lg:block space-y-4`}>
@@ -401,18 +401,6 @@ export default function StorefrontPage() {
           </div>
         </div>
       </div>
-
-      {/* WhatsApp flotante */}
-      {config.store_whatsapp && (
-        <button
-          onClick={openWhatsApp}
-          className="fixed bottom-6 right-6 p-4 rounded-full shadow-lg hover:scale-110 transition-transform z-50"
-          style={{ backgroundColor: '#25D366' }}
-          aria-label="Contactar por WhatsApp"
-        >
-          <Phone className="h-6 w-6 text-white" />
-        </button>
-      )}
     </div>
   );
 }

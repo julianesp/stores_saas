@@ -193,7 +193,8 @@ export default function CheckoutPage() {
       }
     }
 
-    if (config?.store_min_order && total < config.store_min_order) {
+    // Validar pedido mínimo solo si está configurado
+    if (config?.store_min_order && config.store_min_order > 0 && total < config.store_min_order) {
       toast.error(
         `El pedido mínimo es de ${formatCurrency(config.store_min_order)}`
       );
@@ -317,7 +318,7 @@ export default function CheckoutPage() {
         >
           <div className="max-w-7xl mx-auto px-4 py-4">
             <div className="flex items-center justify-center">
-              <h1 className="text-xl font-bold">Pedido Realizado</h1>
+              <h1 className="text-xl font-bold">Pedido Registrado - Pendiente de Pago</h1>
             </div>
           </div>
         </header>
@@ -335,9 +336,9 @@ export default function CheckoutPage() {
                 />
               </div>
 
-              <h2 className="text-3xl font-bold mb-2">¡Pedido Realizado!</h2>
+              <h2 className="text-3xl font-bold mb-2">¡Pedido Registrado!</h2>
               <p className="text-black mb-6">
-                Tu pedido ha sido registrado exitosamente
+                Tu pedido ha sido creado. Ahora debes completar el pago.
               </p>
 
               <div className="bg-gray-50 rounded-lg p-6 mb-6">
@@ -356,11 +357,9 @@ export default function CheckoutPage() {
               <div className="space-y-4">
                 {/* Instrucciones según método de pago */}
                 {wompiEnabled && wompiCheckoutUrl ? (
-                  <div className="p-4 bg-green-50 border border-green-200 rounded-lg">
-                    <p className="text-sm text-green-800">
-                      ✅ <strong>Link de pago creado!</strong> Haz clic en Pagar
-                      con Wompi para completar tu pago con Nequi, PSE, tarjeta y
-                      más.
+                  <div className="p-4 bg-yellow-50 border border-yellow-500 rounded-lg">
+                    <p className="text-sm text-yellow-900">
+                      ⚠️ <strong>¡IMPORTANTE!</strong> Tu pedido está registrado pero aún NO está pagado. Haz clic en el botón "Pagar con Wompi" abajo para completar tu pago ahora.
                     </p>
                   </div>
                 ) : wompiEnabled && creatingPaymentLink ? (
@@ -380,10 +379,10 @@ export default function CheckoutPage() {
                   </div>
                 ) : storeNequiNumber ? (
                   <>
-                    <div className="p-4 bg-blue-50 rounded-lg">
-                      <p className="text-sm text-gray-700">
-                        📋 <strong>Siguiente paso:</strong> Realiza el pago por
-                        Nequi y envía el comprobante por WhatsApp
+                    <div className="p-4 bg-yellow-50 border border-yellow-500 rounded-lg">
+                      <p className="text-sm text-yellow-900">
+                        ⚠️ <strong>¡IMPORTANTE!</strong> Tu pedido está registrado pero aún NO está pagado. Realiza el pago por
+                        Nequi ahora y envía el comprobante por WhatsApp.
                       </p>
                     </div>
 
@@ -414,10 +413,9 @@ export default function CheckoutPage() {
                     </div>
                   </>
                 ) : (
-                  <div className="p-4 bg-blue-50 rounded-lg">
-                    <p className="text-sm text-gray-700">
-                      📋 <strong>Siguiente paso:</strong> Envía los detalles de
-                      tu pedido por WhatsApp para coordinar el pago y la entrega
+                  <div className="p-4 bg-yellow-50 border border-yellow-500 rounded-lg">
+                    <p className="text-sm text-yellow-900">
+                      ⚠️ <strong>¡IMPORTANTE!</strong> Tu pedido está registrado pero aún NO está pagado. Contacta a la tienda por WhatsApp para coordinar el pago ahora.
                     </p>
                   </div>
                 )}
@@ -807,9 +805,7 @@ export default function CheckoutPage() {
                     style={{ backgroundColor: primaryColor }}
                     disabled={
                       submitting ||
-                      (config.store_min_order
-                        ? total < config.store_min_order
-                        : false)
+                      Boolean(config.store_min_order && config.store_min_order > 0 && total < config.store_min_order)
                     }
                   >
                     {submitting ? (

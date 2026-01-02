@@ -572,7 +572,7 @@ export default function DashboardPage() {
           <CardContent>
             <div className="space-y-2 md:space-y-3">
               {metrics.lowStockProducts > 0 ? (
-                <div className="flex items-center justify-between p-2 md:p-3 bg-orange-50 rounded-lg">
+                <div className="flex items-center justify-between p-2 md:p-3 bg-orange-50 border-2 border-orange-200 rounded-lg">
                   <div className="flex items-center gap-2 md:gap-3">
                     <AlertTriangle className="h-4 w-4 md:h-5 md:w-5 text-orange-600 flex-shrink-0" />
                     <div>
@@ -580,6 +580,11 @@ export default function DashboardPage() {
                       <p className="text-xs text-gray-500 hidden sm:block">Revisar inventario</p>
                     </div>
                   </div>
+                  <Link href="/dashboard/inventory">
+                    <Button size="sm" variant="outline" className="bg-white hover:bg-orange-100 border-orange-300 text-orange-700 font-semibold">
+                      VER PRODUCTOS
+                    </Button>
+                  </Link>
                 </div>
               ) : (
                 <div className="flex items-center justify-between p-2 md:p-3 bg-green-50 rounded-lg">
@@ -593,7 +598,7 @@ export default function DashboardPage() {
                 </div>
               )}
               {expiringProductsCount > 0 ? (
-                <div className="flex items-center justify-between p-2 md:p-3 bg-red-50 rounded-lg">
+                <div className="flex items-center justify-between p-2 md:p-3 bg-red-50 border-2 border-red-200 rounded-lg">
                   <div className="flex items-center gap-2 md:gap-3">
                     <Package className="h-4 w-4 md:h-5 md:w-5 text-red-600 flex-shrink-0" />
                     <div>
@@ -601,6 +606,11 @@ export default function DashboardPage() {
                       <p className="text-xs text-gray-500 hidden sm:block">Crear ofertas</p>
                     </div>
                   </div>
+                  <Link href="/dashboard/offers">
+                    <Button size="sm" variant="outline" className="bg-white hover:bg-red-100 border-red-300 text-red-700 font-semibold">
+                      CREAR OFERTAS
+                    </Button>
+                  </Link>
                 </div>
               ) : (
                 <div className="flex items-center justify-between p-2 md:p-3 bg-blue-50 rounded-lg">
