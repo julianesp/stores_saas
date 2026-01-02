@@ -637,15 +637,15 @@ export default function CheckoutPage() {
                             value={selectedZoneId}
                             onValueChange={setSelectedZoneId}
                           >
-                            <SelectTrigger className="bg-white border-amber-50">
+                            <SelectTrigger className="bg-white">
                               <SelectValue placeholder="Selecciona tu zona" />
                             </SelectTrigger>
-                            <SelectContent className="bg-black ">
+                            <SelectContent className="bg-white">
                               {shippingZones.map((zone) => (
                                 <SelectItem
                                   key={zone.id}
                                   value={zone.id}
-                                  className="hover:bg-gray-800 hover:text-2xl transition-all delay-75"
+                                  className="hover:bg-gray-100 cursor-pointer"
                                 >
                                   {zone.zone_name} -{" "}
                                   {formatCurrency(zone.shipping_cost)}
