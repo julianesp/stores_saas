@@ -1,4 +1,4 @@
-import * as XLSX from 'xlsx';
+import ExcelJS from 'exceljs';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { SaleWithRelations, Sale } from './types';
@@ -8,7 +8,7 @@ import { ProductAnalytics } from './analytics-helpers';
  * Exporta las ventas a un archivo Excel con múltiples hojas
  * Incluye datos necesarios para análisis y predicciones
  */
-export function exportSalesToExcel(sales: SaleWithRelations[], filename?: string) {
+export async function exportSalesToExcel(sales: SaleWithRelations[], filename?: string) {
   // Preparar datos para la hoja de resumen de ventas
   const salesSummary = sales.map(sale => {
     const saleDate = (sale.created_at as any)?.toDate
@@ -172,40 +172,41 @@ export function exportSalesToExcel(sales: SaleWithRelations[], filename?: string
   }));
 
   // Crear libro de Excel con múltiples hojas
-  const workbook = XLSX.utils.book_new();
+  const workbook = new ExcelJS.Workbook();
 
   // Hoja 1: Resumen de Ventas
-  const wsSalesSummary = XLSX.utils.json_to_sheet(salesSummary);
-  XLSX.utils.book_append_sheet(workbook, wsSalesSummary, 'Resumen Ventas');
+  const wsSalesSummary = workbook.addWorksheet('Resumen Ventas');
+  addDataToWorksheet(wsSalesSummary, salesSummary);
 
   // Hoja 2: Detalle por Producto
-  const wsSalesDetails = XLSX.utils.json_to_sheet(salesDetails);
-  XLSX.utils.book_append_sheet(workbook, wsSalesDetails, 'Detalle por Producto');
+  const wsSalesDetails = workbook.addWorksheet('Detalle por Producto');
+  addDataToWorksheet(wsSalesDetails, salesDetails);
 
   // Hoja 3: Estadísticas por Producto
-  const wsProductStats = XLSX.utils.json_to_sheet(productStatsArray);
-  XLSX.utils.book_append_sheet(workbook, wsProductStats, 'Estadísticas Productos');
+  const wsProductStats = workbook.addWorksheet('Estadísticas Productos');
+  addDataToWorksheet(wsProductStats, productStatsArray);
 
   // Hoja 4: Estadísticas Diarias
-  const wsDailyStats = XLSX.utils.json_to_sheet(dailyStatsArray);
-  XLSX.utils.book_append_sheet(workbook, wsDailyStats, 'Estadísticas Diarias');
+  const wsDailyStats = workbook.addWorksheet('Estadísticas Diarias');
+  addDataToWorksheet(wsDailyStats, dailyStatsArray);
 
   // Hoja 5: Estadísticas por Método de Pago
-  const wsPaymentStats = XLSX.utils.json_to_sheet(paymentStatsArray);
-  XLSX.utils.book_append_sheet(workbook, wsPaymentStats, 'Métodos de Pago');
+  const wsPaymentStats = workbook.addWorksheet('Métodos de Pago');
+  addDataToWorksheet(wsPaymentStats, paymentStatsArray);
 
   // Generar nombre de archivo
   const defaultFilename = `ventas_${format(new Date(), 'yyyy-MM-dd_HHmmss')}.xlsx`;
   const finalFilename = filename || defaultFilename;
 
   // Descargar archivo
-  XLSX.writeFile(workbook, finalFilename);
+  const buffer = await workbook.xlsx.writeBuffer();
+  downloadBuffer(buffer, finalFilename);
 }
 
 /**
  * Exporta solo ventas de un período específico
  */
-export function exportSalesByDateRange(
+export async function exportSalesByDateRange(
   sales: SaleWithRelations[],
   startDate: Date,
   endDate: Date,
@@ -219,14 +220,14 @@ export function exportSalesByDateRange(
   });
 
   const defaultFilename = `ventas_${format(startDate, 'yyyy-MM-dd')}_a_${format(endDate, 'yyyy-MM-dd')}.xlsx`;
-  exportSalesToExcel(filteredSales, filename || defaultFilename);
+  await exportSalesToExcel(filteredSales, filename || defaultFilename);
 }
 
 /**
  * Exporta datos optimizados para machine learning / predicciones
  * Formato específico para análisis de series de tiempo
  */
-export function exportSalesForPredictions(sales: SaleWithRelations[], filename?: string) {
+export async function exportSalesForPredictions(sales: SaleWithRelations[], filename?: string) {
   const mlData: any[] = [];
 
   sales.forEach(sale => {
@@ -275,18 +276,19 @@ export function exportSalesForPredictions(sales: SaleWithRelations[], filename?:
     });
   });
 
-  const workbook = XLSX.utils.book_new();
-  const ws = XLSX.utils.json_to_sheet(mlData);
-  XLSX.utils.book_append_sheet(workbook, ws, 'Datos para Predicciones');
+  const workbook = new ExcelJS.Workbook();
+  const ws = workbook.addWorksheet('Datos para Predicciones');
+  addDataToWorksheet(ws, mlData);
 
   const defaultFilename = `datos_predicciones_${format(new Date(), 'yyyy-MM-dd')}.xlsx`;
-  XLSX.writeFile(workbook, filename || defaultFilename);
+  const buffer = await workbook.xlsx.writeBuffer();
+  downloadBuffer(buffer, defaultFilename);
 }
 
 /**
  * Exporta análisis de IA con recomendaciones de stock
  */
-export function exportAnalyticsToExcel(analytics: ProductAnalytics[], filename?: string) {
+export async function exportAnalyticsToExcel(analytics: ProductAnalytics[], filename?: string) {
   // Hoja 1: Análisis Completo
   const fullAnalysis = analytics.map(item => ({
     'Producto': item.product_name,
@@ -393,28 +395,81 @@ export function exportAnalyticsToExcel(analytics: ProductAnalytics[], filename?:
   ];
 
   // Crear libro de Excel
-  const workbook = XLSX.utils.book_new();
+  const workbook = new ExcelJS.Workbook();
 
   // Agregar hojas
-  const ws1 = XLSX.utils.json_to_sheet(executiveSummary);
-  XLSX.utils.book_append_sheet(workbook, ws1, 'Resumen Ejecutivo');
+  const ws1 = workbook.addWorksheet('Resumen Ejecutivo');
+  addDataToWorksheet(ws1, executiveSummary);
 
-  const ws2 = XLSX.utils.json_to_sheet(orderRecommendations);
-  XLSX.utils.book_append_sheet(workbook, ws2, 'Pedidos Recomendados');
+  const ws2 = workbook.addWorksheet('Pedidos Recomendados');
+  addDataToWorksheet(ws2, orderRecommendations);
 
-  const ws3 = XLSX.utils.json_to_sheet(criticalProducts);
-  XLSX.utils.book_append_sheet(workbook, ws3, 'Productos Críticos');
+  const ws3 = workbook.addWorksheet('Productos Críticos');
+  addDataToWorksheet(ws3, criticalProducts);
 
-  const ws4 = XLSX.utils.json_to_sheet(warningProducts);
-  XLSX.utils.book_append_sheet(workbook, ws4, 'Productos Advertencia');
+  const ws4 = workbook.addWorksheet('Productos Advertencia');
+  addDataToWorksheet(ws4, warningProducts);
 
-  const ws5 = XLSX.utils.json_to_sheet(topSelling);
-  XLSX.utils.book_append_sheet(workbook, ws5, 'Top 10 Más Vendidos');
+  const ws5 = workbook.addWorksheet('Top 10 Más Vendidos');
+  addDataToWorksheet(ws5, topSelling);
 
-  const ws6 = XLSX.utils.json_to_sheet(fullAnalysis);
-  XLSX.utils.book_append_sheet(workbook, ws6, 'Análisis Completo');
+  const ws6 = workbook.addWorksheet('Análisis Completo');
+  addDataToWorksheet(ws6, fullAnalysis);
 
   // Generar archivo
   const defaultFilename = `analisis_ia_${format(new Date(), 'yyyy-MM-dd_HHmmss')}.xlsx`;
-  XLSX.writeFile(workbook, filename || defaultFilename);
+  const buffer = await workbook.xlsx.writeBuffer();
+  downloadBuffer(buffer, filename || defaultFilename);
+}
+
+// Helper functions
+function addDataToWorksheet(worksheet: ExcelJS.Worksheet, data: any[]) {
+  if (data.length === 0) return;
+
+  // Obtener los headers de las claves del primer objeto
+  const headers = Object.keys(data[0]);
+
+  // Agregar headers
+  worksheet.addRow(headers);
+
+  // Estilizar headers
+  const headerRow = worksheet.getRow(1);
+  headerRow.font = { bold: true };
+  headerRow.fill = {
+    type: 'pattern',
+    pattern: 'solid',
+    fgColor: { argb: 'FF4472C4' }
+  };
+  headerRow.eachCell((cell) => {
+    cell.font = { bold: true, color: { argb: 'FFFFFFFF' } };
+  });
+
+  // Agregar datos
+  data.forEach(item => {
+    const values = headers.map(header => item[header]);
+    worksheet.addRow(values);
+  });
+
+  // Auto-ajustar ancho de columnas
+  if (worksheet.columns) {
+    worksheet.columns.forEach((column) => {
+      if (!column || typeof column.eachCell !== 'function') return;
+      let maxLength = 0;
+      column.eachCell({ includeEmpty: true }, (cell) => {
+        const cellValue = cell.value ? cell.value.toString() : '';
+        maxLength = Math.max(maxLength, cellValue.length);
+      });
+      column.width = Math.min(Math.max(maxLength + 2, 10), 50);
+    });
+  }
+}
+
+function downloadBuffer(buffer: ArrayBuffer, filename: string) {
+  const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+  const url = window.URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = filename;
+  link.click();
+  window.URL.revokeObjectURL(url);
 }

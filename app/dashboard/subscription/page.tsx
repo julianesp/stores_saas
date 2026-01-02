@@ -35,6 +35,7 @@ const SUBSCRIPTION_PLANS = [
       "Todo lo del Plan Básico",
       "Tienda Online personalizable",
       "Análisis con Inteligencia Artificial",
+      "Email Marketing (Carritos abandonados, Stock, Reportes)",
       "Múltiples métodos de pago (Wompi)",
       "Reportes avanzados",
       "Soporte prioritario",

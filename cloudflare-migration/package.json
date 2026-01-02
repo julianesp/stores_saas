@@ -32,8 +32,10 @@
   },
   "dependencies": {
     "@radix-ui/react-dialog": "^1.1.15",
+    "date-fns": "^4.1.0",
     "firebase-admin": "^13.6.0",
     "hono": "^4.0.0",
-    "jose": "^5.2.0"
+    "jose": "^5.2.0",
+    "resend": "^6.6.0"
   }
 }

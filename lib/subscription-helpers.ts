@@ -257,3 +257,41 @@ export function hasAIAccess(userProfile: UserProfile): boolean {
   // Sin suscripción válida, sin acceso
   return false;
 }
+
+/**
+ * Verifica si un usuario tiene acceso a Email Marketing
+ * Durante el período de prueba, todos tienen acceso gratis
+ * Con Plan Premium activo, tienen acceso incluido
+ * Plan Básico NO tiene acceso a Email Marketing
+ */
+export function hasEmailMarketingAccess(userProfile: UserProfile): boolean {
+  // Super admin siempre tiene acceso
+  if (userProfile.is_superadmin) {
+    return true;
+  }
+
+  // Durante el período de prueba, acceso gratis a Email Marketing
+  if (userProfile.subscription_status === 'trial') {
+    return true;
+  }
+
+  // Con suscripción activa
+  if (userProfile.subscription_status === 'active') {
+    // Plan Premium incluye Email Marketing
+    if (userProfile.plan_id === 'plan-premium') {
+      return true;
+    }
+
+    // Plan Básico NO tiene acceso a Email Marketing
+    if (userProfile.plan_id === 'plan-basico') {
+      return false;
+    }
+
+    // Si tiene suscripción activa pero no se identificó el plan,
+    // no dar acceso por defecto
+    return false;
+  }
+
+  // Sin suscripción válida, sin acceso
+  return false;
+}

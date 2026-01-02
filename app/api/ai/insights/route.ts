@@ -26,8 +26,12 @@ export async function POST(request: NextRequest) {
     });
   } catch (error) {
     console.error('Error generating insights:', error);
+
+    // Propagar el mensaje de error específico
+    const errorMessage = error instanceof Error ? error.message : 'Error al generar insights';
+
     return NextResponse.json(
-      { error: 'Error al generar insights' },
+      { error: errorMessage },
       { status: 500 }
     );
   }

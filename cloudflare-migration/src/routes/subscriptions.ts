@@ -82,7 +82,7 @@ app.post('/create-payment-link', async (c) => {
     }
 
     // Construir redirect_url para después del pago
-    const redirectUrl = `https://tienda-pos.vercel.app/dashboard/subscription/confirmation`;
+    const redirectUrl = `https://posib.dev/dashboard/subscription/confirmation`;
 
     // Crear el payment link en Wompi
     const wompiResponse = await fetch('https://production.wompi.co/v1/payment_links', {

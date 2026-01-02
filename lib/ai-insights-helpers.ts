@@ -1,6 +1,11 @@
 // Google Gemini configuration
-const GEMINI_API_KEY = process.env.GEMINI_API_KEY || 'AIzaSyCV66MnyfZDY1NWDmcwbFPay_Bbh8VV5Wc';
-const GEMINI_API_URL = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent';
+const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
+// Usar gemini-2.5-flash - versión estable más reciente (Junio 2025)
+const GEMINI_API_URL = 'https://generativelanguage.googleapis.com/v1/models/gemini-2.5-flash:generateContent';
+
+if (!GEMINI_API_KEY) {
+  console.error('⚠️ GEMINI_API_KEY no está configurada. Los insights de IA no funcionarán.');
+}
 
 export interface SalesData {
   totalRevenue: number;
@@ -29,30 +34,53 @@ export async function generateBusinessInsights(
   customerData: CustomerData,
   daysAnalyzed: number
 ): Promise<string> {
+  // Validar que la API key existe
+  if (!GEMINI_API_KEY) {
+    throw new Error('La API key de Gemini no está configurada. Contacta al administrador.');
+  }
+
   try {
-    const prompt = `Eres un experto consultor de negocios para tiendas minoristas en Colombia. Analiza los siguientes datos de una tienda y proporciona insights accionables en español:
+    const prompt = `Eres un experto consultor de negocios retail en Colombia. Genera un DIAGNÓSTICO EMPRESARIAL PROFESIONAL para el dueño de esta tienda. Usa un tono profesional pero cercano.
 
-**Datos de Ventas (últimos ${daysAnalyzed} días):**
-- Ingresos totales: $${salesData.totalRevenue.toLocaleString('es-CO')}
-- Número de ventas: ${salesData.totalSales}
-- Ticket promedio: $${salesData.avgTicket.toLocaleString('es-CO')}
-- Productos críticos (bajo stock): ${salesData.criticalProducts}
-- Top 3 productos más vendidos:
-${salesData.topProducts.map((p, i) => `  ${i + 1}. ${p.name}: ${p.quantity} unidades, $${p.revenue.toLocaleString('es-CO')}`).join('\n')}
+**DATOS DEL NEGOCIO (Últimos ${daysAnalyzed} días):**
 
-**Datos de Clientes:**
-- Total de clientes: ${customerData.totalCustomers}
-- Clientes nuevos: ${customerData.newCustomers}
-- Clientes recurrentes: ${customerData.returningCustomers}
-- Frecuencia de compra promedio: ${customerData.avgPurchaseFrequency.toFixed(1)} compras/cliente
+📊 VENTAS:
+- Ingresos totales: $${salesData.totalRevenue.toLocaleString('es-CO')} COP
+- Transacciones: ${salesData.totalSales}
+- Ticket promedio: $${salesData.avgTicket.toLocaleString('es-CO')} COP
+- Productos con stock crítico: ${salesData.criticalProducts}
 
-Proporciona:
-1. **3 insights clave** sobre el rendimiento del negocio
-2. **3 recomendaciones específicas** para aumentar ventas
-3. **2 alertas** sobre posibles problemas o riesgos
-4. **1 oportunidad** de crecimiento basada en los datos
+🏆 TOP 3 PRODUCTOS:
+${salesData.topProducts.map((p, i) => `${i + 1}. ${p.name} - ${p.quantity} unidades ($${p.revenue.toLocaleString('es-CO')})`).join('\n')}
 
-Formato: Usa emojis y sé conciso. Máximo 250 palabras.`;
+👥 CLIENTES:
+- Base total: ${customerData.totalCustomers}
+- Nuevos: ${customerData.newCustomers}
+- Recurrentes: ${customerData.returningCustomers}
+- Frecuencia promedio: ${customerData.avgPurchaseFrequency.toFixed(1)} compras/cliente
+
+---
+
+GENERA UN DIAGNÓSTICO CON ESTA ESTRUCTURA EXACTA:
+
+## 📊 Resumen del Desempeño
+[3 puntos clave sobre cómo está el negocio actualmente]
+
+## 💡 Recomendaciones Estratégicas
+[3 acciones específicas y prácticas para mejorar las ventas]
+
+## ⚠️ Puntos de Atención
+[2 riesgos o problemas que requieren atención inmediata]
+
+## 🚀 Oportunidad de Crecimiento
+[1 oportunidad específica basada en los datos para hacer crecer el negocio]
+
+IMPORTANTE:
+- Usa lenguaje claro y directo
+- Incluye números específicos cuando sea relevante
+- Sé práctico y accionable
+- Máximo 300 palabras
+- Usa los emojis indicados en cada sección`;
 
     const response = await fetch(`${GEMINI_API_URL}?key=${GEMINI_API_KEY}`, {
       method: 'POST',
@@ -69,16 +97,41 @@ Formato: Usa emojis y sé conciso. Máximo 250 palabras.`;
     });
 
     if (!response.ok) {
-      const errorData = await response.json();
-      console.error('Gemini API error:', errorData);
-      throw new Error(`Gemini API error: ${response.statusText}`);
+      const errorData = await response.json().catch(() => ({}));
+      console.error('Gemini API error:', {
+        status: response.status,
+        statusText: response.statusText,
+        errorData
+      });
+
+      // Mensajes de error más específicos
+      if (response.status === 400) {
+        // Verificar si el error es por API key inválida
+        if (errorData.error?.message?.includes('API key not valid')) {
+          throw new Error('La API Key de Gemini no es válida. Por favor, genera una nueva en https://aistudio.google.com/app/apikey');
+        }
+        throw new Error('Error en la solicitud a la API de Gemini. Verifica la configuración.');
+      } else if (response.status === 401 || response.status === 403) {
+        throw new Error('API Key de Gemini inválida o sin permisos. Genera una nueva en https://aistudio.google.com/app/apikey');
+      } else if (response.status === 429) {
+        throw new Error('Límite de solicitudes alcanzado. Intenta nuevamente en unos minutos.');
+      }
+
+      throw new Error(`Error de API: ${response.statusText || 'Error desconocido'}`);
     }
 
     const data = await response.json();
-    return data.candidates?.[0]?.content?.parts?.[0]?.text || 'No se pudo generar insights.';
+
+    if (!data.candidates || !data.candidates[0]?.content?.parts?.[0]?.text) {
+      console.error('Respuesta incompleta de Gemini:', data);
+      throw new Error('La API no devolvió un resultado válido.');
+    }
+
+    return data.candidates[0].content.parts[0].text;
   } catch (error) {
     console.error('Error generating insights:', error);
-    return 'Error al generar insights. Por favor intenta nuevamente.';
+    const errorMessage = error instanceof Error ? error.message : 'Error desconocido';
+    throw new Error(`Error al generar insights: ${errorMessage}`);
   }
 }
 
@@ -90,22 +143,56 @@ export async function generateProductRecommendations(
   storeType: string
 ): Promise<string> {
   try {
-    const prompt = `Eres un experto en retail en Colombia. Basándote en las tendencias actuales del mercado colombiano y el inventario de esta tienda, sugiere productos que deberían considerar vender.
+    const prompt = `Eres un experto en retail y tendencias del mercado colombiano. Analiza el inventario actual de esta tienda y recomienda productos tendencia que complementen su catálogo.
 
-**Tipo de tienda:** ${storeType}
+**TIPO DE TIENDA:** ${storeType}
 
-**Inventario actual (muestra):**
+**INVENTARIO ACTUAL (Muestra):**
 ${currentInventory.slice(0, 10).map((p) => `- ${p.name} (${p.category}): ${p.stock} unidades, velocidad: ${p.salesVelocity}/día`).join('\n')}
 
-**Productos tendencia en Colombia 2025:**
-Considera categorías populares como: snacks saludables, bebidas funcionales, cuidado personal, tecnología accesible, productos de limpieza ecológicos, etc.
+---
 
-Proporciona:
-1. **5 productos específicos** que están en tendencia en Colombia y que complementarían bien este inventario
-2. Para cada producto indica: nombre, categoría, por qué es tendencia, y margen de ganancia estimado
-3. **1 consejo** sobre cómo promocionar estos productos
+GENERA RECOMENDACIONES CON ESTA ESTRUCTURA EXACTA:
 
-Formato: Conciso, con emojis. Máximo 300 palabras.`;
+## **Productos en Tendencia para tu Tienda General:**
+
+[Breve introducción sobre las tendencias del mercado colombiano en 2025 - 1 párrafo]
+
+1. **[Nombre del Producto 1]** [emoji relevante]
+   * **Categoría:** [Categoría]
+   * **Tendencia:** [Por qué está en tendencia en Colombia - 1 línea]
+   * **Margen estimado:** [Porcentaje de ganancia]
+
+2. **[Nombre del Producto 2]** [emoji relevante]
+   * **Categoría:** [Categoría]
+   * **Tendencia:** [Por qué está en tendencia - 1 línea]
+   * **Margen estimado:** [Porcentaje de ganancia]
+
+3. **[Nombre del Producto 3]** [emoji relevante]
+   * **Categoría:** [Categoría]
+   * **Tendencia:** [Por qué está en tendencia - 1 línea]
+   * **Margen estimado:** [Porcentaje de ganancia]
+
+4. **[Nombre del Producto 4]** [emoji relevante]
+   * **Categoría:** [Categoría]
+   * **Tendencia:** [Por qué está en tendencia - 1 línea]
+   * **Margen estimado:** [Porcentaje de ganancia]
+
+5. **[Nombre del Producto 5]** [emoji relevante]
+   * **Categoría:** [Categoría]
+   * **Tendencia:** [Por qué está en tendencia - 1 línea]
+   * **Margen estimado:** [Porcentaje de ganancia]
+
+## 💡 Consejo de Promoción
+
+[1 estrategia específica y práctica para promocionar estos productos en tu tienda]
+
+IMPORTANTE:
+- Enfócate en productos REALMENTE tendencia en Colombia 2025
+- Considera: snacks saludables, bebidas funcionales, tecnología accesible, productos sostenibles
+- Sé específico con nombres de productos
+- Usa lenguaje claro y directo
+- Máximo 350 palabras`;
 
     const response = await fetch(`${GEMINI_API_URL}?key=${GEMINI_API_KEY}`, {
       method: 'POST',

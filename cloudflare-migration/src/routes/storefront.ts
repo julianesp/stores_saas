@@ -450,7 +450,7 @@ app.post('/wompi/create-payment-link/:slug', async (c) => {
 
     // Construir redirect_url para después del pago
     // Wompi redirigirá aquí después de que el cliente complete el pago
-    const redirectUrl = `https://tienda-pos.vercel.app/store/${slug}/payment-confirmation`;
+    const redirectUrl = `https://posib.dev/store/${slug}/payment-confirmation`;
 
     // Crear el payment link en Wompi
     const wompiResponse = await fetch('https://production.wompi.co/v1/payment_links', {

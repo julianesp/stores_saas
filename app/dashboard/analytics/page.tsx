@@ -1,23 +1,38 @@
-'use client';
+"use client";
 
-import { useState, useEffect } from 'react';
-import { useAuth, useUser } from '@clerk/nextjs';
-import { Brain, Download, TrendingUp, AlertTriangle, CheckCircle, Package, BarChart, Lock, Sparkles, Users, ShoppingBag } from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { analyzeProductSales, ProductAnalytics } from '@/lib/cloudflare-analytics-helpers';
-import { exportAnalyticsToExcel } from '@/lib/excel-export';
-import { formatCurrency } from '@/lib/utils';
-import { toast } from 'sonner';
-import { getUserProfile, getSales } from '@/lib/cloudflare-api';
-import { hasAIAccess } from '@/lib/subscription-helpers';
-import { UserProfile } from '@/lib/types';
-import Link from 'next/link';
-import { AIInsightsSection } from '@/components/analytics/ai-insights-section';
-import { ProductRecommendationsSection } from '@/components/analytics/product-recommendations-section';
-import { CustomerRFMSection } from '@/components/analytics/customer-rfm-section';
-import AdvancedMetricsDashboard from '@/components/analytics/advanced-metrics-dashboard';
+import { useState, useEffect } from "react";
+import { useAuth, useUser } from "@clerk/nextjs";
+import {
+  Brain,
+  Download,
+  TrendingUp,
+  AlertTriangle,
+  CheckCircle,
+  Package,
+  BarChart,
+  Lock,
+  Sparkles,
+  Users,
+  ShoppingBag,
+} from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import {
+  analyzeProductSales,
+  ProductAnalytics,
+} from "@/lib/cloudflare-analytics-helpers";
+import { exportAnalyticsToExcel } from "@/lib/excel-export";
+import { formatCurrency } from "@/lib/utils";
+import { toast } from "sonner";
+import { getUserProfile, getSales } from "@/lib/cloudflare-api";
+import { hasAIAccess } from "@/lib/subscription-helpers";
+import { UserProfile } from "@/lib/types";
+import Link from "next/link";
+import { AIInsightsSection } from "@/components/analytics/ai-insights-section";
+import { ProductRecommendationsSection } from "@/components/analytics/product-recommendations-section";
+import { CustomerRFMSection } from "@/components/analytics/customer-rfm-section";
+import AdvancedMetricsDashboard from "@/components/analytics/advanced-metrics-dashboard";
 
 export default function AnalyticsPage() {
   const { getToken } = useAuth();
@@ -52,7 +67,7 @@ export default function AnalyticsPage() {
         setLoading(false);
       }
     } catch (error) {
-      console.error('Error checking access:', error);
+      console.error("Error checking access:", error);
       setLoading(false);
     }
   };
@@ -62,10 +77,10 @@ export default function AnalyticsPage() {
       setAnalyzing(true);
       const data = await analyzeProductSales(daysToAnalyze, getToken);
       setAnalytics(data);
-      toast.success('Análisis completado exitosamente');
+      toast.success("Análisis completado exitosamente");
     } catch (error) {
-      console.error('Error running analysis:', error);
-      toast.error('Error al realizar el análisis');
+      console.error("Error running analysis:", error);
+      toast.error("Error al realizar el análisis");
     } finally {
       setAnalyzing(false);
       setLoading(false);
@@ -74,27 +89,32 @@ export default function AnalyticsPage() {
 
   const handleExport = () => {
     if (analytics.length === 0) {
-      toast.error('No hay datos para exportar');
+      toast.error("No hay datos para exportar");
       return;
     }
     exportAnalyticsToExcel(analytics);
-    toast.success('Análisis exportado a Excel exitosamente');
+    toast.success("Análisis exportado a Excel exitosamente");
   };
 
-  const criticalProducts = analytics.filter(p => p.risk_level === 'critical');
-  const warningProducts = analytics.filter(p => p.risk_level === 'warning');
+  const criticalProducts = analytics.filter((p) => p.risk_level === "critical");
+  const warningProducts = analytics.filter((p) => p.risk_level === "warning");
   const topSelling = analytics.slice(0, 10);
-  const productsToOrder = analytics.filter(p => p.recommended_order_quantity > 0);
+  const productsToOrder = analytics.filter(
+    (p) => p.recommended_order_quantity > 0
+  );
 
   const totalRevenue = analytics.reduce((sum, p) => sum + p.total_revenue, 0);
-  const totalSales = analytics.reduce((sum, p) => sum + p.total_quantity_sold, 0);
+  const totalSales = analytics.reduce(
+    (sum, p) => sum + p.total_quantity_sold,
+    0
+  );
   const avgTicket = totalSales > 0 ? totalRevenue / totalSales : 0;
 
   // Preparar datos para IA
   const salesData = {
     totalRevenue,
     totalSales,
-    topProducts: topSelling.slice(0, 3).map(p => ({
+    topProducts: topSelling.slice(0, 3).map((p) => ({
       name: p.product_name,
       revenue: p.total_revenue,
       quantity: p.total_quantity_sold,
@@ -110,9 +130,9 @@ export default function AnalyticsPage() {
     avgPurchaseFrequency: 0,
   };
 
-  const inventoryForRecommendations = analytics.slice(0, 20).map(p => ({
+  const inventoryForRecommendations = analytics.slice(0, 20).map((p) => ({
     name: p.product_name,
-    category: '', // Podrías agregar categoría si la tienes
+    category: "", // Podrías agregar categoría si la tienes
     stock: p.current_stock,
     salesVelocity: p.sales_velocity,
   }));
@@ -130,8 +150,8 @@ export default function AnalyticsPage() {
 
   // Si no tiene acceso, mostrar pantalla de bloqueo
   if (!hasAccess) {
-    const isTrial = userProfile?.subscription_status === 'trial';
-    const isActive = userProfile?.subscription_status === 'active';
+    const isTrial = userProfile?.subscription_status === "trial";
+    const isActive = userProfile?.subscription_status === "active";
 
     return (
       <div className="flex items-center justify-center min-h-[70vh]">
@@ -145,15 +165,17 @@ export default function AnalyticsPage() {
                 Análisis IA
               </h2>
               <p className="text-lg text-gray-600">
-                Desbloquea el poder de la inteligencia artificial para tu negocio
+                Desbloquea el poder de la inteligencia artificial para tu
+                negocio
               </p>
             </div>
-
+            c
             {isTrial ? (
               <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 mb-6">
                 <p className="text-yellow-800">
-                  <strong>¡Hola!</strong> Estás en período de prueba pero parece que hubo un problema verificando tu acceso.
-                  Por favor recarga la página o contacta a soporte.
+                  <strong>¡Hola!</strong> Estás en período de prueba pero parece
+                  que hubo un problema verificando tu acceso. Por favor recarga
+                  la página o contacta a soporte.
                 </p>
               </div>
             ) : (
@@ -166,15 +188,21 @@ export default function AnalyticsPage() {
                   <ul className="space-y-2 text-gray-700">
                     <li className="flex items-start gap-2">
                       <CheckCircle className="h-5 w-5 text-green-600 mt-0.5 flex-shrink-0" />
-                      <span>Análisis inteligente de ventas y predicciones precisas</span>
+                      <span>
+                        Análisis inteligente de ventas y predicciones precisas
+                      </span>
                     </li>
                     <li className="flex items-start gap-2">
                       <CheckCircle className="h-5 w-5 text-green-600 mt-0.5 flex-shrink-0" />
-                      <span>Predicciones de inventario para evitar agotamientos</span>
+                      <span>
+                        Predicciones de inventario para evitar agotamientos
+                      </span>
                     </li>
                     <li className="flex items-start gap-2">
                       <CheckCircle className="h-5 w-5 text-green-600 mt-0.5 flex-shrink-0" />
-                      <span>Recomendaciones automáticas de pedidos optimizados</span>
+                      <span>
+                        Recomendaciones automáticas de pedidos optimizados
+                      </span>
                     </li>
                     <li className="flex items-start gap-2">
                       <CheckCircle className="h-5 w-5 text-green-600 mt-0.5 flex-shrink-0" />
@@ -182,7 +210,9 @@ export default function AnalyticsPage() {
                     </li>
                     <li className="flex items-start gap-2">
                       <CheckCircle className="h-5 w-5 text-green-600 mt-0.5 flex-shrink-0" />
-                      <span>Identificación de productos críticos en tiempo real</span>
+                      <span>
+                        Identificación de productos críticos en tiempo real
+                      </span>
                     </li>
                   </ul>
                 </div>
@@ -193,15 +223,20 @@ export default function AnalyticsPage() {
                   </p>
                   <p className="text-sm text-gray-500">
                     {isActive
-                      ? 'Actualiza al Plan Premium para usar Análisis IA'
-                      : '✨ GRATIS durante los 15 días de prueba'}
+                      ? "Actualiza al Plan Premium para usar Análisis IA"
+                      : "✨ GRATIS durante los 15 días de prueba"}
                   </p>
                 </div>
 
                 <Link href="/dashboard/subscription">
-                  <Button size="lg" className="bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white px-8">
+                  <Button
+                    size="lg"
+                    className="bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white px-8"
+                  >
                     <Sparkles className="mr-2 h-5 w-5" />
-                    {isActive ? 'Actualizar a Plan Premium' : 'Ver Planes y Activar Prueba Gratis'}
+                    {isActive
+                      ? "Actualizar a Plan Premium"
+                      : "Ver Planes y Activar Prueba Gratis"}
                   </Button>
                 </Link>
               </>
@@ -235,7 +270,7 @@ export default function AnalyticsPage() {
             disabled={analyzing}
           >
             <BarChart className="mr-2 h-4 w-4" />
-            {analyzing ? 'Analizando...' : 'Actualizar'}
+            {analyzing ? "Analizando..." : "Actualizar"}
           </Button>
           <Button onClick={handleExport} disabled={analytics.length === 0}>
             <Download className="mr-2 h-4 w-4" />
@@ -257,7 +292,7 @@ export default function AnalyticsPage() {
           </TabsTrigger>
           <TabsTrigger value="insights">
             <Brain className="h-4 w-4 mr-2" />
-            Insights IA
+            Diagnóstico IA
           </TabsTrigger>
           <TabsTrigger value="customers">
             <Users className="h-4 w-4 mr-2" />
@@ -275,229 +310,277 @@ export default function AnalyticsPage() {
 
         {/* Tab: Overview */}
         <TabsContent value="overview" className="space-y-6">
-
-      {/* Estadísticas Generales */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        <Card>
-          <CardContent className="pt-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-gray-500">Productos Analizados</p>
-                <p className="text-2xl font-bold">{analytics.length}</p>
-              </div>
-              <Package className="h-8 w-8 text-blue-600 opacity-50" />
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardContent className="pt-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-gray-500">Productos Críticos</p>
-                <p className="text-2xl font-bold text-red-600">{criticalProducts.length}</p>
-              </div>
-              <AlertTriangle className="h-8 w-8 text-red-600 opacity-50" />
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardContent className="pt-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-gray-500">Productos en Advertencia</p>
-                <p className="text-2xl font-bold text-yellow-600">{warningProducts.length}</p>
-              </div>
-              <AlertTriangle className="h-8 w-8 text-yellow-600 opacity-50" />
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardContent className="pt-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-gray-500">Productos a Pedir</p>
-                <p className="text-2xl font-bold text-blue-600">{productsToOrder.length}</p>
-              </div>
-              <TrendingUp className="h-8 w-8 text-blue-600 opacity-50" />
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* Top 10 Productos Más Vendidos */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <TrendingUp className="h-5 w-5 text-green-600" />
-            Top 10 Productos Más Vendidos
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="space-y-3">
-            {topSelling.map((product, index) => (
-              <div
-                key={product.product_id}
-                className="flex items-center gap-4 p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition"
-              >
-                <div className="flex items-center justify-center w-8 h-8 bg-blue-600 text-white rounded-full font-bold text-sm">
-                  {index + 1}
+          {/* Estadísticas Generales */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            <Card>
+              <CardContent className="pt-6">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm text-gray-500">
+                      Productos Analizados
+                    </p>
+                    <p className="text-2xl font-bold">{analytics.length}</p>
+                  </div>
+                  <Package className="h-8 w-8 text-blue-600 opacity-50" />
                 </div>
-                <div className="flex-1 min-w-0">
-                  <p className="font-medium truncate">{product.product_name}</p>
-                  <p className="text-sm text-gray-500">
-                    {product.total_quantity_sold} unidades • {product.sales_velocity} und/día
-                  </p>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardContent className="pt-6">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm text-gray-500">Productos Críticos</p>
+                    <p className="text-2xl font-bold text-red-600">
+                      {criticalProducts.length}
+                    </p>
+                  </div>
+                  <AlertTriangle className="h-8 w-8 text-red-600 opacity-50" />
                 </div>
-                <div className="text-right">
-                  <p className="font-semibold text-green-600">
-                    {formatCurrency(product.total_revenue)}
-                  </p>
-                  <p className="text-xs text-gray-500">Disponible: {product.current_stock}</p>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardContent className="pt-6">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm text-gray-500">
+                      Productos en Advertencia
+                    </p>
+                    <p className="text-2xl font-bold text-yellow-600">
+                      {warningProducts.length}
+                    </p>
+                  </div>
+                  <AlertTriangle className="h-8 w-8 text-yellow-600 opacity-50" />
                 </div>
-              </div>
-            ))}
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardContent className="pt-6">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm text-gray-500">Productos a Pedir</p>
+                    <p className="text-2xl font-bold text-blue-600">
+                      {productsToOrder.length}
+                    </p>
+                  </div>
+                  <TrendingUp className="h-8 w-8 text-blue-600 opacity-50" />
+                </div>
+              </CardContent>
+            </Card>
           </div>
-        </CardContent>
-      </Card>
 
-      {/* Productos Críticos */}
-      {criticalProducts.length > 0 && (
-        <Card className="border-red-200 bg-red-50">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2 text-red-800">
-              <AlertTriangle className="h-5 w-5" />
-              Productos Críticos - ¡Acción Inmediata Requerida!
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-3">
-              {criticalProducts.map((product) => (
-                <div
-                  key={product.product_id}
-                  className="bg-white p-4 rounded-lg border border-red-200"
-                >
-                  <div className="flex justify-between items-start mb-2">
-                    <div>
-                      <p className="font-semibold text-lg">{product.product_name}</p>
-                      <p className="text-sm text-gray-600">{product.product_barcode}</p>
+          {/* Top 10 Productos Más Vendidos */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <TrendingUp className="h-5 w-5 text-green-600" />
+                Top 10 Productos Más Vendidos
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-3">
+                {topSelling.map((product, index) => (
+                  <div
+                    key={product.product_id}
+                    className="flex items-center gap-4 p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition"
+                  >
+                    <div className="flex items-center justify-center w-8 h-8 bg-blue-600 text-white rounded-full font-bold text-sm">
+                      {index + 1}
                     </div>
-                    <span className="bg-red-600 text-white px-3 py-1 rounded-full text-xs font-semibold">
-                      URGENTE
-                    </span>
-                  </div>
-                  <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-sm">
-                    <div>
-                      <span className="text-gray-500">Cantidad Actual:</span>
-                      <p className="font-semibold text-red-600">{product.current_stock}</p>
+                    <div className="flex-1 min-w-0">
+                      <p className="font-medium truncate">
+                        {product.product_name}
+                      </p>
+                      <p className="text-sm text-gray-500">
+                        {product.total_quantity_sold} unidades •{" "}
+                        {product.sales_velocity} und/día
+                      </p>
                     </div>
-                    <div>
-                      <span className="text-gray-500">Velocidad:</span>
-                      <p className="font-semibold">{product.sales_velocity} und/día</p>
-                    </div>
-                    <div>
-                      <span className="text-gray-500">Días hasta agotarse:</span>
-                      <p className="font-semibold text-red-600">{product.days_until_stockout}</p>
-                    </div>
-                    <div>
-                      <span className="text-gray-500">Pedir:</span>
-                      <p className="font-bold text-blue-600 text-lg">
-                        {product.recommended_order_quantity} unidades
+                    <div className="text-right">
+                      <p className="font-semibold text-green-600">
+                        {formatCurrency(product.total_revenue)}
+                      </p>
+                      <p className="text-xs text-gray-500">
+                        Disponible: {product.current_stock}
                       </p>
                     </div>
                   </div>
-                </div>
-              ))}
-            </div>
-          </CardContent>
-        </Card>
-      )}
+                ))}
+              </div>
+            </CardContent>
+          </Card>
 
-      {/* Productos en Advertencia */}
-      {warningProducts.length > 0 && (
-        <Card className="border-yellow-200 bg-yellow-50">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2 text-yellow-800">
-              <AlertTriangle className="h-5 w-5" />
-              Productos en Advertencia - Planear Pedido Pronto
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-3">
-              {warningProducts.map((product) => (
-                <div
-                  key={product.product_id}
-                  className="bg-white p-4 rounded-lg border border-yellow-200"
-                >
-                  <div className="flex justify-between items-start mb-2">
-                    <div>
-                      <p className="font-semibold">{product.product_name}</p>
-                      <p className="text-sm text-gray-600">{product.product_barcode}</p>
+          {/* Productos Críticos */}
+          {criticalProducts.length > 0 && (
+            <Card className="border-red-200 bg-red-50">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2 text-red-800">
+                  <AlertTriangle className="h-5 w-5" />
+                  Productos Críticos - ¡Acción Inmediata Requerida!
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-3">
+                  {criticalProducts.map((product) => (
+                    <div
+                      key={product.product_id}
+                      className="bg-white p-4 rounded-lg border border-red-200"
+                    >
+                      <div className="flex justify-between items-start mb-2">
+                        <div>
+                          <p className="font-semibold text-lg">
+                            {product.product_name}
+                          </p>
+                          <p className="text-sm text-gray-600">
+                            {product.product_barcode}
+                          </p>
+                        </div>
+                        <span className="bg-red-600 text-white px-3 py-1 rounded-full text-xs font-semibold">
+                          URGENTE
+                        </span>
+                      </div>
+                      <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-sm">
+                        <div>
+                          <span className="text-gray-500">
+                            Cantidad Actual:
+                          </span>
+                          <p className="font-semibold text-red-600">
+                            {product.current_stock}
+                          </p>
+                        </div>
+                        <div>
+                          <span className="text-gray-500">Velocidad:</span>
+                          <p className="font-semibold">
+                            {product.sales_velocity} und/día
+                          </p>
+                        </div>
+                        <div>
+                          <span className="text-gray-500">
+                            Días hasta agotarse:
+                          </span>
+                          <p className="font-semibold text-red-600">
+                            {product.days_until_stockout}
+                          </p>
+                        </div>
+                        <div>
+                          <span className="text-gray-500">Pedir:</span>
+                          <p className="font-bold text-blue-600 text-lg">
+                            {product.recommended_order_quantity} unidades
+                          </p>
+                        </div>
+                      </div>
                     </div>
-                    <span className="bg-yellow-500 text-white px-3 py-1 rounded-full text-xs font-semibold">
-                      ADVERTENCIA
-                    </span>
-                  </div>
-                  <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-sm">
-                    <div>
-                      <span className="text-gray-500">Disponible:</span>
-                      <p className="font-semibold">{product.current_stock}</p>
-                    </div>
-                    <div>
-                      <span className="text-gray-500">Días restantes:</span>
-                      <p className="font-semibold">{product.days_until_stockout}</p>
-                    </div>
-                    <div>
-                      <span className="text-gray-500">Velocidad:</span>
-                      <p className="font-semibold">{product.sales_velocity} und/día</p>
-                    </div>
-                    <div>
-                      <span className="text-gray-500">Pedir:</span>
-                      <p className="font-bold text-blue-600">
-                        {product.recommended_order_quantity} unidades
-                      </p>
-                    </div>
-                  </div>
+                  ))}
                 </div>
-              ))}
-            </div>
-          </CardContent>
-        </Card>
-      )}
+              </CardContent>
+            </Card>
+          )}
 
-      {/* Explicación de la IA */}
-      <Card className="bg-blue-50 border-blue-200">
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2 text-blue-900">
-            <Brain className="h-5 w-5" />
-            Cómo Funciona el Análisis de IA
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="text-sm text-blue-900 space-y-2">
-          <p>
-            <strong>🧮 Velocidad de Venta:</strong> Calculamos cuántas unidades se venden por día
-            en promedio, basado en los últimos {daysToAnalyze} días de ventas.
-          </p>
-          <p>
-            <strong>📊 Predicción de Agotamiento:</strong> Estimamos cuántos días quedan antes de
-            que el producto se agote, considerando la cantidad actual y la velocidad de venta.
-          </p>
-          <p>
-            <strong>🎯 Cantidad Recomendada:</strong> Calculamos la cantidad óptima a pedir para
-            mantener 30 días de inventario, más un margen de seguridad basado en el mínimo disponible.
-          </p>
-          <p>
-            <strong>⚠️ Niveles de Riesgo:</strong>
-          </p>
-          <ul className="list-disc list-inside ml-4 space-y-1">
-            <li><strong>Crítico:</strong> Cantidad por debajo del mínimo o se agotará en 3 días o menos</li>
-            <li><strong>Advertencia:</strong> Se agotará en 7 días o menos</li>
-            <li><strong>Bien:</strong> Cantidad suficiente para más de 7 días</li>
-          </ul>
-        </CardContent>
-      </Card>
+          {/* Productos en Advertencia */}
+          {warningProducts.length > 0 && (
+            <Card className="border-yellow-200 bg-yellow-50">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2 text-yellow-800">
+                  <AlertTriangle className="h-5 w-5" />
+                  Productos en Advertencia - Planear Pedido Pronto
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-3">
+                  {warningProducts.map((product) => (
+                    <div
+                      key={product.product_id}
+                      className="bg-white p-4 rounded-lg border border-yellow-200"
+                    >
+                      <div className="flex justify-between items-start mb-2">
+                        <div>
+                          <p className="font-semibold">
+                            {product.product_name}
+                          </p>
+                          <p className="text-sm text-gray-600">
+                            {product.product_barcode}
+                          </p>
+                        </div>
+                        <span className="bg-yellow-500 text-white px-3 py-1 rounded-full text-xs font-semibold">
+                          ADVERTENCIA
+                        </span>
+                      </div>
+                      <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-sm">
+                        <div>
+                          <span className="text-gray-500">Disponible:</span>
+                          <p className="font-semibold">
+                            {product.current_stock}
+                          </p>
+                        </div>
+                        <div>
+                          <span className="text-gray-500">Días restantes:</span>
+                          <p className="font-semibold">
+                            {product.days_until_stockout}
+                          </p>
+                        </div>
+                        <div>
+                          <span className="text-gray-500">Velocidad:</span>
+                          <p className="font-semibold">
+                            {product.sales_velocity} und/día
+                          </p>
+                        </div>
+                        <div>
+                          <span className="text-gray-500">Pedir:</span>
+                          <p className="font-bold text-blue-600">
+                            {product.recommended_order_quantity} unidades
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Explicación de la IA */}
+          <Card className="bg-blue-50 border-blue-200">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2 text-blue-900">
+                <Brain className="h-5 w-5" />
+                Cómo Funciona el Análisis de IA
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="text-sm text-blue-900 space-y-2">
+              <p>
+                <strong>🧮 Velocidad de Venta:</strong> Calculamos cuántas
+                unidades se venden por día en promedio, basado en los últimos{" "}
+                {daysToAnalyze} días de ventas.
+              </p>
+              <p>
+                <strong>📊 Predicción de Agotamiento:</strong> Estimamos cuántos
+                días quedan antes de que el producto se agote, considerando la
+                cantidad actual y la velocidad de venta.
+              </p>
+              <p>
+                <strong>🎯 Cantidad Recomendada:</strong> Calculamos la cantidad
+                óptima a pedir para mantener 30 días de inventario, más un
+                margen de seguridad basado en el mínimo disponible.
+              </p>
+              <p>
+                <strong>⚠️ Niveles de Riesgo:</strong>
+              </p>
+              <ul className="list-disc list-inside ml-4 space-y-1">
+                <li>
+                  <strong>Crítico:</strong> Cantidad por debajo del mínimo o se
+                  agotará en 3 días o menos
+                </li>
+                <li>
+                  <strong>Advertencia:</strong> Se agotará en 7 días o menos
+                </li>
+                <li>
+                  <strong>Bien:</strong> Cantidad suficiente para más de 7 días
+                </li>
+              </ul>
+            </CardContent>
+          </Card>
         </TabsContent>
 
         {/* Tab: Métricas Avanzadas */}
@@ -505,7 +588,7 @@ export default function AnalyticsPage() {
           <AdvancedMetricsDashboard />
         </TabsContent>
 
-        {/* Tab: Insights IA */}
+        {/* Tab: Diagnóstico IA */}
         <TabsContent value="insights" className="space-y-6">
           <AIInsightsSection
             salesData={salesData}
@@ -550,8 +633,12 @@ export default function AnalyticsPage() {
                     >
                       <div className="flex justify-between items-start mb-2">
                         <div>
-                          <p className="font-semibold text-lg">{product.product_name}</p>
-                          <p className="text-sm text-gray-600">{product.product_barcode}</p>
+                          <p className="font-semibold text-lg">
+                            {product.product_name}
+                          </p>
+                          <p className="text-sm text-gray-600">
+                            {product.product_barcode}
+                          </p>
                         </div>
                         <span className="bg-red-600 text-white px-3 py-1 rounded-full text-xs font-semibold">
                           URGENTE
@@ -559,16 +646,26 @@ export default function AnalyticsPage() {
                       </div>
                       <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-sm">
                         <div>
-                          <span className="text-gray-500">Cantidad Actual:</span>
-                          <p className="font-semibold text-red-600">{product.current_stock}</p>
+                          <span className="text-gray-500">
+                            Cantidad Actual:
+                          </span>
+                          <p className="font-semibold text-red-600">
+                            {product.current_stock}
+                          </p>
                         </div>
                         <div>
                           <span className="text-gray-500">Velocidad:</span>
-                          <p className="font-semibold">{product.sales_velocity} und/día</p>
+                          <p className="font-semibold">
+                            {product.sales_velocity} und/día
+                          </p>
                         </div>
                         <div>
-                          <span className="text-gray-500">Días hasta agotarse:</span>
-                          <p className="font-semibold text-red-600">{product.days_until_stockout}</p>
+                          <span className="text-gray-500">
+                            Días hasta agotarse:
+                          </span>
+                          <p className="font-semibold text-red-600">
+                            {product.days_until_stockout}
+                          </p>
                         </div>
                         <div>
                           <span className="text-gray-500">Pedir:</span>
@@ -602,8 +699,12 @@ export default function AnalyticsPage() {
                     >
                       <div className="flex justify-between items-start mb-2">
                         <div>
-                          <p className="font-semibold">{product.product_name}</p>
-                          <p className="text-sm text-gray-600">{product.product_barcode}</p>
+                          <p className="font-semibold">
+                            {product.product_name}
+                          </p>
+                          <p className="text-sm text-gray-600">
+                            {product.product_barcode}
+                          </p>
                         </div>
                         <span className="bg-yellow-500 text-white px-3 py-1 rounded-full text-xs font-semibold">
                           ADVERTENCIA
@@ -612,15 +713,21 @@ export default function AnalyticsPage() {
                       <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-sm">
                         <div>
                           <span className="text-gray-500">Disponible:</span>
-                          <p className="font-semibold">{product.current_stock}</p>
+                          <p className="font-semibold">
+                            {product.current_stock}
+                          </p>
                         </div>
                         <div>
                           <span className="text-gray-500">Días restantes:</span>
-                          <p className="font-semibold">{product.days_until_stockout}</p>
+                          <p className="font-semibold">
+                            {product.days_until_stockout}
+                          </p>
                         </div>
                         <div>
                           <span className="text-gray-500">Velocidad:</span>
-                          <p className="font-semibold">{product.sales_velocity} und/día</p>
+                          <p className="font-semibold">
+                            {product.sales_velocity} und/día
+                          </p>
                         </div>
                         <div>
                           <span className="text-gray-500">Pedir:</span>

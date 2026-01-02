@@ -64,7 +64,7 @@ app.post('/subscription-reminders', async (c) => {
         days_left: daysLeft,
         next_billing_date: expirationDate,
         plan_price: 29900,
-        payment_link: `https://tienda-pos.vercel.app/dashboard/subscription`,
+        payment_link: `https://posib.dev/dashboard/subscription`,
       };
 
       const html = subscriptionReminderTemplate(emailData);
@@ -72,11 +72,11 @@ app.post('/subscription-reminders', async (c) => {
       const result = await sendEmail({
         to: user.email,
         toName: user.full_name,
-        from: 'noreply@tienda-pos.com',
+        from: 'noreply@posib.dev',
         fromName: 'Tienda POS',
         subject: `⏰ Tu suscripción vence en ${daysLeft} ${daysLeft === 1 ? 'día' : 'días'}`,
         html,
-      });
+      }, c.env.RESEND_API_KEY);
 
       if (result.success) {
         emailsSent++;
@@ -130,23 +130,33 @@ app.post('/daily-reports', async (c) => {
   const db = c.env.DB;
 
   try {
-    const currentHour = new Date().getHours();
-    const currentMinute = new Date().getMinutes();
+    // Obtener hora actual en Colombia (UTC-5)
+    const now = new Date();
+    const colombiaTime = new Date(now.getTime() - 5 * 60 * 60 * 1000);
+    const currentHour = colombiaTime.getUTCHours();
+    const currentMinute = colombiaTime.getUTCMinutes();
     const currentTime = `${currentHour.toString().padStart(2, '0')}:${currentMinute
       .toString()
       .padStart(2, '0')}`;
 
+    console.log('Daily reports check - Colombia time:', currentTime);
+
     // Obtener usuarios con reportes diarios activados para esta hora
+    // Comparamos solo la hora (HH:00 a HH:59) para dar margen al CRON
+    const targetHour = `${currentHour.toString().padStart(2, '0')}`;
+
     const prefs = await db
       .prepare(
         `SELECT ep.*, up.email, up.full_name, up.store_name
          FROM email_preferences ep
          JOIN user_profiles up ON ep.user_profile_id = up.id
          WHERE ep.daily_reports_enabled = 1
-           AND ep.daily_reports_time = ?`
+           AND substr(ep.daily_reports_time, 1, 2) = ?`
       )
-      .bind(currentTime)
+      .bind(targetHour)
       .all();
+
+    console.log(`Found ${prefs.results.length} users with daily reports enabled for hour ${targetHour}`);
 
     let emailsSent = 0;
     let emailsFailed = 0;
@@ -162,7 +172,7 @@ app.post('/daily-reports', async (c) => {
         .prepare(
           `SELECT COUNT(*) as total_sales, SUM(total) as total_revenue
            FROM sales
-           WHERE user_profile_id = ?
+           WHERE tenant_id = ?
              AND DATE(created_at) = ?
              AND status = 'completada'`
         )
@@ -176,7 +186,7 @@ app.post('/daily-reports', async (c) => {
            FROM sale_items si
            JOIN sales s ON si.sale_id = s.id
            JOIN products p ON si.product_id = p.id
-           WHERE s.user_profile_id = ?
+           WHERE s.tenant_id = ?
              AND DATE(s.created_at) = ?
              AND s.status = 'completada'
            GROUP BY p.id, p.name
@@ -191,7 +201,7 @@ app.post('/daily-reports', async (c) => {
         .prepare(
           `SELECT name, stock as current_stock, min_stock
            FROM products
-           WHERE user_profile_id = ?
+           WHERE tenant_id = ?
              AND stock <= min_stock
            ORDER BY (stock - min_stock) ASC
            LIMIT 5`
@@ -213,16 +223,17 @@ app.post('/daily-reports', async (c) => {
       const result = await sendEmail({
         to: pref.email,
         toName: pref.full_name,
-        from: pref.from_email || 'noreply@tienda-pos.com',
+        from: pref.from_email || 'noreply@posib.dev',
         fromName: pref.from_name || 'Tienda POS',
         subject: `📊 Reporte Diario - ${emailData.store_name} - ${new Date(
           yesterdayStr
         ).toLocaleDateString('es-CO')}`,
         html,
-      });
+      }, c.env.RESEND_API_KEY);
 
       if (result.success) {
         emailsSent++;
+        console.log(`✓ Daily report sent to ${pref.email}`);
         await logEmail(
           db,
           pref.user_profile_id,
@@ -235,6 +246,7 @@ app.post('/daily-reports', async (c) => {
         );
       } else {
         emailsFailed++;
+        console.error(`✗ Failed to send daily report to ${pref.email}:`, result.error);
         await logEmail(
           db,
           pref.user_profile_id,
@@ -247,12 +259,15 @@ app.post('/daily-reports', async (c) => {
       }
     }
 
-    return c.json({
+    const response = {
       success: true,
       emails_sent: emailsSent,
       emails_failed: emailsFailed,
       total_prefs: prefs.results.length,
-    });
+    };
+
+    console.log('Daily reports result:', response);
+    return c.json(response);
   } catch (error) {
     console.error('Error sending daily reports:', error);
     return c.json(
@@ -299,7 +314,7 @@ app.post('/stock-alerts', async (c) => {
         continue;
       }
 
-      const productUrl = `https://tienda-pos.vercel.app/store/${sub.store_slug}/product/${sub.product_id}`;
+      const productUrl = `https://posib.dev/store/${sub.store_slug}/product/${sub.product_id}`;
 
       const emailData = {
         product_name: sub.product_name,
@@ -313,11 +328,11 @@ app.post('/stock-alerts', async (c) => {
       const result = await sendEmail({
         to: sub.customer_email,
         toName: sub.customer_name,
-        from: (prefs as any)?.from_email || 'noreply@tienda-pos.com',
+        from: (prefs as any)?.from_email || 'noreply@posib.dev',
         fromName: (prefs as any)?.from_name || sub.store_name || 'Tienda POS',
         subject: `✨ ${sub.product_name} está disponible!`,
         html,
-      });
+      }, c.env.RESEND_API_KEY);
 
       if (result.success) {
         emailsSent++;
@@ -436,7 +451,7 @@ app.post('/abandoned-carts', async (c) => {
         .bind(cart.cart_id)
         .all();
 
-      const cartUrl = `https://tienda-pos.vercel.app/store/${cart.store_slug}/cart`;
+      const cartUrl = `https://posib.dev/store/${cart.store_slug}/cart`;
 
       const emailData = {
         customer_name: cart.customer_name || 'Cliente',
@@ -453,7 +468,7 @@ app.post('/abandoned-carts', async (c) => {
       const result = await sendEmail({
         to: cart.customer_email,
         toName: cart.customer_name,
-        from: (prefs as any)?.from_email || 'noreply@tienda-pos.com',
+        from: (prefs as any)?.from_email || 'noreply@posib.dev',
         fromName: (prefs as any)?.from_name || cart.store_name || 'Tienda POS',
         subject:
           emailNumber === 1
@@ -462,7 +477,7 @@ app.post('/abandoned-carts', async (c) => {
             ? '⏰ Tu carrito te está esperando + 10% descuento'
             : '🎁 Última oportunidad - 15% descuento en tu carrito',
         html,
-      });
+      }, c.env.RESEND_API_KEY);
 
       if (result.success) {
         emailsSent++;
@@ -635,6 +650,313 @@ app.get('/logs', async (c) => {
       .all();
 
     return c.json({ success: true, data: logs.results });
+  } catch (error) {
+    return c.json(
+      {
+        success: false,
+        error: error instanceof Error ? error.message : 'Unknown error',
+      },
+      500
+    );
+  }
+});
+
+/**
+ * TEST: Send a test email
+ */
+app.post('/test', async (c) => {
+  const db = c.env.DB;
+  const userProfileId = c.get('userProfileId');
+
+  try {
+    // Obtener datos del usuario
+    const user = await db
+      .prepare('SELECT * FROM user_profiles WHERE id = ?')
+      .bind(userProfileId)
+      .first();
+
+    if (!user) {
+      return c.json({ success: false, error: 'Usuario no encontrado' }, 404);
+    }
+
+    const userData = user as any;
+
+    // Email de prueba simple
+    const testHtml = `
+      <!DOCTYPE html>
+      <html>
+        <head>
+          <style>
+            body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
+            .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+            .header { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 30px; text-align: center; border-radius: 10px 10px 0 0; }
+            .content { background: #f9f9f9; padding: 30px; border-radius: 0 0 10px 10px; }
+            .success { color: #10b981; font-size: 48px; }
+          </style>
+        </head>
+        <body>
+          <div class="container">
+            <div class="header">
+              <h1>¡Email de Prueba!</h1>
+            </div>
+            <div class="content">
+              <p class="success">✅</p>
+              <h2>¡Hola ${userData.full_name || 'Usuario'}!</h2>
+              <p>Este es un email de prueba para confirmar que tu configuración de emails está funcionando correctamente.</p>
+              <p><strong>Tu sistema de emails automáticos está activo y listo para usar:</strong></p>
+              <ul>
+                <li>📊 Reportes diarios de ventas</li>
+                <li>⏰ Recordatorios de suscripción</li>
+                <li>📦 Alertas de stock</li>
+                <li>🛒 Recuperación de carritos abandonados</li>
+              </ul>
+              <p>Si recibiste este email, significa que todo está funcionando perfectamente.</p>
+              <p>¡Saludos!<br>Tu Tienda POS</p>
+            </div>
+          </div>
+        </body>
+      </html>
+    `;
+
+    const result = await sendEmail({
+      to: userData.email,
+      toName: userData.full_name,
+      from: 'noreply@posib.dev',
+      fromName: 'Tienda POS - Prueba',
+      subject: '✅ Email de Prueba - Tienda POS',
+      html: testHtml,
+    }, c.env.RESEND_API_KEY);
+
+    if (result.success) {
+      await logEmail(
+        db,
+        userProfileId,
+        'general',
+        userData.email,
+        'Email de prueba',
+        'sent'
+      );
+
+      return c.json({
+        success: true,
+        message: `Email de prueba enviado a ${userData.email}`,
+      });
+    } else {
+      await logEmail(
+        db,
+        userProfileId,
+        'general',
+        userData.email,
+        'Email de prueba',
+        'failed',
+        result.error
+      );
+
+      return c.json({
+        success: false,
+        error: result.error,
+      }, 500);
+    }
+  } catch (error) {
+    return c.json(
+      {
+        success: false,
+        error: error instanceof Error ? error.message : 'Unknown error',
+      },
+      500
+    );
+  }
+});
+
+/**
+ * Get email statistics for a user
+ */
+app.get('/stats', async (c) => {
+  const db = c.env.DB;
+  const userProfileId = c.get('userProfileId');
+
+  try {
+    // Total de emails enviados
+    const totalSent = await db
+      .prepare(
+        'SELECT COUNT(*) as count FROM email_logs WHERE user_profile_id = ? AND status = ?'
+      )
+      .bind(userProfileId, 'sent')
+      .first();
+
+    // Total de emails fallidos
+    const totalFailed = await db
+      .prepare(
+        'SELECT COUNT(*) as count FROM email_logs WHERE user_profile_id = ? AND status = ?'
+      )
+      .bind(userProfileId, 'failed')
+      .first();
+
+    // Emails este mes
+    const firstDayOfMonth = new Date();
+    firstDayOfMonth.setDate(1);
+    firstDayOfMonth.setHours(0, 0, 0, 0);
+
+    const thisMonth = await db
+      .prepare(
+        `SELECT COUNT(*) as count FROM email_logs
+         WHERE user_profile_id = ?
+         AND status = 'sent'
+         AND created_at >= ?`
+      )
+      .bind(userProfileId, firstDayOfMonth.toISOString())
+      .first();
+
+    // Por tipo
+    const byType = await db
+      .prepare(
+        `SELECT email_type as type, COUNT(*) as count
+         FROM email_logs
+         WHERE user_profile_id = ? AND status = 'sent'
+         GROUP BY email_type
+         ORDER BY count DESC`
+      )
+      .bind(userProfileId)
+      .all();
+
+    const sent = (totalSent as any)?.count || 0;
+    const failed = (totalFailed as any)?.count || 0;
+    const total = sent + failed;
+    const successRate = total > 0 ? (sent / total) * 100 : 0;
+
+    return c.json({
+      success: true,
+      data: {
+        total_sent: sent,
+        total_failed: failed,
+        total_this_month: (thisMonth as any)?.count || 0,
+        success_rate: successRate,
+        by_type: byType.results,
+      },
+    });
+  } catch (error) {
+    return c.json(
+      {
+        success: false,
+        error: error instanceof Error ? error.message : 'Unknown error',
+      },
+      500
+    );
+  }
+});
+
+/**
+ * Send email campaign
+ */
+app.post('/campaign', async (c) => {
+  const db = c.env.DB;
+  const userProfileId = c.get('userProfileId');
+  const body = await c.req.json();
+
+  try {
+    const { name, subject, message, segment } = body;
+
+    // Obtener lista de destinatarios según el segmento
+    let query = 'SELECT email, name FROM customers WHERE tenant_id = ?';
+    const params = [userProfileId];
+
+    switch (segment) {
+      case 'active':
+        query += ' AND last_purchase_date >= date(\'now\', \'-30 days\')';
+        break;
+      case 'inactive':
+        query += ' AND last_purchase_date < date(\'now\', \'-30 days\')';
+        break;
+      case 'vip':
+        query += ' AND total_spent > 500000';
+        break;
+      case 'new':
+        query += ' AND created_at >= date(\'now\', \'-30 days\')';
+        break;
+    }
+
+    const recipients = await db.prepare(query).bind(...params).all();
+
+    let emailsSent = 0;
+    let emailsFailed = 0;
+
+    // Obtener configuración del remitente
+    const prefs = await db
+      .prepare('SELECT * FROM email_preferences WHERE user_profile_id = ?')
+      .bind(userProfileId)
+      .first();
+
+    for (const recipient of recipients.results as any[]) {
+      const html = `
+        <!DOCTYPE html>
+        <html>
+          <head>
+            <style>
+              body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
+              .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+              .header { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 30px; text-align: center; border-radius: 10px 10px 0 0; }
+              .content { background: #f9f9f9; padding: 30px; border-radius: 0 0 10px 10px; }
+            </style>
+          </head>
+          <body>
+            <div class="container">
+              <div class="header">
+                <h1>${subject}</h1>
+              </div>
+              <div class="content">
+                <p>Hola ${recipient.name || 'Cliente'},</p>
+                ${message.split('\n').map((line: string) => `<p>${line}</p>`).join('')}
+              </div>
+            </div>
+          </body>
+        </html>
+      `;
+
+      const result = await sendEmail(
+        {
+          to: recipient.email,
+          toName: recipient.name,
+          from: (prefs as any)?.from_email || 'noreply@posib.dev',
+          fromName: (prefs as any)?.from_name || 'Tu Tienda',
+          subject,
+          html,
+        },
+        c.env.RESEND_API_KEY
+      );
+
+      if (result.success) {
+        emailsSent++;
+        await logEmail(
+          db,
+          userProfileId,
+          'new_product_campaign',
+          recipient.email,
+          subject,
+          'sent',
+          undefined,
+          { campaign_name: name }
+        );
+      } else {
+        emailsFailed++;
+        await logEmail(
+          db,
+          userProfileId,
+          'new_product_campaign',
+          recipient.email,
+          subject,
+          'failed',
+          result.error,
+          { campaign_name: name }
+        );
+      }
+    }
+
+    return c.json({
+      success: true,
+      recipients_count: recipients.results.length,
+      emails_sent: emailsSent,
+      emails_failed: emailsFailed,
+    });
   } catch (error) {
     return c.json(
       {

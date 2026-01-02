@@ -12,7 +12,7 @@ import { getDebtorCustomers } from '@/lib/cloudflare-credit-helpers';
 import { getSales } from '@/lib/cloudflare-api';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
-import * as XLSX from 'xlsx';
+import ExcelJS from 'exceljs';
 import { toast } from 'sonner';
 
 export default function DebtorsPage() {
@@ -108,36 +108,56 @@ export default function DebtorsPage() {
         });
       });
 
-      // Crear workbook y worksheet
-      const wb = XLSX.utils.book_new();
+      // Crear workbook con ExcelJS
+      const workbook = new ExcelJS.Workbook();
 
       // Hoja 1: Detalle completo de deudas
-      const ws = XLSX.utils.json_to_sheet(excelData);
+      const ws = workbook.addWorksheet('Detalle de Deudas');
 
-      // Ajustar anchos de columna
-      const colWidths = [
-        { wch: 25 }, // Cliente
-        { wch: 15 }, // Teléfono
-        { wch: 25 }, // Email
-        { wch: 18 }, // Límite de Crédito
-        { wch: 18 }, // Deuda Total Cliente
-        { wch: 18 }, // Crédito Disponible
-        { wch: 5 },  // ---
-        { wch: 20 }, // Nº Venta
-        { wch: 18 }, // Fecha Venta
-        { wch: 15 }, // Total Venta
-        { wch: 15 }, // Monto Pagado
-        { wch: 15 }, // Saldo Pendiente
-        { wch: 12 }, // Estado
-        { wch: 5 },  // ----
-        { wch: 30 }, // Producto
-        { wch: 10 }, // Cantidad
-        { wch: 15 }, // Precio Unitario
-        { wch: 15 }, // Subtotal Producto
-      ];
-      ws['!cols'] = colWidths;
+      if (excelData.length > 0) {
+        const headers = Object.keys(excelData[0]);
+        ws.addRow(headers);
 
-      XLSX.utils.book_append_sheet(wb, ws, 'Detalle de Deudas');
+        // Estilizar headers
+        const headerRow = ws.getRow(1);
+        headerRow.font = { bold: true };
+        headerRow.fill = {
+          type: 'pattern',
+          pattern: 'solid',
+          fgColor: { argb: 'FF4472C4' }
+        };
+        headerRow.eachCell((cell) => {
+          cell.font = { bold: true, color: { argb: 'FFFFFFFF' } };
+        });
+
+        // Agregar datos
+        excelData.forEach(item => {
+          const values = headers.map(header => item[header]);
+          ws.addRow(values);
+        });
+
+        // Ajustar anchos de columna
+        ws.columns = [
+          { width: 25 }, // Cliente
+          { width: 15 }, // Teléfono
+          { width: 25 }, // Email
+          { width: 18 }, // Límite de Crédito
+          { width: 18 }, // Deuda Total Cliente
+          { width: 18 }, // Crédito Disponible
+          { width: 5 },  // ---
+          { width: 20 }, // Nº Venta
+          { width: 18 }, // Fecha Venta
+          { width: 15 }, // Total Venta
+          { width: 15 }, // Monto Pagado
+          { width: 15 }, // Saldo Pendiente
+          { width: 12 }, // Estado
+          { width: 5 },  // ----
+          { width: 30 }, // Producto
+          { width: 10 }, // Cantidad
+          { width: 15 }, // Precio Unitario
+          { width: 15 }, // Subtotal Producto
+        ];
+      }
 
       // Hoja 2: Resumen por cliente
       const summaryData = debtors.map(debtor => {
@@ -166,23 +186,54 @@ export default function DebtorsPage() {
         };
       });
 
-      const wsSummary = XLSX.utils.json_to_sheet(summaryData);
-      wsSummary['!cols'] = [
-        { wch: 25 },
-        { wch: 15 },
-        { wch: 25 },
-        { wch: 18 },
-        { wch: 18 },
-        { wch: 18 },
-        { wch: 18 },
-        { wch: 15 },
-        { wch: 12 },
-      ];
-      XLSX.utils.book_append_sheet(wb, wsSummary, 'Resumen por Cliente');
+      const wsSummary = workbook.addWorksheet('Resumen por Cliente');
+
+      if (summaryData.length > 0) {
+        const summaryHeaders = Object.keys(summaryData[0]);
+        wsSummary.addRow(summaryHeaders);
+
+        // Estilizar headers
+        const summaryHeaderRow = wsSummary.getRow(1);
+        summaryHeaderRow.font = { bold: true };
+        summaryHeaderRow.fill = {
+          type: 'pattern',
+          pattern: 'solid',
+          fgColor: { argb: 'FF4472C4' }
+        };
+        summaryHeaderRow.eachCell((cell) => {
+          cell.font = { bold: true, color: { argb: 'FFFFFFFF' } };
+        });
+
+        // Agregar datos
+        summaryData.forEach(item => {
+          const values = summaryHeaders.map(header => (item as any)[header]);
+          wsSummary.addRow(values);
+        });
+
+        // Ajustar anchos de columna
+        wsSummary.columns = [
+          { width: 25 },
+          { width: 15 },
+          { width: 25 },
+          { width: 18 },
+          { width: 18 },
+          { width: 18 },
+          { width: 18 },
+          { width: 15 },
+          { width: 12 },
+        ];
+      }
 
       // Generar archivo y descargar
       const fileName = `deudores_${format(new Date(), 'yyyy-MM-dd_HHmm')}.xlsx`;
-      XLSX.writeFile(wb, fileName);
+      const buffer = await workbook.xlsx.writeBuffer();
+      const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = fileName;
+      link.click();
+      window.URL.revokeObjectURL(url);
 
       toast.success('Archivo Excel generado correctamente', { id: 'exporting' });
     } catch (error) {

@@ -105,7 +105,7 @@ function baseTemplate(content: string, primaryColor = '#2563eb'): string {
       <p>Este es un email automatizado de <strong>Tienda POS</strong></p>
       <p>Si no deseas recibir estos emails, puedes desactivarlos en la configuración de tu cuenta.</p>
       <p style="margin-top: 20px; font-size: 12px; color: #9ca3af;">
-        Powered by <a href="https://tienda-pos.vercel.app" style="color: ${primaryColor};">Tienda POS</a>
+        Powered by <a href="https://posib.dev" style="color: ${primaryColor};">Tienda POS</a>
       </p>
     </div>
   </div>
@@ -225,7 +225,7 @@ export function dailyReportTemplate(data: DailyReportData): string {
       </p>
 
       <div style="text-align: center;">
-        <a href="https://tienda-pos.vercel.app/dashboard/analytics" class="button">Ver Dashboard</a>
+        <a href="https://posib.dev/dashboard/analytics" class="button">Ver Dashboard</a>
       </div>
     </div>
   `;

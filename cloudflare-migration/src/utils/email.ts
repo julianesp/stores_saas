@@ -1,7 +1,7 @@
 /**
- * Email utility using MailChannels API
- * MailChannels es gratuito para Cloudflare Workers
- * Documentación: https://support.mailchannels.com/hc/en-us/articles/4565898358413
+ * Email utility using Resend API
+ * Resend tiene tier gratuito: 100 emails/día, 3,000/mes
+ * Documentación: https://resend.com/docs/api-reference/emails/send-email
  */
 
 export interface EmailOptions {
@@ -16,55 +16,37 @@ export interface EmailOptions {
 }
 
 /**
- * Envía un email usando MailChannels API
+ * Envía un email usando Resend API
+ * Requiere la variable de entorno RESEND_API_KEY
  */
-export async function sendEmail(options: EmailOptions): Promise<{
+export async function sendEmail(
+  options: EmailOptions,
+  resendApiKey?: string
+): Promise<{
   success: boolean;
   error?: string;
 }> {
   try {
-    const emailPayload = {
-      personalizations: [
-        {
-          to: [
-            {
-              email: options.to,
-              name: options.toName || options.to,
-            },
-          ],
-        },
-      ],
-      from: {
-        email: options.from,
-        name: options.fromName,
-      },
-      subject: options.subject,
-      content: [
-        {
-          type: 'text/html',
-          value: options.html,
-        },
-      ],
-    };
-
-    // Agregar reply-to si está presente
-    if (options.replyTo) {
-      (emailPayload as any).reply_to = {
-        email: options.replyTo,
+    if (!resendApiKey) {
+      return {
+        success: false,
+        error: 'RESEND_API_KEY not configured',
       };
     }
 
-    // Agregar texto plano si está presente
-    if (options.text) {
-      (emailPayload as any).content.unshift({
-        type: 'text/plain',
-        value: options.text,
-      });
-    }
+    const emailPayload = {
+      from: `${options.fromName} <${options.from}>`,
+      to: options.toName ? [`${options.toName} <${options.to}>`] : [options.to],
+      subject: options.subject,
+      html: options.html,
+      ...(options.text && { text: options.text }),
+      ...(options.replyTo && { reply_to: options.replyTo }),
+    };
 
-    const response = await fetch('https://api.mailchannels.net/tx/v1/send', {
+    const response = await fetch('https://api.resend.com/emails', {
       method: 'POST',
       headers: {
+        'Authorization': `Bearer ${resendApiKey}`,
         'Content-Type': 'application/json',
       },
       body: JSON.stringify(emailPayload),
@@ -72,10 +54,10 @@ export async function sendEmail(options: EmailOptions): Promise<{
 
     if (!response.ok) {
       const errorText = await response.text();
-      console.error('MailChannels error:', errorText);
+      console.error('Resend error:', errorText);
       return {
         success: false,
-        error: `MailChannels API error: ${response.status} - ${errorText}`,
+        error: `Resend API error: ${response.status} - ${errorText}`,
       };
     }
 

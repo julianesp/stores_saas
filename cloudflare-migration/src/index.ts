@@ -39,7 +39,7 @@ app.use('/*', cors({
     // Allow Vercel deployments
     if (origin?.endsWith('.vercel.app')) return origin;
     // Allow specific production domain if needed
-    if (origin === 'https://tienda-pos.vercel.app') return origin;
+    if (origin === 'https://posib.dev') return origin;
     return 'http://localhost:3000'; // fallback
   },
   allowMethods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH'],
@@ -80,6 +80,25 @@ app.post('/api/subscriptions/webhook', subscriptionsRoutes);
 
 // Storefront public API (NO auth required - endpoints públicos para tiendas online)
 app.route('/api/storefront', storefrontRoutes);
+
+// Email CRON endpoints (NO auth - solo para llamadas internas de CRON)
+// IMPORTANTE: Estos endpoints solo deben ser llamados por el CRON scheduler
+// Necesitamos crear un handler específico que llame al sub-router sin autenticación
+const emailCronHandler = async (c: any) => {
+  // Crear una request interna que será procesada por emailRoutes
+  const path = c.req.path.replace('/api/email', '');
+  const newReq = new Request(c.req.url.replace(c.req.path, path), {
+    method: c.req.method,
+    headers: c.req.headers,
+    body: c.req.body,
+  });
+  return emailRoutes.fetch(newReq, c.env, c.executionCtx);
+};
+
+app.post('/api/email/daily-reports', emailCronHandler);
+app.post('/api/email/subscription-reminders', emailCronHandler);
+app.post('/api/email/stock-alerts', emailCronHandler);
+app.post('/api/email/abandoned-carts', emailCronHandler);
 
 // Apply authentication middleware to all API routes
 app.use('/api/*', authMiddleware);

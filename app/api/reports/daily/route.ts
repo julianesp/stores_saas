@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { auth } from '@clerk/nextjs/server';
-import * as XLSX from 'xlsx';
+import ExcelJS from 'exceljs';
 import { getSales, getProducts, getCustomers, getUserProfile } from '@/lib/cloudflare-api';
 
 export const runtime = 'nodejs';
@@ -103,28 +103,49 @@ export async function GET(request: NextRequest) {
                         sale.metodo_pago === 'transferencia' ? 'Transferencia' : 'Crédito'
     }));
 
-    // Crear libro de Excel
-    const worksheet = XLSX.utils.json_to_sheet(excelData);
+    // Crear libro de Excel con ExcelJS
+    const workbook = new ExcelJS.Workbook();
+    const worksheet = workbook.addWorksheet(`Ventas ${date}`);
 
-    // Ajustar ancho de columnas
-    const columnWidths = [
-      { wch: 18 }, // Fecha de Compra
-      { wch: 12 }, // N° Venta
-      { wch: 30 }, // Producto
-      { wch: 10 }, // Cantidad
-      { wch: 15 }, // Valor Unitario
-      { wch: 15 }, // Valor Total
-      { wch: 25 }, // Cliente
-      { wch: 15 }, // Teléfono
-      { wch: 15 }, // Método de Pago
-    ];
-    worksheet['!cols'] = columnWidths;
+    // Agregar headers y datos
+    if (excelData.length > 0) {
+      const headers = Object.keys(excelData[0]);
+      worksheet.addRow(headers);
 
-    const workbook = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(workbook, worksheet, `Ventas ${date}`);
+      // Estilizar headers
+      const headerRow = worksheet.getRow(1);
+      headerRow.font = { bold: true };
+      headerRow.fill = {
+        type: 'pattern',
+        pattern: 'solid',
+        fgColor: { argb: 'FF4472C4' }
+      };
+      headerRow.eachCell((cell) => {
+        cell.font = { bold: true, color: { argb: 'FFFFFFFF' } };
+      });
+
+      // Agregar datos
+      excelData.forEach(item => {
+        const values = headers.map(header => (item as any)[header]);
+        worksheet.addRow(values);
+      });
+
+      // Ajustar ancho de columnas
+      worksheet.columns = [
+        { width: 18 }, // Fecha de Compra
+        { width: 12 }, // N° Venta
+        { width: 30 }, // Producto
+        { width: 10 }, // Cantidad
+        { width: 15 }, // Valor Unitario
+        { width: 15 }, // Valor Total
+        { width: 25 }, // Cliente
+        { width: 15 }, // Teléfono
+        { width: 15 }, // Método de Pago
+      ];
+    }
 
     // Generar buffer
-    const excelBuffer = XLSX.write(workbook, { type: 'buffer', bookType: 'xlsx' });
+    const excelBuffer = await workbook.xlsx.writeBuffer();
 
     // Retornar archivo Excel
     return new NextResponse(excelBuffer, {
