@@ -580,7 +580,7 @@ export default function DashboardPage() {
                       <p className="text-xs text-gray-500 hidden sm:block">Revisar inventario</p>
                     </div>
                   </div>
-                  <Link href="/dashboard/inventory">
+                  <Link href="/dashboard/inventory?lowStock=true">
                     <Button size="sm" variant="outline" className="bg-white hover:bg-orange-100 border-orange-300 text-orange-700 font-semibold">
                       VER PRODUCTOS
                     </Button>

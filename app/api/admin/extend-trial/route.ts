@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import { auth } from '@clerk/nextjs/server';
 import { getUserProfile, getAllUserProfiles, updateUserProfile } from '@/lib/cloudflare-api';
 
+export const runtime = 'nodejs';
+
 /**
  * API para extender el período de prueba de una cuenta específica
  * Solo accesible por super admins

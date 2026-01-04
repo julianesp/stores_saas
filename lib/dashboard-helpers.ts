@@ -39,9 +39,9 @@ export async function getDashboardMetrics(getToken: GetTokenFn): Promise<Dashboa
     const allProducts = await getProducts(getToken);
     const totalProducts = allProducts.length;
 
-    // Calcular productos con stock bajo
+    // Calcular productos con stock bajo (incluyendo los que tienen stock 0)
     const lowStockProducts = allProducts.filter(
-      p => p.stock <= p.min_stock && p.stock > 0
+      p => p.stock <= p.min_stock
     ).length;
 
     // Obtener todas las ventas
@@ -168,9 +168,9 @@ export async function getInventoryAlerts(getToken: GetTokenFn): Promise<Inventor
   try {
     const allProducts = await getProducts(getToken);
 
-    // Productos con stock bajo
+    // Productos con stock bajo (incluyendo los que tienen stock 0)
     const lowStockProducts = allProducts.filter(
-      p => p.stock <= p.min_stock && p.stock > 0
+      p => p.stock <= p.min_stock
     ).map(p => ({
       name: p.name,
       stock: p.stock,
