@@ -65,26 +65,36 @@ async function fetchAPI<T = any>(
       if (!response.ok) {
         throw new Error(text || `Error ${response.status}: ${response.statusText || response.status}`);
       }
-      // si está todo ok pero no hay JSON, retornar undefined data (no ideal)
+      // Si está todo ok pero no hay JSON (común en DELETE), retornar vacío
+      // Para operaciones como DELETE que devuelven void
       return undefined as unknown as T;
     }
 
-    // Asegurarnos de que tenemos datos JSON válidos
-    if (!data) {
-      throw new Error(`Error ${response.status}: ${response.statusText || response.status}`);
+    // Para DELETE y otras operaciones que retornan void, data puede ser undefined
+    // Solo validar si la operación falló
+    if (!response.ok) {
+      // Si no hay data pero falló, construir error
+      if (!data) {
+        throw new Error(`Error ${response.status}: ${response.statusText || response.status}`);
+      }
+    }
+
+    // Si no hay data pero response.ok es true, es una operación exitosa sin body
+    if (!data && response.ok) {
+      return undefined as unknown as T;
     }
 
     // Manejar errores: construir mensaje seguro incluso si data.error es undefined o un objeto
-    if (!response.ok || !data.success) {
+    if (!response.ok || (data && !data.success)) {
       let msg = '';
-      if (typeof data.error === 'string' && data.error.trim()) msg = data.error;
-      else if (typeof data.message === 'string' && data.message.trim()) msg = data.message;
-      else msg = JSON.stringify(data);
+      if (data && typeof data.error === 'string' && data.error.trim()) msg = data.error;
+      else if (data && typeof data.message === 'string' && data.message.trim()) msg = data.message;
+      else if (data) msg = JSON.stringify(data);
       msg = msg || `Error ${response.status}: ${response.statusText || response.status}`;
       throw new Error(msg);
     }
 
-    return data.data as T;
+    return data?.data as T;
   } catch (error) {
     console.error(`API Error (${endpoint}):`, error);
     throw error;

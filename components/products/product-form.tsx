@@ -13,6 +13,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   getCategories,
   getSuppliers,
+  getProducts,
   createProduct,
   updateProduct,
   createCategory,
@@ -20,7 +21,7 @@ import {
 } from "@/lib/cloudflare-api";
 import { Category, Supplier } from "@/lib/types";
 import { toast } from "sonner";
-import { Scan, Camera, X, Plus } from "lucide-react";
+import { Scan, Camera, X, Plus, Minus } from "lucide-react";
 import { ImageUploader } from './image-uploader';
 import { Html5Qrcode } from "html5-qrcode";
 
@@ -106,6 +107,33 @@ export function ProductForm({ initialData, productId }: ProductFormProps) {
     }
   };
 
+  // Verificar código de barras duplicado al escribir manualmente
+  const handleBarcodeBlur = async (e: React.FocusEvent<HTMLInputElement>) => {
+    const barcodeValue = e.target.value.trim();
+
+    // Solo verificar si hay un código y estamos creando un nuevo producto
+    if (!barcodeValue || productId) {
+      return;
+    }
+
+    try {
+      const products = await getProducts(getToken);
+      const existingProduct = products.find(p => p.barcode === barcodeValue);
+
+      if (existingProduct) {
+        toast.error(`Este código de barras ya está registrado en el producto: ${existingProduct.name}`);
+        // Limpiar el campo de código de barras
+        setValue("barcode", "");
+        // Enfocar nuevamente el campo
+        setTimeout(() => {
+          barcodeInputRef.current?.focus();
+        }, 100);
+      }
+    } catch (error) {
+      console.error("Error verificando código de barras:", error);
+    }
+  };
+
   const startScanner = async () => {
     try {
       setIsScanning(true);
@@ -137,11 +165,31 @@ export function ProductForm({ initialData, productId }: ProductFormProps) {
       await scannerRef.current.start(
         { facingMode: "environment" },
         config,
-        (decodedText) => {
+        async (decodedText) => {
           // Código escaneado exitosamente
           // Evitar procesar múltiples veces el mismo escaneo
           if (!hasScannedRef.current) {
             hasScannedRef.current = true;
+
+            // Verificar si el código de barras ya existe (solo para productos nuevos)
+            if (!productId) {
+              try {
+                const products = await getProducts(getToken);
+                const existingProduct = products.find(p => p.barcode === decodedText);
+
+                if (existingProduct) {
+                  toast.error(`Este código de barras ya está registrado en el producto: ${existingProduct.name}`);
+                  hasScannedRef.current = false; // Permitir escanear otro código
+                  return;
+                }
+              } catch (error) {
+                console.error("Error verificando código de barras:", error);
+                toast.error("Error al verificar el código de barras");
+                hasScannedRef.current = false;
+                return;
+              }
+            }
+
             setValue("barcode", decodedText);
             toast.success("✓ Código escaneado: " + decodedText);
             stopScanner();
@@ -364,7 +412,7 @@ export function ProductForm({ initialData, productId }: ProductFormProps) {
                 <Scan className="h-4 w-4 text-blue-600" />
                 Código de Barras
               </Label>
-              <div className="flex gap-2">
+              <div className="flex flex-col gap-2">
                 <div className="relative flex-1">
                   <Input
                     id="barcode"
@@ -373,6 +421,7 @@ export function ProductForm({ initialData, productId }: ProductFormProps) {
                     placeholder="Escanea o escribe el código"
                     className="pr-10"
                     autoFocus={!productId}
+                    onBlur={handleBarcodeBlur}
                   />
                   {/* <div className="absolute right-2 top-1/2 transform -translate-y-1/2 pointer-events-none">
                     <Scan className="h-5 w-5 text-blue-600" />
@@ -381,16 +430,25 @@ export function ProductForm({ initialData, productId }: ProductFormProps) {
                 <Button
                   type="button"
                   onClick={() => setShowScannerOptions(true)}
-                  className="shrink-0 bg-blue-600 hover:bg-blue-700"
+                  className="shrink-0 bg-blue-600 hover:bg-blue-700 flex-col md:flex-row gap-1 md:gap-2 h-auto py-2 px-3"
                   size="default"
+                  title="Toque aquí para escanear código de barras"
                 >
-                  <Scan className="h-5 w-5 md:mr-2" />
-                  <span className="hidden md:inline">Escanear</span>
+                  <Scan className="h-5 w-5" />
+                  <span className="text-xs md:text-sm leading-tight text-center md:text-left">
+                    Escanear<br className="md:hidden" />Código
+                  </span>
                 </Button>
               </div>
-              <p className="text-xs text-gray-500">
-                Usa el lector USB o la cámara para escanear
-              </p>
+              <div className="bg-blue-50 border border-blue-200 rounded-lg p-2 mt-2">
+                <p className="text-xs text-blue-800 font-medium flex items-center gap-1">
+                  <Scan className="h-3 w-3" />
+                  💡 Toca el botón "Escanear Código" para usar tu lector USB o cámara
+                </p>
+                <p className="text-xs text-blue-600 mt-1">
+                  Es más rápido y evita errores al registrar productos
+                </p>
+              </div>
               {errors.barcode && (
                 <p className="text-sm text-red-600">{errors.barcode.message}</p>
               )}
@@ -637,16 +695,43 @@ export function ProductForm({ initialData, productId }: ProductFormProps) {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="space-y-2">
               <Label htmlFor="stock">Cantidad Disponible *</Label>
-              <Input
-                id="stock"
-                type="number"
-                inputMode="numeric"
-                {...register("stock", {
-                  valueAsNumber: true,
-                  setValueAs: (value) => value === "" ? 0 : Number(value)
-                })}
-                placeholder="0"
-              />
+              <div className="flex items-center gap-3">
+                <Button
+                  type="button"
+                  onClick={() => {
+                    const currentValue = watch("stock") || 0;
+                    if (currentValue > 0) {
+                      setValue("stock", currentValue - 1);
+                    }
+                  }}
+                  className="h-14 w-14 shrink-0 bg-red-600 hover:bg-red-700 text-white border-red-600"
+                  size="lg"
+                >
+                  <Minus className="h-6 w-6 text-white stroke-2" />
+                </Button>
+                <Input
+                  id="stock"
+                  type="number"
+                  inputMode="numeric"
+                  {...register("stock", {
+                    valueAsNumber: true,
+                    setValueAs: (value) => value === "" ? 0 : Number(value)
+                  })}
+                  placeholder="0"
+                  className="h-14 text-center text-2xl font-bold"
+                />
+                <Button
+                  type="button"
+                  onClick={() => {
+                    const currentValue = watch("stock") || 0;
+                    setValue("stock", currentValue + 1);
+                  }}
+                  className="h-14 w-14 shrink-0 bg-green-600 hover:bg-green-700 text-white border-green-600"
+                  size="lg"
+                >
+                  <Plus className="h-6 w-6 text-white stroke-2" />
+                </Button>
+              </div>
               {errors.stock && (
                 <p className="text-sm text-red-600">{errors.stock.message}</p>
               )}

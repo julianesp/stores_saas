@@ -1494,39 +1494,47 @@ export default function POSPage() {
                   cart.map((item) => (
                     <div
                       key={item.product.id}
-                      className={`flex items-center gap-1 md:gap-2 p-2 border rounded ${item.hasOffer ? 'bg-orange-50 border-orange-300' : ''}`}
+                      className={`p-3 md:p-4 border-2 rounded-lg ${item.hasOffer ? 'bg-orange-50 border-orange-300' : 'border-gray-300'}`}
                     >
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-1">
-                          <p className="font-medium text-xs md:text-sm truncate">
+                      {/* Primera fila: Nombre, precio y cantidad */}
+                      <div className="mb-3">
+                        <div className="flex items-center gap-2 mb-2">
+                          <p className="font-bold text-base md:text-lg flex-1">
                             {item.product.name}
                           </p>
                           {item.hasOffer && (
-                            <span className="text-xs bg-orange-600 text-white px-1.5 py-0.5 rounded font-bold">
+                            <span className="text-sm md:text-base bg-orange-600 text-white px-2 py-1 rounded font-bold">
                               -{item.discountPercentage}%
                             </span>
                           )}
                         </div>
-                        <div className="text-xs md:text-sm">
+                        <div className="flex items-baseline gap-2">
                           {item.hasOffer && item.originalPrice && (
-                            <span className="text-gray-400 line-through mr-1">
+                            <span className="text-base md:text-lg text-gray-400 line-through">
                               {formatCurrency(item.originalPrice)}
                             </span>
                           )}
-                          <span className={item.hasOffer ? 'text-orange-600 font-semibold' : 'text-gray-500'}>
-                            {formatCurrency(item.product.sale_price)} x{" "}
-                            {item.quantity}
+                          <span className={`font-bold text-lg md:text-xl ${item.hasOffer ? 'text-orange-600' : 'text-blue-600'}`}>
+                            {formatCurrency(item.product.sale_price)}
+                          </span>
+                          <span className="text-base md:text-lg text-gray-600">
+                            x {item.quantity}
+                          </span>
+                          <span className={`ml-auto font-bold text-lg md:text-xl ${item.hasOffer ? 'text-orange-600' : 'text-blue-600'}`}>
+                            = {formatCurrency(item.product.sale_price * item.quantity)}
                           </span>
                         </div>
                       </div>
-                      <div className="flex items-center gap-0.5 md:gap-1 shrink-0">
+
+                      {/* Segunda fila: Controles de cantidad y eliminar */}
+                      <div className="flex items-center gap-2">
                         <Button
                           size="sm"
                           variant="outline"
                           onClick={() => updateQuantity(item.product.id, -1)}
-                          className="h-7 w-7 p-0 md:h-8 md:w-8"
+                          className="h-12 w-12 p-0 md:h-14 md:w-14 bg-red-600 hover:bg-red-700 text-white border-red-600"
                         >
-                          <Minus className="h-3 w-3" />
+                          <Minus className="h-6 w-6 md:h-7 md:w-7" />
                         </Button>
                         <Input
                           type="text"
@@ -1575,25 +1583,25 @@ export default function POSPage() {
                               e.preventDefault();
                             }
                           }}
-                          className="w-10 md:w-12 h-7 md:h-8 text-center text-xs md:text-sm p-1"
+                          className="flex-1 h-12 md:h-14 text-center text-2xl md:text-3xl font-bold p-1"
                         />
                         <Button
                           size="sm"
                           variant="outline"
                           onClick={() => updateQuantity(item.product.id, 1)}
-                          className="h-7 w-7 p-0 md:h-8 md:w-8"
+                          className="h-12 w-12 p-0 md:h-14 md:w-14 bg-green-600 hover:bg-green-700 text-white border-green-600"
                         >
-                          <Plus className="h-3 w-3" />
+                          <Plus className="h-6 w-6 md:h-7 md:w-7" />
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          onClick={() => removeFromCart(item.product.id)}
+                          className="h-12 w-12 p-0 md:h-14 md:w-14 shrink-0 hover:bg-red-50 ml-2"
+                        >
+                          <Trash2 className="h-7 w-7 md:h-8 md:w-8 text-red-600" />
                         </Button>
                       </div>
-                      <Button
-                        size="sm"
-                        variant="ghost"
-                        onClick={() => removeFromCart(item.product.id)}
-                        className="h-7 w-7 p-0 md:h-8 md:w-8 shrink-0"
-                      >
-                        <Trash2 className="h-3 w-3 md:h-4 md:w-4 text-red-600" />
-                      </Button>
                     </div>
                   ))
                 )}

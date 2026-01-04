@@ -53,6 +53,9 @@ app.get('/stats', async (c) => {
     const storeStats: StoreStats[] = await Promise.all(
       stores.map(async (store) => {
         try {
+          // DEBUG: Log para ver qué tenant_id estamos usando
+          console.log(`[ADMIN-STATS] Getting stats for store: ${store.id} (${store.email})`);
+
           // Contar productos
           const productsResult = await c.env.DB.prepare(
             'SELECT COUNT(*) as count FROM products WHERE tenant_id = ?'
@@ -61,6 +64,9 @@ app.get('/stats', async (c) => {
             .first<{ count: number }>();
 
           const productsCount = productsResult?.count || 0;
+
+          // DEBUG: Log para ver cuántos productos encontramos
+          console.log(`[ADMIN-STATS] Store ${store.email} has ${productsCount} products with tenant_id=${store.id}`);
 
           // Contar ventas y obtener total
           const salesResult = await c.env.DB.prepare(

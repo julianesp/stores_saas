@@ -201,17 +201,63 @@ app.delete('/:id', async (c) => {
       }, 404);
     }
 
+    // Check if product has sales (we should NOT delete products with sales history)
+    const salesCount = await c.env.DB
+      .prepare('SELECT COUNT(*) as count FROM sale_items WHERE tenant_id = ? AND product_id = ?')
+      .bind(tenant.id, productId)
+      .first<{ count: number }>();
+
+    if (salesCount && salesCount.count > 0) {
+      return c.json<APIResponse>({
+        success: false,
+        error: 'No se puede eliminar un producto que tiene ventas registradas. En su lugar, puedes establecer su stock en 0.',
+      }, 400);
+    }
+
+    // Delete related records that don't have CASCADE
+    // Delete inventory movements
+    await c.env.DB
+      .prepare('DELETE FROM inventory_movements WHERE tenant_id = ? AND product_id = ?')
+      .bind(tenant.id, productId)
+      .run();
+
+    // Delete cart items
+    await c.env.DB
+      .prepare('DELETE FROM cart_items WHERE tenant_id = ? AND product_id = ?')
+      .bind(tenant.id, productId)
+      .run();
+
+    // Delete purchase order items
+    await c.env.DB
+      .prepare('DELETE FROM purchase_order_items WHERE tenant_id = ? AND product_id = ?')
+      .bind(tenant.id, productId)
+      .run();
+
+    // Delete offers (these should CASCADE but let's be explicit)
+    await c.env.DB
+      .prepare('DELETE FROM offers WHERE tenant_id = ? AND product_id = ?')
+      .bind(tenant.id, productId)
+      .run();
+
+    // Delete stock alert subscriptions (these should CASCADE but let's be explicit)
+    await c.env.DB
+      .prepare('DELETE FROM stock_alert_subscriptions WHERE product_id = ?')
+      .bind(productId)
+      .run();
+
+    // Finally, delete the product
     await tenantDB.delete('products', productId);
 
     return c.json<APIResponse>({
       success: true,
+      data: null,
       message: 'Product deleted successfully',
     });
-  } catch (error) {
+  } catch (error: any) {
     console.error('Error deleting product:', error);
     return c.json<APIResponse>({
       success: false,
-      error: 'Failed to delete product',
+      error: error.message || 'Failed to delete product',
     }, 500);
   }
 });
