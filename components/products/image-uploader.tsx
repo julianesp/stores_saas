@@ -25,6 +25,7 @@ export function ImageUploader({
   const [uploading, setUploading] = useState(false);
   const [loadingIndex, setLoadingIndex] = useState<number | null>(null);
   const [showCamera, setShowCamera] = useState(false);
+  const [cameraReady, setCameraReady] = useState(false);
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const streamRef = useRef<MediaStream | null>(null);
@@ -183,6 +184,12 @@ export function ImageUploader({
   // Iniciar cámara
   const startCamera = async () => {
     try {
+      // Verificar si el navegador soporta getUserMedia
+      if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+        toast.error('Tu navegador no soporta el acceso a la cámara. Usa la opción de Galería.');
+        return;
+      }
+
       const stream = await navigator.mediaDevices.getUserMedia({
         video: { facingMode: 'environment', width: { ideal: 1280 }, height: { ideal: 720 } },
         audio: false
@@ -190,12 +197,88 @@ export function ImageUploader({
 
       streamRef.current = stream;
       if (videoRef.current) {
-        videoRef.current.srcObject = stream;
+        const video = videoRef.current;
+        video.srcObject = stream;
+
+        console.log('📹 Stream asignado al video');
+
+        // Múltiples eventos para asegurar que capturemos cuando esté listo
+        const handleVideoReady = () => {
+          console.log('✅ Video listo - Estado:', {
+            readyState: video.readyState,
+            width: video.videoWidth,
+            height: video.videoHeight,
+            paused: video.paused
+          });
+
+          if (video.videoWidth > 0 && video.videoHeight > 0) {
+            setCameraReady(true);
+          }
+        };
+
+        // Escuchar múltiples eventos
+        video.addEventListener('loadedmetadata', () => {
+          console.log('📹 Evento: loadedmetadata');
+          handleVideoReady();
+        });
+
+        video.addEventListener('loadeddata', () => {
+          console.log('📹 Evento: loadeddata');
+          handleVideoReady();
+        });
+
+        video.addEventListener('canplay', () => {
+          console.log('📹 Evento: canplay');
+          handleVideoReady();
+        });
+
+        video.addEventListener('playing', () => {
+          console.log('📹 Evento: playing');
+          handleVideoReady();
+        });
+
+        // Intentar reproducir inmediatamente
+        video.play()
+          .then(() => {
+            console.log('✅ Play() exitoso');
+          })
+          .catch((err) => {
+            console.warn('⚠️ Play() falló:', err);
+          });
+
+        // Timeout de respaldo - si después de 2 segundos no está listo, intentar de todos modos
+        setTimeout(() => {
+          if (!cameraReady) {
+            console.log('⏰ Timeout - forzando cameraReady');
+            if (video.videoWidth > 0 && video.videoHeight > 0) {
+              setCameraReady(true);
+            } else {
+              console.error('❌ Video sin dimensiones después de 2s');
+              toast.warning('La cámara tardó más de lo esperado. Si no se muestra el video, cierra y vuelve a intentar.');
+            }
+          }
+        }, 2000);
       }
       setShowCamera(true);
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error accessing camera:', error);
-      toast.error('No se pudo acceder a la cámara. Verifica los permisos.');
+
+      // Mensajes de error más específicos y amigables
+      let errorMessage = 'No se pudo acceder a la cámara.';
+
+      if (error.name === 'NotAllowedError' || error.name === 'PermissionDeniedError') {
+        errorMessage = '⚠️ Permiso de cámara denegado. Por favor, permite el acceso a la cámara en la configuración de tu navegador y recarga la página.';
+      } else if (error.name === 'NotFoundError' || error.name === 'DevicesNotFoundError') {
+        errorMessage = '📷 No se encontró ninguna cámara en tu dispositivo. Usa la opción de Galería.';
+      } else if (error.name === 'NotReadableError' || error.name === 'TrackStartError') {
+        errorMessage = '⚠️ La cámara está siendo usada por otra aplicación. Cierra otras aplicaciones y intenta de nuevo.';
+      } else if (error.name === 'OverconstrainedError' || error.name === 'ConstraintNotSatisfiedError') {
+        errorMessage = '⚠️ No se pudo configurar la cámara con los ajustes solicitados. Intenta de nuevo.';
+      } else if (error.name === 'SecurityError') {
+        errorMessage = '🔒 Acceso a la cámara bloqueado por seguridad. Asegúrate de estar usando HTTPS y verifica los permisos.';
+      }
+
+      toast.error(errorMessage, { duration: 6000 });
     }
   };
 
@@ -205,75 +288,133 @@ export function ImageUploader({
       streamRef.current.getTracks().forEach(track => track.stop());
       streamRef.current = null;
     }
+    setCameraReady(false);
     setShowCamera(false);
   };
 
   // Tomar foto
   const capturePhoto = async () => {
-    if (!videoRef.current || !canvasRef.current) return;
-
-    const video = videoRef.current;
-    const canvas = canvasRef.current;
-    const context = canvas.getContext('2d');
-
-    if (!context) return;
-
-    // Configurar canvas al tamaño del video
-    canvas.width = video.videoWidth;
-    canvas.height = video.videoHeight;
-
-    // Dibujar el frame actual del video en el canvas
-    context.drawImage(video, 0, 0, canvas.width, canvas.height);
-
-    // Convertir canvas a blob
-    canvas.toBlob(async (blob) => {
-      if (!blob) {
-        toast.error('Error al capturar foto');
+    try {
+      if (!videoRef.current || !canvasRef.current) {
+        toast.error('Error: Cámara no inicializada correctamente');
         return;
       }
 
-      // Crear archivo desde el blob
-      const file = new File([blob], `photo-${Date.now()}.jpg`, { type: 'image/jpeg' });
+      const video = videoRef.current;
+      const canvas = canvasRef.current;
 
-      // Detener cámara
-      stopCamera();
+      // Verificar que el video esté listo y tenga dimensiones
+      if (video.readyState !== video.HAVE_ENOUGH_DATA) {
+        toast.error('Espera un momento, la cámara aún se está inicializando...');
+        return;
+      }
 
-      // Subir la foto
-      setUploading(true);
-      try {
-        const formData = new FormData();
-        formData.append('file', file);
-        formData.append('folder', `products/${productId || 'temp'}`);
+      if (video.videoWidth === 0 || video.videoHeight === 0) {
+        toast.error('Error: No se pudo obtener la imagen de la cámara');
+        console.error('Video dimensions:', video.videoWidth, video.videoHeight);
+        return;
+      }
 
-        toast.info('Subiendo foto...', { duration: 2000 });
+      const context = canvas.getContext('2d');
+      if (!context) {
+        toast.error('Error al inicializar el canvas');
+        return;
+      }
 
-        const response = await fetch('/api/upload-image', {
-          method: 'POST',
-          body: formData,
+      // Configurar canvas al tamaño del video
+      canvas.width = video.videoWidth;
+      canvas.height = video.videoHeight;
+
+      console.log('📸 Capturando foto:', { width: canvas.width, height: canvas.height });
+
+      // Dibujar el frame actual del video en el canvas
+      context.drawImage(video, 0, 0, canvas.width, canvas.height);
+
+      // Convertir canvas a blob
+      canvas.toBlob(async (blob) => {
+        if (!blob) {
+          toast.error('Error al capturar foto. Intenta de nuevo.');
+          return;
+        }
+
+        console.log('✅ Foto capturada:', { size: `${(blob.size / 1024).toFixed(2)} KB` });
+
+        // Crear archivo desde el blob
+        const file = new File([blob], `photo-${Date.now()}.jpg`, { type: 'image/jpeg' });
+
+        // Detener cámara
+        stopCamera();
+
+        // Subir la foto
+        setUploading(true);
+        try {
+          const formData = new FormData();
+          formData.append('file', file);
+          formData.append('folder', `products/${productId || 'temp'}`);
+
+          toast.info('Subiendo foto...', { duration: 2000 });
+
+          const response = await fetch('/api/upload-image', {
+            method: 'POST',
+            body: formData,
+          });
+
+          if (!response.ok) {
+            const errorData = await response.json().catch(() => ({}));
+            throw new Error(errorData.error || 'Error al subir imagen');
+          }
+
+          const data = await response.json();
+          if (!data.success || !data.secure_url) {
+            throw new Error('Respuesta inválida del servidor');
+          }
+
+          const newImages = [...images, data.secure_url];
+          setImages(newImages);
+          onChange(newImages);
+
+          toast.success('Foto agregada correctamente');
+        } catch (error: any) {
+          console.error('Error uploading photo:', error);
+          toast.error(error.message || 'Error al subir foto. Intenta de nuevo.');
+        } finally {
+          setUploading(false);
+        }
+      }, 'image/jpeg', 0.9);
+    } catch (error: any) {
+      console.error('Error in capturePhoto:', error);
+      toast.error('Error al capturar foto: ' + (error.message || 'Error desconocido'));
+    }
+  };
+
+  // Reproducir video cuando el modal se abre (respaldo)
+  useEffect(() => {
+    if (showCamera && videoRef.current && streamRef.current) {
+      const video = videoRef.current;
+
+      const checkAndPlay = async () => {
+        console.log('🔄 useEffect - Verificando video:', {
+          readyState: video.readyState,
+          paused: video.paused,
+          srcObject: !!video.srcObject
         });
 
-        if (!response.ok) {
-          throw new Error('Error al subir imagen');
+        if (video.paused) {
+          try {
+            await video.play();
+            console.log('✅ Video reproducido desde useEffect');
+          } catch (err) {
+            console.warn('⚠️ No se pudo reproducir desde useEffect:', err);
+          }
         }
+      };
 
-        const data = await response.json();
-        if (!data.success || !data.secure_url) {
-          throw new Error('Respuesta inválida del servidor');
-        }
+      // Intentar reproducir después de un delay
+      const timer = setTimeout(checkAndPlay, 500);
 
-        const newImages = [...images, data.secure_url];
-        setImages(newImages);
-        onChange(newImages);
-
-        toast.success('Foto agregada correctamente');
-      } catch (error) {
-        console.error('Error uploading photo:', error);
-        toast.error('Error al subir foto');
-      } finally {
-        setUploading(false);
-      }
-    }, 'image/jpeg', 0.9);
-  };
+      return () => clearTimeout(timer);
+    }
+  }, [showCamera]);
 
   // Limpiar stream al desmontar
   useEffect(() => {
@@ -350,6 +491,18 @@ export function ImageUploader({
             disabled={uploading}
           />
 
+          {/* Mensaje informativo sobre permisos */}
+          <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
+            <p className="text-xs text-blue-800 font-medium mb-1">
+              💡 Para usar la cámara:
+            </p>
+            <ul className="text-xs text-blue-700 space-y-1 list-disc list-inside">
+              <li>Permite el acceso cuando el navegador lo solicite</li>
+              <li>Si no funciona, usa la opción "Galería"</li>
+              <li>Asegúrate de que ninguna otra app esté usando la cámara</li>
+            </ul>
+          </div>
+
           {/* Botones principales */}
           <div className="grid grid-cols-2 gap-3">
             {/* Botón de cámara */}
@@ -357,28 +510,30 @@ export function ImageUploader({
               type="button"
               onClick={startCamera}
               disabled={uploading}
-              className="w-full bg-purple-600 hover:bg-purple-700"
+              className="w-full bg-purple-600 hover:bg-purple-700 h-auto py-3"
             >
-              <Camera className="mr-2 h-4 w-4" />
-              Tomar Foto
+              <div className="flex flex-col items-center gap-1">
+                <Camera className="h-5 w-5" />
+                <span className="text-sm">Tomar Foto</span>
+              </div>
             </Button>
 
             {/* Botón de galería */}
             <label
               htmlFor="image-upload"
-              className={`inline-flex items-center justify-center rounded-md border border-gray-300 bg-blue-600 text-white px-4 py-2 text-sm font-medium transition-colors hover:bg-blue-700 ${
+              className={`inline-flex flex-col items-center justify-center gap-1 rounded-md border border-gray-300 bg-blue-600 text-white px-4 py-3 text-sm font-medium transition-colors hover:bg-blue-700 ${
                 uploading ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'
               }`}
             >
               {uploading ? (
                 <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Subiendo...
+                  <Loader2 className="h-5 w-5 animate-spin" />
+                  <span className="text-sm">Subiendo...</span>
                 </>
               ) : (
                 <>
-                  <Upload className="mr-2 h-4 w-4" />
-                  Galería
+                  <Upload className="h-5 w-5" />
+                  <span className="text-sm">Galería</span>
                 </>
               )}
             </label>
@@ -421,13 +576,24 @@ export function ImageUploader({
             </div>
 
             {/* Video preview */}
-            <div className="relative bg-black">
+            <div className="relative bg-black min-h-[300px] flex items-center justify-center">
               <video
                 ref={videoRef}
                 autoPlay
                 playsInline
+                muted
                 className="w-full max-h-[60vh] object-contain"
               />
+
+              {/* Loader mientras carga el video */}
+              {!cameraReady && (
+                <div className="absolute inset-0 flex items-center justify-center">
+                  <div className="text-white text-center">
+                    <Loader2 className="h-12 w-12 animate-spin mx-auto mb-3" />
+                    <p className="text-sm">Iniciando cámara...</p>
+                  </div>
+                </div>
+              )}
 
               {/* Canvas oculto para capturar la imagen */}
               <canvas ref={canvasRef} className="hidden" />
@@ -440,6 +606,16 @@ export function ImageUploader({
 
             {/* Footer con botones */}
             <div className="p-4 bg-gray-50">
+              {/* Indicador de estado de cámara */}
+              {!cameraReady && !uploading && (
+                <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-2 mb-3">
+                  <p className="text-xs text-yellow-800 text-center flex items-center justify-center gap-2">
+                    <Loader2 className="h-3 w-3 animate-spin" />
+                    Iniciando cámara, espera un momento...
+                  </p>
+                </div>
+              )}
+
               <div className="flex gap-3 justify-center">
                 <Button
                   type="button"
@@ -452,13 +628,18 @@ export function ImageUploader({
                 <Button
                   type="button"
                   onClick={capturePhoto}
-                  disabled={uploading}
-                  className="min-w-[120px] bg-purple-600 hover:bg-purple-700"
+                  disabled={!cameraReady || uploading}
+                  className="min-w-[120px] bg-purple-600 hover:bg-purple-700 disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   {uploading ? (
                     <>
                       <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                       Subiendo...
+                    </>
+                  ) : !cameraReady ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      Preparando...
                     </>
                   ) : (
                     <>
@@ -469,7 +650,9 @@ export function ImageUploader({
                 </Button>
               </div>
               <p className="text-xs text-gray-500 text-center mt-3">
-                Centra el producto dentro del recuadro y presiona Capturar Foto
+                {cameraReady
+                  ? 'Centra el producto dentro del recuadro y presiona Capturar Foto'
+                  : 'Espera a que la cámara esté lista antes de capturar'}
               </p>
             </div>
           </div>
