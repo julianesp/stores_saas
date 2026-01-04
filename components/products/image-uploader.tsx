@@ -7,6 +7,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Upload, X, Image as ImageIcon, Loader2, Camera } from 'lucide-react';
 import { toast } from 'sonner';
 import imageCompression from 'browser-image-compression';
+import Swal from 'sweetalert2';
 
 interface ImageUploaderProps {
   productId?: string;
@@ -267,7 +268,46 @@ export function ImageUploader({
       let errorMessage = 'No se pudo acceder a la cámara.';
 
       if (error.name === 'NotAllowedError' || error.name === 'PermissionDeniedError') {
-        errorMessage = '⚠️ Permiso de cámara denegado. Por favor, permite el acceso a la cámara en la configuración de tu navegador y recarga la página.';
+        // Mostrar un modal con instrucciones detalladas
+        Swal.fire({
+          icon: 'warning',
+          title: '⚠️ Permiso de Cámara Requerido',
+          html: `
+            <div class="text-left space-y-3">
+              <p class="text-sm text-gray-700 mb-3">
+                Para usar la cámara, debes dar permiso en tu navegador.
+              </p>
+
+              <div class="bg-blue-50 border-l-4 border-blue-500 p-3 mb-3">
+                <p class="text-sm font-semibold text-blue-800 mb-2">📱 Cómo dar permisos:</p>
+                <ol class="text-xs text-blue-700 space-y-2 list-decimal list-inside">
+                  <li>Toca el <strong>ícono del candado 🔒</strong> o la <strong>i de información ℹ️</strong> en la barra de direcciones</li>
+                  <li>Busca la opción <strong>"Cámara"</strong> o <strong>"Camera"</strong></li>
+                  <li>Selecciona <strong>"Permitir"</strong> o <strong>"Allow"</strong></li>
+                  <li>Recarga la página tocando el botón de recargar 🔄</li>
+                  <li>Vuelve a presionar <strong>"Tomar Foto"</strong></li>
+                </ol>
+              </div>
+
+              <div class="bg-yellow-50 border border-yellow-200 rounded p-2">
+                <p class="text-xs text-yellow-800">
+                  <strong>💡 Alternativa:</strong> Si no puedes dar permisos, usa el botón <strong>"Galería"</strong> para subir fotos desde tu dispositivo.
+                </p>
+              </div>
+            </div>
+          `,
+          confirmButtonText: 'Entendido',
+          confirmButtonColor: '#3B82F6',
+          showCancelButton: true,
+          cancelButtonText: 'Usar Galería',
+          cancelButtonColor: '#10B981',
+        }).then((result) => {
+          if (result.isDismissed && result.dismiss === Swal.DismissReason.cancel) {
+            // Usuario eligió usar galería - trigger el input file
+            document.getElementById('image-upload')?.click();
+          }
+        });
+        return;
       } else if (error.name === 'NotFoundError' || error.name === 'DevicesNotFoundError') {
         errorMessage = '📷 No se encontró ninguna cámara en tu dispositivo. Usa la opción de Galería.';
       } else if (error.name === 'NotReadableError' || error.name === 'TrackStartError') {
@@ -278,7 +318,9 @@ export function ImageUploader({
         errorMessage = '🔒 Acceso a la cámara bloqueado por seguridad. Asegúrate de estar usando HTTPS y verifica los permisos.';
       }
 
-      toast.error(errorMessage, { duration: 6000 });
+      if (errorMessage) {
+        toast.error(errorMessage, { duration: 6000 });
+      }
     }
   };
 
