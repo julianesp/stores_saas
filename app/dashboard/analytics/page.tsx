@@ -26,7 +26,7 @@ import { exportAnalyticsToExcel } from "@/lib/excel-export";
 import { formatCurrency } from "@/lib/utils";
 import { toast } from "sonner";
 import { getUserProfile, getSales } from "@/lib/cloudflare-api";
-import { hasAIAccess } from "@/lib/subscription-helpers";
+import { hasAIAccess } from "@/lib/cloudflare-subscription-helpers";
 import { UserProfile } from "@/lib/types";
 import Link from "next/link";
 import { AIInsightsSection } from "@/components/analytics/ai-insights-section";

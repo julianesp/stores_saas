@@ -18,7 +18,14 @@ export interface UserProfile {
   next_billing_date?: string;
   wompi_customer_id?: string;
   plan_id?: string; // ID del plan de suscripción
-  has_ai_addon?: boolean; // Usuario tiene addon de IA activo
+
+  // Addons como suscripciones separadas
+  has_ai_addon?: boolean; // Usuario tiene addon de IA activo (legacy - usar addon_subscriptions)
+  has_store_addon?: boolean; // Usuario tiene addon de Tienda Online activo
+  has_email_addon?: boolean; // Usuario tiene addon de Email Marketing activo
+  store_addon_expires_at?: string; // Fecha de expiración del addon de tienda
+  email_addon_expires_at?: string; // Fecha de expiración del addon de email
+  ai_addon_expires_at?: string; // Fecha de expiración del addon de IA
 
   // Configuración de reportes automáticos
   auto_reports_enabled?: boolean; // Si los reportes automáticos están activados
@@ -52,6 +59,37 @@ export interface UserProfile {
   wompi_private_key?: string; // Private Key de Wompi del comercio (sensible)
   wompi_enabled?: boolean; // Si Wompi está activado como método de pago
 
+  created_at: string;
+  updated_at: string;
+}
+
+// Tipos para el sistema de Addons
+export interface AddonSubscription {
+  id: string;
+  user_profile_id: string;
+  addon_type: 'ai' | 'store' | 'email';
+  status: 'active' | 'expired' | 'canceled';
+  price: number; // Precio en COP
+  subscription_id?: string; // ID de la transacción en Wompi
+  started_at: string;
+  expires_at: string;
+  last_payment_date?: string;
+  next_billing_date?: string;
+  auto_renew: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface AddonPricing {
+  id: string;
+  addon_type: 'ai' | 'store' | 'email';
+  name: string;
+  description?: string;
+  price: number; // Precio en COP
+  currency: string;
+  billing_period: 'monthly' | 'yearly';
+  is_active: boolean;
+  features?: string; // JSON string
   created_at: string;
   updated_at: string;
 }

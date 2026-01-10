@@ -13,14 +13,19 @@ export async function POST(request: NextRequest) {
     const { getToken, userId } = await auth();
 
     if (!userId) {
+      console.error('[extend-trial] No userId found in auth');
       return NextResponse.json(
         { error: 'No autenticado' },
         { status: 401 }
       );
     }
 
+    console.log('[extend-trial] User ID:', userId);
+
     // Verificar que el usuario actual sea super admin
+    console.log('[extend-trial] Fetching user profile...');
     const currentUserProfile = await getUserProfile(getToken);
+    console.log('[extend-trial] User profile fetched:', currentUserProfile?.email, 'is_superadmin:', currentUserProfile?.is_superadmin);
 
     if (!currentUserProfile?.is_superadmin) {
       return NextResponse.json(
@@ -94,7 +99,8 @@ export async function POST(request: NextRequest) {
     });
 
   } catch (error) {
-    console.error('Error extending trial:', error);
+    console.error('[extend-trial] Error extending trial:', error);
+    console.error('[extend-trial] Error stack:', error instanceof Error ? error.stack : 'No stack');
     return NextResponse.json(
       { error: error instanceof Error ? error.message : 'Error al extender período de prueba' },
       { status: 500 }

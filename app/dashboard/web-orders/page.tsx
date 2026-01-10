@@ -2,8 +2,9 @@
 
 import { useState, useEffect } from 'react';
 import { useAuth } from '@clerk/nextjs';
-import { getSales, updateSale } from '@/lib/cloudflare-api';
-import { Sale } from '@/lib/types';
+import { useRouter } from 'next/navigation';
+import { getSales, updateSale, getUserProfile } from '@/lib/cloudflare-api';
+import { Sale, UserProfile } from '@/lib/types';
 import { formatCurrency } from '@/lib/utils';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -27,25 +28,78 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import {
+  hasStorefrontAccess,
+  getStorefrontBlockMessage,
+} from '@/lib/storefront-access';
 import Swal from 'sweetalert2';
 
 export default function WebOrdersPage() {
   const { getToken } = useAuth();
+  const router = useRouter();
   const [orders, setOrders] = useState<Sale[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedOrder, setSelectedOrder] = useState<Sale | null>(null);
   const [showDetailsDialog, setShowDetailsDialog] = useState(false);
+  const [profile, setProfile] = useState<UserProfile | null>(null);
+  const [hasAccess, setHasAccess] = useState(false);
 
   useEffect(() => {
-    loadOrders();
+    checkAccessAndLoadOrders();
 
     // Auto-refresh cada 30 segundos para mostrar cambios de estado de pago
     const interval = setInterval(() => {
-      loadOrders();
+      if (hasAccess) {
+        loadOrders();
+      }
     }, 30000); // 30 segundos
 
     return () => clearInterval(interval);
-  }, []);
+  }, [hasAccess]);
+
+  const checkAccessAndLoadOrders = async () => {
+    try {
+      const data = await getUserProfile(getToken);
+      setProfile(data);
+
+      // Verificar acceso a Tienda Online / Pedidos Web
+      const accessCheck = hasStorefrontAccess(data);
+      setHasAccess(accessCheck.hasAccess);
+
+      // Si no tiene acceso, mostrar alerta y redirigir
+      if (!accessCheck.hasAccess) {
+        const message = getStorefrontBlockMessage(accessCheck.reason);
+
+        Swal.fire({
+          icon: 'warning',
+          title: message.title,
+          html: message.html,
+          showCancelButton: true,
+          confirmButtonText: 'Ver Planes de Suscripción',
+          cancelButtonText: 'Volver al Dashboard',
+          confirmButtonColor: '#8B5CF6',
+          cancelButtonColor: '#6B7280',
+          allowOutsideClick: false,
+        }).then((result) => {
+          if (result.isConfirmed) {
+            router.push('/dashboard/subscription');
+          } else {
+            router.push('/dashboard');
+          }
+        });
+
+        setLoading(false);
+        return;
+      }
+
+      // Si tiene acceso, cargar pedidos
+      await loadOrders();
+    } catch (error) {
+      console.error('Error checking access:', error);
+      toast.error('Error al verificar acceso');
+      setLoading(false);
+    }
+  };
 
   const loadOrders = async () => {
     try {

@@ -135,28 +135,42 @@ export async function getUserProfileByClerkId(getToken: GetTokenFn) {
 /**
  * Verifica si un usuario tiene acceso a las funcionalidades de IA
  * Durante el período de prueba, todos tienen acceso gratis
- * Después del trial, solo quienes paguen el addon
+ * Después del trial, solo quienes paguen el addon de IA ($9,900 COP/mes)
  */
 export function hasAIAccess(userProfile: UserProfile): boolean {
+  // Super admin siempre tiene acceso
+  if (userProfile.is_superadmin) {
+    return true;
+  }
+
   // Durante el período de prueba, acceso gratis a IA
   if (userProfile.subscription_status === 'trial') {
     return true;
   }
 
-  // Con suscripción activa, solo si tienen el addon
+  // Con suscripción activa, verificar si tiene el addon de IA
   if (userProfile.subscription_status === 'active') {
-    return userProfile.has_ai_addon === true;
+    // Verificar si el addon está activo Y no ha expirado
+    if (userProfile.has_ai_addon) {
+      // Si tiene fecha de expiración, verificarla
+      if (userProfile.ai_addon_expires_at) {
+        const expiresAt = new Date(userProfile.ai_addon_expires_at);
+        const now = new Date();
+        return now < expiresAt;
+      }
+      // Si no tiene fecha de expiración, asumimos que está activo (legacy)
+      return true;
+    }
   }
 
-  // Sin suscripción válida, sin acceso
+  // Sin suscripción válida o addon, sin acceso
   return false;
 }
 
 /**
  * Verifica si un usuario tiene acceso a Email Marketing
  * Durante el período de prueba, todos tienen acceso gratis
- * Con Plan Premium activo, tienen acceso incluido
- * Plan Básico NO tiene acceso a Email Marketing
+ * Después del trial, solo quienes paguen el addon de Email Marketing ($4,900 COP/mes)
  */
 export function hasEmailMarketingAccess(userProfile: UserProfile): boolean {
   // Super admin siempre tiene acceso
@@ -169,24 +183,57 @@ export function hasEmailMarketingAccess(userProfile: UserProfile): boolean {
     return true;
   }
 
-  // Con suscripción activa
+  // Con suscripción activa, verificar si tiene el addon de Email Marketing
   if (userProfile.subscription_status === 'active') {
-    // Plan Premium incluye Email Marketing
-    if (userProfile.plan_id === 'plan-premium') {
+    // Verificar si el addon está activo Y no ha expirado
+    if (userProfile.has_email_addon) {
+      // Si tiene fecha de expiración, verificarla
+      if (userProfile.email_addon_expires_at) {
+        const expiresAt = new Date(userProfile.email_addon_expires_at);
+        const now = new Date();
+        return now < expiresAt;
+      }
+      // Si no tiene fecha de expiración, asumimos que está activo (legacy)
       return true;
     }
-
-    // Plan Básico NO tiene acceso a Email Marketing
-    if (userProfile.plan_id === 'plan-basico') {
-      return false;
-    }
-
-    // Si tiene suscripción activa pero no se identificó el plan,
-    // no dar acceso por defecto
-    return false;
   }
 
-  // Sin suscripción válida, sin acceso
+  // Sin suscripción válida o addon, sin acceso
+  return false;
+}
+
+/**
+ * Verifica si un usuario tiene acceso a la Tienda Online
+ * Durante el período de prueba, todos tienen acceso gratis
+ * Después del trial, solo quienes paguen el addon de Tienda Online ($14,900 COP/mes)
+ */
+export function hasStoreAccess(userProfile: UserProfile): boolean {
+  // Super admin siempre tiene acceso
+  if (userProfile.is_superadmin) {
+    return true;
+  }
+
+  // Durante el período de prueba, acceso gratis a Tienda Online
+  if (userProfile.subscription_status === 'trial') {
+    return true;
+  }
+
+  // Con suscripción activa, verificar si tiene el addon de Tienda Online
+  if (userProfile.subscription_status === 'active') {
+    // Verificar si el addon está activo Y no ha expirado
+    if (userProfile.has_store_addon) {
+      // Si tiene fecha de expiración, verificarla
+      if (userProfile.store_addon_expires_at) {
+        const expiresAt = new Date(userProfile.store_addon_expires_at);
+        const now = new Date();
+        return now < expiresAt;
+      }
+      // Si no tiene fecha de expiración, asumimos que está activo (legacy)
+      return true;
+    }
+  }
+
+  // Sin suscripción válida o addon, sin acceso
   return false;
 }
 
@@ -241,9 +288,16 @@ export async function activateSubscription(
       plan_id: planId,
     };
 
-    // Si es el addon de IA, activar la bandera
-    if (planId === 'ai-addon-monthly') {
+    // Si es un addon específico, activarlo
+    if (planId === 'addon-ai-monthly') {
       updates.has_ai_addon = true;
+      updates.ai_addon_expires_at = nextBilling.toISOString();
+    } else if (planId === 'addon-store-monthly') {
+      updates.has_store_addon = true;
+      updates.store_addon_expires_at = nextBilling.toISOString();
+    } else if (planId === 'addon-email-monthly') {
+      updates.has_email_addon = true;
+      updates.email_addon_expires_at = nextBilling.toISOString();
     }
 
     await updateUserProfile(userProfileId, updates, getToken);
@@ -254,6 +308,46 @@ export async function activateSubscription(
     };
   } catch (error) {
     console.error('Error activating subscription:', error);
+    throw error;
+  }
+}
+
+/**
+ * Activa un addon específico después de un pago exitoso
+ */
+export async function activateAddon(
+  userProfileId: string,
+  addonType: 'ai' | 'store' | 'email',
+  transactionId: string,
+  getToken: GetTokenFn,
+  paymentDate: Date = new Date()
+) {
+  try {
+    const expiresAt = new Date(paymentDate);
+    expiresAt.setMonth(expiresAt.getMonth() + 1); // Expira en un mes
+
+    const updates: any = {};
+
+    // Activar el addon correspondiente
+    if (addonType === 'ai') {
+      updates.has_ai_addon = true;
+      updates.ai_addon_expires_at = expiresAt.toISOString();
+    } else if (addonType === 'store') {
+      updates.has_store_addon = true;
+      updates.store_addon_expires_at = expiresAt.toISOString();
+    } else if (addonType === 'email') {
+      updates.has_email_addon = true;
+      updates.email_addon_expires_at = expiresAt.toISOString();
+    }
+
+    await updateUserProfile(userProfileId, updates, getToken);
+
+    return {
+      success: true,
+      expiresAt: expiresAt.toISOString(),
+    };
+  } catch (error) {
+    console.error('Error activating addon:', error);
     throw error;
   }
 }

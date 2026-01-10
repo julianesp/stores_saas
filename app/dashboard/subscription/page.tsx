@@ -2,45 +2,80 @@
 
 import { useState, useEffect } from "react";
 import { useUser, useAuth } from "@clerk/nextjs";
-import { Check, Loader2, CreditCard } from "lucide-react";
+import { Check, Loader2, CreditCard, Sparkles, Store, Mail } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { getUserProfile } from "@/lib/cloudflare-api";
 import { UserProfile } from "@/lib/types";
 import { toast } from "sonner";
 import { formatCurrency } from "@/lib/utils";
+import { hasAIAccess, hasStoreAccess, hasEmailMarketingAccess } from "@/lib/cloudflare-subscription-helpers";
 
-// Planes de suscripción
-const SUBSCRIPTION_PLANS = [
+// Plan base de suscripción
+const BASE_PLAN = {
+  id: "plan-basico",
+  name: "Plan Básico",
+  price: 24900,
+  features: [
+    "Gestión completa de inventario",
+    "Punto de venta (POS)",
+    "Gestión de clientes y proveedores",
+    "Reportes y estadísticas básicas",
+    "Sistema de créditos y deudores",
+    "Ofertas y promociones",
+    "Soporte técnico por email",
+    "Actualizaciones automáticas",
+  ],
+};
+
+// Addons disponibles
+const ADDONS = [
   {
-    id: "plan-basico",
-    name: "Plan Básico",
-    price: 29900,
-    popular: true,
+    id: "addon-ai-monthly",
+    type: "ai" as const,
+    name: "Análisis con IA",
+    icon: Sparkles,
+    price: 9900,
+    color: "purple",
     features: [
-      "Gestión completa de inventario",
-      "Punto de venta (POS)",
-      "Gestión de clientes",
-      "Reportes y estadísticas básicas",
-      "Soporte técnico por email",
-      "Actualizaciones automáticas",
+      "Predicciones de ventas automáticas",
+      "Análisis de tendencias y patrones",
+      "Recomendaciones de inventario inteligentes",
+      "Insights y alertas automáticas",
+      "Detección de anomalías en ventas",
     ],
   },
   {
-    id: "plan-premium",
-    name: "Plan Premium",
-    price: 39900,
-    popular: false,
+    id: "addon-store-monthly",
+    type: "store" as const,
+    name: "Tienda Online",
+    icon: Store,
+    price: 14900,
+    color: "blue",
     features: [
-      "Todo lo del Plan Básico",
-      "Tienda Online personalizable",
-      "Análisis con Inteligencia Artificial",
-      "Email Marketing (Carritos abandonados, Stock, Reportes)",
-      "Múltiples métodos de pago (Wompi)",
-      "Reportes avanzados",
-      "Soporte prioritario",
-      "Integración con WhatsApp",
+      "Tienda online personalizable",
+      "Carrito de compras completo",
+      "Pedidos online en tiempo real",
+      "Integración con Wompi (pagos)",
       "Zonas de envío configurables",
+      "Integración con WhatsApp",
+      "Sincronización automática de inventario",
+    ],
+  },
+  {
+    id: "addon-email-monthly",
+    type: "email" as const,
+    name: "Email Marketing",
+    icon: Mail,
+    price: 4900,
+    color: "green",
+    features: [
+      "Carritos abandonados (3 emails automáticos)",
+      "Reportes diarios por email",
+      "Alertas de stock para clientes",
+      "Campañas personalizadas",
+      "Segmentación de clientes",
+      "Analytics de emails enviados",
     ],
   },
 ];
@@ -50,7 +85,7 @@ export default function SubscriptionPageWompi() {
   const { getToken } = useAuth();
   const [loading, setLoading] = useState(false);
   const [profile, setProfile] = useState<UserProfile | null>(null);
-  const [selectedPlan, setSelectedPlan] = useState<string | null>(null);
+  const [selectedItem, setSelectedItem] = useState<string | null>(null);
 
   useEffect(() => {
     async function fetchProfile() {
@@ -66,11 +101,11 @@ export default function SubscriptionPageWompi() {
     fetchProfile();
   }, [getToken]);
 
-  const handleSubscribe = async (planId: string) => {
+  const handleSubscribe = async (itemId: string) => {
     if (!user) return;
 
     setLoading(true);
-    setSelectedPlan(planId);
+    setSelectedItem(itemId);
 
     try {
       // Llamar a la API local que luego llama al worker
@@ -80,7 +115,7 @@ export default function SubscriptionPageWompi() {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          planId,
+          planId: itemId,
         }),
       });
 
@@ -103,7 +138,7 @@ export default function SubscriptionPageWompi() {
         error instanceof Error ? error.message : "Error al procesar el pago";
       toast.error(errorMessage);
       setLoading(false);
-      setSelectedPlan(null);
+      setSelectedItem(null);
     }
   };
 
@@ -131,16 +166,47 @@ export default function SubscriptionPageWompi() {
 
   const subscriptionStatus = getSubscriptionStatus();
 
+  // Verificar qué addons tiene activos el usuario
+  const activeAddons = profile ? {
+    ai: hasAIAccess(profile),
+    store: hasStoreAccess(profile),
+    email: hasEmailMarketingAccess(profile),
+  } : { ai: false, store: false, email: false };
+
+  const getColorClasses = (color: string) => {
+    const colors: Record<string, { border: string; bg: string; text: string; button: string }> = {
+      purple: {
+        border: "border-purple-200",
+        bg: "bg-purple-50",
+        text: "text-purple-700",
+        button: "bg-purple-600 hover:bg-purple-700",
+      },
+      blue: {
+        border: "border-blue-200",
+        bg: "bg-blue-50",
+        text: "text-blue-700",
+        button: "bg-blue-600 hover:bg-blue-700",
+      },
+      green: {
+        border: "border-green-200",
+        bg: "bg-green-50",
+        text: "text-green-700",
+        button: "bg-green-600 hover:bg-green-700",
+      },
+    };
+    return colors[color] || colors.purple;
+  };
+
   return (
     <div className="space-y-6">
       <div className="text-center">
-        <h1 className="text-3xl font-bold">Planes de Suscripción</h1>
+        <h1 className="text-3xl font-bold">Planes y Addons</h1>
         <p className="text-gray-500 mt-2">
-          Elige el plan perfecto para tu negocio
+          Elige el plan base y agrega las funcionalidades que necesites
         </p>
         <div className="mt-4 inline-block bg-gradient-to-r from-purple-100 to-pink-100 border border-purple-300 rounded-lg px-6 py-3">
           <p className="text-sm font-medium text-purple-900">
-            ✨ <strong>Prueba Gratis por 15 Días:</strong> Plan Básico completo
+            ✨ <strong>Prueba Gratis por 15 Días:</strong> Acceso completo a todos los addons
           </p>
         </div>
       </div>
@@ -222,80 +288,137 @@ export default function SubscriptionPageWompi() {
         </CardContent>
       </Card>
 
-      {/* Planes */}
-      <div className="grid md:grid-cols-2 gap-6 max-w-4xl mx-auto">
-        {SUBSCRIPTION_PLANS.map((plan) => (
-          <Card
-            key={plan.id}
-            className={`relative ${
-              plan.popular ? "border-blue-500 border-2 shadow-lg" : ""
-            }`}
-          >
-            {plan.popular && (
-              <div className="absolute -top-3 left-1/2 transform -translate-x-1/2">
-                <span className="bg-blue-500 text-white px-4 py-1 rounded-full text-sm font-medium">
-                  Más Popular
-                </span>
-              </div>
-            )}
+      {/* Plan Base */}
+      <div>
+        <h2 className="text-2xl font-bold mb-4">Plan Base</h2>
+        <Card className="border-gray-300 border-2">
+          <CardHeader>
+            <CardTitle className="text-2xl">{BASE_PLAN.name}</CardTitle>
+            <CardDescription>
+              Todo lo esencial para gestionar tu negocio
+            </CardDescription>
+            <div className="mt-4">
+              <span className="text-4xl font-bold">
+                {formatCurrency(BASE_PLAN.price)}
+              </span>
+              <span className="text-gray-500 ml-2">/mes</span>
+            </div>
+          </CardHeader>
 
-            <CardHeader>
-              <CardTitle className="text-2xl">{plan.name}</CardTitle>
-              <div className="mt-4">
-                <span className="text-4xl font-bold">
-                  {formatCurrency(plan.price)}
-                </span>
-                <span className="text-gray-500 ml-2">/mes</span>
-              </div>
-            </CardHeader>
+          <CardContent className="space-y-4">
+            <ul className="space-y-3">
+              {BASE_PLAN.features.map((feature, index) => (
+                <li key={index} className="flex items-start gap-2">
+                  <Check className="h-5 w-5 text-green-600 mt-0.5 flex-shrink-0" />
+                  <span className="text-sm">{feature}</span>
+                </li>
+              ))}
+            </ul>
 
-            <CardContent className="space-y-4">
-              <ul className="space-y-3">
-                {plan.features.map((feature, index) => (
-                  <li key={index} className="flex items-start gap-2">
-                    <Check className="h-5 w-5 text-green-600 mt-0.5 flex-shrink-0" />
-                    <span className="text-sm">{feature}</span>
-                  </li>
-                ))}
-              </ul>
+            <Button
+              className="w-full bg-gray-800 hover:bg-gray-900"
+              size="lg"
+              onClick={() => handleSubscribe(BASE_PLAN.id)}
+              disabled={loading && selectedItem === BASE_PLAN.id}
+            >
+              {loading && selectedItem === BASE_PLAN.id ? (
+                <>
+                  <Loader2 className="mr-2 h-5 w-5 animate-spin" />
+                  Creando link de pago...
+                </>
+              ) : subscriptionStatus?.status === "active" ? (
+                "Plan Activo"
+              ) : (
+                "Suscribirse al Plan Base"
+              )}
+            </Button>
+          </CardContent>
+        </Card>
+      </div>
 
-              {/* Botón de pago con Wompi */}
-              <Button
-                className="w-full bg-purple-600 hover:bg-purple-700"
-                size="lg"
-                onClick={() => handleSubscribe(plan.id)}
-                disabled={loading && selectedPlan === plan.id}
+      {/* Addons */}
+      <div>
+        <h2 className="text-2xl font-bold mb-4">Addons Disponibles</h2>
+        <p className="text-gray-600 mb-6">
+          Agrega funcionalidades extra a tu plan base (se pueden combinar)
+        </p>
+
+        <div className="grid md:grid-cols-3 gap-6">
+          {ADDONS.map((addon) => {
+            const colors = getColorClasses(addon.color);
+            const Icon = addon.icon;
+            const isActive = activeAddons[addon.type];
+
+            return (
+              <Card
+                key={addon.id}
+                className={`relative ${colors.border} ${isActive ? "border-2" : ""}`}
               >
-                {loading && selectedPlan === plan.id ? (
-                  <>
-                    <Loader2 className="mr-2 h-5 w-5 animate-spin" />
-                    Creando link de pago...
-                  </>
-                ) : subscriptionStatus?.status === "active" ? (
-                  "Renovar Plan"
-                ) : (
-                  <>
-                    <svg
-                      className="mr-2 h-5 w-5"
-                      viewBox="0 0 24 24"
-                      fill="currentColor"
-                    >
-                      <path
-                        d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z"
-                        stroke="white"
-                        strokeWidth="2"
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        fill="none"
-                      />
-                    </svg>
-                    Suscribirse con Wompi
-                  </>
+                {isActive && subscriptionStatus?.status === "trial" && (
+                  <div className="absolute -top-3 left-1/2 transform -translate-x-1/2">
+                    <span className={`${colors.bg} ${colors.text} px-3 py-1 rounded-full text-xs font-medium border ${colors.border}`}>
+                      Activo en Trial
+                    </span>
+                  </div>
                 )}
-              </Button>
-            </CardContent>
-          </Card>
-        ))}
+                {isActive && subscriptionStatus?.status === "active" && (
+                  <div className="absolute -top-3 left-1/2 transform -translate-x-1/2">
+                    <span className="bg-green-500 text-white px-3 py-1 rounded-full text-xs font-medium">
+                      ✓ Activo
+                    </span>
+                  </div>
+                )}
+
+                <CardHeader>
+                  <div className="flex items-center gap-2">
+                    <div className={`p-2 rounded-lg ${colors.bg}`}>
+                      <Icon className={`h-6 w-6 ${colors.text}`} />
+                    </div>
+                    <CardTitle className="text-xl">{addon.name}</CardTitle>
+                  </div>
+                  <div className="mt-4">
+                    <span className="text-3xl font-bold">
+                      +{formatCurrency(addon.price)}
+                    </span>
+                    <span className="text-gray-500 ml-2">/mes</span>
+                  </div>
+                </CardHeader>
+
+                <CardContent className="space-y-4">
+                  <ul className="space-y-2">
+                    {addon.features.map((feature, index) => (
+                      <li key={index} className="flex items-start gap-2">
+                        <Check className="h-4 w-4 text-green-600 mt-0.5 flex-shrink-0" />
+                        <span className="text-sm">{feature}</span>
+                      </li>
+                    ))}
+                  </ul>
+
+                  <Button
+                    className={`w-full ${colors.button}`}
+                    size="lg"
+                    onClick={() => handleSubscribe(addon.id)}
+                    disabled={loading && selectedItem === addon.id}
+                  >
+                    {loading && selectedItem === addon.id ? (
+                      <>
+                        <Loader2 className="mr-2 h-5 w-5 animate-spin" />
+                        Procesando...
+                      </>
+                    ) : isActive && subscriptionStatus?.status === "active" ? (
+                      "Renovar Addon"
+                    ) : (
+                      <>
+                        <Icon className="mr-2 h-5 w-5" />
+                        Agregar Addon
+                      </>
+                    )}
+                  </Button>
+                </CardContent>
+              </Card>
+            );
+          })}
+        </div>
       </div>
 
       {/* Información adicional */}
@@ -310,19 +433,69 @@ export default function SubscriptionPageWompi() {
               tarjetas
             </p>
             <p>
-              ✓ <strong>Facturación mensual</strong> automática
+              ✓ <strong>Facturación mensual</strong> automática e independiente
             </p>
-            
             <p>
-              ✓ <strong>Soporte técnico</strong> incluido en todos los planes
+              ✓ <strong>Cancela addons cuando quieras</strong> - Sin penalizaciones
+            </p>
+            <p>
+              ✓ <strong>Soporte técnico</strong> incluido
             </p>
             <p className="text-xs text-gray-500 mt-4 pt-4 border-t">
-              Los pagos son procesados de forma segura por Wompi. Después de
-              completar tu pago, tu suscripción se activará automáticamente.
+              Los pagos son procesados de forma segura por Wompi. Cada addon
+              se factura de manera independiente y puedes activarlos o
+              desactivarlos en cualquier momento.
             </p>
           </div>
         </CardContent>
       </Card>
+
+      {/* Calculadora de precio total */}
+      {profile && subscriptionStatus?.status !== "trial" && (
+        <Card className="max-w-2xl mx-auto bg-gradient-to-br from-purple-50 to-pink-50 border-purple-200">
+          <CardHeader>
+            <CardTitle className="text-center">Tu Costo Mensual</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-2">
+              <div className="flex justify-between items-center">
+                <span>Plan Básico</span>
+                <span className="font-bold">{formatCurrency(BASE_PLAN.price)}</span>
+              </div>
+              {activeAddons.ai && (
+                <div className="flex justify-between items-center text-purple-700">
+                  <span>+ Análisis IA</span>
+                  <span className="font-bold">{formatCurrency(9900)}</span>
+                </div>
+              )}
+              {activeAddons.store && (
+                <div className="flex justify-between items-center text-blue-700">
+                  <span>+ Tienda Online</span>
+                  <span className="font-bold">{formatCurrency(14900)}</span>
+                </div>
+              )}
+              {activeAddons.email && (
+                <div className="flex justify-between items-center text-green-700">
+                  <span>+ Email Marketing</span>
+                  <span className="font-bold">{formatCurrency(4900)}</span>
+                </div>
+              )}
+              <div className="border-t pt-2 mt-2 flex justify-between items-center text-lg font-bold">
+                <span>Total</span>
+                <span>
+                  {formatCurrency(
+                    (subscriptionStatus?.status === "active" ? BASE_PLAN.price : 0) +
+                    (activeAddons.ai ? 9900 : 0) +
+                    (activeAddons.store ? 14900 : 0) +
+                    (activeAddons.email ? 4900 : 0)
+                  )}
+                  <span className="text-sm font-normal text-gray-600">/mes</span>
+                </span>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
     </div>
   );
 }

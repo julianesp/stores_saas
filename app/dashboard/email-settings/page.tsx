@@ -12,7 +12,7 @@ import { toast } from 'sonner';
 import { Loader2, Mail, Clock, ShoppingCart, Package, FileText, Lock, Settings, BarChart3, Eye, Sparkles, Bell } from 'lucide-react';
 import { EmailPreferences, UserProfile } from '@/lib/types';
 import { getUserProfile } from '@/lib/cloudflare-api';
-import { hasEmailMarketingAccess } from '@/lib/subscription-helpers';
+import { hasEmailMarketingAccess } from '@/lib/cloudflare-subscription-helpers';
 import { useRouter } from 'next/navigation';
 import { EmailStats } from '@/components/email/email-stats';
 import { EmailHistory } from '@/components/email/email-history';

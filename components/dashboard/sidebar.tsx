@@ -32,6 +32,7 @@ import {
   getUserProfileByClerkId,
   hasAIAccess,
   hasEmailMarketingAccess,
+  hasStoreAccess,
 } from "@/lib/cloudflare-subscription-helpers";
 import { UserProfile } from "@/lib/types";
 
@@ -168,6 +169,7 @@ export function Sidebar({ isMobile = false, onLinkClick }: SidebarProps) {
   const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
   const [hasAI, setHasAI] = useState(false);
   const [hasEmail, setHasEmail] = useState(false);
+  const [hasStore, setHasStore] = useState(false);
 
   // Estado para el ancho del sidebar
   const [sidebarWidth, setSidebarWidth] = useState(DEFAULT_WIDTH);
@@ -252,6 +254,7 @@ export function Sidebar({ isMobile = false, onLinkClick }: SidebarProps) {
             if (data.profile) {
               setHasAI(hasAIAccess(data.profile));
               setHasEmail(hasEmailMarketingAccess(data.profile));
+              setHasStore(hasStoreAccess(data.profile));
             }
           }
         } catch (error) {
@@ -343,6 +346,8 @@ export function Sidebar({ isMobile = false, onLinkClick }: SidebarProps) {
             pathname === item.href || pathname?.startsWith(item.href + "/");
           const isAnalytics = item.href === "/dashboard/analytics";
           const isEmailMarketing = item.href === "/dashboard/email-settings";
+          const isStoreConfig = item.href === "/dashboard/store-config";
+          const isWebOrders = item.href === "/dashboard/web-orders";
 
           return (
             <Link
@@ -384,6 +389,19 @@ export function Sidebar({ isMobile = false, onLinkClick }: SidebarProps) {
                   )}
                 </>
               )}
+              {(isStoreConfig || isWebOrders) && userProfile && (
+                <>
+                  {userProfile.subscription_status === "trial" && (
+                    <span className="text-xs bg-gradient-to-r from-purple-500 to-pink-500 text-white px-2 py-0.5 rounded-full flex items-center gap-1">
+                      <Sparkles className="h-3 w-3" />
+                      Gratis
+                    </span>
+                  )}
+                  {!hasStore && userProfile.subscription_status !== "trial" && (
+                    <Lock className="h-4 w-4 text-gray-400" />
+                  )}
+                </>
+              )}
             </Link>
           );
         })}
@@ -398,6 +416,8 @@ export function Sidebar({ isMobile = false, onLinkClick }: SidebarProps) {
               pathname === item.href || pathname?.startsWith(item.href + "/");
             const isAnalytics = item.href === "/dashboard/analytics";
             const isEmailMarketing = item.href === "/dashboard/email-settings";
+            const isStoreConfig = item.href === "/dashboard/store-config";
+            const isWebOrders = item.href === "/dashboard/web-orders";
 
             return (
               <Link
@@ -437,6 +457,19 @@ export function Sidebar({ isMobile = false, onLinkClick }: SidebarProps) {
                       </span>
                     )}
                     {!hasEmail && userProfile.subscription_status !== "trial" && (
+                      <Lock className="absolute top-1 right-1 h-3 w-3 text-gray-400" />
+                    )}
+                  </>
+                )}
+                {(isStoreConfig || isWebOrders) && userProfile && (
+                  <>
+                    {userProfile.subscription_status === "trial" && (
+                      <span className="absolute top-1 right-1 text-[10px] bg-gradient-to-r from-purple-500 to-pink-500 text-white px-1.5 py-0.5 rounded-full flex items-center gap-0.5">
+                        <Sparkles className="h-2 w-2" />
+                        Gratis
+                      </span>
+                    )}
+                    {!hasStore && userProfile.subscription_status !== "trial" && (
                       <Lock className="absolute top-1 right-1 h-3 w-3 text-gray-400" />
                     )}
                   </>

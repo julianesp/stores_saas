@@ -112,10 +112,16 @@ app.put('/:id', async (c) => {
       }, 404);
     }
 
-    if (currentProfile.clerk_user_id !== tenant.clerk_user_id && !currentProfile.is_superadmin) {
+    // Verificar si el usuario que hace la petición es superadmin
+    const isSuperAdmin = (tenant as any).is_superadmin === true;
+
+    // Solo permitir actualización si:
+    // 1. Es el mismo usuario, O
+    // 2. El usuario que hace la petición es superadmin
+    if (currentProfile.clerk_user_id !== tenant.clerk_user_id && !isSuperAdmin) {
       return c.json<APIResponse<null>>({
         success: false,
-        error: 'Unauthorized',
+        error: 'Unauthorized - Solo puedes actualizar tu propio perfil o ser superadmin',
         data: null
       }, 403);
     }
@@ -132,6 +138,13 @@ app.put('/:id', async (c) => {
       'next_billing_date',
       'loyalty_points',
       'loyalty_tier',
+      // Addon subscriptions
+      'has_ai_addon',
+      'has_store_addon',
+      'has_email_addon',
+      'ai_addon_expires_at',
+      'store_addon_expires_at',
+      'email_addon_expires_at',
       // Storefront configuration fields
       'store_slug',
       'store_name',

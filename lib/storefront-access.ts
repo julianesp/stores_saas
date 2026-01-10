@@ -1,4 +1,5 @@
 import { UserProfile } from './types';
+import { hasStoreAccess } from './cloudflare-subscription-helpers';
 
 /**
  * Verifica si un usuario tiene acceso a la funcionalidad de Tienda Online
@@ -22,7 +23,35 @@ export function hasStorefrontAccess(userProfile: UserProfile | null): {
     };
   }
 
-  // Super admin siempre tiene acceso
+  // Usar la función hasStoreAccess que verifica correctamente el estado
+  const hasAccess = hasStoreAccess(userProfile);
+
+  if (!hasAccess) {
+    // Determinar la razón del bloqueo
+    if (userProfile.subscription_status === 'expired') {
+      return {
+        hasAccess: false,
+        reason: 'expired',
+        message: 'Tu suscripción ha expirado. Renueva para acceder a la Tienda Online.',
+      };
+    }
+
+    if (userProfile.subscription_status === 'active' && userProfile.plan_id === 'plan-basico') {
+      return {
+        hasAccess: false,
+        reason: 'basic_plan',
+        message: 'La Tienda Online solo está disponible con el Plan Premium',
+      };
+    }
+
+    return {
+      hasAccess: false,
+      reason: 'no_subscription',
+      message: 'Necesitas una suscripción activa para acceder a la Tienda Online',
+    };
+  }
+
+  // Tiene acceso - determinar la razón
   if (userProfile.is_superadmin) {
     return {
       hasAccess: true,
@@ -30,7 +59,6 @@ export function hasStorefrontAccess(userProfile: UserProfile | null): {
     };
   }
 
-  // Durante el período de prueba, tiene acceso completo
   if (userProfile.subscription_status === 'trial') {
     return {
       hasAccess: true,
@@ -39,39 +67,18 @@ export function hasStorefrontAccess(userProfile: UserProfile | null): {
     };
   }
 
-  // Si tiene suscripción activa, verificar el plan
-  if (userProfile.subscription_status === 'active') {
-    // Verificar si es Plan Premium
-    if (userProfile.plan_id === 'plan-premium') {
-      return {
-        hasAccess: true,
-        reason: 'premium',
-        message: 'Tienda Online incluida en tu Plan Premium',
-      };
-    }
-
-    // Si es Plan Básico, no tiene acceso
-    if (userProfile.plan_id === 'plan-basico') {
-      return {
-        hasAccess: false,
-        reason: 'basic_plan',
-        message: 'La Tienda Online solo está disponible con el Plan Premium',
-      };
-    }
-
-    // Si tiene suscripción activa pero no se identificó el plan, dar acceso por defecto
-    // (para compatibilidad con suscripciones antiguas)
+  if (userProfile.subscription_status === 'active' && userProfile.plan_id === 'plan-premium') {
     return {
       hasAccess: true,
       reason: 'premium',
+      message: 'Tienda Online incluida en tu Plan Premium',
     };
   }
 
-  // Suscripción expirada o cancelada
+  // Caso por defecto con acceso
   return {
-    hasAccess: false,
-    reason: 'expired',
-    message: 'Tu suscripción ha expirado. Renueva para acceder a la Tienda Online.',
+    hasAccess: true,
+    reason: 'premium',
   };
 }
 
