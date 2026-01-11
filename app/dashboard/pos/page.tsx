@@ -246,7 +246,33 @@ export default function POSPage() {
     e.preventDefault();
     if (!barcodeInput.trim()) return;
 
-    const product = products.find((p) => p.barcode === barcodeInput.trim());
+    // Normalizar el código de barras para la búsqueda
+    const normalizedBarcode = barcodeInput.trim().toLowerCase();
+
+    // Buscar en productos disponibles primero (con stock > 0)
+    let product = products.find((p) => p.barcode?.toLowerCase().trim() === normalizedBarcode);
+
+    // Si no se encuentra en productos disponibles, buscar en todos los productos
+    if (!product) {
+      try {
+        const allProducts = await getProducts(getToken) as Product[];
+        product = allProducts.find((p) => p.barcode?.toLowerCase().trim() === normalizedBarcode);
+
+        // Si se encuentra pero no tiene stock
+        if (product && product.stock <= 0) {
+          Swal.error(
+            "Producto sin stock",
+            `${product.name} no tiene unidades disponibles (Stock: ${product.stock})`
+          );
+          setBarcodeInput("");
+          barcodeRef.current?.focus();
+          return;
+        }
+      } catch (error) {
+        console.error("Error fetching all products:", error);
+      }
+    }
+
     if (product) {
       // Efecto visual de éxito
       setScanSuccess(true);
@@ -258,8 +284,12 @@ export default function POSPage() {
       // Toast pequeño y no intrusivo
       Swal.productAdded(product.name, 1);
     } else {
-      Swal.error("Producto no encontrado", "Código no registrado");
+      Swal.error(
+        "Producto no encontrado",
+        `El código ${barcodeInput.trim()} no está registrado`
+      );
     }
+    setBarcodeInput("");
     barcodeRef.current?.focus();
   };
 
@@ -273,7 +303,32 @@ export default function POSPage() {
 
     setLastCameraScannedCode(barcode);
 
-    const product = products.find((p) => p.barcode === barcode.trim());
+    // Normalizar el código de barras para la búsqueda
+    const normalizedBarcode = barcode.trim().toLowerCase();
+
+    // Buscar en productos disponibles primero (con stock > 0)
+    let product = products.find((p) => p.barcode?.toLowerCase().trim() === normalizedBarcode);
+
+    // Si no se encuentra en productos disponibles, buscar en todos los productos
+    if (!product) {
+      try {
+        const allProducts = await getProducts(getToken) as Product[];
+        product = allProducts.find((p) => p.barcode?.toLowerCase().trim() === normalizedBarcode);
+
+        // Si se encuentra pero no tiene stock
+        if (product && product.stock <= 0) {
+          Swal.error(
+            "Producto sin stock",
+            `${product.name} no tiene unidades disponibles (Stock: ${product.stock})`
+          );
+          setTimeout(() => setLastCameraScannedCode(""), 2000);
+          return;
+        }
+      } catch (error) {
+        console.error("Error fetching all products:", error);
+      }
+    }
+
     if (product) {
       // Efecto visual de éxito
       setScanSuccess(true);
@@ -1332,18 +1387,42 @@ export default function POSPage() {
                   </div>
                 ) : (
                   <div>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      className="w-full"
-                      onClick={() => setShowCustomerSearch(!showCustomerSearch)}
-                    >
-                      <User className="h-4 w-4 mr-2" />
-                      {showCustomerSearch
-                        ? "Cerrar búsqueda"
-                        : "Seleccionar Cliente (Opcional)"}
-                    </Button>
-                    <p className="text-xs text-gray-500 text-center mt-1">
+                    {/* Nuevo diseño con cuadro naranja/tomate */}
+                    <div className="bg-gradient-to-br from-orange-100 to-orange-50 border-2 border-orange-400 rounded-lg p-4 relative overflow-hidden">
+                      {/* Icono de persona en el fondo */}
+                      <div className="absolute right-2 top-1/2 -translate-y-1/2 opacity-10">
+                        <User className="h-20 w-20 text-orange-600" />
+                      </div>
+
+                      {/* Contenido */}
+                      <div className="relative z-10 space-y-3">
+                        <div className="flex items-center gap-2 mb-2">
+                          <div className="p-2 bg-orange-600 rounded-full">
+                            <User className="h-5 w-5 text-white" />
+                          </div>
+                          <div>
+                            <p className="text-sm font-bold text-orange-900">
+                              Seleccionar Cliente
+                            </p>
+                            <p className="text-xs text-orange-700">
+                              Opcional
+                            </p>
+                          </div>
+                        </div>
+
+                        {/* Botón de tamaño reducido (50% del ancho del cuadro) */}
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="w-1/2 mx-auto block bg-white hover:bg-orange-50 border-orange-400 text-orange-900 font-semibold"
+                          onClick={() => setShowCustomerSearch(!showCustomerSearch)}
+                        >
+                          {showCustomerSearch ? "Cerrar" : "Seleccionar"}
+                        </Button>
+                      </div>
+                    </div>
+
+                    <p className="text-xs text-gray-500 text-center mt-2">
                       Puedes vender sin seleccionar cliente
                     </p>
 

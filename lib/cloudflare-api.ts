@@ -10,6 +10,8 @@
  * const products = await getProducts(getToken);
  */
 
+import type { PurchaseOrderWithItems } from '@/lib/types';
+
 // URL base de la API de Cloudflare Workers
 const API_BASE_URL = process.env.NEXT_PUBLIC_CLOUDFLARE_API_URL || 'https://tienda-pos-api.julii1295.workers.dev';
 
@@ -399,8 +401,8 @@ export async function getPurchaseOrderById(id: string, getToken: GetTokenFn): Pr
   return fetchAPI<PurchaseOrder>(`/api/purchase-orders/${id}`, getToken);
 }
 
-export async function getPurchaseOrdersBySupplier(supplierId: string, getToken: GetTokenFn): Promise<PurchaseOrder[]> {
-  return fetchAPI<PurchaseOrder[]>(`/api/purchase-orders/supplier/${supplierId}`, getToken);
+export async function getPurchaseOrdersBySupplier(supplierId: string, getToken: GetTokenFn): Promise<PurchaseOrderWithItems[]> {
+  return fetchAPI<PurchaseOrderWithItems[]>(`/api/purchase-orders/supplier/${supplierId}`, getToken);
 }
 
 export async function createPurchaseOrder(data: Partial<PurchaseOrder>, getToken: GetTokenFn): Promise<PurchaseOrder> {

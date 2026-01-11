@@ -4,12 +4,12 @@ import { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { useAuth } from '@clerk/nextjs';
-import { ShoppingCart, Plus, Trash2, Edit, Package } from 'lucide-react';
+import { ShoppingCart, History } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { SupplierForm } from '@/components/suppliers/supplier-form';
-import { getSupplierById, getSupplierProducts, deleteProduct } from '@/lib/cloudflare-api';
-import type { Supplier, Product } from '@/lib/types';
+import { getSupplierById, getPurchaseOrdersBySupplier } from '@/lib/cloudflare-api';
+import type { Supplier, PurchaseOrderWithItems, PurchaseOrderItem } from '@/lib/types';
 import { formatCurrency } from '@/lib/utils';
 import { toast } from 'sonner';
 
@@ -18,13 +18,19 @@ export default function EditSupplierPage() {
   const params = useParams();
   const router = useRouter();
   const [supplier, setSupplier] = useState<Supplier | null>(null);
-  const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
-  const [loadingProducts, setLoadingProducts] = useState(true);
+  const [purchaseOrders, setPurchaseOrders] = useState<PurchaseOrderWithItems[]>([]);
+  const [loadingPurchases, setLoadingPurchases] = useState(true);
+  const [purchasedProducts, setPurchasedProducts] = useState<Map<string, {
+    product_name: string;
+    total_quantity: number;
+    total_amount: number;
+    last_purchase_date: string;
+  }>>(new Map());
 
   useEffect(() => {
     fetchSupplier();
-    fetchProducts();
+    fetchPurchaseHistory();
   }, [params.id]);
 
   const fetchSupplier = async () => {
@@ -39,39 +45,50 @@ export default function EditSupplierPage() {
     }
   };
 
-  const fetchProducts = async () => {
+  const fetchPurchaseHistory = async () => {
     try {
-      setLoadingProducts(true);
-      const data = await getSupplierProducts(params.id as string, getToken);
-      // Normalizar el campo images para compatibilidad
-      const normalizedProducts = data.map(p => ({
-        ...p,
-        images: Array.isArray(p.images)
-          ? p.images
-          : p.images
-            ? [p.images]
-            : p.image_url
-              ? [p.image_url]
-              : undefined,
-      }));
-      setProducts(normalizedProducts);
+      setLoadingPurchases(true);
+      const orders = await getPurchaseOrdersBySupplier(params.id as string, getToken);
+      setPurchaseOrders(orders);
+
+      // Agrupar productos comprados
+      const productsMap = new Map<string, {
+        product_name: string;
+        total_quantity: number;
+        total_amount: number;
+        last_purchase_date: string;
+      }>();
+
+      // Solo incluir órdenes recibidas
+      const receivedOrders = orders.filter(order => order.status === 'recibida');
+
+      for (const order of receivedOrders) {
+        if (order.items) {
+          for (const item of order.items) {
+            const existing = productsMap.get(item.product_id);
+            if (existing) {
+              existing.total_quantity += item.quantity;
+              existing.total_amount += item.subtotal;
+              if (order.received_date && order.received_date > existing.last_purchase_date) {
+                existing.last_purchase_date = order.received_date;
+              }
+            } else {
+              productsMap.set(item.product_id, {
+                product_name: item.product_name,
+                total_quantity: item.quantity,
+                total_amount: item.subtotal,
+                last_purchase_date: order.received_date || order.created_at,
+              });
+            }
+          }
+        }
+      }
+
+      setPurchasedProducts(productsMap);
     } catch (error) {
-      console.error('Error fetching products:', error);
+      console.error('Error fetching purchase history:', error);
     } finally {
-      setLoadingProducts(false);
-    }
-  };
-
-  const handleDeleteProduct = async (productId: string, productName: string) => {
-    if (!confirm(`¿Estás seguro de eliminar "${productName}" del catálogo de este proveedor?`)) return;
-
-    try {
-      await deleteProduct(productId, getToken);
-      toast.success('Producto eliminado');
-      fetchProducts();
-    } catch (error) {
-      console.error('Error deleting product:', error);
-      toast.error('Error al eliminar producto');
+      setLoadingPurchases(false);
     }
   };
 
@@ -89,78 +106,95 @@ export default function EditSupplierPage() {
 
       <SupplierForm initialData={supplier} supplierId={params.id as string} />
 
-      {/* Productos del Proveedor */}
+      {/* Historial de Productos Comprados */}
       <Card>
         <CardHeader>
           <div className="flex items-center justify-between">
             <CardTitle className="flex items-center gap-2">
-              <Package className="h-5 w-5" />
-              Productos de este Proveedor ({products.length})
+              <History className="h-5 w-5" />
+              Productos Comprados a este Proveedor ({purchasedProducts.size})
             </CardTitle>
-            <Link href={`/dashboard/products/new?supplier_id=${params.id}`}>
-              <Button size="sm">
-                <Plus className="mr-2 h-4 w-4" />
-                Agregar Producto
+            <Link href={`/dashboard/suppliers/${params.id}/new-purchase`}>
+              <Button size="sm" variant="outline">
+                <ShoppingCart className="mr-2 h-4 w-4" />
+                Nueva Orden de Compra
               </Button>
             </Link>
           </div>
+          <p className="text-sm text-gray-500 mt-2">
+            Historial de productos que has comprado a este proveedor a través de órdenes de compra
+          </p>
         </CardHeader>
         <CardContent>
-          {loadingProducts ? (
-            <div className="text-center py-8 text-gray-500">Cargando productos...</div>
-          ) : products.length === 0 ? (
+          {loadingPurchases ? (
+            <div className="text-center py-8 text-gray-500">Cargando historial de compras...</div>
+          ) : purchasedProducts.size === 0 ? (
             <div className="text-center py-8 text-gray-500">
-              <Package className="h-12 w-12 mx-auto mb-4 opacity-50" />
-              <p>No hay productos registrados para este proveedor</p>
-              <Link href={`/dashboard/products/new?supplier_id=${params.id}`}>
-                <Button className="mt-4" variant="outline">
-                  <Plus className="mr-2 h-4 w-4" />
-                  Agregar Primer Producto
+              <History className="h-12 w-12 mx-auto mb-4 opacity-50" />
+              <p className="mb-2">No hay historial de compras con este proveedor</p>
+              <p className="text-xs mb-4">Crea una orden de compra para comenzar</p>
+              <Link href={`/dashboard/suppliers/${params.id}/new-purchase`}>
+                <Button variant="outline">
+                  <ShoppingCart className="mr-2 h-4 w-4" />
+                  Crear Primera Orden
                 </Button>
               </Link>
             </div>
           ) : (
             <div className="space-y-3">
-              {products.map((product) => (
+              {Array.from(purchasedProducts.entries()).map(([productId, data]) => (
                 <div
-                  key={product.id}
+                  key={productId}
                   className="flex items-center justify-between p-4 border rounded-lg hover:bg-gray-50"
                 >
                   <div className="flex-1">
-                    <div className="flex items-center gap-3">
-                      {product.images && product.images.length > 0 && (
-                        <img
-                          src={product.images[0]}
-                          alt={product.name}
-                          className="w-12 h-12 object-cover rounded"
-                        />
-                      )}
+                    <h3 className="font-semibold">{data.product_name}</h3>
+                    <div className="grid grid-cols-3 gap-4 text-sm text-gray-600 mt-2">
                       <div>
-                        <h3 className="font-semibold">{product.name}</h3>
-                        <div className="flex gap-4 text-sm text-gray-600">
-                          <span>Disponible: {product.stock}</span>
-                          <span>Costo: {formatCurrency(product.cost_price)}</span>
-                          <span>Venta: {formatCurrency(product.sale_price)}</span>
-                        </div>
+                        <span className="text-gray-500">Total comprado:</span>
+                        <p className="font-medium text-gray-900">{data.total_quantity} unidades</p>
+                      </div>
+                      <div>
+                        <span className="text-gray-500">Monto total:</span>
+                        <p className="font-medium text-gray-900">{formatCurrency(data.total_amount)}</p>
+                      </div>
+                      <div>
+                        <span className="text-gray-500">Última compra:</span>
+                        <p className="font-medium text-gray-900">
+                          {new Date(data.last_purchase_date).toLocaleDateString('es-CO', {
+                            year: 'numeric',
+                            month: 'short',
+                            day: 'numeric'
+                          })}
+                        </p>
                       </div>
                     </div>
                   </div>
-                  <div className="flex gap-2">
-                    <Link href={`/dashboard/products/${product.id}`}>
-                      <Button variant="ghost" size="sm">
-                        <Edit className="h-4 w-4" />
-                      </Button>
-                    </Link>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => handleDeleteProduct(product.id, product.name)}
-                    >
-                      <Trash2 className="h-4 w-4 text-red-600" />
-                    </Button>
-                  </div>
                 </div>
               ))}
+            </div>
+          )}
+          {purchaseOrders.length > 0 && (
+            <div className="mt-6 pt-6 border-t">
+              <h4 className="font-semibold mb-2">Resumen de Órdenes</h4>
+              <div className="grid grid-cols-3 gap-4 text-sm">
+                <div>
+                  <span className="text-gray-500">Total órdenes:</span>
+                  <p className="font-medium text-gray-900">{purchaseOrders.length}</p>
+                </div>
+                <div>
+                  <span className="text-gray-500">Órdenes recibidas:</span>
+                  <p className="font-medium text-green-600">
+                    {purchaseOrders.filter(o => o.status === 'recibida').length}
+                  </p>
+                </div>
+                <div>
+                  <span className="text-gray-500">Órdenes pendientes:</span>
+                  <p className="font-medium text-yellow-600">
+                    {purchaseOrders.filter(o => o.status === 'pendiente').length}
+                  </p>
+                </div>
+              </div>
             </div>
           )}
         </CardContent>

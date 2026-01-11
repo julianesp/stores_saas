@@ -138,9 +138,27 @@ app.get('/supplier/:supplierId', async (c) => {
       [supplierId]
     );
 
-    return c.json<APIResponse<PurchaseOrder[]>>({
+    // Get all items for these orders
+    const allItems = await tenantDB.getAll<PurchaseOrderItem>('purchase_order_items');
+
+    // Group items by order_id
+    const itemsMap = new Map<string, PurchaseOrderItem[]>();
+    allItems.forEach(item => {
+      if (!itemsMap.has(item.purchase_order_id)) {
+        itemsMap.set(item.purchase_order_id, []);
+      }
+      itemsMap.get(item.purchase_order_id)!.push(item);
+    });
+
+    // Add items to each order
+    const ordersWithItems = orders.map(order => ({
+      ...order,
+      items: itemsMap.get(order.id) || []
+    }));
+
+    return c.json<APIResponse<Array<PurchaseOrder & { items: PurchaseOrderItem[] }>>>({
       success: true,
-      data: orders,
+      data: ordersWithItems,
     });
   } catch (error) {
     console.error('Error fetching supplier purchase orders:', error);
