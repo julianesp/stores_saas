@@ -58,6 +58,7 @@ import Swal from "@/lib/sweetalert";
 import { BarcodeScanner } from "@/components/products/barcode-scanner";
 import { InvoiceModal } from "@/components/sales/invoice-modal";
 import Link from "next/link";
+import { normalizeBarcode, barcodeEquals } from "@/lib/barcode-utils";
 // COMENTADO: Tour deshabilitado
 // import { useTour } from '@/hooks/useTour';
 // import { posTourConfig } from '@/lib/tour-configs';
@@ -246,20 +247,32 @@ export default function POSPage() {
     e.preventDefault();
     if (!barcodeInput.trim()) return;
 
-    // Normalizar el código de barras para la búsqueda
-    const normalizedBarcode = barcodeInput.trim().toLowerCase();
+    console.log('🔍 [LECTOR USB] Código recibido:', barcodeInput);
 
-    // Buscar en productos disponibles primero (con stock > 0)
-    let product = products.find((p) => p.barcode?.toLowerCase().trim() === normalizedBarcode);
+    // 🔧 Normalizar el código de barras con la función centralizada
+    const scannedBarcode = normalizeBarcode(barcodeInput);
+    console.log('🔧 [LECTOR USB] Código normalizado:', scannedBarcode);
+
+    if (!scannedBarcode) {
+      Swal.error("Código inválido", "El código de barras no es válido");
+      setBarcodeInput("");
+      barcodeRef.current?.focus();
+      return;
+    }
+
+    // 🔧 Buscar usando comparación normalizada
+    let product = products.find((p) => barcodeEquals(p.barcode, scannedBarcode));
 
     // Si no se encuentra en productos disponibles, buscar en todos los productos
     if (!product) {
+      console.log('⚠️ [LECTOR USB] No encontrado en productos disponibles, buscando en todos...');
       try {
         const allProducts = await getProducts(getToken) as Product[];
-        product = allProducts.find((p) => p.barcode?.toLowerCase().trim() === normalizedBarcode);
+        product = allProducts.find((p) => barcodeEquals(p.barcode, scannedBarcode));
 
         // Si se encuentra pero no tiene stock
         if (product && product.stock <= 0) {
+          console.log('❌ [LECTOR USB] Producto encontrado pero sin stock');
           Swal.error(
             "Producto sin stock",
             `${product.name} no tiene unidades disponibles (Stock: ${product.stock})`
@@ -274,6 +287,7 @@ export default function POSPage() {
     }
 
     if (product) {
+      console.log('✅ [LECTOR USB] Producto encontrado:', product.name);
       // Efecto visual de éxito
       setScanSuccess(true);
       setTimeout(() => setScanSuccess(false), 500);
@@ -284,9 +298,10 @@ export default function POSPage() {
       // Toast pequeño y no intrusivo
       Swal.productAdded(product.name, 1);
     } else {
+      console.log('❌ [LECTOR USB] Producto NO encontrado en ninguna lista');
       Swal.error(
         "Producto no encontrado",
-        `El código ${barcodeInput.trim()} no está registrado`
+        `El código ${scannedBarcode} no está registrado`
       );
     }
     setBarcodeInput("");
@@ -296,47 +311,55 @@ export default function POSPage() {
   const handleCameraScan = async (barcode: string) => {
     if (!barcode.trim()) return;
 
-    // Evitar procesar el mismo código dos veces seguidas
-    if (barcode === lastCameraScannedCode) {
+    console.log('📷 [CÁMARA] Código recibido:', barcode);
+
+    // 🔧 Normalizar el código de barras con la función centralizada
+    const scannedBarcode = normalizeBarcode(barcode);
+    console.log('🔧 [CÁMARA] Código normalizado:', scannedBarcode);
+
+    if (!scannedBarcode) {
+      console.log('❌ [CÁMARA] Código inválido después de normalizar');
+      Swal.error("Código inválido", "El código de barras no es válido");
+      setTimeout(() => setLastCameraScannedCode(""), 2000);
       return;
     }
 
-    setLastCameraScannedCode(barcode);
+    // Evitar procesar el mismo código dos veces seguidas
+    if (scannedBarcode === lastCameraScannedCode) {
+      console.log('⏭️ [CÁMARA] Código ya procesado, ignorando duplicado');
+      return;
+    }
 
-    console.log('🔍 Buscando producto con código:', barcode);
+    setLastCameraScannedCode(scannedBarcode);
 
-    // Normalizar el código de barras para la búsqueda
-    const normalizedBarcode = barcode.trim().toLowerCase();
-    console.log('🔍 Código normalizado:', normalizedBarcode);
-
-    // Buscar en productos disponibles primero (con stock > 0)
-    console.log('🔍 Productos disponibles para buscar:', products.length);
-    console.log('🔍 Códigos disponibles:', products.map(p => ({
+    // 🔧 Buscar usando comparación normalizada
+    console.log('🔍 [CÁMARA] Productos disponibles para buscar:', products.length);
+    console.log('🔍 [CÁMARA] Códigos disponibles:', products.map(p => ({
       nombre: p.name,
       codigo: p.barcode,
-      codigoNormalizado: p.barcode?.toLowerCase().trim()
+      codigoNormalizado: normalizeBarcode(p.barcode)
     })));
 
-    let product = products.find((p) => p.barcode?.toLowerCase().trim() === normalizedBarcode);
+    let product = products.find((p) => barcodeEquals(p.barcode, scannedBarcode));
 
     // Si no se encuentra en productos disponibles, buscar en todos los productos
     if (!product) {
-      console.log('⚠️ No encontrado en productos disponibles, buscando en TODOS...');
+      console.log('⚠️ [CÁMARA] No encontrado en productos disponibles, buscando en TODOS...');
       try {
         const allProducts = await getProducts(getToken) as Product[];
-        console.log('🔍 Total de productos en sistema:', allProducts.length);
-        console.log('🔍 Todos los códigos:', allProducts.map(p => ({
+        console.log('🔍 [CÁMARA] Total de productos en sistema:', allProducts.length);
+        console.log('🔍 [CÁMARA] Todos los códigos:', allProducts.map(p => ({
           nombre: p.name,
           codigo: p.barcode,
           stock: p.stock,
-          codigoNormalizado: p.barcode?.toLowerCase().trim()
+          codigoNormalizado: normalizeBarcode(p.barcode)
         })));
 
-        product = allProducts.find((p) => p.barcode?.toLowerCase().trim() === normalizedBarcode);
+        product = allProducts.find((p) => barcodeEquals(p.barcode, scannedBarcode));
 
         // Si se encuentra pero no tiene stock
         if (product && product.stock <= 0) {
-          console.log('❌ Producto encontrado pero sin stock:', product.name);
+          console.log('❌ [CÁMARA] Producto encontrado pero sin stock:', product.name);
           Swal.error(
             "Producto sin stock",
             `${product.name} no tiene unidades disponibles (Stock: ${product.stock})`
@@ -350,7 +373,7 @@ export default function POSPage() {
     }
 
     if (product) {
-      console.log('✅ Producto encontrado:', product.name);
+      console.log('✅ [CÁMARA] Producto encontrado:', product.name);
       // Efecto visual de éxito
       setScanSuccess(true);
       setTimeout(() => setScanSuccess(false), 500);
@@ -367,10 +390,10 @@ export default function POSPage() {
         setTimeout(() => setLastCameraScannedCode(""), 1000);
       }, 500);
     } else {
-      console.log('❌ Producto NO encontrado en ninguna lista');
+      console.log('❌ [CÁMARA] Producto NO encontrado en ninguna lista');
       Swal.error(
         "Producto no encontrado",
-        `El código ${barcode} no está registrado`
+        `El código ${scannedBarcode} no está registrado`
       );
       // También resetear el código en caso de error
       setTimeout(() => setLastCameraScannedCode(""), 2000);

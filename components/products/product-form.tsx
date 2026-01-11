@@ -24,6 +24,7 @@ import { toast } from "sonner";
 import { Scan, Camera, X, Plus, Minus } from "lucide-react";
 import { ImageUploader } from './image-uploader';
 import { Html5Qrcode } from "html5-qrcode";
+import { normalizeBarcode, barcodeEquals } from "@/lib/barcode-utils";
 
 const productSchema = z.object({
   barcode: z.string().optional(),
@@ -118,7 +119,8 @@ export function ProductForm({ initialData, productId }: ProductFormProps) {
 
     try {
       const products = await getProducts(getToken);
-      const existingProduct = products.find(p => p.barcode === barcodeValue);
+      // 🔧 Usar comparación normalizada de códigos de barras
+      const existingProduct = products.find(p => barcodeEquals(p.barcode, barcodeValue));
 
       if (existingProduct) {
         toast.error(`Este código de barras ya está registrado en el producto: ${existingProduct.name}`);
@@ -175,7 +177,8 @@ export function ProductForm({ initialData, productId }: ProductFormProps) {
             if (!productId) {
               try {
                 const products = await getProducts(getToken);
-                const existingProduct = products.find(p => p.barcode === decodedText);
+                // 🔧 Usar comparación normalizada de códigos de barras
+                const existingProduct = products.find(p => barcodeEquals(p.barcode, decodedText));
 
                 if (existingProduct) {
                   toast.error(`Este código de barras ya está registrado en el producto: ${existingProduct.name}`);
@@ -190,8 +193,10 @@ export function ProductForm({ initialData, productId }: ProductFormProps) {
               }
             }
 
-            setValue("barcode", decodedText);
-            toast.success("✓ Código escaneado: " + decodedText);
+            // 🔧 Normalizar el código antes de guardarlo
+            const normalizedCode = normalizeBarcode(decodedText);
+            setValue("barcode", normalizedCode || "");
+            toast.success("✓ Código escaneado: " + normalizedCode);
             stopScanner();
           }
         },
@@ -359,6 +364,16 @@ export function ProductForm({ initialData, productId }: ProductFormProps) {
 
       // Log para debugging - verificar que el código de barras esté presente
       console.log('📦 Datos del producto antes de limpiar:', productData);
+
+      // 🔧 NORMALIZAR código de barras antes de guardar
+      if (productData.barcode) {
+        const normalizedBarcode = normalizeBarcode(productData.barcode);
+        productData.barcode = normalizedBarcode;
+        console.log('🔧 Código de barras normalizado:', {
+          original: data.barcode,
+          normalizado: normalizedBarcode
+        });
+      }
 
       // Limpiar campos vacíos para evitar errores en la base de datos
       // Convertir strings vacíos a undefined
