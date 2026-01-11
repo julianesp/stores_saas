@@ -303,20 +303,40 @@ export default function POSPage() {
 
     setLastCameraScannedCode(barcode);
 
+    console.log('🔍 Buscando producto con código:', barcode);
+
     // Normalizar el código de barras para la búsqueda
     const normalizedBarcode = barcode.trim().toLowerCase();
+    console.log('🔍 Código normalizado:', normalizedBarcode);
 
     // Buscar en productos disponibles primero (con stock > 0)
+    console.log('🔍 Productos disponibles para buscar:', products.length);
+    console.log('🔍 Códigos disponibles:', products.map(p => ({
+      nombre: p.name,
+      codigo: p.barcode,
+      codigoNormalizado: p.barcode?.toLowerCase().trim()
+    })));
+
     let product = products.find((p) => p.barcode?.toLowerCase().trim() === normalizedBarcode);
 
     // Si no se encuentra en productos disponibles, buscar en todos los productos
     if (!product) {
+      console.log('⚠️ No encontrado en productos disponibles, buscando en TODOS...');
       try {
         const allProducts = await getProducts(getToken) as Product[];
+        console.log('🔍 Total de productos en sistema:', allProducts.length);
+        console.log('🔍 Todos los códigos:', allProducts.map(p => ({
+          nombre: p.name,
+          codigo: p.barcode,
+          stock: p.stock,
+          codigoNormalizado: p.barcode?.toLowerCase().trim()
+        })));
+
         product = allProducts.find((p) => p.barcode?.toLowerCase().trim() === normalizedBarcode);
 
         // Si se encuentra pero no tiene stock
         if (product && product.stock <= 0) {
+          console.log('❌ Producto encontrado pero sin stock:', product.name);
           Swal.error(
             "Producto sin stock",
             `${product.name} no tiene unidades disponibles (Stock: ${product.stock})`
@@ -330,6 +350,7 @@ export default function POSPage() {
     }
 
     if (product) {
+      console.log('✅ Producto encontrado:', product.name);
       // Efecto visual de éxito
       setScanSuccess(true);
       setTimeout(() => setScanSuccess(false), 500);
@@ -346,6 +367,7 @@ export default function POSPage() {
         setTimeout(() => setLastCameraScannedCode(""), 1000);
       }, 500);
     } else {
+      console.log('❌ Producto NO encontrado en ninguna lista');
       Swal.error(
         "Producto no encontrado",
         `El código ${barcode} no está registrado`

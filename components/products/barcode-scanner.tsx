@@ -70,31 +70,26 @@ export function BarcodeScanner({ onDetected, onClose }: BarcodeScannerProps) {
 
   useEffect(() => {
     if (isScanning && scannerRef.current) {
+      console.log('🎥 Iniciando escáner de códigos de barras...');
+
       Quagga.init(
         {
           inputStream: {
             name: 'Live',
-            type: 'LiveStream',
+            type: 'LiveStream' as const,
             target: scannerRef.current,
             constraints: {
               width: { min: 640, ideal: 1280, max: 1920 },
               height: { min: 480, ideal: 720, max: 1080 },
               facingMode: 'environment', // Cámara trasera en móviles
-              aspectRatio: { min: 1, max: 2 },
             },
-            area: {
-              // Área de escaneo (centro de la imagen)
-              top: '20%',
-              right: '10%',
-              left: '10%',
-              bottom: '20%',
-            },
+            // REMOVIDO: area - Esta configuración puede causar el error de "null.x"
           },
           locator: {
-            patchSize: 'medium',
-            halfSample: false, // Mejor calidad, más lento pero más preciso
+            patchSize: 'medium' as const,
+            halfSample: true, // Cambiar a true para mejor compatibilidad
           },
-          numOfWorkers: navigator.hardwareConcurrency || 4,
+          numOfWorkers: 0, // Desactivar workers para mejor compatibilidad con móviles
           frequency: 10, // Escaneos por segundo
           decoder: {
             readers: [
@@ -102,59 +97,82 @@ export function BarcodeScanner({ onDetected, onClose }: BarcodeScannerProps) {
               'ean_8_reader', // EAN-8
               'code_128_reader', // Code 128
               'code_39_reader', // Code 39
-              'code_39_vin_reader', // Code 39 VIN
-              'codabar_reader', // Codabar
               'upc_reader', // UPC-A
               'upc_e_reader', // UPC-E
-              'i2of5_reader', // Interleaved 2 of 5
-              '2of5_reader', // Standard 2 of 5
-              'code_93_reader', // Code 93
-            ],
+            ] as const,
             multiple: false,
           },
           locate: true,
         },
         (err) => {
           if (err) {
-            console.error('Error al iniciar escáner:', err);
-            setError('No se pudo iniciar el escáner. Verifica los permisos de cámara.');
+            console.error('❌ Error al iniciar escáner:', err);
+            setError(`No se pudo iniciar el escáner: ${err.message || err}`);
             setIsScanning(false);
             return;
           }
+          console.log('✅ Escáner iniciado correctamente');
           Quagga.start();
         }
       );
 
       // Mejorar detección con validación de calidad
       Quagga.onDetected((result) => {
-        const code = result.codeResult.code;
-        const quality = result.codeResult.decodedCodes
-          .filter((c: any) => c.error !== undefined)
-          .reduce((sum: number, c: any) => sum + c.error, 0) / result.codeResult.decodedCodes.length;
+        try {
+          const code = result.codeResult.code;
 
-        // Solo aceptar códigos con buena calidad (error < 0.15) y si no está procesando
-        if (code && quality < 0.15 && code !== lastScanned && !isProcessing) {
-          setIsProcessing(true);
-          setLastScanned(code);
-
-          // Vibración (si el dispositivo lo soporta)
-          if (navigator.vibrate) {
-            navigator.vibrate(200);
+          // Calcular calidad de forma más segura
+          let quality = 1;
+          try {
+            const decodedCodes = result.codeResult.decodedCodes || [];
+            const validCodes = decodedCodes.filter((c: any) => c.error !== undefined);
+            if (validCodes.length > 0) {
+              quality = validCodes.reduce((sum: number, c: any) => sum + c.error, 0) / validCodes.length;
+            }
+          } catch (e) {
+            console.warn('No se pudo calcular calidad, usando valor por defecto');
           }
 
-          // Sonido de confirmación (opcional)
-          const audio = new Audio('data:audio/wav;base64,UklGRnoGAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQoGAACBhYqFbF1fdJivrJBhNjVgodDbq2EcBj+a2/LDciUFLIHO8tiJNwgZaLvt559NEAxQp+PwtmMcBjiR1/LMeSwFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBSuBzvLZiTYHGGS57OihUBELTKXh8bllHgU2kdb0z4IuCR1ywfDdkkEKF2a77OujUhELTqXi8bllHQU4kdXyz38qCiJ1wvDck0UJHGG56+6lUREMUKjj8r5sHgY8ldz00YMvCiZ4x/LajUIKH2W96+2nUxALTqrj8rxrHwU6lNv0z4QtCSF2wfHajEAPG2O56+qjURIMUKrk871rIAU7ldz00IMuCiR3xPDajEELG2K46+ykTxELTarg8r1sIAU6ltzzz4QuCiF1xvHYjUEPGl656+qkTxELTarg8r1sIAU5ltzzz4QuCiF1xvHYjUEPGl656+qkTxELTarg8r1sIAU5ltzzz4QuCiF1xvHYjUEPGl656+qkTxELTarg8r1sIAU5ltzzz4QuCiF1xvHYjUEPGl656+qkTxELTarg8r1sIAU5ltzzz4QuCiF1xvHYjUEPGl656+qkTxELTarg8r1sIAU5ltzzz4QuCiF1xvHYjUEPGl656+qkTxEL');
-          audio.volume = 0.3;
-          audio.play().catch(() => {}); // Silenciar errores si no se puede reproducir
+          // 🔍 DEBUG: Mostrar TODOS los códigos detectados en la consola
+          console.log('📷 Código detectado:', {
+            codigo: code,
+            calidad: quality.toFixed(4),
+            formato: result.codeResult.format,
+            aceptado: quality < 0.3 // Relajado aún más para móviles
+          });
 
-          // Llamar a onDetected
-          onDetected(code);
+          // Relajar el umbral de calidad de 0.15 a 0.3 para mejor detección con cámara móvil
+          if (code && quality < 0.3 && code !== lastScanned && !isProcessing) {
+            setIsProcessing(true);
+            setLastScanned(code);
 
-          // Resetear después de 3 segundos
-          setTimeout(() => {
-            setLastScanned('');
-            setIsProcessing(false);
-          }, 3000);
+            console.log('✅ Código aceptado y enviado:', code);
+
+            // Vibración (si el dispositivo lo soporta)
+            if (navigator.vibrate) {
+              navigator.vibrate(200);
+            }
+
+            // Sonido de confirmación (opcional)
+            try {
+              const audio = new Audio('data:audio/wav;base64,UklGRnoGAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQoGAACBhYqFbF1fdJivrJBhNjVgodDbq2EcBj+a2/LDciUFLIHO8tiJNwgZaLvt559NEAxQp+PwtmMcBjiR1/LMeSwFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBSuBzvLZiTYHGGS57OihUBELTKXh8bllHgU2kdb0z4IuCR1ywfDdkkEKF2a77OujUhELTqXi8bllHQU4kdXyz38qCiJ1wvDck0UJHGG56+6lUREMUKjj8r5sHgY8ldz00YMvCiZ4x/LajUIKH2W96+2nUxALTqrj8rxrHwU6lNv0z4QtCSF2wfHajEAPG2O56+qjURIMUKrk871rIAU7ldz00IMuCiR3xPDajEELG2K46+ykTxELTarg8r1sIAU6ltzzz4QuCiF1xvHYjUEPGl656+qkTxELTarg8r1sIAU5ltzzz4QuCiF1xvHYjUEPGl656+qkTxELTarg8r1sIAU5ltzzz4QuCiF1xvHYjUEPGl656+qkTxELTarg8r1sIAU5ltzzz4QuCiF1xvHYjUEPGl656+qkTxELTarg8r1sIAU5ltzzz4QuCiF1xvHYjUEPGl656+qkTxELTarg8r1sIAU5ltzzz4QuCiF1xvHYjUEPGl656+qkTxEL');
+              audio.volume = 0.3;
+              audio.play().catch(() => {}); // Silenciar errores si no se puede reproducir
+            } catch (e) {
+              // Ignorar errores de audio
+            }
+
+            // Llamar a onDetected
+            onDetected(code);
+
+            // Resetear después de 3 segundos
+            setTimeout(() => {
+              setLastScanned('');
+              setIsProcessing(false);
+            }, 3000);
+          }
+        } catch (error) {
+          console.error('Error procesando código detectado:', error);
         }
       });
     }
