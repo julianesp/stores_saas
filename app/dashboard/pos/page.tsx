@@ -1533,6 +1533,9 @@ export default function POSPage() {
                             />
                             <Input
                               placeholder="Teléfono"
+                              type="tel"
+                              inputMode="numeric"
+                              pattern="[0-9]*"
                               value={newCustomerData.phone}
                               onChange={(e) =>
                                 setNewCustomerData({

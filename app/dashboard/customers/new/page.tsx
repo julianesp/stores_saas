@@ -110,6 +110,9 @@ export default function NewCustomerPage() {
                 <Label htmlFor="phone">Teléfono</Label>
                 <Input
                   id="phone"
+                  type="tel"
+                  inputMode="numeric"
+                  pattern="[0-9]*"
                   {...register('phone')}
                   placeholder="Número de teléfono"
                 />
