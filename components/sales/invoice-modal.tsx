@@ -136,7 +136,8 @@ export function InvoiceModal({
               variant="outline"
               size="sm"
               onClick={handleDownloadPDF}
-              className="gap-2 text-black"
+              className="gap-2 text-black bg-green-400 cursor-pointer md:"
+              
             >
               <Download className="h-4 w-4 text-black" />
               Descargar PDF

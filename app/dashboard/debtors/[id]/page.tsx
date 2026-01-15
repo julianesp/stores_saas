@@ -340,8 +340,7 @@ export default function DebtorDetailPage() {
               {creditSales.map((sale) => (
                 <div
                   key={sale.id}
-                  className="border rounded-lg p-4 hover:bg-gray-50 cursor-pointer"
-                  onClick={() => handleSaleClick(sale)}
+                  className="border rounded-lg p-4 hover:bg-gray-50"
                 >
                   <div className="flex justify-between items-start mb-2">
                     <div>
@@ -365,7 +364,7 @@ export default function DebtorDetailPage() {
                       {sale.payment_status === 'pendiente' ? 'Pendiente' : 'Pago Parcial'}
                     </span>
                   </div>
-                  <div className="grid grid-cols-3 gap-4 text-sm">
+                  <div className="grid grid-cols-3 gap-4 text-sm mb-3">
                     <div>
                       <p className="text-gray-500">Total</p>
                       <p className="font-semibold">${sale.total.toLocaleString('es-CO')}</p>
@@ -383,6 +382,14 @@ export default function DebtorDetailPage() {
                       </p>
                     </div>
                   </div>
+                  {/* Botón de Registrar Pago */}
+                  <Button
+                    onClick={() => handleSaleClick(sale)}
+                    className="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold"
+                  >
+                    <DollarSign className="h-4 w-4 mr-2" />
+                    Registrar Pago
+                  </Button>
                 </div>
               ))}
             </div>

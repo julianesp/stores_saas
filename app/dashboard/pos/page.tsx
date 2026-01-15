@@ -527,7 +527,6 @@ export default function POSPage() {
     }
 
     setProcessing(true);
-    Swal.loading("Procesando venta...");
     try {
       // Obtener user_profile del usuario actual
       let userProfile = null;
@@ -535,7 +534,6 @@ export default function POSPage() {
         userProfile = await getUserProfile(getToken);
       } catch (error) {
         console.error("User profile not found:", error);
-        Swal.closeLoading();
         Swal.error(
           "Error",
           "Perfil de usuario no encontrado. Asegúrate de haber iniciado sesión correctamente."
@@ -545,7 +543,6 @@ export default function POSPage() {
       }
 
       if (!userProfile || !userProfile.id) {
-        Swal.closeLoading();
         Swal.error(
           "Perfil inválido",
           "No se pudo obtener información del usuario autenticado."
@@ -659,7 +656,6 @@ export default function POSPage() {
         !Array.isArray(saleData.items) ||
         saleData.items!.length === 0
       ) {
-        Swal.closeLoading();
         Swal.error(
           "Datos de venta inválidos",
           "Faltan campos requeridos (total, payment_method o items)"
@@ -676,7 +672,6 @@ export default function POSPage() {
           typeof item.unit_price !== "number" ||
           typeof item.subtotal !== "number"
         ) {
-          Swal.closeLoading();
           Swal.error(
             "Datos de producto inválidos",
             "Revisa los productos en el carrito (id, cantidad o precio inválidos)"
@@ -741,8 +736,6 @@ export default function POSPage() {
       if (paymentMethod === "credito" && selectedCustomer) {
         await updateCustomerDebt(selectedCustomer.id, total, getToken);
       }
-
-      Swal.closeLoading();
 
       // Mostrar notificación especial si el cliente alcanzó el umbral de recompensa
       if (customerReachedRewardThreshold && selectedCustomer) {
@@ -954,7 +947,6 @@ export default function POSPage() {
       console.error("Error processing sale:", error);
       const errorMessage =
         error instanceof Error ? error.message : "Error al procesar la venta";
-      Swal.closeLoading();
       Swal.error(errorMessage, "Error en la venta");
     } finally {
       setProcessing(false);

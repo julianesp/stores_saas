@@ -671,12 +671,15 @@ export default function DashboardPage() {
                 Si necesitas <strong>facturación electrónica ante la DIAN</strong>, podemos integrar el sistema con proveedores como Alegra o Siigo.
               </p>
               <div className="flex flex-col sm:flex-row gap-2">
-                <Link href="/dashboard/config">
-                  <Button variant="outline" size="sm" className="text-xs bg-white hover:bg-blue-50">
-                    <Info className="h-3 w-3 mr-1" />
-                    Más Información
-                  </Button>
-                </Link>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="text-xs bg-green-600 hover:bg-green-700 text-white border-green-600"
+                  onClick={() => window.open('https://wa.me/573174503604?text=Hola,%20necesito%20información%20sobre%20facturación%20electrónica', '_blank')}
+                >
+                  <Info className="h-3 w-3 mr-1" />
+                  Contactar para Integración
+                </Button>
               </div>
             </div>
           </div>

@@ -1,8 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { auth } from '@clerk/nextjs/server';
-import { getUserProfile, updateUserProfile } from '@/lib/cloudflare-api';
+import { getUserProfile } from '@/lib/cloudflare-api';
 
 export const runtime = 'nodejs';
+
+const API_BASE_URL = process.env.NEXT_PUBLIC_CLOUDFLARE_API_URL || 'https://tienda-pos-api.julii1295.workers.dev';
 
 // GET: Obtener configuración actual
 export async function GET() {
@@ -57,11 +59,47 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Perfil no encontrado' }, { status: 404 });
     }
 
-    await updateUserProfile(userProfile.id, {
-      auto_reports_enabled: enabled,
-      auto_reports_time: time || '20:00',
-      auto_reports_email: email || null,
-    }, getToken);
+    const token = await getToken();
+
+    // Intentar actualizar el perfil con PATCH que solo actualiza campos específicos
+    const updateResponse = await fetch(`${API_BASE_URL}/api/user-profiles/${userProfile.id}`, {
+      method: 'PATCH',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`,
+      },
+      body: JSON.stringify({
+        auto_reports_enabled: enabled ? 1 : 0,
+        auto_reports_time: time || '20:00',
+        auto_reports_email: email || null,
+      }),
+    });
+
+    if (!updateResponse.ok) {
+      const errorData = await updateResponse.json().catch(() => ({}));
+      console.error('Error updating reports config:', errorData);
+
+      // Si PATCH falla, intentar con PUT enviando el perfil completo
+      const putResponse = await fetch(`${API_BASE_URL}/api/user-profiles/${userProfile.id}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          ...userProfile,
+          auto_reports_enabled: enabled ? 1 : 0,
+          auto_reports_time: time || '20:00',
+          auto_reports_email: email || null,
+        }),
+      });
+
+      if (!putResponse.ok) {
+        const putErrorData = await putResponse.json().catch(() => ({}));
+        console.error('Error with PUT request:', putErrorData);
+        throw new Error(putErrorData.error || 'Error al actualizar configuración');
+      }
+    }
 
     return NextResponse.json({
       success: true,

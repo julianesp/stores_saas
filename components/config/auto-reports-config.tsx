@@ -1,13 +1,25 @@
-'use client';
+"use client";
 
-import { useState, useEffect } from 'react';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Switch } from '@/components/ui/switch';
-import { FileSpreadsheet, Download, Clock, Mail, CheckCircle2 } from 'lucide-react';
-import { toast } from 'sonner';
+import { useState, useEffect } from "react";
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+  CardDescription,
+} from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Switch } from "@/components/ui/switch";
+import {
+  FileSpreadsheet,
+  Download,
+  Clock,
+  Mail,
+  CheckCircle2,
+} from "lucide-react";
+import { toast } from "sonner";
 
 interface AutoReportsConfig {
   enabled: boolean;
@@ -20,7 +32,7 @@ export function AutoReportsConfig() {
   const [saving, setSaving] = useState(false);
   const [config, setConfig] = useState<AutoReportsConfig>({
     enabled: false,
-    time: '20:00',
+    time: "20:00",
     email: null,
   });
   const [showPermissionRequest, setShowPermissionRequest] = useState(false);
@@ -32,19 +44,22 @@ export function AutoReportsConfig() {
   const loadConfig = async () => {
     try {
       setLoading(true);
-      const response = await fetch('/api/reports/config');
+      const response = await fetch("/api/reports/config");
 
       if (response.ok) {
         const data = await response.json();
         setConfig(data);
-        // Si nunca ha configurado, mostrar solicitud de permisos
+        // Si nunca ha configurado Y está desactivado, mostrar solicitud de permisos
+        // Si ya está activado, no mostrar solicitud
         if (data.enabled === false && data.email === null) {
           setShowPermissionRequest(true);
+        } else {
+          setShowPermissionRequest(false);
         }
       }
     } catch (error) {
-      console.error('Error loading config:', error);
-      toast.error('Error al cargar configuración');
+      console.error("Error loading config:", error);
+      toast.error("Error al cargar configuración");
     } finally {
       setLoading(false);
     }
@@ -55,9 +70,9 @@ export function AutoReportsConfig() {
       setSaving(true);
       const updatedConfig = { ...config, ...newConfig };
 
-      const response = await fetch('/api/reports/config', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+      const response = await fetch("/api/reports/config", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify(updatedConfig),
       });
 
@@ -68,11 +83,11 @@ export function AutoReportsConfig() {
         toast.success(data.message);
       } else {
         const error = await response.json();
-        toast.error(error.error || 'Error al guardar configuración');
+        toast.error(error.error || "Error al guardar configuración");
       }
     } catch (error) {
-      console.error('Error saving config:', error);
-      toast.error('Error al guardar configuración');
+      console.error("Error saving config:", error);
+      toast.error("Error al guardar configuración");
     } finally {
       setSaving(false);
     }
@@ -88,14 +103,14 @@ export function AutoReportsConfig() {
 
   const downloadManualReport = async () => {
     try {
-      toast.loading('Generando reporte...');
-      const today = new Date().toISOString().split('T')[0];
+      toast.loading("Generando reporte...");
+      const today = new Date().toISOString().split("T")[0];
       const response = await fetch(`/api/reports/daily?date=${today}`);
 
       if (response.ok) {
         const blob = await response.blob();
         const url = window.URL.createObjectURL(blob);
-        const a = document.createElement('a');
+        const a = document.createElement("a");
         a.href = url;
         a.download = `Ventas_${today}.xlsx`;
         document.body.appendChild(a);
@@ -103,16 +118,16 @@ export function AutoReportsConfig() {
         window.URL.revokeObjectURL(url);
         document.body.removeChild(a);
         toast.dismiss();
-        toast.success('Reporte descargado exitosamente');
+        toast.success("Reporte descargado exitosamente");
       } else {
         const error = await response.json();
         toast.dismiss();
-        toast.error(error.error || 'Error al generar reporte');
+        toast.error(error.error || "Error al generar reporte");
       }
     } catch (error) {
-      console.error('Error downloading report:', error);
+      console.error("Error downloading report:", error);
       toast.dismiss();
-      toast.error('Error al descargar reporte');
+      toast.error("Error al descargar reporte");
     }
   };
 
@@ -157,7 +172,10 @@ export function AutoReportsConfig() {
               </li>
               <li className="flex items-start gap-2">
                 <CheckCircle2 className="h-4 w-4 mt-0.5 shrink-0" />
-                <span>Incluye: fecha, producto, cantidad, valores, cliente y teléfono</span>
+                <span>
+                  Incluye: fecha, producto, cantidad, valores, cliente y
+                  teléfono
+                </span>
               </li>
               <li className="flex items-start gap-2">
                 <CheckCircle2 className="h-4 w-4 mt-0.5 shrink-0" />
@@ -172,8 +190,9 @@ export function AutoReportsConfig() {
 
           <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
             <p className="text-sm text-yellow-800">
-              <strong>📌 Permiso requerido:</strong> Para activar los reportes automáticos,
-              necesitamos tu autorización. Este permiso solo se solicitará una vez.
+              <strong>📌 Permiso requerido:</strong> Para activar los reportes
+              automáticos, necesitamos tu autorización. Este permiso solo se
+              solicitará una vez.
             </p>
           </div>
 
@@ -183,7 +202,7 @@ export function AutoReportsConfig() {
               disabled={saving}
               className="flex-1 bg-blue-600 hover:bg-blue-700"
             >
-              {saving ? 'Activando...' : 'Activar Reportes Automáticos'}
+              {saving ? "Activando..." : "Activar Reportes Automáticos"}
             </Button>
             <Button
               onClick={() => setShowPermissionRequest(false)}
@@ -213,16 +232,21 @@ export function AutoReportsConfig() {
         {/* Estado y activación */}
         <div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
           <div className="flex items-center gap-3">
-            <div className={`h-3 w-3 rounded-full ${config.enabled ? 'bg-green-500 animate-pulse' : 'bg-gray-300'}`}></div>
+            <div
+              className={`h-3 w-3 rounded-full ${
+                config.enabled ? "bg-green-500 animate-pulse" : "bg-gray-300"
+              }`}
+            ></div>
             <div>
               <p className="font-medium text-gray-900">
-                {config.enabled ? 'Reportes Activados' : 'Reportes Desactivados'}
+                {config.enabled
+                  ? "Reportes Activados"
+                  : "Reportes Desactivados"}
               </p>
               <p className="text-sm text-gray-500">
                 {config.enabled
-                  ? 'Se generan automáticamente cada día'
-                  : 'Activa para generar reportes diarios'
-                }
+                  ? "Se generan automáticamente cada día"
+                  : "Activa para generar reportes diarios"}
               </p>
             </div>
           </div>
@@ -259,7 +283,7 @@ export function AutoReportsConfig() {
                 disabled={saving}
                 variant="outline"
               >
-                {saving ? 'Guardando...' : 'Guardar'}
+                {saving ? "Guardando..." : "Guardar"}
               </Button>
             </div>
             <p className="text-xs text-gray-500">
@@ -279,8 +303,10 @@ export function AutoReportsConfig() {
               <Input
                 id="report-email"
                 type="email"
-                value={config.email || ''}
-                onChange={(e) => setConfig({ ...config, email: e.target.value })}
+                value={config.email || ""}
+                onChange={(e) =>
+                  setConfig({ ...config, email: e.target.value })
+                }
                 placeholder="tu@email.com"
                 className="max-w-md"
               />
@@ -289,18 +315,21 @@ export function AutoReportsConfig() {
                 disabled={saving}
                 variant="outline"
               >
-                {saving ? 'Guardando...' : 'Guardar'}
+                {saving ? "Guardando..." : "Guardar"}
               </Button>
             </div>
             <p className="text-xs text-gray-500">
-              Recibirás una notificación cuando se genere el reporte (próximamente)
+              Recibirás una notificación cuando se genere el reporte
+              (próximamente)
             </p>
           </div>
         )}
 
         {/* Descarga manual */}
         <div className="border-t pt-4">
-          <h4 className="font-medium text-gray-900 mb-3">Descargar reporte manual</h4>
+          <h4 className="font-medium text-gray-900 mb-3">
+            Descargar reporte manual
+          </h4>
           <Button
             onClick={downloadManualReport}
             variant="outline"

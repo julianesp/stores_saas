@@ -540,6 +540,12 @@ export async function updateSale(id: string, data: Partial<Sale>, getToken: GetT
   });
 }
 
+export async function deleteSale(id: string, getToken: GetTokenFn): Promise<void> {
+  return fetchAPI<void>(`/api/sales/${id}`, getToken, {
+    method: 'DELETE',
+  });
+}
+
 // ============================================
 // USER PROFILES
 // ============================================

@@ -151,7 +151,8 @@ export interface Product {
   min_stock: number;
   expiration_date?: string;
   image_url?: string; // Deprecated: mantener por compatibilidad
-  images?: string[]; // Array de URLs de imágenes (actualmente solo se usa la primera)
+  images?: string[]; // Array de URLs de imágenes (hasta 4 imágenes para tienda online)
+  main_image_index?: number; // Índice de la imagen principal (0-3)
   created_at: string;
   updated_at: string;
 }

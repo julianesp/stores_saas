@@ -684,8 +684,8 @@ export default function StoreConfigPage() {
               id="minOrder"
               type="number"
               inputMode="numeric"
-              value={storeMinOrder}
-              onChange={(e) => setStoreMinOrder(Number(e.target.value))}
+              value={storeMinOrder || ""}
+              onChange={(e) => setStoreMinOrder(Number(e.target.value) || 0)}
               placeholder="0"
               min="0"
               step="1000"

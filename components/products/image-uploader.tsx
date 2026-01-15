@@ -4,7 +4,7 @@ import { useState, useEffect, useRef } from 'react';
 import Image from 'next/image';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
-import { Upload, X, Image as ImageIcon, Loader2, Camera } from 'lucide-react';
+import { Upload, X, Image as ImageIcon, Loader2, Camera, Star } from 'lucide-react';
 import { toast } from 'sonner';
 import imageCompression from 'browser-image-compression';
 import Swal from 'sweetalert2';
@@ -13,6 +13,8 @@ interface ImageUploaderProps {
   productId?: string;
   initialImages?: string[];
   onChange: (images: string[]) => void;
+  onMainImageChange?: (mainImageIndex: number) => void;
+  initialMainImageIndex?: number;
   maxImages?: number;
 }
 
@@ -20,9 +22,12 @@ export function ImageUploader({
   productId,
   initialImages = [],
   onChange,
-  maxImages = 3,
+  onMainImageChange,
+  initialMainImageIndex = 0,
+  maxImages = 4,
 }: ImageUploaderProps) {
   const [images, setImages] = useState<string[]>(initialImages);
+  const [mainImageIndex, setMainImageIndex] = useState<number>(initialMainImageIndex);
   const [uploading, setUploading] = useState(false);
   const [loadingIndex, setLoadingIndex] = useState<number | null>(null);
   const [showCamera, setShowCamera] = useState(false);
@@ -35,6 +40,20 @@ export function ImageUploader({
   useEffect(() => {
     setImages(initialImages);
   }, [initialImages]);
+
+  // Sincronizar mainImageIndex
+  useEffect(() => {
+    setMainImageIndex(initialMainImageIndex);
+  }, [initialMainImageIndex]);
+
+  // Manejar cambio de imagen principal
+  const handleSetMainImage = (index: number) => {
+    setMainImageIndex(index);
+    if (onMainImageChange) {
+      onMainImageChange(index);
+    }
+    toast.success('Imagen principal actualizada');
+  };
 
   const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
@@ -175,6 +194,21 @@ export function ImageUploader({
       setImages(newImages);
       onChange(newImages);
 
+      // Ajustar el índice de la imagen principal si es necesario
+      let newMainIndex = mainImageIndex;
+      if (index === mainImageIndex) {
+        // Si eliminamos la imagen principal, la primera imagen será la nueva principal
+        newMainIndex = 0;
+      } else if (index < mainImageIndex) {
+        // Si eliminamos una imagen antes de la principal, ajustar el índice
+        newMainIndex = mainImageIndex - 1;
+      }
+
+      if (newMainIndex !== mainImageIndex && onMainImageChange) {
+        setMainImageIndex(newMainIndex);
+        onMainImageChange(newMainIndex);
+      }
+
       toast.success('Imagen eliminada');
     } catch (error) {
       console.error('Error removing image:', error);
@@ -191,78 +225,74 @@ export function ImageUploader({
         return;
       }
 
+      // Mostrar modal primero
+      setShowCamera(true);
+
       const stream = await navigator.mediaDevices.getUserMedia({
         video: { facingMode: 'environment', width: { ideal: 1280 }, height: { ideal: 720 } },
         audio: false
       });
 
       streamRef.current = stream;
+
+      // Esperar un tick para que el DOM se actualice y videoRef esté disponible
+      await new Promise(resolve => setTimeout(resolve, 100));
+
       if (videoRef.current) {
         const video = videoRef.current;
         video.srcObject = stream;
 
         console.log('📹 Stream asignado al video');
 
-        // Múltiples eventos para asegurar que capturemos cuando esté listo
-        const handleVideoReady = () => {
-          console.log('✅ Video listo - Estado:', {
-            readyState: video.readyState,
-            width: video.videoWidth,
-            height: video.videoHeight,
-            paused: video.paused
-          });
+        // Promesa para esperar a que el video esté listo
+        const waitForVideo = new Promise<void>((resolve) => {
+          const handleVideoReady = () => {
+            console.log('✅ Video listo - Estado:', {
+              readyState: video.readyState,
+              width: video.videoWidth,
+              height: video.videoHeight,
+              paused: video.paused
+            });
 
-          if (video.videoWidth > 0 && video.videoHeight > 0) {
-            setCameraReady(true);
-          }
-        };
+            if (video.videoWidth > 0 && video.videoHeight > 0) {
+              setCameraReady(true);
+              resolve();
+            }
+          };
 
-        // Escuchar múltiples eventos
-        video.addEventListener('loadedmetadata', () => {
-          console.log('📹 Evento: loadedmetadata');
-          handleVideoReady();
-        });
+          // Usar solo el evento más confiable
+          video.addEventListener('loadedmetadata', handleVideoReady, { once: true });
 
-        video.addEventListener('loadeddata', () => {
-          console.log('📹 Evento: loadeddata');
-          handleVideoReady();
-        });
-
-        video.addEventListener('canplay', () => {
-          console.log('📹 Evento: canplay');
-          handleVideoReady();
-        });
-
-        video.addEventListener('playing', () => {
-          console.log('📹 Evento: playing');
-          handleVideoReady();
+          // Timeout de respaldo
+          setTimeout(() => {
+            console.log('⏰ Timeout - verificando estado del video');
+            if (video.videoWidth > 0 && video.videoHeight > 0) {
+              setCameraReady(true);
+              resolve();
+            } else {
+              console.error('❌ Video sin dimensiones después de 3s');
+              // Intentar de todos modos
+              setCameraReady(true);
+              resolve();
+            }
+          }, 3000);
         });
 
         // Intentar reproducir inmediatamente
-        video.play()
-          .then(() => {
-            console.log('✅ Play() exitoso');
-          })
-          .catch((err) => {
-            console.warn('⚠️ Play() falló:', err);
-          });
+        try {
+          await video.play();
+          console.log('✅ Play() exitoso');
+        } catch (err) {
+          console.warn('⚠️ Play() falló:', err);
+        }
 
-        // Timeout de respaldo - si después de 2 segundos no está listo, intentar de todos modos
-        setTimeout(() => {
-          if (!cameraReady) {
-            console.log('⏰ Timeout - forzando cameraReady');
-            if (video.videoWidth > 0 && video.videoHeight > 0) {
-              setCameraReady(true);
-            } else {
-              console.error('❌ Video sin dimensiones después de 2s');
-              toast.warning('La cámara tardó más de lo esperado. Si no se muestra el video, cierra y vuelve a intentar.');
-            }
-          }
-        }, 2000);
+        // Esperar a que el video esté listo
+        await waitForVideo;
       }
-      setShowCamera(true);
     } catch (error: any) {
       console.error('Error accessing camera:', error);
+      setShowCamera(false);
+      setCameraReady(false);
 
       // Mensajes de error más específicos y amigables
       let errorMessage = 'No se pudo acceder a la cámara.';
@@ -468,31 +498,58 @@ export function ImageUploader({
   return (
     <div className="space-y-4">
       {/* Grid de imágenes */}
-      <div className={`grid gap-4 ${maxImages === 1 ? 'grid-cols-1 max-w-xs mx-auto' : 'grid-cols-3'}`}>
+      <div className={`grid gap-4 ${maxImages === 1 ? 'grid-cols-1 max-w-xs mx-auto' : 'grid-cols-2 sm:grid-cols-4'}`}>
         {images.map((imageUrl, index) => (
-          <Card key={index} className="relative group">
+          <Card key={index} className={`relative group ${index === mainImageIndex ? 'ring-2 ring-yellow-500' : ''}`}>
             <CardContent className="p-2">
               <div className="relative aspect-square overflow-hidden rounded-md">
                 <Image
                   src={imageUrl}
                   alt={`Producto imagen ${index + 1}`}
                   fill
-                  sizes="(max-width: 768px) 33vw, 200px"
+                  sizes="(max-width: 768px) 50vw, (max-width: 1024px) 33vw, 200px"
                   className="object-cover"
                   loading="lazy"
                 />
-                <Button
-                  type="button"
-                  variant="destructive"
-                  size="icon"
-                  className="absolute top-1 right-1 h-7 w-7 opacity-0 group-hover:opacity-100 transition-opacity z-10"
-                  onClick={() => handleRemoveImage(index)}
-                >
-                  <X className="h-4 w-4" />
-                </Button>
+
+                {/* Badge de imagen principal */}
+                {index === mainImageIndex && (
+                  <div className="absolute top-1 left-1 bg-yellow-500 text-white px-2 py-0.5 rounded-md text-xs font-semibold flex items-center gap-1 z-10">
+                    <Star className="h-3 w-3 fill-white" />
+                    Principal
+                  </div>
+                )}
+
+                {/* Botones de acción */}
+                <div className="absolute top-1 right-1 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity z-10">
+                  {/* Botón para establecer como principal */}
+                  {maxImages > 1 && index !== mainImageIndex && (
+                    <Button
+                      type="button"
+                      variant="secondary"
+                      size="icon"
+                      className="h-7 w-7 bg-yellow-500 hover:bg-yellow-600 text-white"
+                      onClick={() => handleSetMainImage(index)}
+                      title="Establecer como imagen principal"
+                    >
+                      <Star className="h-4 w-4" />
+                    </Button>
+                  )}
+
+                  {/* Botón para eliminar */}
+                  <Button
+                    type="button"
+                    variant="destructive"
+                    size="icon"
+                    className="h-7 w-7"
+                    onClick={() => handleRemoveImage(index)}
+                  >
+                    <X className="h-4 w-4" />
+                  </Button>
+                </div>
               </div>
               <p className="text-xs text-center text-gray-500 mt-1">
-                {maxImages === 1 ? 'Vista previa' : `Imagen ${index + 1}`}
+                {maxImages === 1 ? 'Vista previa' : index === mainImageIndex ? 'Imagen Principal' : `Imagen ${index + 1}`}
               </p>
             </CardContent>
           </Card>
@@ -533,15 +590,15 @@ export function ImageUploader({
             disabled={uploading}
           />
 
-          {/* Mensaje informativo sobre permisos */}
+          {/* Mensaje informativo */}
           <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
             <p className="text-xs text-blue-800 font-medium mb-1">
-              💡 Para usar la cámara:
+              💡 Consejos para las imágenes:
             </p>
             <ul className="text-xs text-blue-700 space-y-1 list-disc list-inside">
-              <li>Permite el acceso cuando el navegador lo solicite</li>
-              <li>Si no funciona, usa la opción "Galería"</li>
-              <li>Asegúrate de que ninguna otra app esté usando la cámara</li>
+              <li>La primera imagen será la principal (se muestra en la tienda online)</li>
+              <li>Puedes cambiar la imagen principal haciendo clic en la estrella</li>
+              <li>Agrega hasta {maxImages} imágenes para mostrar diferentes ángulos</li>
             </ul>
           </div>
 

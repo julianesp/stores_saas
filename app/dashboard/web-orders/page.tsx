@@ -3,12 +3,13 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '@clerk/nextjs';
 import { useRouter } from 'next/navigation';
-import { getSales, updateSale, getUserProfile } from '@/lib/cloudflare-api';
+import { getSales, updateSale, deleteSale, getUserProfile } from '@/lib/cloudflare-api';
 import { Sale, UserProfile } from '@/lib/types';
 import { formatCurrency } from '@/lib/utils';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import {
   ShoppingCart,
   CheckCircle,
@@ -18,7 +19,8 @@ import {
   Phone,
   User,
   MapPin,
-  Package
+  Package,
+  Trash2
 } from 'lucide-react';
 import { toast } from 'sonner';
 import {
@@ -43,6 +45,7 @@ export default function WebOrdersPage() {
   const [showDetailsDialog, setShowDetailsDialog] = useState(false);
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [hasAccess, setHasAccess] = useState(false);
+  const [activeTab, setActiveTab] = useState('pendiente');
 
   useEffect(() => {
     checkAccessAndLoadOrders();
@@ -227,6 +230,53 @@ export default function WebOrdersPage() {
     }
   };
 
+  const deleteOrder = async (orderId: string) => {
+    const order = orders.find(o => o.id === orderId);
+
+    const result = await Swal.fire({
+      title: '¿Eliminar este pedido?',
+      html: `
+        <p class="text-gray-600 mb-4">Vas a <strong>eliminar permanentemente</strong> el pedido:</p>
+        <div class="bg-red-50 p-4 rounded-lg mb-4">
+          <p class="font-bold text-lg text-red-900">${order?.sale_number}</p>
+          <p class="text-sm text-gray-600 mt-1">${formatCurrency(order?.total || 0)}</p>
+        </div>
+        <p class="text-sm text-red-600">⚠️ Esta acción no se puede deshacer</p>
+      `,
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonColor: '#dc2626',
+      cancelButtonColor: '#6b7280',
+      confirmButtonText: 'Sí, eliminar',
+      cancelButtonText: 'Cancelar',
+      reverseButtons: true,
+    });
+
+    if (!result.isConfirmed) return;
+
+    try {
+      await deleteSale(orderId, getToken);
+
+      await Swal.fire({
+        title: 'Pedido eliminado',
+        text: 'El pedido ha sido eliminado de la base de datos',
+        icon: 'success',
+        confirmButtonColor: '#16a34a',
+        timer: 2000,
+      });
+
+      loadOrders();
+    } catch (error: any) {
+      console.error('Error deleting order:', error);
+      await Swal.fire({
+        title: 'Error',
+        text: error.message || 'Error al eliminar pedido',
+        icon: 'error',
+        confirmButtonColor: '#dc2626',
+      });
+    }
+  };
+
   const viewOrderDetails = (order: Sale) => {
     setSelectedOrder(order);
     setShowDetailsDialog(true);
@@ -280,36 +330,12 @@ export default function WebOrdersPage() {
     );
   }
 
-  return (
-    <div className="space-y-6">
-      <div className="flex justify-between items-center">
-        <div>
-          <h1 className="text-3xl font-bold">Pedidos Web</h1>
-          <p className="text-gray-500">Gestiona los pedidos de tu tienda online</p>
-        </div>
-        <div className="flex gap-2">
-          <Badge variant="outline" className="text-yellow-700">
-            <Clock className="h-4 w-4 mr-1" />
-            {orders.filter(o => o.status === 'pendiente').length} Pendientes
-          </Badge>
-        </div>
-      </div>
+  // Filtrar pedidos por estado
+  const pendingOrders = orders.filter(o => o.status === 'pendiente');
+  const completedOrders = orders.filter(o => o.status === 'completada');
+  const canceledOrders = orders.filter(o => o.status === 'cancelada');
 
-      {orders.length === 0 ? (
-        <Card>
-          <CardContent className="flex flex-col items-center justify-center py-16">
-            <ShoppingCart className="h-16 w-16 text-gray-300 mb-4" />
-            <h3 className="text-xl font-semibold text-gray-700 mb-2">
-              No hay pedidos web
-            </h3>
-            <p className="text-gray-500">
-              Los pedidos de tu tienda online aparecerán aquí
-            </p>
-          </CardContent>
-        </Card>
-      ) : (
-        <div className="space-y-4">
-          {orders.map((order) => {
+  const renderOrderCard = (order: Sale) => {
             const customerInfo = extractCustomerInfo(order.notes || '');
 
             return (
@@ -396,12 +422,127 @@ export default function WebOrdersPage() {
                         </Button>
                       </>
                     )}
+
+                    {order.status === 'cancelada' && (
+                      <Button
+                        size="sm"
+                        variant="destructive"
+                        onClick={() => deleteOrder(order.id)}
+                      >
+                        <Trash2 className="h-4 w-4 mr-2" />
+                        Eliminar
+                      </Button>
+                    )}
                   </div>
                 </CardContent>
               </Card>
             );
-          })}
+  };
+
+  return (
+    <div className="space-y-6">
+      <div className="flex justify-between items-center">
+        <div>
+          <h1 className="text-3xl font-bold">Pedidos Web</h1>
+          <p className="text-gray-500">Gestiona los pedidos de tu tienda online</p>
         </div>
+        <div className="flex gap-2">
+          <Badge variant="outline" className="bg-yellow-50 text-yellow-700 border-yellow-300">
+            <Clock className="h-4 w-4 mr-1" />
+            {pendingOrders.length} Pendientes
+          </Badge>
+        </div>
+      </div>
+
+      {orders.length === 0 ? (
+        <Card>
+          <CardContent className="flex flex-col items-center justify-center py-16">
+            <ShoppingCart className="h-16 w-16 text-gray-300 mb-4" />
+            <h3 className="text-xl font-semibold text-gray-700 mb-2">
+              No hay pedidos web
+            </h3>
+            <p className="text-gray-500">
+              Los pedidos de tu tienda online aparecerán aquí
+            </p>
+          </CardContent>
+        </Card>
+      ) : (
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+          <TabsList className="grid w-full grid-cols-3">
+            <TabsTrigger value="pendiente" className="relative">
+              Pendientes
+              {pendingOrders.length > 0 && (
+                <Badge className="ml-2 bg-yellow-600">{pendingOrders.length}</Badge>
+              )}
+            </TabsTrigger>
+            <TabsTrigger value="completada" className="relative">
+              Completados
+              {completedOrders.length > 0 && (
+                <Badge className="ml-2 bg-green-600">{completedOrders.length}</Badge>
+              )}
+            </TabsTrigger>
+            <TabsTrigger value="cancelada" className="relative">
+              Cancelados
+              {canceledOrders.length > 0 && (
+                <Badge className="ml-2 bg-red-600">{canceledOrders.length}</Badge>
+              )}
+            </TabsTrigger>
+          </TabsList>
+
+          <TabsContent value="pendiente" className="space-y-4 mt-6">
+            {pendingOrders.length === 0 ? (
+              <Card>
+                <CardContent className="flex flex-col items-center justify-center py-16">
+                  <Clock className="h-16 w-16 text-gray-300 mb-4" />
+                  <h3 className="text-xl font-semibold text-gray-700 mb-2">
+                    No hay pedidos pendientes
+                  </h3>
+                  <p className="text-gray-500">
+                    Los nuevos pedidos aparecerán aquí
+                  </p>
+                </CardContent>
+              </Card>
+            ) : (
+              pendingOrders.map(renderOrderCard)
+            )}
+          </TabsContent>
+
+          <TabsContent value="completada" className="space-y-4 mt-6">
+            {completedOrders.length === 0 ? (
+              <Card>
+                <CardContent className="flex flex-col items-center justify-center py-16">
+                  <CheckCircle className="h-16 w-16 text-gray-300 mb-4" />
+                  <h3 className="text-xl font-semibold text-gray-700 mb-2">
+                    No hay pedidos completados
+                  </h3>
+                  <p className="text-gray-500">
+                    Los pedidos confirmados aparecerán aquí
+                  </p>
+                </CardContent>
+              </Card>
+            ) : (
+              completedOrders.map(renderOrderCard)
+            )}
+          </TabsContent>
+
+          <TabsContent value="cancelada" className="space-y-4 mt-6">
+            {canceledOrders.length === 0 ? (
+              <Card>
+                <CardContent className="flex flex-col items-center justify-center py-16">
+                  <XCircle className="h-16 w-16 text-gray-300 mb-4" />
+                  <h3 className="text-xl font-semibold text-gray-700 mb-2">
+                    No hay pedidos cancelados
+                  </h3>
+                  <p className="text-gray-500">
+                    Los pedidos rechazados aparecerán aquí
+                  </p>
+                </CardContent>
+              </Card>
+            ) : (
+              canceledOrders.map(renderOrderCard)
+            )}
+          </TabsContent>
+        </Tabs>
       )}
 
       {/* Dialog de detalles */}

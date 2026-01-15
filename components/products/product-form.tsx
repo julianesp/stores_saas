@@ -59,6 +59,8 @@ export function ProductForm({ initialData, productId }: ProductFormProps) {
   const [categories, setCategories] = useState<Category[]>([]);
   const [suppliers, setSuppliers] = useState<Supplier[]>([]);
   const [productImages, setProductImages] = useState<string[]>(initialData?.images || []);
+  const [mainImageIndex, setMainImageIndex] = useState<number>(initialData?.main_image_index ?? 0);
+  const [doesNotExpire, setDoesNotExpire] = useState(!initialData?.expiration_date);
   const [showScanner, setShowScanner] = useState(false);
   const [showScannerOptions, setShowScannerOptions] = useState(false); // Modal con opciones de escaneo
   const [showNewCategory, setShowNewCategory] = useState(false);
@@ -360,6 +362,7 @@ export function ProductForm({ initialData, productId }: ProductFormProps) {
       const productData: any = {
         ...data,
         images: productImages, // Incluir imágenes
+        main_image_index: mainImageIndex, // Incluir índice de imagen principal
       };
 
       // Log para debugging - verificar que el código de barras esté presente
@@ -772,27 +775,70 @@ export function ProductForm({ initialData, productId }: ProductFormProps) {
             </div>
           </div>
 
-          <div className="space-y-2">
+          <div className="space-y-3">
             <Label htmlFor="expiration_date">Fecha de Vencimiento</Label>
-            <Input
-              id="expiration_date"
-              type="date"
-              {...register("expiration_date")}
-            />
+
+            <div className="flex gap-3">
+              {/* Campo de fecha más corto */}
+              <div className="w-64">
+                <Input
+                  id="expiration_date"
+                  type="date"
+                  disabled={doesNotExpire}
+                  {...register("expiration_date")}
+                  className={doesNotExpire ? "bg-gray-100 cursor-not-allowed" : ""}
+                />
+              </div>
+
+              {/* Botón "No vence" grande y visible */}
+              <Button
+                type="button"
+                variant={doesNotExpire ? "default" : "outline"}
+                onClick={() => {
+                  setDoesNotExpire(!doesNotExpire);
+                  if (!doesNotExpire) {
+                    setValue("expiration_date", "");
+                  }
+                }}
+                className={`flex items-center gap-2 px-6 ${
+                  doesNotExpire
+                    ? "bg-green-600 hover:bg-green-700 text-white"
+                    : "border-2 border-gray-300 hover:bg-gray-50"
+                }`}
+              >
+                {doesNotExpire ? (
+                  <>
+                    <span className="text-lg">✓</span>
+                    <span className="font-semibold">No vence</span>
+                  </>
+                ) : (
+                  <span>Marcar como "No vence"</span>
+                )}
+              </Button>
+            </div>
+
+            {doesNotExpire && (
+              <p className="text-sm text-green-700 bg-green-50 border border-green-200 rounded-md px-3 py-2 flex items-center gap-2">
+                <span className="text-lg">✓</span>
+                <span>Este producto no tiene fecha de vencimiento</span>
+              </p>
+            )}
           </div>
         </CardContent>
       </Card>
 
       <Card>
         <CardHeader>
-          <CardTitle>Imagen del Producto</CardTitle>
+          <CardTitle>Imágenes del Producto</CardTitle>
         </CardHeader>
         <CardContent>
           <ImageUploader
             productId={productId}
             initialImages={productImages}
             onChange={setProductImages}
-            maxImages={1}
+            onMainImageChange={setMainImageIndex}
+            initialMainImageIndex={mainImageIndex}
+            maxImages={4}
           />
         </CardContent>
       </Card>
