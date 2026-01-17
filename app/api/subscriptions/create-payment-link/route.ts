@@ -2,15 +2,27 @@ import { NextRequest, NextResponse } from 'next/server';
 import { auth } from '@clerk/nextjs/server';
 import { createPaymentLink } from '@/lib/wompi';
 
-// Planes de suscripción
-const SUBSCRIPTION_PLANS: Record<string, { name: string; price: number }> = {
+// Planes de suscripción y addons
+const SUBSCRIPTION_ITEMS: Record<string, { name: string; price: number; type: 'plan' | 'addon' }> = {
   'plan-basico': {
     name: 'Plan Básico',
-    price: 29900,
+    price: 24900,
+    type: 'plan',
   },
-  'plan-premium': {
-    name: 'Plan Premium',
-    price: 49900,
+  'addon-ai-monthly': {
+    name: 'Addon: Análisis con IA',
+    price: 9900,
+    type: 'addon',
+  },
+  'addon-store-monthly': {
+    name: 'Addon: Tienda Online',
+    price: 14900,
+    type: 'addon',
+  },
+  'addon-email-monthly': {
+    name: 'Addon: Email Marketing',
+    price: 4900,
+    type: 'addon',
   },
 };
 
@@ -29,20 +41,20 @@ export async function POST(req: NextRequest) {
     // Obtener el planId del body
     const { planId } = await req.json();
 
-    // Validar el plan
-    const plan = SUBSCRIPTION_PLANS[planId];
-    if (!plan) {
+    // Validar el plan o addon
+    const item = SUBSCRIPTION_ITEMS[planId];
+    if (!item) {
       return NextResponse.json(
-        { success: false, error: 'Plan inválido' },
+        { success: false, error: 'Plan o addon inválido' },
         { status: 400 }
       );
     }
 
     // Crear el link de pago usando la función de wompi.ts (igual que la tienda online)
     const paymentLink = await createPaymentLink({
-      amount: plan.price,
+      amount: item.price,
       currency: 'COP',
-      reference: `SUBSCRIPTION-${planId}-${userId}-${Date.now()}`,
+      reference: `${item.type === 'plan' ? 'SUBSCRIPTION' : 'ADDON'}-${planId}-${userId}-${Date.now()}`,
       customerEmail: 'customer@example.com', // Podrías obtener el email del usuario de Clerk
       redirectUrl: `${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/dashboard/subscription/confirmation`,
     });
