@@ -4,7 +4,7 @@ import { verifyWebhookSignature } from '@/lib/wompi';
 // El webhook de Wompi llamará directamente al Worker de Cloudflare
 // que tiene acceso directo a la base de datos
 const CLOUDFLARE_API_URL = process.env.NEXT_PUBLIC_CLOUDFLARE_API_URL || 'https://tienda-pos-api.julii1295.workers.dev';
-const WEBHOOK_SECRET = process.env.WOMPI_EVENTS_SECRET || '';
+const WEBHOOK_SECRET = process.env.WOMPI_INTEGRITY_SECRET || '';
 
 export async function POST(req: NextRequest) {
   try {
