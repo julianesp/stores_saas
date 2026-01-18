@@ -1114,7 +1114,6 @@ export default function POSPage() {
                         <div className="text-xs opacity-90">Conectado</div>
                       </div>
                     </Button>
-                    {/* COMENTADO: Botón de cámara deshabilitado temporalmente
                     <Button
                       type="button"
                       size="lg"
@@ -1128,7 +1127,6 @@ export default function POSPage() {
                         <div className="text-xs opacity-90">Del dispositivo</div>
                       </div>
                     </Button>
-                    */}
                   </div>
                 )}
 
