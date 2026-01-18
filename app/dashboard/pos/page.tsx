@@ -55,7 +55,7 @@ import {
   updateCustomerDebt,
 } from "@/lib/cloudflare-credit-helpers";
 import Swal from "@/lib/sweetalert";
-import { BarcodeScanner } from "@/components/products/barcode-scanner";
+import { BarcodeScannerZXing } from "@/components/products/barcode-scanner-zxing";
 import { InvoiceModal } from "@/components/sales/invoice-modal";
 import Link from "next/link";
 import { normalizeBarcode, barcodeEquals } from "@/lib/barcode-utils";
@@ -1051,7 +1051,7 @@ export default function POSPage() {
       {showCameraScanner && (
         <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
           <div className="w-full max-w-2xl">
-            <BarcodeScanner
+            <BarcodeScannerZXing
               onDetected={handleCameraScan}
               onClose={() => setShowCameraScanner(false)}
             />

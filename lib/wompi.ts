@@ -62,7 +62,6 @@ export async function createPaymentLink(params: {
     console.log('Creating payment link with config:', {
       apiUrl: WOMPI_CONFIG.apiUrl,
       hasPrivateKey: !!WOMPI_CONFIG.privateKey,
-      privateKeyPrefix: WOMPI_CONFIG.privateKey?.substring(0, 15),
       amount: params.amount,
       reference: params.reference,
       paymentMethod: params.paymentMethod,
@@ -84,12 +83,6 @@ export async function createPaymentLink(params: {
       body.payment_method_types = [params.paymentMethod];
     }
 
-    console.log('Request to Wompi:', {
-      url: `${WOMPI_CONFIG.apiUrl}/payment_links`,
-      method: 'POST',
-      body: body,
-    });
-
     const response = await fetch(`${WOMPI_CONFIG.apiUrl}/payment_links`, {
       method: 'POST',
       headers: {
@@ -100,12 +93,6 @@ export async function createPaymentLink(params: {
     });
 
     const data = await response.json();
-    console.log('Wompi full response:', {
-      status: response.status,
-      statusText: response.statusText,
-      ok: response.ok,
-      data: data,
-    });
 
     if (!response.ok) {
       console.error('Wompi API Error Details:', {

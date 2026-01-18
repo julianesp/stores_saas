@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import { useAuth } from '@clerk/nextjs';
 import { useRouter } from 'next/navigation';
-import { BarcodeScanner } from '@/components/products/barcode-scanner';
+import { BarcodeScannerZXing } from '@/components/products/barcode-scanner-zxing';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -109,7 +109,7 @@ export default function QuickAddProductPage() {
             </Card>
           ) : (
             <div>
-              <BarcodeScanner
+              <BarcodeScannerZXing
                 onDetected={handleBarcodeDetected}
                 onClose={() => setShowScanner(false)}
               />
