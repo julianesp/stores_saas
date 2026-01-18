@@ -37,7 +37,7 @@ export default function PaymentConfirmationPage() {
     loadConfigAndTransaction();
   }, [slug, transactionId]);
 
-  // Timeout para evitar carga infinita - después de 10 segundos, asumir éxito si hay transaction ID
+  // Timeout para evitar carga infinita - después de 5 segundos, asumir éxito si hay transaction ID
   useEffect(() => {
     if (!transactionId) return;
 
@@ -57,7 +57,7 @@ export default function PaymentConfirmationPage() {
       });
       setLoading(false);
       toast.success("Pago procesado exitosamente");
-    }, 10000); // 10 segundos
+    }, 5000); // 5 segundos (reducido de 10)
 
     return () => clearTimeout(timeout);
   }, [transactionId]);
@@ -100,7 +100,7 @@ export default function PaymentConfirmationPage() {
       const timeoutId = setTimeout(() => controller.abort(), 5000);
 
       try {
-        // Consultar transacción en Wompi - la API pública no requiere autenticación para consultar
+        // Consultar transacción en Wompi con autenticación
         const response = await fetch(
           `https://production.wompi.co/v1/transactions/${txId}`,
           {
@@ -108,6 +108,7 @@ export default function PaymentConfirmationPage() {
             signal: controller.signal,
             headers: {
               'Accept': 'application/json',
+              'Authorization': `Bearer ${publicKey}`,
             },
           }
         );
