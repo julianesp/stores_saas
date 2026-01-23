@@ -18,9 +18,8 @@ export const landingConfig = {
     email: 'admin@neurai.dev',
     // Chat en vivo Tawk.to
     tawkTo: {
-      // Obtén estos IDs desde el panel de Tawk.to
-      propertyId: 'TU_PROPERTY_ID', // Ejemplo: '5f8d4e5c4c7d8a0001234567'
-      widgetId: 'TU_WIDGET_ID',     // Ejemplo: '1abc2def3ghi'
+      propertyId: '6972efa923ac1a197c06ce90',
+      widgetId: '1jfkfgbso',
     },
   },
 
