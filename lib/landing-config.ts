@@ -13,7 +13,7 @@ export const landingConfig = {
     },
     calendly: {
       // URL de tu cuenta de Calendly para agendar demos
-      url: 'https://calendly.com/tu-usuario/demo', // ACTUALIZAR CON TU URL DE CALENDLY
+      url: 'https://calendly.com/julii1295/30min',
     },
     email: 'admin@neurai.dev',
     // Chat en vivo Tawk.to
