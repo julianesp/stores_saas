@@ -63,3 +63,5 @@ public/worker-*.js.map
 
 # Ignorando archivos Markdown
 *.md
+# clerk configuration (can include secrets)
+/.clerk/

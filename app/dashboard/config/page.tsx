@@ -21,11 +21,14 @@ import {
   FileText,
   Info,
   ExternalLink,
+  MessageCircle,
 } from "lucide-react";
 import { LoyaltySettings, LoyaltyTier } from "@/lib/types";
 import { formatCurrency } from "@/lib/utils";
 import { toast } from "sonner";
 import { AutoReportsConfig } from "@/components/config/auto-reports-config";
+import TawkToChat from "@/components/TawkToChat";
+import { landingConfig } from "@/lib/landing-config";
 
 export default function ConfigPage() {
   const { user } = useUser();
@@ -482,6 +485,49 @@ export default function ConfigPage() {
           <p>• Los cambios se aplicarán inmediatamente a las nuevas ventas</p>
         </CardContent>
       </Card>
+
+      {/* Soporte y Chat en Vivo */}
+      <Card className="border-green-200 bg-green-50/30">
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <MessageCircle className="h-5 w-5 text-green-600" />
+            Soporte en Vivo
+          </CardTitle>
+          <CardDescription>
+            ¿Necesitas ayuda? Estamos aquí para ti
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="bg-green-50 border border-green-200 rounded-lg p-4">
+            <div className="flex gap-3">
+              <Info className="h-5 w-5 text-green-600 flex-shrink-0 mt-0.5" />
+              <div className="space-y-2">
+                <p className="font-semibold text-green-900">
+                  Chat en Vivo Disponible
+                </p>
+                <p className="text-sm text-green-800">
+                  Haz clic en el botón de chat en la esquina inferior derecha de
+                  la pantalla para hablar con nuestro equipo de soporte en tiempo
+                  real.
+                </p>
+                <p className="text-sm text-green-800">
+                  También puedes contactarnos por:
+                </p>
+                <ul className="text-sm text-green-800 list-disc list-inside space-y-1 ml-2">
+                  <li>WhatsApp: +57 317 450 3604</li>
+                  <li>Email: {landingConfig.contact.email}</li>
+                </ul>
+              </div>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Chat en Vivo con Tawk.to */}
+      <TawkToChat
+        propertyId={landingConfig.contact.tawkTo.propertyId}
+        widgetId={landingConfig.contact.tawkTo.widgetId}
+      />
     </div>
   );
 }

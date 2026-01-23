@@ -28,6 +28,7 @@ import shippingZonesRoutes from './routes/shipping-zones';
 import wompiRoutes from './routes/wompi';
 import subscriptionsRoutes from './routes/subscriptions';
 import emailRoutes from './routes/email';
+import statsRoutes from './routes/stats';
 
 const app = new Hono<{ Bindings: Env }>();
 
@@ -80,6 +81,9 @@ app.post('/api/subscriptions/webhook', subscriptionsRoutes);
 
 // Storefront public API (NO auth required - endpoints públicos para tiendas online)
 app.route('/api/storefront', storefrontRoutes);
+
+// Stats public API (NO auth required - estadísticas públicas)
+app.route('/stats', statsRoutes);
 
 // Email CRON endpoints (NO auth - solo para llamadas internas de CRON)
 // IMPORTANTE: Estos endpoints solo deben ser llamados por el CRON scheduler

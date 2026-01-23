@@ -239,3 +239,33 @@ export async function createWompiPaymentLink(
 
   return data.data as WompiPaymentLinkResponse;
 }
+
+/**
+ * Get order details by order number (public endpoint)
+ */
+export async function getOrderByNumber(
+  slug: string,
+  orderNumber: string
+): Promise<any> {
+  const url = `${WORKER_URL}/api/storefront/orders/${slug}/${orderNumber}`;
+
+  const response = await fetch(url, {
+    method: 'GET',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+  });
+
+  if (!response.ok) {
+    const errorData = await response.json().catch(() => ({}));
+    throw new Error(errorData.error || `Error ${response.status}`);
+  }
+
+  const data: APIResponse<any> = await response.json();
+
+  if (!data.success) {
+    throw new Error(data.error || 'Failed to get order');
+  }
+
+  return data.data;
+}
