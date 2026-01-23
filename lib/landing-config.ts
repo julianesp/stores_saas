@@ -15,7 +15,7 @@ export const landingConfig = {
       // URL de tu cuenta de Calendly para agendar demos
       url: 'https://calendly.com/tu-usuario/demo', // ACTUALIZAR CON TU URL DE CALENDLY
     },
-    email: 'contacto@posib.dev',
+    email: 'admin@neurai.dev',
     // Chat en vivo Tawk.to
     tawkTo: {
       // Obtén estos IDs desde el panel de Tawk.to
@@ -50,7 +50,7 @@ export const landingConfig = {
       },
     },
     professional: {
-      price: 49900,
+      price: 39800,
       maxProducts: 200,
       maxUsers: 5,
       features: {
@@ -65,80 +65,81 @@ export const landingConfig = {
         emailMarketing: false,
       },
     },
-    premium: {
-      price: 79900,
-      maxProducts: 500,
-      maxUsers: 10,
-      features: {
-        pos: true,
-        inventory: true,
-        reports: 'advanced',
-        onlineStore: true,
-        dianInvoicing: true,
-        loyaltyPoints: true,
-        suppliers: true,
-        analytics: true,
-        emailMarketing: true,
+    //   premium: {
+    //     price: 79900,
+    //     maxProducts: 500,
+    //     maxUsers: 10,
+    //     features: {
+    //       pos: true,
+    //       inventory: true,
+    //       reports: 'advanced',
+    //       onlineStore: true,
+    //       dianInvoicing: true,
+    //       loyaltyPoints: true,
+    //       suppliers: true,
+    //       analytics: true,
+    //       emailMarketing: true,
+    //     },
+    //   },
+    //   enterprise: {
+    //     price: 'custom',
+    //     maxProducts: -1, // ilimitado
+    //     maxUsers: -1,    // ilimitado
+    //     features: {
+    //       pos: true,
+    //       inventory: true,
+    //       reports: 'custom',
+    //       onlineStore: true,
+    //       dianInvoicing: true,
+    //       loyaltyPoints: true,
+    //       suppliers: true,
+    //       analytics: true,
+    //       emailMarketing: true,
+    //       multiLocation: true,
+    //       customApi: true,
+    //       dedicatedSupport: true,
+    //     },
+    //   },
+    // },
+
+    // Social proof - Actualiza con datos reales
+    stats: {
+      satisfaction: '98%',
+      rating: '4.9/5',
+      dianCompliance: '100%',
+    },
+
+    // Feature flags - Activa/desactiva secciones
+    features: {
+      showWhatsAppButton: true,
+      showDemoButton: true,
+      showPricingPlans: true,
+      showDianCompliance: true,
+      showDianGuarantee: true,
+      showFreeMigration: true,
+      showTrustBadges: true,
+      showVideoTutorials: true,
+      showResistanceSection: true,
+    },
+
+    // URLs de videos (actualiza cuando subas tus videos)
+    videos: {
+      posDemo: '/videos/pos-demo.mp4',
+      inventoryDemo: '/videos/inventory-demo.mp4',
+      storeDemo: '/videos/store-demo.mp4',
+      migrationTutorial: '/videos/migration-tutorial.mp4',
+    },
+
+    // Legal - IMPORTANTE: Verifica estos valores anualmente
+    dian: {
+      uvt: {
+        year: 2025,
+        // Valores UVT para declaración de renta (actualiza cada año)
+        patrimonioMinimo: '4.500 UVT (≈$214 millones COP)',
+        ingresosMinimos: '1.400 UVT (≈$66 millones COP)',
       },
     },
-    enterprise: {
-      price: 'custom',
-      maxProducts: -1, // ilimitado
-      maxUsers: -1,    // ilimitado
-      features: {
-        pos: true,
-        inventory: true,
-        reports: 'custom',
-        onlineStore: true,
-        dianInvoicing: true,
-        loyaltyPoints: true,
-        suppliers: true,
-        analytics: true,
-        emailMarketing: true,
-        multiLocation: true,
-        customApi: true,
-        dedicatedSupport: true,
-      },
-    },
-  },
-
-  // Social proof - Actualiza con datos reales
-  stats: {
-    satisfaction: '98%',
-    rating: '4.9/5',
-    dianCompliance: '100%',
-  },
-
-  // Feature flags - Activa/desactiva secciones
-  features: {
-    showWhatsAppButton: true,
-    showDemoButton: true,
-    showPricingPlans: true,
-    showDianCompliance: true,
-    showDianGuarantee: true,
-    showFreeMigration: true,
-    showTrustBadges: true,
-    showVideoTutorials: true,
-    showResistanceSection: true,
-  },
-
-  // URLs de videos (actualiza cuando subas tus videos)
-  videos: {
-    posDemo: '/videos/pos-demo.mp4',
-    inventoryDemo: '/videos/inventory-demo.mp4',
-    storeDemo: '/videos/store-demo.mp4',
-    migrationTutorial: '/videos/migration-tutorial.mp4',
-  },
-
-  // Legal - IMPORTANTE: Verifica estos valores anualmente
-  dian: {
-    uvt: {
-      year: 2025,
-      // Valores UVT para declaración de renta (actualiza cada año)
-      patrimonioMinimo: '4.500 UVT (≈$214 millones COP)',
-      ingresosMinimos: '1.400 UVT (≈$66 millones COP)',
-    },
-  },
+  }
 };
 
 export default landingConfig;
