@@ -366,22 +366,22 @@ export default function Home() {
       <PricingPlans />
 
       {/* DIAN Compliance */}
-      <DianCompliance />
+      {/* <DianCompliance /> */}
 
       {/* DIAN Guarantee */}
-      <DianGuarantee />
+      {/* <DianGuarantee /> */}
 
       {/* Free Migration */}
-      <FreeMigration />
+      {/* <FreeMigration /> */}
 
       {/* Trust & Social Proof */}
-      <TrustBadges />
+      {/* <TrustBadges /> */}
 
       {/* Overcome Resistance to Change */}
       <OvercomeResistance />
 
       {/* Video Tutorials */}
-      <VideoTutorials />
+      {/* <VideoTutorials /> */}
 
       {/* FAQ */}
       <FAQ />
@@ -442,10 +442,10 @@ export default function Home() {
       </footer>
 
       {/* Chat en Vivo con Tawk.to */}
-      <TawkToChat
+      {/* <TawkToChat
         propertyId={landingConfig.contact.tawkTo.propertyId}
         widgetId={landingConfig.contact.tawkTo.widgetId}
-      />
+      /> */}
     </div>
   );
 }

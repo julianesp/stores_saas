@@ -93,7 +93,7 @@ export default function DianCompliance() {
               </ul>
             </div>
           </div>
-          <p className="text-center mt-6 text-sm font-medium">
+          <p className="text-center mt-6 text-[18px] font-medium text-black">
             Nuestro sistema calcula automáticamente si debes declarar según tus ingresos registrados
           </p>
         </div>

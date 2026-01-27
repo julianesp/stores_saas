@@ -35,7 +35,7 @@ const ADDONS = [
     type: "ai" as const,
     name: "Análisis con IA",
     icon: Sparkles,
-    price: 9900,
+    price: 4900,
     color: "purple",
     features: [
       "Predicciones de ventas automáticas",
@@ -50,7 +50,7 @@ const ADDONS = [
     type: "store" as const,
     name: "Tienda Online",
     icon: Store,
-    price: 14900,
+    price: 9900,
     color: "blue",
     features: [
       "Tienda online personalizable",
@@ -465,13 +465,13 @@ export default function SubscriptionPageWompi() {
               {activeAddons.ai && (
                 <div className="flex justify-between items-center text-purple-700">
                   <span>+ Análisis IA</span>
-                  <span className="font-bold">{formatCurrency(9900)}</span>
+                  <span className="font-bold">{formatCurrency(4900)}</span>
                 </div>
               )}
               {activeAddons.store && (
                 <div className="flex justify-between items-center text-blue-700">
                   <span>+ Tienda Online</span>
-                  <span className="font-bold">{formatCurrency(14900)}</span>
+                  <span className="font-bold">{formatCurrency(9900)}</span>
                 </div>
               )}
               {activeAddons.email && (
@@ -485,8 +485,8 @@ export default function SubscriptionPageWompi() {
                 <span>
                   {formatCurrency(
                     (subscriptionStatus?.status === "active" ? BASE_PLAN.price : 0) +
-                    (activeAddons.ai ? 9900 : 0) +
-                    (activeAddons.store ? 14900 : 0) +
+                    (activeAddons.ai ? 4900 : 0) +
+                    (activeAddons.store ? 9900 : 0) +
                     (activeAddons.email ? 4900 : 0)
                   )}
                   <span className="text-sm font-normal text-gray-600">/mes</span>

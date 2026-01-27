@@ -11,12 +11,12 @@ const SUBSCRIPTION_ITEMS: Record<string, { name: string; price: number; type: 'p
   },
   'addon-ai-monthly': {
     name: 'Addon: Análisis con IA',
-    price: 9900,
+    price: 4900,
     type: 'addon',
   },
   'addon-store-monthly': {
     name: 'Addon: Tienda Online',
-    price: 14900,
+    price: 9900,
     type: 'addon',
   },
   'addon-email-monthly': {

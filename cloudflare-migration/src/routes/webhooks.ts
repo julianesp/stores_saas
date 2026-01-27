@@ -284,17 +284,37 @@ app.post('/wompi', async (c) => {
         const amountCOP = amount_in_cents / 100;
         let planId = 'basic-monthly';
         let hasAIAddon = false;
+        let hasStoreAddon = false;
+        let hasEmailAddon = false;
 
-        if (amountCOP === 29900) {
+        // Plan básico
+        if (amountCOP === 24900) {
           planId = 'basic-monthly';
-          hasAIAddon = false;
-        } else if (amountCOP === 9900) {
+        }
+        // Addon IA solo
+        else if (amountCOP === 4900) {
           planId = 'ai-addon-monthly';
           hasAIAddon = true;
-        } else if (amountCOP === 39800) {
-          // Plan básico + IA addon
+        }
+        // Addon Tienda solo
+        else if (amountCOP === 9900) {
+          planId = 'store-addon-monthly';
+          hasStoreAddon = true;
+        }
+        // Plan básico + IA addon (24900 + 4900 = 29800)
+        else if (amountCOP === 29800) {
           planId = 'basic-monthly';
           hasAIAddon = true;
+        }
+        // Plan básico + Tienda (24900 + 9900 = 34800)
+        else if (amountCOP === 34800) {
+          planId = 'basic-monthly';
+          hasStoreAddon = true;
+        }
+        // Plan básico + Email (24900 + 4900 = 29800)
+        else if (amountCOP === 29800) {
+          planId = 'basic-monthly';
+          hasEmailAddon = true;
         }
 
         await c.env.DB.prepare(

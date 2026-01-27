@@ -9,7 +9,7 @@
 CREATE TABLE IF NOT EXISTS user_profiles (
   id TEXT PRIMARY KEY,
   clerk_user_id TEXT NOT NULL UNIQUE,
-  email TEXT NOT NULL,
+  email TEXT NOT NULL UNIQUE,
   role TEXT NOT NULL CHECK(role IN ('admin', 'cajero', 'cliente')),
   full_name TEXT,
   phone TEXT,

@@ -109,6 +109,12 @@ const storeMenuItems = [
     roles: ["admin"],
   },
   {
+    title: "Estadísticas de Compras",
+    href: "/dashboard/purchase-stats",
+    icon: TrendingUp,
+    roles: ["admin"],
+  },
+  {
     title: "Ventas",
     href: "/dashboard/sales",
     icon: BarChart3,

@@ -85,12 +85,12 @@ export default function OvercomeResistance() {
                     Inventario actualizado en tiempo real, sin esfuerzo
                   </span>
                 </li>
-                <li className="flex items-start gap-2 text-green-200">
+                {/* <li className="flex items-start gap-2 text-green-200">
                   <Check className="h-5 w-5 text-green-400 flex-shrink-0 mt-0.5" />
                   <span className="text-sm">
                     100% cumplimiento DIAN con facturación electrónica
                   </span>
-                </li>
+                </li> */}
                 <li className="flex items-start gap-2 text-green-200">
                   <Check className="h-5 w-5 text-green-400 flex-shrink-0 mt-0.5" />
                   <span className="text-sm">
@@ -109,7 +109,7 @@ export default function OvercomeResistance() {
         </div>
 
         {/* ROI Calculation */}
-        <div className="bg-yellow-400 rounded-lg p-6 md:p-8 max-w-4xl mx-auto mb-8">
+        {/* <div className="bg-yellow-400 rounded-lg p-6 md:p-8 max-w-4xl mx-auto mb-8">
           <h3 className="text-2xl font-bold text-gray-900 mb-6 text-center">
             El Cambio se Paga Solo
           </h3>
@@ -142,10 +142,10 @@ export default function OvercomeResistance() {
               </p>
             </div>
           </div>
-        </div>
+        </div> */}
 
         {/* Ease of Transition */}
-        <div className="text-center">
+        {/* <div className="text-center">
           <Card className="bg-gradient-to-br from-purple-800 to-indigo-800 border-purple-400 max-w-3xl mx-auto">
             <CardContent className="pt-6">
               <Zap className="h-12 w-12 text-yellow-400 mx-auto mb-4" />
@@ -175,7 +175,7 @@ export default function OvercomeResistance() {
               </p>
             </CardContent>
           </Card>
-        </div>
+        </div> */}
       </div>
     </section>
   );

@@ -393,8 +393,8 @@ export interface PurchaseOrder {
   items?: PurchaseOrderItem[];
 }
 
-export async function getPurchaseOrders(getToken: GetTokenFn): Promise<PurchaseOrder[]> {
-  return fetchAPI<PurchaseOrder[]>('/api/purchase-orders', getToken);
+export async function getPurchaseOrders(getToken: GetTokenFn): Promise<PurchaseOrderWithItems[]> {
+  return fetchAPI<PurchaseOrderWithItems[]>('/api/purchase-orders', getToken);
 }
 
 export async function getPurchaseOrderById(id: string, getToken: GetTokenFn): Promise<PurchaseOrder> {

@@ -106,39 +106,64 @@ export async function authMiddleware(c: Context<{ Bindings: Env }>, next: Next) 
           }
         }
 
-        const { getClerkUserFullName } = await import('../utils/clerk-helpers');
-        const fullName = getClerkUserFullName(clerkUser);
-        const superAdminEmail = 'admin@neurai.dev';
-        const isSuperAdmin = userEmail === superAdminEmail;
+        // ⚠️ VALIDACIÓN: Verificar si ya existe un perfil con este email
+        const existingProfileByEmail = await c.env.DB
+          .prepare('SELECT id, clerk_user_id, email FROM user_profiles WHERE email = ?')
+          .bind(userEmail)
+          .first<{ id: string; clerk_user_id: string; email: string }>();
 
-        console.log('Creating user_profile for clerk_user_id:', clerkUserId, 'email:', userEmail, 'name:', fullName);
+        if (existingProfileByEmail) {
+          console.warn('⚠️ Email already exists in database:', userEmail, 'for clerk_user_id:', existingProfileByEmail.clerk_user_id);
+          console.warn('Current clerk_user_id trying to register:', clerkUserId);
 
-        const profileId = `usr_${Date.now()}_${Math.random().toString(36).substring(7)}`;
-        const now = new Date().toISOString();
-        const trialEnd = new Date();
-        trialEnd.setDate(trialEnd.getDate() + 15);
+          // Si es el mismo clerk_user_id, solo retornar el perfil existente
+          if (existingProfileByEmail.clerk_user_id === clerkUserId) {
+            console.log('Same clerk_user_id, returning existing profile');
+            userProfile = { id: existingProfileByEmail.id, is_superadmin: 0 };
+          } else {
+            // Email duplicado con diferente clerk_user_id - NO PERMITIR
+            return c.json({
+              success: false,
+              error: 'Email already registered',
+              message: `The email ${userEmail} is already associated with another account. Please use a different email or contact support.`
+            }, 409); // Conflict
+          }
+        } else {
+          // No existe perfil con este email, crear uno nuevo
+          const { getClerkUserFullName } = await import('../utils/clerk-helpers');
+          const fullName = getClerkUserFullName(clerkUser);
+          const superAdminEmail = 'admin@neurai.dev';
+          const isSuperAdmin = userEmail === superAdminEmail;
 
-        await c.env.DB.prepare(
-          `INSERT INTO user_profiles (
-            id, clerk_user_id, email, role, full_name, is_superadmin,
-            subscription_status, trial_start_date, trial_end_date, created_at, updated_at
-          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
-        ).bind(
-          profileId,
-          clerkUserId,
-          userEmail,
-          'admin',
-          fullName,
-          isSuperAdmin ? 1 : 0,
-          isSuperAdmin ? 'active' : 'trial',
-          isSuperAdmin ? null : now,
-          isSuperAdmin ? null : trialEnd.toISOString(),
-          now,
-          now
-        ).run();
+          console.log('Creating user_profile for clerk_user_id:', clerkUserId, 'email:', userEmail, 'name:', fullName);
 
-        console.log('User profile created successfully:', profileId);
-        userProfile = { id: profileId, is_superadmin: isSuperAdmin ? 1 : 0 };
+          const profileId = `usr_${Date.now()}_${Math.random().toString(36).substring(7)}`;
+          const now = new Date().toISOString();
+          const trialEnd = new Date();
+          trialEnd.setDate(trialEnd.getDate() + 15);
+
+          await c.env.DB.prepare(
+            `INSERT INTO user_profiles (
+              id, clerk_user_id, email, role, full_name, is_superadmin,
+              subscription_status, trial_start_date, trial_end_date, created_at, updated_at
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+          ).bind(
+            profileId,
+            clerkUserId,
+            userEmail,
+            'admin',
+            fullName,
+            isSuperAdmin ? 1 : 0,
+            isSuperAdmin ? 'active' : 'trial',
+            isSuperAdmin ? null : now,
+            isSuperAdmin ? null : trialEnd.toISOString(),
+            now,
+            now
+          ).run();
+
+          console.log('User profile created successfully:', profileId);
+          userProfile = { id: profileId, is_superadmin: isSuperAdmin ? 1 : 0 };
+        }
       } catch (error) {
         console.error('Error creating user_profile:', error);
         return c.json({

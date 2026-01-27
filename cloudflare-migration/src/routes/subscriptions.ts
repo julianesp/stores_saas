@@ -13,14 +13,26 @@ const app = new Hono<{ Bindings: Env }>();
 const SUBSCRIPTION_PLANS = {
   'plan-basico': {
     name: 'Plan Básico',
-    price: 29900, // $29,900 COP
-    amount_in_cents: 2990000,
+    price: 24900, // $24,900 COP
+    amount_in_cents: 2490000,
     interval: 'monthly',
   },
-  'plan-premium': {
-    name: 'Plan Premium',
-    price: 49900, // $49,900 COP
-    amount_in_cents: 4990000,
+  'addon-ai-monthly': {
+    name: 'Addon: Análisis con IA',
+    price: 4900, // $4,900 COP
+    amount_in_cents: 490000,
+    interval: 'monthly',
+  },
+  'addon-store-monthly': {
+    name: 'Addon: Tienda Online',
+    price: 9900, // $9,900 COP
+    amount_in_cents: 990000,
+    interval: 'monthly',
+  },
+  'addon-email-monthly': {
+    name: 'Addon: Email Marketing',
+    price: 4900, // $4,900 COP
+    amount_in_cents: 490000,
     interval: 'monthly',
   },
 };

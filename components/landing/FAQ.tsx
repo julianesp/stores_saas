@@ -16,12 +16,17 @@ const faqs = [
       {
         question: '¿Necesito experiencia técnica para usar el sistema?',
         answer:
-          'No, nuestro sistema está diseñado para ser intuitivo y fácil de usar. Si sabes usar WhatsApp, puedes usar nuestro POS. Además, ofrecemos tutoriales en video y soporte personalizado.',
+          'No, nuestro sistema está diseñado para ser intuitivo y fácil de usar. Si sabes usar WhatsApp, puedes usar nuestro POS.',
       },
       {
         question: '¿Funciona sin internet?',
         answer:
-          'El sistema está optimizado para funcionar con conexión a internet. Sin embargo, estamos trabajando en funcionalidades offline para registrar ventas que se sincronizarán cuando recuperes la conexión.',
+          '¡Sí! El sistema funciona completamente offline. Puedes registrar ventas, consultar productos y gestionar clientes sin conexión a internet. Todas las operaciones se guardan localmente y se sincronizan automáticamente cuando recuperas la conexión. Esta es una de nuestras ventajas competitivas más importantes.',
+      },
+      {
+        question: '¿Qué ventajas tiene el modo offline?',
+        answer:
+          'El modo offline te permite: 1) Seguir vendiendo aunque se caiga el internet, 2) No depender de la velocidad de tu conexión, 3) Trabajar en zonas con mala señal, 4) Mayor velocidad en el POS al no esperar respuestas del servidor. El sistema detecta automáticamente cuando pierdes conexión y te avisa cuándo se recupera.',
       },
     ],
   },

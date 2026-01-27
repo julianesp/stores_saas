@@ -63,7 +63,7 @@ app.post('/subscription-reminders', async (c) => {
         user_name: user.full_name || user.email.split('@')[0],
         days_left: daysLeft,
         next_billing_date: expirationDate,
-        plan_price: 29900,
+        plan_price: 24900,
         payment_link: `https://posib.dev/dashboard/subscription`,
       };
 

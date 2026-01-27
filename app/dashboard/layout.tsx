@@ -8,6 +8,7 @@ import { Header } from "@/components/dashboard/header";
 import { TrialBanner } from "@/components/subscription/trial-banner";
 import { SubscriptionExpiredModal } from "@/components/subscription/expired-modal";
 import { ExpirationAlert } from "@/components/subscription/expiration-alert";
+import OfflineProvider from "@/components/OfflineProvider";
 import {
   checkSubscriptionStatus,
   getUserProfileByClerkId,
@@ -148,7 +149,7 @@ export default function DashboardLayout({
   };
 
   return (
-    <>
+    <OfflineProvider>
       <NoIndexMeta />
       <div className="flex h-screen overflow-hidden">
         <Sidebar />
@@ -211,6 +212,6 @@ export default function DashboardLayout({
           </main>
         </div>
       </div>
-    </>
+    </OfflineProvider>
   );
 }
