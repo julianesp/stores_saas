@@ -255,42 +255,137 @@ app.post('/webhook', async (c) => {
 
     if (event === 'transaction.updated') {
       const transaction = data.transaction;
+      const { id, status, reference, amount_in_cents, payment_method_type } = transaction;
+
+      console.log(`📨 Processing transaction ${id} with status: ${status}`);
+
+      // Extraer tenant_id del SKU
+      // Formato: subscription_plan-basico_tenant123
+      const sku = reference;
+      const match = sku.match(/subscription_([^_]+)_(.+)/);
+
+      if (!match) {
+        console.error('❌ Invalid SKU format:', sku);
+        return c.json({ received: true, error: 'Invalid SKU format' });
+      }
+
+      const planId = match[1];
+      const tenantId = match[2];
+
+      console.log(`📦 Plan: ${planId}, Tenant: ${tenantId}`);
+
+      // Verificar si ya existe la transacción
+      const existingTransaction = await c.env.DB.prepare(
+        `SELECT id FROM payment_transactions WHERE wompi_transaction_id = ?`
+      ).bind(id).first();
+
+      // Crear o actualizar la transacción en el historial
+      if (!existingTransaction) {
+        const transactionId = `txn_${Date.now()}_${Math.random().toString(36).substring(7)}`;
+        const now = new Date().toISOString();
+
+        await c.env.DB.prepare(
+          `INSERT INTO payment_transactions (
+            id, user_profile_id, wompi_transaction_id, amount, currency,
+            status, payment_method_type, reference, created_at
+          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`
+        ).bind(
+          transactionId,
+          tenantId,
+          id,
+          amount_in_cents / 100,
+          'COP',
+          status,
+          payment_method_type || 'unknown',
+          reference,
+          now
+        ).run();
+
+        console.log(`✅ Payment transaction created: ${transactionId}`);
+      } else {
+        // Actualizar estado de transacción existente
+        await c.env.DB.prepare(
+          `UPDATE payment_transactions SET status = ? WHERE wompi_transaction_id = ?`
+        ).bind(status, id).run();
+
+        console.log(`✅ Payment transaction updated: ${id}`);
+      }
 
       // Solo procesar si el pago fue aprobado
-      if (transaction.status === 'APPROVED') {
-        // Extraer tenant_id del SKU
-        // Formato: subscription_plan-basico_tenant123
-        const sku = transaction.reference;
-        const match = sku.match(/subscription_([^_]+)_(.+)/);
+      if (status === 'APPROVED') {
+        // Calcular fechas de suscripción
+        const now = new Date();
+        const nextBillingDate = new Date(now);
+        nextBillingDate.setMonth(nextBillingDate.getMonth() + 1);
 
-        if (match) {
-          const planId = match[1];
-          const tenantId = match[2];
+        // Determinar qué activar según el plan
+        let hasAIAddon = 0;
+        let hasStoreAddon = 0;
+        let hasEmailAddon = 0;
 
-          // Calcular fechas de suscripción
-          const now = new Date();
-          const nextBillingDate = new Date(now);
-          nextBillingDate.setMonth(nextBillingDate.getMonth() + 1);
+        if (planId === 'addon-ai-monthly') {
+          hasAIAddon = 1;
+        } else if (planId === 'addon-store-monthly') {
+          hasStoreAddon = 1;
+        } else if (planId === 'addon-email-monthly') {
+          hasEmailAddon = 1;
+        }
 
-          // Actualizar suscripción del usuario
+        // Actualizar suscripción del usuario
+        if (planId === 'plan-basico') {
+          // Plan completo
           await c.env.DB.prepare(
             `UPDATE user_profiles
              SET subscription_status = 'active',
-                 last_payment_date = datetime('now'),
-                 next_billing_date = datetime(?, 'unixepoch'),
+                 plan_id = 'basic-monthly',
+                 trial_start_date = NULL,
+                 trial_end_date = NULL,
+                 last_payment_date = ?,
+                 next_billing_date = ?,
                  subscription_id = ?,
-                 updated_at = datetime('now')
+                 updated_at = ?
              WHERE id = ?`
           )
             .bind(
-              Math.floor(nextBillingDate.getTime() / 1000),
-              transaction.id,
+              now.toISOString(),
+              nextBillingDate.toISOString(),
+              id,
+              now.toISOString(),
               tenantId
             )
             .run();
 
-          console.log(`Subscription activated for tenant ${tenantId}, plan ${planId}`);
+          console.log(`✅ Subscription activated for tenant ${tenantId}`);
+        } else {
+          // Solo addon
+          await c.env.DB.prepare(
+            `UPDATE user_profiles
+             SET has_ai_addon = ?,
+                 has_store_addon = ?,
+                 has_email_addon = ?,
+                 last_payment_date = ?,
+                 next_billing_date = ?,
+                 updated_at = ?
+             WHERE id = ?`
+          )
+            .bind(
+              hasAIAddon,
+              hasStoreAddon,
+              hasEmailAddon,
+              now.toISOString(),
+              nextBillingDate.toISOString(),
+              now.toISOString(),
+              tenantId
+            )
+            .run();
+
+          console.log(`✅ Addon ${planId} activated for tenant ${tenantId}`);
         }
+      }
+
+      // Si el pago fue rechazado
+      if (status === 'DECLINED' || status === 'ERROR') {
+        console.log(`⚠️ Payment ${status} for tenant ${tenantId}`);
       }
     }
 

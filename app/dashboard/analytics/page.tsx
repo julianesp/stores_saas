@@ -54,8 +54,15 @@ export default function AnalyticsPage() {
     try {
       const profile = await getUserProfile(getToken);
       if (profile) {
+        console.log('[AI Analytics] User Profile:', {
+          subscription_status: profile.subscription_status,
+          has_ai_addon: profile.has_ai_addon,
+          trial_end_date: profile.trial_end_date,
+          is_superadmin: profile.is_superadmin,
+        });
         setUserProfile(profile);
         const access = hasAIAccess(profile);
+        console.log('[AI Analytics] hasAIAccess result:', access);
         setHasAccess(access);
 
         if (access) {
