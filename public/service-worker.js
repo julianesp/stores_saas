@@ -3,16 +3,11 @@
  * Permite que el POS funcione sin conexión a internet
  */
 
-const CACHE_NAME = 'posib-pos-v1';
-const OFFLINE_CACHE = 'posib-offline-v1';
+const CACHE_NAME = 'posib-pos-v3';
+const OFFLINE_CACHE = 'posib-offline-v3';
 
 // Recursos críticos que siempre deben estar disponibles offline
 const CRITICAL_RESOURCES = [
-  '/',
-  '/dashboard',
-  '/dashboard/sales',
-  '/dashboard/products',
-  '/dashboard/customers',
   '/offline.html',
 ];
 
@@ -23,8 +18,11 @@ self.addEventListener('install', (event) => {
   event.waitUntil(
     caches.open(CACHE_NAME).then((cache) => {
       console.log('[Service Worker] Pre-caching recursos críticos');
+      // Solo pre-cachear offline.html para evitar errores de instalación
       return cache.addAll(CRITICAL_RESOURCES).catch((err) => {
         console.error('[Service Worker] Error pre-caching:', err);
+        // No fallar la instalación por errores de cache
+        return Promise.resolve();
       });
     })
   );
@@ -59,24 +57,40 @@ self.addEventListener('fetch', (event) => {
   const { request } = event;
   const url = new URL(request.url);
 
-  // Solo cachear peticiones GET
-  if (request.method !== 'GET') {
-    // Para peticiones POST/PUT/DELETE offline, las guardamos en IndexedDB
-    if (!navigator.onLine) {
-      event.respondWith(
-        handleOfflineRequest(request)
-      );
-      return;
-    }
+  // Ignorar peticiones a dominios externos (APIs de terceros, etc)
+  if (url.origin !== self.location.origin) {
     return;
   }
 
-  // Estrategia Network First para páginas HTML
-  if (request.headers.get('accept')?.includes('text/html')) {
+  // Solo interceptar peticiones POST/PUT/DELETE para guardarlas offline
+  if (request.method !== 'GET') {
+    // Para peticiones POST/PUT/DELETE, intentar enviar y si falla guardar offline
     event.respondWith(
       fetch(request)
-        .then((response) => {
-          // Guardar en cache si la respuesta es válida
+        .then((response) => response)
+        .catch(async () => {
+          // Si falla la red, guardar en IndexedDB
+          console.log('[Service Worker] Guardando petición offline:', request.method, request.url);
+          return await handleOfflineRequest(request);
+        })
+    );
+    return;
+  }
+
+  // Para peticiones GET, solo cachear recursos estáticos (JS, CSS, imágenes)
+  // No cachear HTML ni APIs para evitar problemas de navegación
+  if (
+    url.pathname.match(/\.(js|css|png|jpg|jpeg|svg|gif|woff|woff2|ico)$/)
+  ) {
+    event.respondWith(
+      caches.match(request).then((cached) => {
+        // Cache First para recursos estáticos
+        if (cached) {
+          return cached;
+        }
+
+        // Si no está en cache, intentar descargar
+        return fetch(request).then((response) => {
           if (response.ok) {
             const responseClone = response.clone();
             caches.open(CACHE_NAME).then((cache) => {
@@ -84,20 +98,18 @@ self.addEventListener('fetch', (event) => {
             });
           }
           return response;
-        })
-        .catch(() => {
-          // Si falla la red, intentar servir desde cache
-          return caches.match(request).then((cached) => {
-            if (cached) {
-              return cached;
-            }
-            // Si no hay cache, mostrar página offline
-            return caches.match('/offline.html');
-          });
-        })
+        }).catch(() => {
+          // Si falla, simplemente falla (no bloquear navegación)
+          return new Response('', { status: 404 });
+        });
+      })
     );
     return;
   }
+
+  // Para todo lo demás (HTML, APIs, etc), dejar que pase sin interceptar
+  // Esto permite que Next.js maneje las rutas normalmente
+  return;
 
   // Estrategia Cache First para recursos estáticos
   if (
@@ -173,7 +185,7 @@ async function handleOfflineRequest(request) {
 // Guardar en IndexedDB
 async function saveToIndexedDB(storeName, data) {
   return new Promise((resolve, reject) => {
-    const request = indexedDB.open('posib-offline-db', 1);
+    const request = indexedDB.open('posib-offline-db', 2); // Versión 2 con keyPath correcto
 
     request.onerror = () => reject(request.error);
     request.onsuccess = () => {
@@ -188,9 +200,14 @@ async function saveToIndexedDB(storeName, data) {
 
     request.onupgradeneeded = (event) => {
       const db = event.target.result;
-      if (!db.objectStoreNames.contains(storeName)) {
-        db.createObjectStore(storeName, { autoIncrement: true });
+
+      // Eliminar store antiguo si existe
+      if (db.objectStoreNames.contains(storeName)) {
+        db.deleteObjectStore(storeName);
       }
+
+      // Crear nuevo store con keyPath correcto
+      db.createObjectStore(storeName, { keyPath: 'timestamp' });
     };
   });
 }
@@ -214,7 +231,7 @@ async function syncOfflineData() {
   console.log('[Service Worker] Sincronizando datos offline...');
 
   return new Promise((resolve, reject) => {
-    const request = indexedDB.open('posib-offline-db', 1);
+    const request = indexedDB.open('posib-offline-db', 2); // Versión 2
 
     request.onerror = () => reject(request.error);
     request.onsuccess = async () => {
@@ -259,7 +276,7 @@ async function syncOfflineData() {
 // Eliminar de IndexedDB
 async function deleteFromIndexedDB(storeName, data) {
   return new Promise((resolve, reject) => {
-    const request = indexedDB.open('posib-offline-db', 1);
+    const request = indexedDB.open('posib-offline-db', 2); // Versión 2
 
     request.onerror = () => reject(request.error);
     request.onsuccess = () => {

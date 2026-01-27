@@ -9,28 +9,34 @@ import { toast } from 'sonner';
 export default function OfflineIndicator() {
   const { isOnline, pendingSync, isSyncing, syncOfflineData } = useOfflineSync();
   const [showIndicator, setShowIndicator] = useState(false);
+  const [userDismissed, setUserDismissed] = useState(false);
 
   useEffect(() => {
-    // Mostrar indicador cuando cambia el estado de conexión
+    // Resetear dismissal cuando cambia el estado de conexión
     if (!isOnline) {
+      setUserDismissed(false);
       setShowIndicator(true);
       toast.warning('Sin conexión a internet', {
         description: 'El sistema continuará funcionando offline',
         duration: 5000,
       });
-    } else if (showIndicator && isOnline) {
-      toast.success('Conexión restaurada', {
-        description: 'Sincronizando datos...',
-        duration: 3000,
-      });
-      // Mantener visible para mostrar proceso de sincronización
+    } else if (isOnline && !userDismissed) {
+      // Solo mostrar mensaje si hay cambio de offline a online
+      if (showIndicator) {
+        toast.success('Conexión restaurada', {
+          description: 'Sincronizando datos...',
+          duration: 3000,
+        });
+      }
+      setShowIndicator(true);
+      // Auto-ocultar después de sincronizar
       setTimeout(() => {
-        if (pendingSync === 0) {
+        if (pendingSync === 0 && !userDismissed) {
           setShowIndicator(false);
         }
       }, 3000);
     }
-  }, [isOnline, showIndicator, pendingSync]);
+  }, [isOnline, pendingSync]);
 
   const handleSync = async () => {
     try {
@@ -41,6 +47,17 @@ export default function OfflineIndicator() {
     }
   };
 
+  const handleClose = () => {
+    setUserDismissed(true);
+    setShowIndicator(false);
+  };
+
+  // No mostrar si el usuario lo cerró manualmente
+  if (userDismissed) {
+    return null;
+  }
+
+  // No mostrar si está todo bien y no hay nada que mostrar
   if (!showIndicator && isOnline && pendingSync === 0) {
     return null;
   }
@@ -110,7 +127,7 @@ export default function OfflineIndicator() {
         </div>
 
         <button
-          onClick={() => setShowIndicator(false)}
+          onClick={handleClose}
           className="text-white/80 hover:text-white text-xl leading-none"
           aria-label="Cerrar"
         >

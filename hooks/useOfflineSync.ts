@@ -170,16 +170,21 @@ export function useOfflineSync() {
 // Abrir base de datos IndexedDB
 function openDB(): Promise<IDBDatabase> {
   return new Promise((resolve, reject) => {
-    const request = indexedDB.open('posib-offline-db', 1);
+    const request = indexedDB.open('posib-offline-db', 2); // Versión 2 con keyPath correcto
 
     request.onerror = () => reject(request.error);
     request.onsuccess = () => resolve(request.result);
 
     request.onupgradeneeded = (event) => {
       const db = (event.target as IDBOpenDBRequest).result;
-      if (!db.objectStoreNames.contains('pending-requests')) {
-        db.createObjectStore('pending-requests', { keyPath: 'timestamp' });
+
+      // Eliminar store antiguo si existe
+      if (db.objectStoreNames.contains('pending-requests')) {
+        db.deleteObjectStore('pending-requests');
       }
+
+      // Crear nuevo store con keyPath correcto
+      db.createObjectStore('pending-requests', { keyPath: 'timestamp' });
     };
   });
 }

@@ -2,14 +2,31 @@
 
 import { useState, useEffect } from "react";
 import { useUser, useAuth } from "@clerk/nextjs";
-import { Check, Loader2, CreditCard, Sparkles, Store, Mail } from "lucide-react";
+import {
+  Check,
+  Loader2,
+  CreditCard,
+  Sparkles,
+  Store,
+  Mail,
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+  CardDescription,
+} from "@/components/ui/card";
 import { getUserProfile } from "@/lib/cloudflare-api";
 import { UserProfile } from "@/lib/types";
 import { toast } from "sonner";
 import { formatCurrency } from "@/lib/utils";
-import { hasAIAccess, hasStoreAccess, hasEmailMarketingAccess } from "@/lib/cloudflare-subscription-helpers";
+import {
+  hasAIAccess,
+  hasStoreAccess,
+  hasEmailMarketingAccess,
+} from "@/lib/cloudflare-subscription-helpers";
 
 // Plan base de suscripción
 const BASE_PLAN = {
@@ -167,14 +184,19 @@ export default function SubscriptionPageWompi() {
   const subscriptionStatus = getSubscriptionStatus();
 
   // Verificar qué addons tiene activos el usuario
-  const activeAddons = profile ? {
-    ai: hasAIAccess(profile),
-    store: hasStoreAccess(profile),
-    email: hasEmailMarketingAccess(profile),
-  } : { ai: false, store: false, email: false };
+  const activeAddons = profile
+    ? {
+        ai: hasAIAccess(profile),
+        store: hasStoreAccess(profile),
+        email: hasEmailMarketingAccess(profile),
+      }
+    : { ai: false, store: false, email: false };
 
   const getColorClasses = (color: string) => {
-    const colors: Record<string, { border: string; bg: string; text: string; button: string }> = {
+    const colors: Record<
+      string,
+      { border: string; bg: string; text: string; button: string }
+    > = {
       purple: {
         border: "border-purple-200",
         bg: "bg-purple-50",
@@ -198,7 +220,22 @@ export default function SubscriptionPageWompi() {
   };
 
   return (
-    <div className="space-y-6">
+    <div className="">
+      {/* Botón de WhatsApp flotante */}
+      <a
+        href="https://wa.me/573177280432?text=Hola,%20tengo%20una%20pregunta%20sobre%20los%20planes%20de%20suscripción"
+        target="_blank"
+        rel="noopener noreferrer"
+        className="fixed bottom-[10px] right-6 z-50 transition-transform hover:scale-110"
+        aria-label="Contactar por WhatsApp"
+      >
+        <img
+          src="https://0dwas2ied3dcs14f.public.blob.vercel-storage.com/redes/social%20%281%29.png"
+          alt="WhatsApp"
+          className="w-14 h-14 md:w-16 md:h-16 drop-shadow-lg"
+        />
+      </a>
+
       <div className="text-center">
         <h1 className="text-3xl font-bold">Planes y Addons</h1>
         <p className="text-gray-500 mt-2">
@@ -206,7 +243,8 @@ export default function SubscriptionPageWompi() {
         </p>
         <div className="mt-4 inline-block bg-gradient-to-r from-purple-100 to-pink-100 border border-purple-300 rounded-lg px-6 py-3">
           <p className="text-sm font-medium text-purple-900">
-            ✨ <strong>Prueba Gratis por 15 Días:</strong> Acceso completo a todos los addons
+            ✨ <strong>Prueba Gratis por 15 Días:</strong> Acceso completo a
+            todos los complementos
           </p>
         </div>
       </div>
@@ -243,8 +281,8 @@ export default function SubscriptionPageWompi() {
                   subscriptionStatus.status === "active"
                     ? "bg-green-100 text-green-800"
                     : subscriptionStatus.status === "trial"
-                    ? "bg-yellow-100 text-yellow-800"
-                    : "bg-red-100 text-red-800"
+                      ? "bg-yellow-100 text-yellow-800"
+                      : "bg-red-100 text-red-800"
                 }`}
               >
                 {subscriptionStatus.status === "trial" && "Prueba Gratuita"}
@@ -356,7 +394,9 @@ export default function SubscriptionPageWompi() {
               >
                 {isActive && subscriptionStatus?.status === "trial" && (
                   <div className="absolute -top-3 left-1/2 transform -translate-x-1/2">
-                    <span className={`${colors.bg} ${colors.text} px-3 py-1 rounded-full text-xs font-medium border ${colors.border}`}>
+                    <span
+                      className={`${colors.bg} ${colors.text} px-3 py-1 rounded-full text-xs font-medium border ${colors.border}`}
+                    >
                       Activo en Trial
                     </span>
                   </div>
@@ -436,14 +476,16 @@ export default function SubscriptionPageWompi() {
               ✓ <strong>Facturación mensual</strong> automática e independiente
             </p>
             <p>
-              ✓ <strong>Cancela addons cuando quieras</strong> - Sin penalizaciones
+              ✓ <strong>Cancela los complementos cuando quieras</strong> - Sin
+              penalizaciones
             </p>
             <p>
-              ✓ <strong>Soporte técnico</strong> incluido
+              ✓ <strong>Soporte técnico</strong> incluido.
+              Escríbeme a través del botón de WhatsApp.
             </p>
             <p className="text-xs text-gray-500 mt-4 pt-4 border-t">
-              Los pagos son procesados de forma segura por Wompi. Cada addon
-              se factura de manera independiente y puedes activarlos o
+              Los pagos son procesados de forma segura por Wompi. Cada addon se
+              factura de manera independiente y puedes activarlos o
               desactivarlos en cualquier momento.
             </p>
           </div>
@@ -460,7 +502,9 @@ export default function SubscriptionPageWompi() {
             <div className="space-y-2">
               <div className="flex justify-between items-center">
                 <span>Plan Básico</span>
-                <span className="font-bold">{formatCurrency(BASE_PLAN.price)}</span>
+                <span className="font-bold">
+                  {formatCurrency(BASE_PLAN.price)}
+                </span>
               </div>
               {activeAddons.ai && (
                 <div className="flex justify-between items-center text-purple-700">
@@ -484,12 +528,16 @@ export default function SubscriptionPageWompi() {
                 <span>Total</span>
                 <span>
                   {formatCurrency(
-                    (subscriptionStatus?.status === "active" ? BASE_PLAN.price : 0) +
-                    (activeAddons.ai ? 4900 : 0) +
-                    (activeAddons.store ? 9900 : 0) +
-                    (activeAddons.email ? 4900 : 0)
+                    (subscriptionStatus?.status === "active"
+                      ? BASE_PLAN.price
+                      : 0) +
+                      (activeAddons.ai ? 4900 : 0) +
+                      (activeAddons.store ? 9900 : 0) +
+                      (activeAddons.email ? 4900 : 0),
                   )}
-                  <span className="text-sm font-normal text-gray-600">/mes</span>
+                  <span className="text-sm font-normal text-gray-600">
+                    /mes
+                  </span>
                 </span>
               </div>
             </div>
