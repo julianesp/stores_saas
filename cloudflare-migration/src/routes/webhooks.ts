@@ -204,27 +204,41 @@ app.post('/wompi', async (c) => {
         });
       }
 
-      // 💳 PROCESAR SUSCRIPCIÓN (transacciones directas, no de payment links)
+      // 💳 PROCESAR SUSCRIPCIÓN O ADDON (transacciones directas, no de payment links)
       // Determinar el tipo de transacción según el reference
-      // - Suscripciones: SUB-{primeros8chars}-{timestamp}
+      // - Suscripciones: SUB-{primeros8chars}-{timestamp} o SUBSCRIPTION-{planId}-{userId}-{timestamp}
+      // - Addons: ADDON-{addonId}-{userId}-{timestamp}
       const referenceParts = reference.split('-');
-      if (referenceParts.length < 2 || referenceParts[0] !== 'SUB') {
-        console.error('❌ Invalid reference format for subscription:', reference);
+      const transactionType = referenceParts[0]; // SUB, SUBSCRIPTION, o ADDON
+
+      if (referenceParts.length < 2 || !['SUB', 'SUBSCRIPTION', 'ADDON'].includes(transactionType)) {
+        console.error('❌ Invalid reference format:', reference);
         return c.json<APIResponse>({
           success: true,
           message: 'Transaction received but not processed (unknown type)',
         });
       }
 
-      const userIdPrefix = referenceParts[1]; // Primeros 8 caracteres del user_profile_id
+      // Extraer el userId del reference
+      let userId = '';
+      if (transactionType === 'SUB') {
+        // SUB-{primeros8chars}-{timestamp}
+        userId = referenceParts[1]; // Primeros 8 caracteres
+      } else if (transactionType === 'SUBSCRIPTION' || transactionType === 'ADDON') {
+        // SUBSCRIPTION-{planId}-{userId}-{timestamp} o ADDON-{addonId}-{userId}-{timestamp}
+        userId = referenceParts[2]; // userId completo
+      }
 
       // Buscar el user_profile
       const userProfileResult = await c.env.DB.prepare(
-        `SELECT id, email, subscription_status FROM user_profiles WHERE id LIKE ?`
-      ).bind(`${userIdPrefix}%`).first<{
+        `SELECT id, email, subscription_status, has_ai_addon, has_store_addon, has_email_addon FROM user_profiles WHERE id LIKE ?`
+      ).bind(`${userId}%`).first<{
         id: string;
         email: string;
         subscription_status: string;
+        has_ai_addon: number;
+        has_store_addon: number;
+        has_email_addon: number;
       }>();
 
       if (!userProfileResult) {
@@ -280,72 +294,101 @@ app.post('/wompi', async (c) => {
         const nextBillingDate = new Date(now);
         nextBillingDate.setMonth(nextBillingDate.getMonth() + 1);
 
-        // Determinar el plan basado en el monto
+        // Determinar qué activar basado en el tipo de transacción y monto
         const amountCOP = amount_in_cents / 100;
-        let planId = 'basic-monthly';
-        let hasAIAddon = false;
-        let hasStoreAddon = false;
-        let hasEmailAddon = false;
+        let planId = userProfileResult.subscription_status === 'trial' ? null : 'basic-monthly';
+        let hasAIAddon = userProfileResult.has_ai_addon;
+        let hasStoreAddon = userProfileResult.has_store_addon;
+        let hasEmailAddon = userProfileResult.has_email_addon;
+        let updateSubscriptionStatus = false;
 
-        // Plan básico
-        if (amountCOP === 24900) {
-          planId = 'basic-monthly';
+        // Si es un ADDON, solo activar el addon correspondiente
+        if (transactionType === 'ADDON') {
+          const addonId = referenceParts[1]; // addon-ai-monthly, addon-store-monthly, etc.
+
+          if (addonId.includes('ai')) {
+            hasAIAddon = 1;
+            console.log('✅ Activating AI addon');
+          } else if (addonId.includes('store')) {
+            hasStoreAddon = 1;
+            console.log('✅ Activating Store addon');
+          } else if (addonId.includes('email')) {
+            hasEmailAddon = 1;
+            console.log('✅ Activating Email addon');
+          }
         }
-        // Addon IA solo
-        else if (amountCOP === 4900) {
-          planId = 'ai-addon-monthly';
-          hasAIAddon = true;
-        }
-        // Addon Tienda solo
-        else if (amountCOP === 9900) {
-          planId = 'store-addon-monthly';
-          hasStoreAddon = true;
-        }
-        // Plan básico + IA addon (24900 + 4900 = 29800)
-        else if (amountCOP === 29800) {
-          planId = 'basic-monthly';
-          hasAIAddon = true;
-        }
-        // Plan básico + Tienda (24900 + 9900 = 34800)
-        else if (amountCOP === 34800) {
-          planId = 'basic-monthly';
-          hasStoreAddon = true;
-        }
-        // Plan básico + Email (24900 + 4900 = 29800)
-        else if (amountCOP === 29800) {
-          planId = 'basic-monthly';
-          hasEmailAddon = true;
+        // Si es SUBSCRIPTION, activar el plan y/o addons
+        else if (transactionType === 'SUBSCRIPTION' || transactionType === 'SUB') {
+          updateSubscriptionStatus = true;
+
+          // Plan básico
+          if (amountCOP === 24900) {
+            planId = 'basic-monthly';
+          }
+          // Addon IA solo (mantener estado de trial si lo tiene)
+          else if (amountCOP === 4900) {
+            hasAIAddon = 1;
+          }
+          // Addon Tienda solo
+          else if (amountCOP === 9900) {
+            hasStoreAddon = 1;
+          }
+          // Plan básico + IA addon
+          else if (amountCOP === 29800) {
+            planId = 'basic-monthly';
+            hasAIAddon = 1;
+          }
+          // Plan básico + Tienda
+          else if (amountCOP === 34800) {
+            planId = 'basic-monthly';
+            hasStoreAddon = 1;
+          }
         }
 
-        await c.env.DB.prepare(
-          `UPDATE user_profiles SET
-            subscription_status = 'active',
-            plan_id = ?,
-            has_ai_addon = ?,
-            last_payment_date = ?,
-            next_billing_date = ?,
-            trial_start_date = NULL,
-            trial_end_date = NULL,
-            updated_at = ?
-          WHERE id = ?`
-        ).bind(
-          planId,
-          hasAIAddon ? 1 : 0,
+        // Construir query de actualización dinámicamente
+        const updates: string[] = [];
+        const bindings: any[] = [];
+
+        if (updateSubscriptionStatus) {
+          updates.push('subscription_status = ?', 'plan_id = ?', 'trial_start_date = NULL', 'trial_end_date = NULL');
+          bindings.push('active', planId);
+        }
+
+        updates.push(
+          'has_ai_addon = ?',
+          'has_store_addon = ?',
+          'has_email_addon = ?',
+          'last_payment_date = ?',
+          'next_billing_date = ?',
+          'updated_at = ?'
+        );
+
+        bindings.push(
+          hasAIAddon,
+          hasStoreAddon,
+          hasEmailAddon,
           now.toISOString(),
           nextBillingDate.toISOString(),
           now.toISOString(),
           userProfileResult.id
-        ).run();
+        );
 
-        console.log(`✅ Subscription activated for user: ${userProfileResult.id} with plan: ${planId}`);
+        await c.env.DB.prepare(
+          `UPDATE user_profiles SET ${updates.join(', ')} WHERE id = ?`
+        ).bind(...bindings).run();
+
+        console.log(`✅ ${transactionType === 'ADDON' ? 'Addon' : 'Subscription'} activated for user: ${userProfileResult.id}`);
+        console.log(`Plan: ${planId}, AI: ${hasAIAddon}, Store: ${hasStoreAddon}, Email: ${hasEmailAddon}`);
 
         return c.json<APIResponse>({
           success: true,
-          message: 'Subscription activated successfully',
+          message: transactionType === 'ADDON' ? 'Addon activated successfully' : 'Subscription activated successfully',
           data: {
             userId: userProfileResult.id,
             planId,
-            hasAIAddon,
+            hasAIAddon: hasAIAddon === 1,
+            hasStoreAddon: hasStoreAddon === 1,
+            hasEmailAddon: hasEmailAddon === 1,
           },
         });
       }
