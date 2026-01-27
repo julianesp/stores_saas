@@ -18,7 +18,7 @@ app.post('/create-payment-link', async (c) => {
     const body = await c.req.json();
 
     // Validar campos requeridos
-    const { order_id, order_number, amount_in_cents, customer_email, customer_name } = body;
+    const { order_id, order_number, amount_in_cents, customer_email, customer_name, customer_phone } = body;
 
     if (!order_id || !order_number || !amount_in_cents) {
       return c.json<APIResponse<null>>({
@@ -60,6 +60,16 @@ app.post('/create-payment-link', async (c) => {
       }, 400);
     }
 
+    // Preparar datos del cliente para Wompi
+    const customerData: any = {};
+    if (customer_phone) {
+      customerData.phone_number = customer_phone.replace(/\s+/g, ''); // Remover espacios
+      customerData.full_name = customer_name || 'Cliente';
+    }
+    if (customer_email) {
+      customerData.email = customer_email;
+    }
+
     // Crear el payment link en Wompi
     const wompiResponse = await fetch('https://production.wompi.co/v1/payment_links', {
       method: 'POST',
@@ -77,6 +87,7 @@ app.post('/create-payment-link', async (c) => {
         redirect_url: body.redirect_url || undefined,
         expires_at: body.expires_at || undefined,
         sku: order_id, // Usamos el order_id como SKU para rastreo
+        customer_data: Object.keys(customerData).length > 0 ? customerData : undefined, // Datos del cliente para Nequi
       }),
     });
 

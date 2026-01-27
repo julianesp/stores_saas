@@ -251,6 +251,8 @@ export default function CheckoutPage() {
             amount_in_cents: Math.round(response.total * 100),
             customer_email: customerEmail.trim() || undefined,
             customer_name: customerName.trim(),
+            customer_phone: customerPhone.trim(),
+            redirect_url: `${window.location.origin}/store/${slug}/payment-confirmation?order=${response.order_number}`,
           });
           setWompiCheckoutUrl(paymentLink.checkout_url);
         } catch (error: any) {

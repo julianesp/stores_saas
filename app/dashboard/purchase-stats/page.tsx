@@ -1,9 +1,9 @@
-'use client';
+"use client";
 
-import { useState, useEffect } from 'react';
-import { useAuth } from '@clerk/nextjs';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
+import { useState, useEffect } from "react";
+import { useAuth } from "@clerk/nextjs";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
 import {
   TrendingUp,
   TrendingDown,
@@ -13,7 +13,9 @@ import {
   Calendar,
   BarChart3,
   PieChart as PieChartIcon,
-} from 'lucide-react';
+  HelpCircle,
+  X,
+} from "lucide-react";
 import {
   BarChart,
   Bar,
@@ -28,10 +30,10 @@ import {
   Tooltip,
   Legend,
   ResponsiveContainer,
-} from 'recharts';
-import { formatCurrency } from '@/lib/utils';
-import { getPurchaseOrders, getSales, getProducts } from '@/lib/cloudflare-api';
-import type { PurchaseOrderWithItems, Sale, Product } from '@/lib/types';
+} from "recharts";
+import { formatCurrency } from "@/lib/utils";
+import { getPurchaseOrders, getSales, getProducts } from "@/lib/cloudflare-api";
+import type { PurchaseOrderWithItems, Sale, Product } from "@/lib/types";
 
 interface PurchaseStats {
   totalInvestment: number;
@@ -40,19 +42,34 @@ interface PurchaseStats {
   totalProducts: number;
   monthlyInvestment: { month: string; amount: number }[];
   supplierStats: { supplier: string; total: number; orders: number }[];
-  productStats: { product: string; invested: number; sold: number; profit: number }[];
+  productStats: {
+    product: string;
+    invested: number;
+    sold: number;
+    profit: number;
+  }[];
   profitMargin: number;
   totalRevenue: number;
   totalProfit: number;
 }
 
-const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884D8', '#82CA9D'];
+const COLORS = [
+  "#0088FE",
+  "#00C49F",
+  "#FFBB28",
+  "#FF8042",
+  "#8884D8",
+  "#82CA9D",
+];
 
 export default function PurchaseStatsPage() {
   const { getToken } = useAuth();
   const [loading, setLoading] = useState(true);
   const [stats, setStats] = useState<PurchaseStats | null>(null);
-  const [dateRange, setDateRange] = useState<'7d' | '30d' | '90d' | 'all'>('30d');
+  const [dateRange, setDateRange] = useState<"7d" | "30d" | "90d" | "all">(
+    "30d",
+  );
+  const [activeModal, setActiveModal] = useState<string | null>(null);
 
   useEffect(() => {
     loadStats();
@@ -69,36 +86,44 @@ export default function PurchaseStatsPage() {
 
       // Filter by date range
       const cutoffDate = getCutoffDate(dateRange);
-      const filteredOrders = orders.filter(order =>
-        new Date(order.order_date) >= cutoffDate
+      const filteredOrders = orders.filter(
+        (order) => new Date(order.order_date) >= cutoffDate,
       );
-      const filteredSales = sales.filter(sale =>
-        new Date(sale.created_at) >= cutoffDate
+      const filteredSales = sales.filter(
+        (sale) => new Date(sale.created_at) >= cutoffDate,
       );
 
       // Calculate total investment
-      const totalInvestment = filteredOrders.reduce((sum, order) => sum + order.total, 0);
+      const totalInvestment = filteredOrders.reduce(
+        (sum, order) => sum + order.total,
+        0,
+      );
 
       // Calculate average order value
-      const averageOrderValue = filteredOrders.length > 0
-        ? totalInvestment / filteredOrders.length
-        : 0;
+      const averageOrderValue =
+        filteredOrders.length > 0 ? totalInvestment / filteredOrders.length : 0;
 
       // Calculate total products purchased
-      const totalProducts = filteredOrders.reduce((sum, order) =>
-        sum + order.items.reduce((itemSum, item) => itemSum + item.quantity, 0), 0
+      const totalProducts = filteredOrders.reduce(
+        (sum, order) =>
+          sum +
+          order.items.reduce((itemSum, item) => itemSum + item.quantity, 0),
+        0,
       );
 
       // Monthly investment
       const monthlyData = calculateMonthlyInvestment(filteredOrders);
 
       // Supplier stats
-      const supplierMap = new Map<string, { total: number; orders: number; name: string }>();
-      filteredOrders.forEach(order => {
+      const supplierMap = new Map<
+        string,
+        { total: number; orders: number; name: string }
+      >();
+      filteredOrders.forEach((order) => {
         const existing = supplierMap.get(order.supplier_id) || {
           total: 0,
           orders: 0,
-          name: order.supplier?.name || 'Proveedor desconocido'
+          name: order.supplier?.name || "Proveedor desconocido",
         };
         supplierMap.set(order.supplier_id, {
           total: existing.total + order.total,
@@ -108,20 +133,23 @@ export default function PurchaseStatsPage() {
       });
 
       const supplierStats = Array.from(supplierMap.values())
-        .map(s => ({ supplier: s.name, total: s.total, orders: s.orders }))
+        .map((s) => ({ supplier: s.name, total: s.total, orders: s.orders }))
         .sort((a, b) => b.total - a.total);
 
       // Product profit analysis
-      const productMap = new Map<string, { invested: number; sold: number; revenue: number; name: string }>();
+      const productMap = new Map<
+        string,
+        { invested: number; sold: number; revenue: number; name: string }
+      >();
 
       // Calculate investment per product
-      filteredOrders.forEach(order => {
-        order.items.forEach(item => {
+      filteredOrders.forEach((order) => {
+        order.items.forEach((item) => {
           const existing = productMap.get(item.product_id) || {
             invested: 0,
             sold: 0,
             revenue: 0,
-            name: item.product_name
+            name: item.product_name,
           };
           productMap.set(item.product_id, {
             ...existing,
@@ -135,7 +163,7 @@ export default function PurchaseStatsPage() {
         filteredSales.map(async (sale) => {
           try {
             const response = await fetch(`/api/cloudflare/sales/${sale.id}`, {
-              headers: { Authorization: `Bearer ${await getToken()}` }
+              headers: { Authorization: `Bearer ${await getToken()}` },
             });
             if (!response.ok) return null;
             const data = await response.json();
@@ -143,7 +171,7 @@ export default function PurchaseStatsPage() {
           } catch {
             return null;
           }
-        })
+        }),
       );
 
       allSales.filter(Boolean).forEach((sale: any) => {
@@ -162,20 +190,24 @@ export default function PurchaseStatsPage() {
       });
 
       const productStats = Array.from(productMap.values())
-        .map(p => ({
+        .map((p) => ({
           product: p.name,
           invested: p.invested,
           sold: p.sold,
           profit: p.revenue - p.invested,
         }))
-        .filter(p => p.sold > 0)
+        .filter((p) => p.sold > 0)
         .sort((a, b) => b.profit - a.profit)
         .slice(0, 10);
 
       // Calculate totals
-      const totalRevenue = productStats.reduce((sum, p) => sum + (p.invested + p.profit), 0);
+      const totalRevenue = productStats.reduce(
+        (sum, p) => sum + (p.invested + p.profit),
+        0,
+      );
       const totalProfit = productStats.reduce((sum, p) => sum + p.profit, 0);
-      const profitMargin = totalInvestment > 0 ? (totalProfit / totalInvestment) * 100 : 0;
+      const profitMargin =
+        totalInvestment > 0 ? (totalProfit / totalInvestment) * 100 : 0;
 
       setStats({
         totalInvestment,
@@ -190,22 +222,22 @@ export default function PurchaseStatsPage() {
         totalProfit,
       });
     } catch (error) {
-      console.error('Error loading stats:', error);
+      console.error("Error loading stats:", error);
     } finally {
       setLoading(false);
     }
   };
 
-  const getCutoffDate = (range: '7d' | '30d' | '90d' | 'all'): Date => {
+  const getCutoffDate = (range: "7d" | "30d" | "90d" | "all"): Date => {
     const now = new Date();
     switch (range) {
-      case '7d':
+      case "7d":
         return new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
-      case '30d':
+      case "30d":
         return new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
-      case '90d':
+      case "90d":
         return new Date(now.getTime() - 90 * 24 * 60 * 60 * 1000);
-      case 'all':
+      case "all":
         return new Date(0);
     }
   };
@@ -213,20 +245,26 @@ export default function PurchaseStatsPage() {
   const calculateMonthlyInvestment = (orders: PurchaseOrderWithItems[]) => {
     const monthMap = new Map<string, number>();
 
-    orders.forEach(order => {
+    orders.forEach((order) => {
       const date = new Date(order.order_date);
-      const monthKey = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
-      const monthName = date.toLocaleDateString('es-CO', { month: 'short', year: 'numeric' });
+      const monthKey = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}`;
+      const monthName = date.toLocaleDateString("es-CO", {
+        month: "short",
+        year: "numeric",
+      });
 
       monthMap.set(monthKey, (monthMap.get(monthKey) || 0) + order.total);
     });
 
     return Array.from(monthMap.entries())
       .map(([key, amount]) => {
-        const [year, month] = key.split('-');
+        const [year, month] = key.split("-");
         const date = new Date(parseInt(year), parseInt(month) - 1);
         return {
-          month: date.toLocaleDateString('es-CO', { month: 'short', year: 'numeric' }),
+          month: date.toLocaleDateString("es-CO", {
+            month: "short",
+            year: "numeric",
+          }),
           amount,
         };
       })
@@ -249,6 +287,65 @@ export default function PurchaseStatsPage() {
     );
   }
 
+  const modalContent: Record<string, { title: string; description: string }> = {
+    investment: {
+      title: "Inversión Total",
+      description:
+        "Esta métrica muestra el total de dinero invertido en órdenes de compra durante el período seleccionado. Incluye todos los costos de adquisición de productos de tus proveedores.",
+    },
+    profit: {
+      title: "Ganancia Total",
+      description:
+        "Representa la ganancia neta obtenida de las ventas de productos comprados en el período seleccionado. Se calcula restando la inversión inicial del ingreso total por ventas. El margen de ganancia muestra el porcentaje de retorno sobre tu inversión.",
+    },
+    average: {
+      title: "Promedio por Orden",
+      description:
+        "El valor promedio de cada orden de compra realizada. Este indicador te ayuda a entender el tamaño típico de tus pedidos a proveedores y puede ayudarte a negociar mejores precios o planificar tu flujo de caja.",
+    },
+    products: {
+      title: "Productos Comprados",
+      description:
+        "El número total de unidades de productos adquiridos en el período seleccionado. Esta métrica te ayuda a entender el volumen de tu inventario y la rotación de productos.",
+    },
+  };
+
+  const HelpButton = ({ modalKey }: { modalKey: string }) => (
+    <button
+      onClick={() => setActiveModal(modalKey)}
+      className=" px-2 py-1 rounded  cursor-pointer transition-all hover:scale-105 hover:shadow-lg font-semibold"
+      style={{ backgroundColor: "#FFE11F", color: "#000" }}
+    >
+      ¿Qué es esto?
+    </button>
+  );
+
+  const Modal = ({ modalKey }: { modalKey: string }) => {
+    const content = modalContent[modalKey];
+    if (!content) return null;
+
+    return (
+      <div
+        className="fixed inset-0 bg-transparent backdrop-blur-sm w-1/2 h-1/2 bg-opacity-50 flex items-center justify-center z-50 left-1/4 top-1/4 rounded-2xl"
+        onClick={() => setActiveModal(null)}
+      >
+        <div
+          className="bg-white rounded-lg p-6 max-w-md mx-4 relative"
+          onClick={(e) => e.stopPropagation()}
+        >
+          <button
+            onClick={() => setActiveModal(null)}
+            className="absolute top-4 right-4 text-white border rounded-3xl p-2 bg-red-600 cursor-pointer transition-transform duration-200 hover:scale-x-125 hover:scale-y-125"
+          >
+            <X className="h-5 w-5" />
+          </button>
+          <h3 className="text-xl font-bold mb-4">{content.title}</h3>
+          <p className="text-gray-700 leading-relaxed">{content.description}</p>
+        </div>
+      </div>
+    );
+  };
+
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -256,32 +353,35 @@ export default function PurchaseStatsPage() {
         <div>
           <h1 className="text-3xl font-bold">Estadísticas de Compras</h1>
           <p className="text-gray-500">Análisis de inversión y rentabilidad</p>
+          <p className="text-gray-500">
+            Conoce qué tan rentable es tu negocio con estas estadísticas
+          </p>
         </div>
         <div className="flex gap-2">
           <Button
-            variant={dateRange === '7d' ? 'default' : 'outline'}
-            onClick={() => setDateRange('7d')}
+            variant={dateRange === "7d" ? "default" : "outline"}
+            onClick={() => setDateRange("7d")}
             size="sm"
           >
             7 días
           </Button>
           <Button
-            variant={dateRange === '30d' ? 'default' : 'outline'}
-            onClick={() => setDateRange('30d')}
+            variant={dateRange === "30d" ? "default" : "outline"}
+            onClick={() => setDateRange("30d")}
             size="sm"
           >
             30 días
           </Button>
           <Button
-            variant={dateRange === '90d' ? 'default' : 'outline'}
-            onClick={() => setDateRange('90d')}
+            variant={dateRange === "90d" ? "default" : "outline"}
+            onClick={() => setDateRange("90d")}
             size="sm"
           >
             90 días
           </Button>
           <Button
-            variant={dateRange === 'all' ? 'default' : 'outline'}
-            onClick={() => setDateRange('all')}
+            variant={dateRange === "all" ? "default" : "outline"}
+            onClick={() => setDateRange("all")}
             size="sm"
           >
             Todo
@@ -289,24 +389,36 @@ export default function PurchaseStatsPage() {
         </div>
       </div>
 
+      {/* Modals */}
+      {activeModal && <Modal modalKey={activeModal} />}
+
       {/* KPI Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Inversión Total</CardTitle>
+            <CardTitle className="text-sm font-medium">
+              Inversión Total
+            </CardTitle>
             <DollarSign className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{formatCurrency(stats.totalInvestment)}</div>
+            <div className="text-2xl font-bold">
+              {formatCurrency(stats.totalInvestment)}
+            </div>
             <p className="text-xs text-muted-foreground">
               En {stats.totalOrders} órdenes de compra
             </p>
+            <div className="mt-3 m-auto text-center">
+              <HelpButton modalKey="investment" />
+            </div>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Ganancia Total</CardTitle>
+            <CardTitle className="text-sm font-medium">
+              Ganancia Total
+            </CardTitle>
             <TrendingUp className="h-4 w-4 text-green-600" />
           </CardHeader>
           <CardContent>
@@ -316,12 +428,17 @@ export default function PurchaseStatsPage() {
             <p className="text-xs text-muted-foreground">
               Margen: {stats.profitMargin.toFixed(1)}%
             </p>
+            <div className="mt-3">
+              <HelpButton modalKey="profit" />
+            </div>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Promedio por Orden</CardTitle>
+            <CardTitle className="text-sm font-medium">
+              Promedio por Orden
+            </CardTitle>
             <ShoppingCart className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
@@ -331,19 +448,25 @@ export default function PurchaseStatsPage() {
             <p className="text-xs text-muted-foreground">
               {stats.totalOrders} órdenes totales
             </p>
+            <div className="mt-3">
+              <HelpButton modalKey="average" />
+            </div>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Productos Comprados</CardTitle>
+            <CardTitle className="text-sm font-medium">
+              Productos Comprados
+            </CardTitle>
             <Package className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{stats.totalProducts}</div>
-            <p className="text-xs text-muted-foreground">
-              Unidades totales
-            </p>
+            <p className="text-xs text-muted-foreground">Unidades totales</p>
+            <div className="mt-3">
+              <HelpButton modalKey="products" />
+            </div>
           </CardContent>
         </Card>
       </div>
@@ -366,7 +489,7 @@ export default function PurchaseStatsPage() {
                 <YAxis />
                 <Tooltip
                   formatter={(value: number) => formatCurrency(value)}
-                  labelStyle={{ color: '#000' }}
+                  labelStyle={{ color: "#000" }}
                 />
                 <Legend />
                 <Line
@@ -402,7 +525,10 @@ export default function PurchaseStatsPage() {
                   label
                 >
                   {stats.supplierStats.map((entry, index) => (
-                    <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                    <Cell
+                      key={`cell-${index}`}
+                      fill={COLORS[index % COLORS.length]}
+                    />
                   ))}
                 </Pie>
                 <Tooltip formatter={(value: number) => formatCurrency(value)} />
@@ -432,7 +558,9 @@ export default function PurchaseStatsPage() {
               <tbody>
                 {stats.supplierStats.map((supplier, index) => (
                   <tr key={index} className="border-b hover:bg-gray-50">
-                    <td className="py-3 px-4 font-medium">{supplier.supplier}</td>
+                    <td className="py-3 px-4 font-medium">
+                      {supplier.supplier}
+                    </td>
                     <td className="py-3 px-4 text-right">{supplier.orders}</td>
                     <td className="py-3 px-4 text-right font-semibold">
                       {formatCurrency(supplier.total)}
@@ -467,7 +595,7 @@ export default function PurchaseStatsPage() {
                 <YAxis />
                 <Tooltip
                   formatter={(value: number) => formatCurrency(value)}
-                  labelStyle={{ color: '#000' }}
+                  labelStyle={{ color: "#000" }}
                 />
                 <Legend />
                 <Bar dataKey="invested" fill="#FF8042" name="Invertido" />
@@ -483,15 +611,27 @@ export default function PurchaseStatsPage() {
                     <th className="text-right py-3 px-4">Unidades Vendidas</th>
                     <th className="text-right py-3 px-4">Invertido</th>
                     <th className="text-right py-3 px-4">Ganancia</th>
-                    <th className="text-right py-3 px-4">ROI</th>
+                    <th className="text-right py-3 px-4">
+                      <span
+                        className="cursor-help"
+                        title="Retorno de la Inversión"
+                      >
+                        ROI
+                      </span>
+                    </th>
                   </tr>
                 </thead>
                 <tbody>
                   {stats.productStats.map((product, index) => {
-                    const roi = product.invested > 0 ? (product.profit / product.invested) * 100 : 0;
+                    const roi =
+                      product.invested > 0
+                        ? (product.profit / product.invested) * 100
+                        : 0;
                     return (
                       <tr key={index} className="border-b hover:bg-gray-50">
-                        <td className="py-3 px-4 font-medium">{product.product}</td>
+                        <td className="py-3 px-4 font-medium">
+                          {product.product}
+                        </td>
                         <td className="py-3 px-4 text-right">{product.sold}</td>
                         <td className="py-3 px-4 text-right text-red-600">
                           {formatCurrency(product.invested)}
@@ -500,8 +640,11 @@ export default function PurchaseStatsPage() {
                           {formatCurrency(product.profit)}
                         </td>
                         <td className="py-3 px-4 text-right">
-                          <span className={`font-semibold ${roi > 0 ? 'text-green-600' : 'text-red-600'}`}>
-                            {roi > 0 ? '+' : ''}{roi.toFixed(1)}%
+                          <span
+                            className={`font-semibold ${roi > 0 ? "text-green-600" : "text-red-600"}`}
+                          >
+                            {roi > 0 ? "+" : ""}
+                            {roi.toFixed(1)}%
                           </span>
                         </td>
                       </tr>

@@ -27,6 +27,8 @@ import {
   hasStoreAccess,
   hasEmailMarketingAccess,
 } from "@/lib/cloudflare-subscription-helpers";
+import Link from "next/link";
+import Image from "next/image";
 
 // Plan base de suscripción
 const BASE_PLAN = {
@@ -222,19 +224,21 @@ export default function SubscriptionPageWompi() {
   return (
     <div className="">
       {/* Botón de WhatsApp flotante */}
-      <a
-        href="https://wa.me/573177280432?text=Hola,%20tengo%20una%20pregunta%20sobre%20los%20planes%20de%20suscripción"
+      <Link
+        href="https://wa.me/573174503604?text=Hola,%20tengo%20una%20pregunta%20sobre%20los%20planes%20de%20suscripción"
         target="_blank"
         rel="noopener noreferrer"
         className="fixed bottom-[10px] right-6 z-50 transition-transform hover:scale-110"
         aria-label="Contactar por WhatsApp"
       >
-        <img
+        <Image
           src="https://0dwas2ied3dcs14f.public.blob.vercel-storage.com/redes/social%20%281%29.png"
           alt="WhatsApp"
           className="w-14 h-14 md:w-16 md:h-16 drop-shadow-lg"
+          width={50}
+          height={50}
         />
-      </a>
+      </Link>
 
       <div className="text-center">
         <h1 className="text-3xl font-bold">Planes y Addons</h1>
@@ -480,8 +484,8 @@ export default function SubscriptionPageWompi() {
               penalizaciones
             </p>
             <p>
-              ✓ <strong>Soporte técnico</strong> incluido.
-              Escríbeme a través del botón de WhatsApp.
+              ✓ <strong>Soporte técnico</strong> incluido. Escríbeme a través
+              del botón de WhatsApp.
             </p>
             <p className="text-xs text-gray-500 mt-4 pt-4 border-t">
               Los pagos son procesados de forma segura por Wompi. Cada addon se

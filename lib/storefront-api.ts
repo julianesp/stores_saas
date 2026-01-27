@@ -214,6 +214,8 @@ export async function createWompiPaymentLink(
     amount_in_cents: number;
     customer_email?: string;
     customer_name?: string;
+    customer_phone?: string;
+    redirect_url?: string;
   }
 ): Promise<WompiPaymentLinkResponse> {
   const url = `${WORKER_URL}/api/storefront/wompi/create-payment-link/${slug}`;

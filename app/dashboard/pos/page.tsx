@@ -86,7 +86,7 @@ export default function POSPage() {
   >("efectivo");
   const [processing, setProcessing] = useState(false);
   const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(
-    null
+    null,
   );
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [customerSearchTerm, setCustomerSearchTerm] = useState("");
@@ -114,7 +114,7 @@ export default function POSPage() {
   const [lastSale, setLastSale] = useState<Sale | null>(null);
   const [lastSaleItems, setLastSaleItems] = useState<SaleItemWithProduct[]>([]);
   const [lastSaleCustomer, setLastSaleCustomer] = useState<Customer | null>(
-    null
+    null,
   );
   const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
 
@@ -139,7 +139,7 @@ export default function POSPage() {
 
       Swal.success(
         "Cliente creado",
-        `${newCustomer.name} ha sido agregado exitosamente`
+        `${newCustomer.name} ha sido agregado exitosamente`,
       );
 
       // Seleccionar automáticamente el nuevo cliente
@@ -170,21 +170,30 @@ export default function POSPage() {
     }
   }, [getToken]);
 
-  const getProductOffer = useCallback((productId: string): Offer | undefined => {
-    return activeOffers.find(offer => offer.product_id === productId && offer.is_active === 1);
-  }, [activeOffers]);
+  const getProductOffer = useCallback(
+    (productId: string): Offer | undefined => {
+      return activeOffers.find(
+        (offer) => offer.product_id === productId && offer.is_active === 1,
+      );
+    },
+    [activeOffers],
+  );
 
-  const getProductWithOffer = useCallback((product: Product): Product => {
-    const offer = getProductOffer(product.id);
-    if (offer && offer.discount_percentage > 0) {
-      const discountAmount = (product.sale_price * offer.discount_percentage) / 100;
-      return {
-        ...product,
-        sale_price: product.sale_price - discountAmount,
-      };
-    }
-    return product;
-  }, [getProductOffer]);
+  const getProductWithOffer = useCallback(
+    (product: Product): Product => {
+      const offer = getProductOffer(product.id);
+      if (offer && offer.discount_percentage > 0) {
+        const discountAmount =
+          (product.sale_price * offer.discount_percentage) / 100;
+        return {
+          ...product,
+          sale_price: product.sale_price - discountAmount,
+        };
+      }
+      return product;
+    },
+    [getProductOffer],
+  );
 
   const fetchProducts = useCallback(async () => {
     try {
@@ -241,17 +250,23 @@ export default function POSPage() {
     fetchUserProfile();
     // Auto-focus en el input de código de barras
     barcodeRef.current?.focus();
-  }, [fetchOffers, fetchProducts, fetchCustomers, fetchCategories, fetchUserProfile]);
+  }, [
+    fetchOffers,
+    fetchProducts,
+    fetchCustomers,
+    fetchCategories,
+    fetchUserProfile,
+  ]);
 
   const handleBarcodeSearch = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!barcodeInput.trim()) return;
 
-    console.log('🔍 [LECTOR USB] Código recibido:', barcodeInput);
+    console.log("🔍 [LECTOR USB] Código recibido:", barcodeInput);
 
     // 🔧 Normalizar el código de barras con la función centralizada
     const scannedBarcode = normalizeBarcode(barcodeInput);
-    console.log('🔧 [LECTOR USB] Código normalizado:', scannedBarcode);
+    console.log("🔧 [LECTOR USB] Código normalizado:", scannedBarcode);
 
     if (!scannedBarcode) {
       Swal.error("Código inválido", "El código de barras no es válido");
@@ -261,21 +276,27 @@ export default function POSPage() {
     }
 
     // 🔧 Buscar usando comparación normalizada
-    let product = products.find((p) => barcodeEquals(p.barcode, scannedBarcode));
+    let product = products.find((p) =>
+      barcodeEquals(p.barcode, scannedBarcode),
+    );
 
     // Si no se encuentra en productos disponibles, buscar en todos los productos
     if (!product) {
-      console.log('⚠️ [LECTOR USB] No encontrado en productos disponibles, buscando en todos...');
+      console.log(
+        "⚠️ [LECTOR USB] No encontrado en productos disponibles, buscando en todos...",
+      );
       try {
-        const allProducts = await getProducts(getToken) as Product[];
-        product = allProducts.find((p) => barcodeEquals(p.barcode, scannedBarcode));
+        const allProducts = (await getProducts(getToken)) as Product[];
+        product = allProducts.find((p) =>
+          barcodeEquals(p.barcode, scannedBarcode),
+        );
 
         // Si se encuentra pero no tiene stock
         if (product && product.stock <= 0) {
-          console.log('❌ [LECTOR USB] Producto encontrado pero sin stock');
+          console.log("❌ [LECTOR USB] Producto encontrado pero sin stock");
           Swal.error(
             "Producto sin stock",
-            `${product.name} no tiene unidades disponibles (Stock: ${product.stock})`
+            `${product.name} no tiene unidades disponibles (Stock: ${product.stock})`,
           );
           setBarcodeInput("");
           barcodeRef.current?.focus();
@@ -287,7 +308,7 @@ export default function POSPage() {
     }
 
     if (product) {
-      console.log('✅ [LECTOR USB] Producto encontrado:', product.name);
+      console.log("✅ [LECTOR USB] Producto encontrado:", product.name);
       // Efecto visual de éxito
       setScanSuccess(true);
       setTimeout(() => setScanSuccess(false), 500);
@@ -298,10 +319,10 @@ export default function POSPage() {
       // Toast pequeño y no intrusivo
       Swal.productAdded(product.name, 1);
     } else {
-      console.log('❌ [LECTOR USB] Producto NO encontrado en ninguna lista');
+      console.log("❌ [LECTOR USB] Producto NO encontrado en ninguna lista");
       Swal.error(
         "Producto no encontrado",
-        `El código ${scannedBarcode} no está registrado`
+        `El código ${scannedBarcode} no está registrado`,
       );
     }
     setBarcodeInput("");
@@ -311,14 +332,14 @@ export default function POSPage() {
   const handleCameraScan = async (barcode: string) => {
     if (!barcode.trim()) return;
 
-    console.log('📷 [CÁMARA] Código recibido:', barcode);
+    console.log("📷 [CÁMARA] Código recibido:", barcode);
 
     // 🔧 Normalizar el código de barras con la función centralizada
     const scannedBarcode = normalizeBarcode(barcode);
-    console.log('🔧 [CÁMARA] Código normalizado:', scannedBarcode);
+    console.log("🔧 [CÁMARA] Código normalizado:", scannedBarcode);
 
     if (!scannedBarcode) {
-      console.log('❌ [CÁMARA] Código inválido después de normalizar');
+      console.log("❌ [CÁMARA] Código inválido después de normalizar");
       Swal.error("Código inválido", "El código de barras no es válido");
       setTimeout(() => setLastCameraScannedCode(""), 2000);
       return;
@@ -326,43 +347,64 @@ export default function POSPage() {
 
     // Evitar procesar el mismo código dos veces seguidas
     if (scannedBarcode === lastCameraScannedCode) {
-      console.log('⏭️ [CÁMARA] Código ya procesado, ignorando duplicado');
+      console.log("⏭️ [CÁMARA] Código ya procesado, ignorando duplicado");
       return;
     }
 
     setLastCameraScannedCode(scannedBarcode);
 
     // 🔧 Buscar usando comparación normalizada
-    console.log('🔍 [CÁMARA] Productos disponibles para buscar:', products.length);
-    console.log('🔍 [CÁMARA] Códigos disponibles:', products.map(p => ({
-      nombre: p.name,
-      codigo: p.barcode,
-      codigoNormalizado: normalizeBarcode(p.barcode)
-    })));
+    console.log(
+      "🔍 [CÁMARA] Productos disponibles para buscar:",
+      products.length,
+    );
+    console.log(
+      "🔍 [CÁMARA] Códigos disponibles:",
+      products.map((p) => ({
+        nombre: p.name,
+        codigo: p.barcode,
+        codigoNormalizado: normalizeBarcode(p.barcode),
+      })),
+    );
 
-    let product = products.find((p) => barcodeEquals(p.barcode, scannedBarcode));
+    let product = products.find((p) =>
+      barcodeEquals(p.barcode, scannedBarcode),
+    );
 
     // Si no se encuentra en productos disponibles, buscar en todos los productos
     if (!product) {
-      console.log('⚠️ [CÁMARA] No encontrado en productos disponibles, buscando en TODOS...');
+      console.log(
+        "⚠️ [CÁMARA] No encontrado en productos disponibles, buscando en TODOS...",
+      );
       try {
-        const allProducts = await getProducts(getToken) as Product[];
-        console.log('🔍 [CÁMARA] Total de productos en sistema:', allProducts.length);
-        console.log('🔍 [CÁMARA] Todos los códigos:', allProducts.map(p => ({
-          nombre: p.name,
-          codigo: p.barcode,
-          stock: p.stock,
-          codigoNormalizado: normalizeBarcode(p.barcode)
-        })));
+        const allProducts = (await getProducts(getToken)) as Product[];
+        console.log(
+          "🔍 [CÁMARA] Total de productos en sistema:",
+          allProducts.length,
+        );
+        console.log(
+          "🔍 [CÁMARA] Todos los códigos:",
+          allProducts.map((p) => ({
+            nombre: p.name,
+            codigo: p.barcode,
+            stock: p.stock,
+            codigoNormalizado: normalizeBarcode(p.barcode),
+          })),
+        );
 
-        product = allProducts.find((p) => barcodeEquals(p.barcode, scannedBarcode));
+        product = allProducts.find((p) =>
+          barcodeEquals(p.barcode, scannedBarcode),
+        );
 
         // Si se encuentra pero no tiene stock
         if (product && product.stock <= 0) {
-          console.log('❌ [CÁMARA] Producto encontrado pero sin stock:', product.name);
+          console.log(
+            "❌ [CÁMARA] Producto encontrado pero sin stock:",
+            product.name,
+          );
           Swal.error(
             "Producto sin stock",
-            `${product.name} no tiene unidades disponibles (Stock: ${product.stock})`
+            `${product.name} no tiene unidades disponibles (Stock: ${product.stock})`,
           );
           setTimeout(() => setLastCameraScannedCode(""), 2000);
           return;
@@ -373,7 +415,7 @@ export default function POSPage() {
     }
 
     if (product) {
-      console.log('✅ [CÁMARA] Producto encontrado:', product.name);
+      console.log("✅ [CÁMARA] Producto encontrado:", product.name);
       // Efecto visual de éxito
       setScanSuccess(true);
       setTimeout(() => setScanSuccess(false), 500);
@@ -390,10 +432,10 @@ export default function POSPage() {
         setTimeout(() => setLastCameraScannedCode(""), 1000);
       }, 500);
     } else {
-      console.log('❌ [CÁMARA] Producto NO encontrado en ninguna lista');
+      console.log("❌ [CÁMARA] Producto NO encontrado en ninguna lista");
       Swal.error(
         "Producto no encontrado",
-        `El código ${scannedBarcode} no está registrado`
+        `El código ${scannedBarcode} no está registrado`,
       );
       // También resetear el código en caso de error
       setTimeout(() => setLastCameraScannedCode(""), 2000);
@@ -407,14 +449,14 @@ export default function POSPage() {
         if (existing.quantity >= product.stock) {
           Swal.warning(
             "Cantidad insuficiente",
-            "No hay más unidades disponibles"
+            "No hay más unidades disponibles",
           );
           return prev;
         }
         return prev.map((item) =>
           item.product.id === product.id
             ? { ...item, quantity: item.quantity + 1 }
-            : item
+            : item,
         );
       }
 
@@ -425,15 +467,20 @@ export default function POSPage() {
       const discountPercentage = hasOffer ? offer!.discount_percentage : 0;
 
       // Aplicar descuento si existe
-      const productWithOffer = hasOffer ? getProductWithOffer(product) : product;
+      const productWithOffer = hasOffer
+        ? getProductWithOffer(product)
+        : product;
 
-      return [...prev, {
-        product: productWithOffer,
-        quantity: 1,
-        originalPrice: hasOffer ? originalPrice : undefined,
-        discountPercentage: hasOffer ? discountPercentage : undefined,
-        hasOffer: hasOffer,
-      }];
+      return [
+        ...prev,
+        {
+          product: productWithOffer,
+          quantity: 1,
+          originalPrice: hasOffer ? originalPrice : undefined,
+          discountPercentage: hasOffer ? discountPercentage : undefined,
+          hasOffer: hasOffer,
+        },
+      ];
     });
   };
 
@@ -446,14 +493,14 @@ export default function POSPage() {
           if (newQuantity > item.product.stock) {
             Swal.warning(
               "Cantidad insuficiente",
-              "No hay más unidades disponibles"
+              "No hay más unidades disponibles",
             );
             return item;
           }
           return { ...item, quantity: newQuantity };
         }
         return item;
-      })
+      }),
     );
   };
 
@@ -468,14 +515,14 @@ export default function POSPage() {
           if (quantity > item.product.stock) {
             Swal.warning(
               "Cantidad insuficiente",
-              `Solo hay ${item.product.stock} unidades disponibles`
+              `Solo hay ${item.product.stock} unidades disponibles`,
             );
             return { ...item, quantity: item.product.stock };
           }
           return { ...item, quantity };
         }
         return item;
-      })
+      }),
     );
   };
 
@@ -486,7 +533,7 @@ export default function POSPage() {
   const calculateTotal = () => {
     const subtotal = cart.reduce(
       (sum, item) => sum + item.product.sale_price * item.quantity,
-      0
+      0,
     );
     return subtotal - discountAmount;
   };
@@ -495,7 +542,7 @@ export default function POSPage() {
     if (cart.length === 0) {
       Swal.warning(
         "El carrito está vacío",
-        "Agrega productos antes de procesar la venta"
+        "Agrega productos antes de procesar la venta",
       );
       return;
     }
@@ -505,7 +552,7 @@ export default function POSPage() {
       if (!selectedCustomer) {
         Swal.warning(
           "Cliente requerido",
-          "Debes seleccionar un cliente para vender a crédito"
+          "Debes seleccionar un cliente para vender a crédito",
         );
         return;
       }
@@ -514,13 +561,13 @@ export default function POSPage() {
       const creditCheck = await canCustomerGetCredit(
         selectedCustomer.id,
         total,
-        getToken
+        getToken,
       );
 
       if (!creditCheck.canGetCredit) {
         Swal.error(
           "Crédito no disponible",
-          creditCheck.message || "Este cliente no puede recibir más crédito"
+          creditCheck.message || "Este cliente no puede recibir más crédito",
         );
         return;
       }
@@ -536,7 +583,7 @@ export default function POSPage() {
         console.error("User profile not found:", error);
         Swal.error(
           "Error",
-          "Perfil de usuario no encontrado. Asegúrate de haber iniciado sesión correctamente."
+          "Perfil de usuario no encontrado. Asegúrate de haber iniciado sesión correctamente.",
         );
         setProcessing(false);
         return;
@@ -545,7 +592,7 @@ export default function POSPage() {
       if (!userProfile || !userProfile.id) {
         Swal.error(
           "Perfil inválido",
-          "No se pudo obtener información del usuario autenticado."
+          "No se pudo obtener información del usuario autenticado.",
         );
         setProcessing(false);
         return;
@@ -553,7 +600,7 @@ export default function POSPage() {
 
       const subtotal = cart.reduce(
         (sum, item) => sum + item.product.sale_price * item.quantity,
-        0
+        0,
       );
       // El número de venta se genera automáticamente en la API de Cloudflare
 
@@ -564,7 +611,7 @@ export default function POSPage() {
         const redeemResult = await redeemPointsForDiscount(
           selectedCustomer.id,
           subtotal,
-          getToken
+          getToken,
         );
         appliedDiscount = redeemResult.discount;
         pointsRedeemed = redeemResult.pointsRedeemed;
@@ -635,9 +682,11 @@ export default function POSPage() {
       // Agregar items a la venta (la API de Cloudflare los crea automáticamente)
       const itemsPayload = cart.map((cartItem) => {
         // Calcular el descuento por oferta si existe
-        const itemDiscount = cartItem.hasOffer && cartItem.originalPrice
-          ? (cartItem.originalPrice - cartItem.product.sale_price) * cartItem.quantity
-          : 0;
+        const itemDiscount =
+          cartItem.hasOffer && cartItem.originalPrice
+            ? (cartItem.originalPrice - cartItem.product.sale_price) *
+              cartItem.quantity
+            : 0;
 
         return {
           product_id: cartItem.product.id,
@@ -658,7 +707,7 @@ export default function POSPage() {
       ) {
         Swal.error(
           "Datos de venta inválidos",
-          "Faltan campos requeridos (total, payment_method o items)"
+          "Faltan campos requeridos (total, payment_method o items)",
         );
         setProcessing(false);
         return;
@@ -674,7 +723,7 @@ export default function POSPage() {
         ) {
           Swal.error(
             "Datos de producto inválidos",
-            "Revisa los productos en el carrito (id, cantidad o precio inválidos)"
+            "Revisa los productos en el carrito (id, cantidad o precio inválidos)",
           );
           setProcessing(false);
           return;
@@ -683,7 +732,7 @@ export default function POSPage() {
 
       const sale = await createSale(
         saleData as unknown as Partial<Sale>,
-        getToken
+        getToken,
       );
 
       // Actualizar el stock de los productos
@@ -694,7 +743,7 @@ export default function POSPage() {
           {
             stock: newStock,
           },
-          getToken
+          getToken,
         );
 
         // TODO: Implementar API endpoint para inventory_movements
@@ -710,13 +759,13 @@ export default function POSPage() {
         await addPointsToCustomer(
           selectedCustomer.id,
           pointsToAssignNow,
-          getToken
+          getToken,
         );
 
         // Verificar si el cliente alcanzó el umbral para obtener descuento
         const updatedCustomer = await getCustomerById(
           selectedCustomer.id,
-          getToken
+          getToken,
         );
         customerNewPoints = updatedCustomer.loyalty_points || 0;
 
@@ -768,10 +817,12 @@ export default function POSPage() {
       }
 
       // Verificar si hay productos con descuento por oferta
-      const itemsWithOffer = cart.filter(item => item.hasOffer);
+      const itemsWithOffer = cart.filter((item) => item.hasOffer);
       const totalOfferDiscount = itemsWithOffer.reduce((sum, item) => {
         if (item.originalPrice) {
-          return sum + ((item.originalPrice - item.product.sale_price) * item.quantity);
+          return (
+            sum + (item.originalPrice - item.product.sale_price) * item.quantity
+          );
         }
         return sum;
       }, 0);
@@ -788,8 +839,10 @@ export default function POSPage() {
             <p class="text-sm font-bold text-orange-800 mb-2">🏷️ Descuentos Aplicados</p>
             <div class="space-y-1">
         `;
-        itemsWithOffer.forEach(item => {
-          const itemDiscount = item.originalPrice ? (item.originalPrice - item.product.sale_price) * item.quantity : 0;
+        itemsWithOffer.forEach((item) => {
+          const itemDiscount = item.originalPrice
+            ? (item.originalPrice - item.product.sale_price) * item.quantity
+            : 0;
           htmlContent += `
             <div class="flex justify-between items-center text-xs">
               <span class="text-gray-700">
@@ -826,7 +879,7 @@ export default function POSPage() {
               : ""
           }
           <p class="text-2xl font-bold text-green-600 mb-3">Total: ${formatCurrency(
-            total
+            total,
           )}</p>
           <div class="bg-blue-50 border border-blue-200 rounded-lg p-3 mb-2">
             <p class="text-sm text-gray-600">Cliente: <strong>${
@@ -872,7 +925,7 @@ export default function POSPage() {
             <div class="bg-orange-50 border border-orange-200 rounded-lg p-3 mt-2">
               <p class="text-sm font-semibold text-orange-800">💳 Venta a Crédito</p>
               <p class="text-xs text-gray-600 mt-1">Fecha de vencimiento: ${dueDate.toLocaleDateString(
-                "es-CO"
+                "es-CO",
               )}</p>
             </div>
           `;
@@ -881,7 +934,7 @@ export default function POSPage() {
         // Sin cliente seleccionado
         htmlContent += `
           <p class="text-2xl font-bold text-green-600 mb-3">Total: ${formatCurrency(
-            total
+            total,
           )}</p>
         `;
       }
@@ -925,7 +978,7 @@ export default function POSPage() {
                   subtotal: cartItem.product.sale_price * cartItem.quantity,
                   created_at: new Date().toISOString(),
                   product: cartItem.product,
-                })
+                }),
               );
               setLastSaleItems(saleItemsWithProducts);
               setLastSaleCustomer(selectedCustomer);
@@ -1001,7 +1054,7 @@ export default function POSPage() {
                 } else {
                   Swal.error(
                     "Error",
-                    data.error || "No se pudieron crear productos de ejemplo"
+                    data.error || "No se pudieron crear productos de ejemplo",
                   );
                 }
               }}
@@ -1067,7 +1120,7 @@ export default function POSPage() {
             className={`border-2 shadow-lg transition-all duration-300 ${
               scanSuccess
                 ? "border-green-500 bg-green-50"
-                : "border-blue-500 bg-gradient-to-r from-blue-50 to-white"
+                : "border-blue-500 bg-linear-to-r from-blue-50 to-white"
             }`}
           >
             <CardContent className="pt-6">
@@ -1096,7 +1149,7 @@ export default function POSPage() {
 
                 {/* Botones de selección de método de escaneo */}
                 {!showBarcodeInput && !showCameraScanner && (
-                  <div className="grid grid-cols-1 gap-3">
+                  <div className="grid grid-cols-2 gap-3">
                     <Button
                       type="button"
                       size="lg"
@@ -1110,8 +1163,10 @@ export default function POSPage() {
                     >
                       <Scan className="h-6 w-6 md:h-8 md:w-8" />
                       <div className="text-center">
-                        <div className="text-sm md:text-base font-semibold">Lector USB</div>
-                        <div className="text-xs opacity-90">Conectado</div>
+                        <div className="text-sm md:text-base font-semibold">
+                          Lector USB
+                        </div>
+                        {/* <div className="text-xs opacity-90">Conectado</div> */}
                       </div>
                     </Button>
                     <Button
@@ -1123,8 +1178,12 @@ export default function POSPage() {
                     >
                       <Camera className="h-6 w-6 md:h-8 md:w-8" />
                       <div className="text-center">
-                        <div className="text-sm md:text-base font-semibold">Cámara</div>
-                        <div className="text-xs opacity-90">Del dispositivo</div>
+                        <div className="text-sm md:text-base font-semibold">
+                          Cámara
+                        </div>
+                        <div className="text-xs opacity-90">
+                          Del dispositivo
+                        </div>
                       </div>
                     </Button>
                   </div>
@@ -1189,7 +1248,9 @@ export default function POSPage() {
                     <div className="flex items-center gap-2 text-xs text-gray-500">
                       <div
                         className={`h-1.5 w-1.5 rounded-full ${
-                          scanSuccess ? "bg-green-500 animate-ping" : "bg-green-500"
+                          scanSuccess
+                            ? "bg-green-500 animate-ping"
+                            : "bg-green-500"
                         }`}
                       ></div>
                       <span>
@@ -1246,69 +1307,72 @@ export default function POSPage() {
               </div>
 
               <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-3 xl:grid-cols-4 gap-2 md:gap-3 max-h-[400px] md:max-h-[500px] overflow-y-auto">
-                {filteredProducts.length > 0 ?
+                {filteredProducts.length > 0 ? (
                   filteredProducts.map((product) => {
                     const offer = getProductOffer(product.id);
                     const hasOffer = offer && offer.discount_percentage > 0;
                     const originalPrice = product.sale_price;
-                    const discountedPrice = hasOffer ? product.sale_price - (product.sale_price * offer.discount_percentage / 100) : product.sale_price;
+                    const discountedPrice = hasOffer
+                      ? product.sale_price -
+                        (product.sale_price * offer.discount_percentage) / 100
+                      : product.sale_price;
 
                     return (
-                    <Card
-                      key={product.id}
-                      className={`cursor-pointer hover:border-blue-500 transition-colors ${hasOffer ? 'border-2 border-orange-400' : ''}`}
-                      onClick={() => addToCart(product)}
-                    >
-                      <CardContent className="p-2 md:p-4">
-                        {/* Imagen del producto */}
-                        <div className="relative w-full aspect-square mb-2 bg-gray-50 rounded-md overflow-hidden">
-                          {hasOffer && (
-                            <div className="absolute top-0 right-0 z-10 bg-orange-600 text-white text-xs font-bold px-2 py-1 rounded-bl-md">
-                              -{offer.discount_percentage}%
-                            </div>
-                          )}
-                          {product.images && product.images.length > 0 ? (
-                            <Image
-                              src={product.images[0]}
-                              alt={product.name}
-                              fill
-                              sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 25vw"
-                              className="object-contain p-2"
-                              loading="lazy"
-                            />
-                          ) : (
-                            <div className="w-full h-full flex items-center justify-center">
-                              <Package className="h-8 w-8 md:h-12 md:w-12 text-gray-300" />
-                            </div>
-                          )}
-                        </div>
-                        <h4 className="font-medium text-xs md:text-sm mb-1 line-clamp-2">
-                          {product.name}
-                        </h4>
-                        <div>
-                          {hasOffer ? (
-                            <>
-                              <p className="text-xs text-gray-400 line-through">
-                                {formatCurrency(originalPrice)}
+                      <Card
+                        key={product.id}
+                        className={`cursor-pointer hover:border-blue-500 transition-colors ${hasOffer ? "border-2 border-orange-400" : ""}`}
+                        onClick={() => addToCart(product)}
+                      >
+                        <CardContent className="p-2 md:p-4">
+                          {/* Imagen del producto */}
+                          <div className="relative w-full aspect-square mb-2 bg-gray-50 rounded-md overflow-hidden">
+                            {hasOffer && (
+                              <div className="absolute top-0 right-0 z-10 bg-orange-600 text-white text-xs font-bold px-2 py-1 rounded-bl-md">
+                                -{offer.discount_percentage}%
+                              </div>
+                            )}
+                            {product.images && product.images.length > 0 ? (
+                              <Image
+                                src={product.images[0]}
+                                alt={product.name}
+                                fill
+                                sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 25vw"
+                                className="object-contain p-2"
+                                loading="lazy"
+                              />
+                            ) : (
+                              <div className="w-full h-full flex items-center justify-center">
+                                <Package className="h-8 w-8 md:h-12 md:w-12 text-gray-300" />
+                              </div>
+                            )}
+                          </div>
+                          <h4 className="font-medium text-xs md:text-sm mb-1 line-clamp-2">
+                            {product.name}
+                          </h4>
+                          <div>
+                            {hasOffer ? (
+                              <>
+                                <p className="text-xs text-gray-400 line-through">
+                                  {formatCurrency(originalPrice)}
+                                </p>
+                                <p className="text-sm md:text-lg font-bold text-orange-600">
+                                  {formatCurrency(discountedPrice)}
+                                </p>
+                              </>
+                            ) : (
+                              <p className="text-sm md:text-lg font-bold text-blue-600">
+                                {formatCurrency(product.sale_price)}
                               </p>
-                              <p className="text-sm md:text-lg font-bold text-orange-600">
-                                {formatCurrency(discountedPrice)}
-                              </p>
-                            </>
-                          ) : (
-                            <p className="text-sm md:text-lg font-bold text-blue-600">
-                              {formatCurrency(product.sale_price)}
-                            </p>
-                          )}
-                        </div>
-                        <p className="text-xs text-gray-500">
-                          Disponible: {product.stock}
-                        </p>
-                      </CardContent>
-                    </Card>
+                            )}
+                          </div>
+                          <p className="text-xs text-gray-500">
+                            Disponible: {product.stock}
+                          </p>
+                        </CardContent>
+                      </Card>
                     );
                   })
-                 : (
+                ) : (
                   <div className="col-span-full flex flex-col items-center justify-center py-12 text-center">
                     <Package className="h-16 w-16 text-gray-300 mb-4" />
                     <h3 className="text-lg font-semibold text-gray-700 mb-2">
@@ -1393,11 +1457,12 @@ export default function POSPage() {
                                   (sum, item) =>
                                     sum +
                                     item.product.sale_price * item.quantity,
-                                  0
+                                  0,
                                 );
                                 const discount = Math.round(
                                   total *
-                                    (REWARD_CONSTANTS.DISCOUNT_PERCENTAGE / 100)
+                                    (REWARD_CONSTANTS.DISCOUNT_PERCENTAGE /
+                                      100),
                                 );
                                 setDiscountAmount(discount);
                               } else {
@@ -1441,9 +1506,7 @@ export default function POSPage() {
                             <p className="text-sm font-bold text-orange-900">
                               Seleccionar Cliente
                             </p>
-                            <p className="text-xs text-orange-700">
-                              Opcional
-                            </p>
+                            <p className="text-xs text-orange-700">Opcional</p>
                           </div>
                         </div>
 
@@ -1452,7 +1515,9 @@ export default function POSPage() {
                           variant="outline"
                           size="sm"
                           className="w-1/2 mx-auto block bg-white hover:bg-orange-50 border-orange-400 text-orange-900 font-semibold"
-                          onClick={() => setShowCustomerSearch(!showCustomerSearch)}
+                          onClick={() =>
+                            setShowCustomerSearch(!showCustomerSearch)
+                          }
                         >
                           {showCustomerSearch ? "Cerrar" : "Seleccionar"}
                         </Button>
@@ -1568,7 +1633,7 @@ export default function POSPage() {
                                 c.phone?.includes(customerSearchTerm) ||
                                 c.email
                                   ?.toLowerCase()
-                                  .includes(customerSearchTerm.toLowerCase())
+                                  .includes(customerSearchTerm.toLowerCase()),
                             )
                             .slice(0, 10)
                             .map((customer) => (
@@ -1583,7 +1648,7 @@ export default function POSPage() {
                                   // Verificar si el cliente puede canjear puntos
                                   const eligible = await canRedeemDiscount(
                                     customer.id,
-                                    getToken
+                                    getToken,
                                   );
                                   setCanRedeem(eligible);
                                   setApplyDiscount(false);
@@ -1613,7 +1678,7 @@ export default function POSPage() {
                   cart.map((item) => (
                     <div
                       key={item.product.id}
-                      className={`p-3 md:p-4 border-2 rounded-lg ${item.hasOffer ? 'bg-orange-50 border-orange-300' : 'border-gray-300'}`}
+                      className={`p-3 md:p-4 border-2 rounded-lg ${item.hasOffer ? "bg-orange-50 border-orange-300" : "border-gray-300"}`}
                     >
                       {/* Primera fila: Nombre, precio y cantidad */}
                       <div className="mb-3">
@@ -1633,14 +1698,21 @@ export default function POSPage() {
                               {formatCurrency(item.originalPrice)}
                             </span>
                           )}
-                          <span className={`font-bold text-lg md:text-xl ${item.hasOffer ? 'text-orange-600' : 'text-blue-600'}`}>
+                          <span
+                            className={`font-bold text-lg md:text-xl ${item.hasOffer ? "text-orange-600" : "text-blue-600"}`}
+                          >
                             {formatCurrency(item.product.sale_price)}
                           </span>
                           <span className="text-base md:text-lg text-gray-600">
                             x {item.quantity}
                           </span>
-                          <span className={`ml-auto font-bold text-lg md:text-xl ${item.hasOffer ? 'text-orange-600' : 'text-blue-600'}`}>
-                            = {formatCurrency(item.product.sale_price * item.quantity)}
+                          <span
+                            className={`ml-auto font-bold text-lg md:text-xl ${item.hasOffer ? "text-orange-600" : "text-blue-600"}`}
+                          >
+                            ={" "}
+                            {formatCurrency(
+                              item.product.sale_price * item.quantity,
+                            )}
                           </span>
                         </div>
                       </div>
@@ -1651,7 +1723,7 @@ export default function POSPage() {
                           size="sm"
                           variant="outline"
                           onClick={() => updateQuantity(item.product.id, -1)}
-                          className="h-12 w-12 p-0 md:h-14 md:w-14 bg-red-600 hover:bg-red-700 text-white border-red-600"
+                          className="h-12 w-12 p-0 md:h-14 md:w-14 bg-red-600  text-white border-red-600 rounded-2xl cursor-pointer hover:bg-red-700"
                         >
                           <Minus className="h-6 w-6 md:h-7 md:w-7" />
                         </Button>
@@ -1669,8 +1741,8 @@ export default function POSPage() {
                                   prev.map((cartItem) =>
                                     cartItem.product.id === item.product.id
                                       ? { ...cartItem, quantity: 0 }
-                                      : cartItem
-                                  )
+                                      : cartItem,
+                                  ),
                                 );
                               } else {
                                 const val = parseInt(value);
@@ -1696,19 +1768,19 @@ export default function POSPage() {
                             if (
                               !/\d/.test(e.key) &&
                               !["ArrowLeft", "ArrowRight", "Tab"].includes(
-                                e.key
+                                e.key,
                               )
                             ) {
                               e.preventDefault();
                             }
                           }}
-                          className="flex-1 h-12 md:h-14 text-center text-2xl md:text-3xl font-bold p-1"
+                          className="flex-1 h-12 md:h-14 text-center text-[16px] md:text-3xl font-bold p-1"
                         />
                         <Button
                           size="sm"
                           variant="outline"
                           onClick={() => updateQuantity(item.product.id, 1)}
-                          className="h-12 w-12 p-0 md:h-14 md:w-14 bg-green-600 hover:bg-green-700 text-white border-green-600"
+                          className="h-12 w-12 p-0 md:h-14 md:w-14 bg-green-600 hover:bg-green-700 text-white border-green-600 rounded-2xl cursor-pointer"
                         >
                           <Plus className="h-6 w-6 md:h-7 md:w-7" />
                         </Button>
@@ -1738,8 +1810,8 @@ export default function POSPage() {
                               cart.reduce(
                                 (sum, item) =>
                                   sum + item.product.sale_price * item.quantity,
-                                0
-                              )
+                                0,
+                              ),
                             )}
                           </span>
                         </div>
@@ -1770,7 +1842,7 @@ export default function POSPage() {
                               | "efectivo"
                               | "tarjeta"
                               | "transferencia"
-                              | "credito"
+                              | "credito",
                           )
                         }
                         className="w-full h-9 md:h-10 rounded-md border border-gray-300 px-3 text-sm"

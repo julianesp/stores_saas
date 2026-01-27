@@ -107,7 +107,7 @@ export default function SuperAdminPage() {
       const storesData = allProfiles.filter((p) => !p.is_superadmin);
       storesData.sort(
         (a, b) =>
-          new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+          new Date(b.created_at).getTime() - new Date(a.created_at).getTime(),
       );
       setStores(storesData);
 
@@ -141,7 +141,7 @@ export default function SuperAdminPage() {
     // No permitir cambiar el estado si está en trial
     if (currentStatus === "trial") {
       toast.error(
-        "No puedes cambiar el estado de una cuenta en período de prueba. Espera a que expire o se convierta."
+        "No puedes cambiar el estado de una cuenta en período de prueba. Espera a que expire o se convierta.",
       );
       return;
     }
@@ -174,7 +174,7 @@ export default function SuperAdminPage() {
       toast.success(
         `Tienda ${
           newStatus === "active" ? "activada" : "suspendida"
-        } correctamente`
+        } correctamente`,
       );
       fetchData();
     } catch (error: any) {
@@ -186,7 +186,7 @@ export default function SuperAdminPage() {
   const handlePromoteToSuperAdmin = async (email: string) => {
     if (
       !confirm(
-        `¿Estás seguro de promover a ${email} como Super Administrador?\n\nEsto le dará acceso completo al sistema y la capacidad de gestionar todas las tiendas.`
+        `¿Estás seguro de promover a ${email} como Super Administrador?\n\nEsto le dará acceso completo al sistema y la capacidad de gestionar todas las tiendas.`,
       )
     ) {
       return;
@@ -245,7 +245,7 @@ export default function SuperAdminPage() {
       }
 
       toast.success(
-        data.message || `Período de prueba extendido por ${days} días`
+        data.message || `Período de prueba extendido por ${days} días`,
       );
       setExtendTrialDialog({ open: false, store: null, days: "15" });
       fetchData();
@@ -254,7 +254,7 @@ export default function SuperAdminPage() {
       toast.error(
         error instanceof Error
           ? error.message
-          : "Error al extender período de prueba"
+          : "Error al extender período de prueba",
       );
     }
   };
@@ -269,17 +269,17 @@ export default function SuperAdminPage() {
     const nowMidnight = new Date(
       now.getFullYear(),
       now.getMonth(),
-      now.getDate()
+      now.getDate(),
     );
     const trialEndMidnight = new Date(
       trialEnd.getFullYear(),
       trialEnd.getMonth(),
-      trialEnd.getDate()
+      trialEnd.getDate(),
     );
 
     const daysLeft = Math.ceil(
       (trialEndMidnight.getTime() - nowMidnight.getTime()) /
-        (1000 * 60 * 60 * 24)
+        (1000 * 60 * 60 * 24),
     );
 
     return Math.max(0, daysLeft);
@@ -336,13 +336,13 @@ export default function SuperAdminPage() {
   // Estadísticas
   const totalStores = stores.length;
   const activeStores = stores.filter(
-    (s) => s.subscription_status === "active"
+    (s) => s.subscription_status === "active",
   ).length;
   const trialStores = stores.filter(
-    (s) => s.subscription_status === "trial"
+    (s) => s.subscription_status === "trial",
   ).length;
   const expiredStores = stores.filter(
-    (s) => s.subscription_status === "expired"
+    (s) => s.subscription_status === "expired",
   ).length;
   const totalRevenue =
     stores.filter((s) => s.subscription_status === "active").length * 50000;
@@ -351,7 +351,7 @@ export default function SuperAdminPage() {
   const today = new Date();
   today.setHours(0, 0, 0, 0);
   const newStoresToday = stores.filter(
-    (s) => new Date(s.created_at) >= today
+    (s) => new Date(s.created_at) >= today,
   ).length;
 
   // Tasa de conversión (trial a activo)
@@ -359,7 +359,7 @@ export default function SuperAdminPage() {
     (s) =>
       s.subscription_status === "trial" ||
       s.subscription_status === "active" ||
-      s.subscription_status === "expired"
+      s.subscription_status === "expired",
   ).length;
   const conversionRate =
     totalWithTrial > 0
@@ -371,11 +371,11 @@ export default function SuperAdminPage() {
   const storesNotUsing = totalStores - storesUsingPOS;
   const totalSalesAllStores = storeStats.reduce(
     (sum, s) => sum + s.stats.salesCount,
-    0
+    0,
   );
   const totalRevenueAllStores = storeStats.reduce(
     (sum, s) => sum + s.stats.salesTotal,
-    0
+    0,
   );
 
   return (
@@ -779,7 +779,7 @@ export default function SuperAdminPage() {
                 <tbody>
                   {filteredStores.map((store) => {
                     const createdDate = new Date(
-                      store.created_at
+                      store.created_at,
                     ).toLocaleDateString("es-CO");
                     const statusConfig = {
                       active: {
@@ -803,7 +803,7 @@ export default function SuperAdminPage() {
                     const status = statusConfig[store.subscription_status];
                     const daysRemaining = getDaysRemaining(store);
                     const stats = storeStats.find(
-                      (s) => s.storeId === store.id
+                      (s) => s.storeId === store.id,
                     );
 
                     return (
@@ -829,8 +829,8 @@ export default function SuperAdminPage() {
                                 daysRemaining <= 3
                                   ? "text-red-600"
                                   : daysRemaining <= 7
-                                  ? "text-yellow-600"
-                                  : "text-green-600"
+                                    ? "text-yellow-600"
+                                    : "text-green-600"
                               }`}
                             >
                               {daysRemaining} días
@@ -888,7 +888,7 @@ export default function SuperAdminPage() {
                           {stats?.stats.lastSaleDate ? (
                             <span className="text-gray-600">
                               {new Date(
-                                stats.stats.lastSaleDate
+                                stats.stats.lastSaleDate,
                               ).toLocaleDateString("es-CO", {
                                 day: "2-digit",
                                 month: "short",
@@ -940,7 +940,7 @@ export default function SuperAdminPage() {
                                 onClick={() =>
                                   handleToggleStatus(
                                     store.id,
-                                    store.subscription_status
+                                    store.subscription_status,
                                   )
                                 }
                               >
@@ -1033,7 +1033,7 @@ export default function SuperAdminPage() {
                   <div className="text-sm">
                     <span className="font-medium text-gray-500">Vence:</span>{" "}
                     {new Date(
-                      extendTrialDialog.store.trial_end_date
+                      extendTrialDialog.store.trial_end_date,
                     ).toLocaleDateString("es-CO")}
                   </div>
                 )}
@@ -1125,7 +1125,7 @@ export default function SuperAdminPage() {
                       </p>
                       <p className="text-sm">
                         {new Date(
-                          detailsDialog.store.trial_start_date
+                          detailsDialog.store.trial_start_date,
                         ).toLocaleDateString("es-CO")}
                       </p>
                     </div>
@@ -1137,7 +1137,7 @@ export default function SuperAdminPage() {
                       </p>
                       <p className="text-sm">
                         {new Date(
-                          detailsDialog.store.trial_end_date
+                          detailsDialog.store.trial_end_date,
                         ).toLocaleDateString("es-CO")}
                       </p>
                     </div>
@@ -1149,7 +1149,7 @@ export default function SuperAdminPage() {
                       </p>
                       <p className="text-sm">
                         {new Date(
-                          detailsDialog.store.last_payment_date
+                          detailsDialog.store.last_payment_date,
                         ).toLocaleDateString("es-CO")}
                       </p>
                     </div>
@@ -1161,7 +1161,7 @@ export default function SuperAdminPage() {
                       </p>
                       <p className="text-sm">
                         {new Date(
-                          detailsDialog.store.next_billing_date
+                          detailsDialog.store.next_billing_date,
                         ).toLocaleDateString("es-CO")}
                       </p>
                     </div>
@@ -1176,7 +1176,7 @@ export default function SuperAdminPage() {
                     <p className="text-sm font-medium text-black">Registro</p>
                     <p className="text-sm">
                       {new Date(detailsDialog.store.created_at).toLocaleString(
-                        "es-CO"
+                        "es-CO",
                       )}
                     </p>
                   </div>
@@ -1186,7 +1186,7 @@ export default function SuperAdminPage() {
                     </p>
                     <p className="text-sm">
                       {new Date(detailsDialog.store.updated_at).toLocaleString(
-                        "es-CO"
+                        "es-CO",
                       )}
                     </p>
                   </div>
