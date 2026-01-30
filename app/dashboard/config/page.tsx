@@ -27,7 +27,6 @@ import { LoyaltySettings, LoyaltyTier } from "@/lib/types";
 import { formatCurrency } from "@/lib/utils";
 import { toast } from "sonner";
 import { AutoReportsConfig } from "@/components/config/auto-reports-config";
-import TawkToChat from "@/components/TawkToChat";
 import { landingConfig } from "@/lib/landing-config";
 
 export default function ConfigPage() {
@@ -49,52 +48,16 @@ export default function ConfigPage() {
     try {
       setLoading(true);
 
-      // NOTA: Temporalmente usamos configuración por defecto
-      // TODO: Migrar loyalty_settings a Cloudflare D1
-      const defaultSettings: LoyaltySettings = {
-        id: "default",
-        user_profile_id: user.id,
-        enabled: true,
-        tiers: [
-          { min_amount: 0, max_amount: 19999, points: 0, name: "Sin puntos" },
-          {
-            min_amount: 20000,
-            max_amount: 49999,
-            points: 5,
-            name: "Compra pequeña",
-          },
-          {
-            min_amount: 50000,
-            max_amount: 99999,
-            points: 10,
-            name: "Compra mediana",
-          },
-          {
-            min_amount: 100000,
-            max_amount: 199999,
-            points: 25,
-            name: "Compra grande",
-          },
-          {
-            min_amount: 200000,
-            max_amount: 499999,
-            points: 50,
-            name: "Compra muy grande",
-          },
-          {
-            min_amount: 500000,
-            max_amount: Infinity,
-            points: 100,
-            name: "Compra premium",
-          },
-        ],
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString(),
-      };
+      const response = await fetch("/api/loyalty-settings");
 
-      setSettings(defaultSettings);
-      setEnabled(defaultSettings.enabled);
-      setTiers(defaultSettings.tiers);
+      if (response.ok) {
+        const data = await response.json();
+        setSettings(data);
+        setEnabled(data.enabled);
+        setTiers(data.tiers);
+      } else {
+        toast.error("Error al cargar configuración");
+      }
     } catch (error) {
       console.error("Error loading settings:", error);
       toast.error("Error al cargar configuración");
@@ -118,12 +81,25 @@ export default function ConfigPage() {
     try {
       setSaving(true);
 
-      // NOTA: Por ahora solo se puede visualizar la configuración por defecto
-      // TODO: Implementar guardado en Cloudflare D1 cuando se migre loyalty_settings
-      toast.warning("Configuración de solo lectura", {
-        description:
-          "Por ahora se usa la configuración por defecto del sistema. La edición personalizada estará disponible próximamente.",
+      const response = await fetch("/api/loyalty-settings", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          enabled,
+          tiers,
+        }),
       });
+
+      if (response.ok) {
+        const data = await response.json();
+        setSettings(data.settings);
+        toast.success("Configuración guardada exitosamente");
+      } else {
+        const error = await response.json();
+        toast.error(error.error || "Error al guardar configuración");
+      }
     } catch (error) {
       console.error("Error saving settings:", error);
       toast.error("Error al guardar configuración");
@@ -158,7 +134,7 @@ export default function ConfigPage() {
   const handleUpdateTier = (
     index: number,
     field: keyof LoyaltyTier,
-    value: LoyaltyTier[keyof LoyaltyTier]
+    value: LoyaltyTier[keyof LoyaltyTier],
   ) => {
     const newTiers = [...tiers];
     newTiers[index] = {
@@ -195,7 +171,7 @@ export default function ConfigPage() {
         </Button>
       </div>
 
-      {/* Estado del Sistema */}
+      {/* Estado del Sistema - Temporalmente oculto */}
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
@@ -221,7 +197,7 @@ export default function ConfigPage() {
         </CardContent>
       </Card>
 
-      {/* Niveles de Puntos */}
+      {/* Niveles de Puntos - Temporalmente oculto */}
       <Card>
         <CardHeader>
           <div className="flex items-center justify-between">
@@ -244,7 +220,6 @@ export default function ConfigPage() {
               <div key={index} className="border rounded-lg p-4 bg-white">
                 <div className="flex items-start gap-4">
                   <div className="flex-1 grid grid-cols-1 md:grid-cols-4 gap-4">
-                    {/* Nombre del nivel */}
                     <div>
                       <label className="text-sm font-medium text-gray-700 mb-1 block">
                         Nombre del Nivel
@@ -259,7 +234,6 @@ export default function ConfigPage() {
                       />
                     </div>
 
-                    {/* Monto mínimo */}
                     <div>
                       <label className="text-sm font-medium text-gray-700 mb-1 block">
                         Monto Mínimo
@@ -272,7 +246,7 @@ export default function ConfigPage() {
                           handleUpdateTier(
                             index,
                             "min_amount",
-                            Number(e.target.value)
+                            Number(e.target.value),
                           )
                         }
                         placeholder="0"
@@ -282,7 +256,6 @@ export default function ConfigPage() {
                       </p>
                     </div>
 
-                    {/* Monto máximo */}
                     <div>
                       <label className="text-sm font-medium text-gray-700 mb-1 block">
                         Monto Máximo
@@ -299,7 +272,7 @@ export default function ConfigPage() {
                             "max_amount",
                             e.target.value === ""
                               ? Infinity
-                              : Number(e.target.value)
+                              : Number(e.target.value),
                           )
                         }
                         placeholder="Sin límite"
@@ -311,7 +284,6 @@ export default function ConfigPage() {
                       </p>
                     </div>
 
-                    {/* Puntos a otorgar */}
                     <div>
                       <label className="text-sm font-medium text-gray-700 mb-1 block">
                         Puntos a Otorgar
@@ -324,7 +296,7 @@ export default function ConfigPage() {
                           handleUpdateTier(
                             index,
                             "points",
-                            Number(e.target.value)
+                            Number(e.target.value),
                           )
                         }
                         placeholder="0"
@@ -333,7 +305,6 @@ export default function ConfigPage() {
                     </div>
                   </div>
 
-                  {/* Botón eliminar */}
                   <Button
                     variant="ghost"
                     size="icon"
@@ -344,7 +315,6 @@ export default function ConfigPage() {
                   </Button>
                 </div>
 
-                {/* Preview del nivel */}
                 <div className="mt-3 p-3 bg-blue-50 rounded text-sm">
                   <p className="text-blue-900">
                     <strong>Vista previa:</strong> Compras entre{" "}
@@ -456,7 +426,7 @@ export default function ConfigPage() {
               onClick={() =>
                 window.open(
                   "https://wa.me/573174503604?text=Hola,%20necesito%20ayuda%20con%20facturación%20electrónica",
-                  "_blank"
+                  "_blank",
                 )
               }
             >
@@ -491,7 +461,7 @@ export default function ConfigPage() {
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <MessageCircle className="h-5 w-5 text-green-600" />
-            Soporte en Vivo
+            Soporte
           </CardTitle>
           <CardDescription>
             ¿Necesitas ayuda? Estamos aquí para ti
@@ -502,16 +472,9 @@ export default function ConfigPage() {
             <div className="flex gap-3">
               <Info className="h-5 w-5 text-green-600 flex-shrink-0 mt-0.5" />
               <div className="space-y-2">
-                <p className="font-semibold text-green-900">
-                  Chat en Vivo Disponible
-                </p>
+                <p className="font-semibold text-green-900">Contacto</p>
                 <p className="text-sm text-green-800">
-                  Haz clic en el botón de chat en la esquina inferior derecha de
-                  la pantalla para hablar con nuestro equipo de soporte en tiempo
-                  real.
-                </p>
-                <p className="text-sm text-green-800">
-                  También puedes contactarnos por:
+                  Puedes contactarnos por:
                 </p>
                 <ul className="text-sm text-green-800 list-disc list-inside space-y-1 ml-2">
                   <li>WhatsApp: +57 317 450 3604</li>
@@ -522,12 +485,6 @@ export default function ConfigPage() {
           </div>
         </CardContent>
       </Card>
-
-      {/* Chat en Vivo con Tawk.to */}
-      <TawkToChat
-        propertyId={landingConfig.contact.tawkTo.propertyId}
-        widgetId={landingConfig.contact.tawkTo.widgetId}
-      />
     </div>
   );
 }

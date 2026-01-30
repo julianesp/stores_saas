@@ -29,6 +29,8 @@ import wompiRoutes from './routes/wompi';
 import subscriptionsRoutes from './routes/subscriptions';
 import emailRoutes from './routes/email';
 import statsRoutes from './routes/stats';
+import loyaltySettingsRoutes from './routes/loyalty-settings';
+import teamInvitationsRoutes from './routes/team-invitations';
 
 const app = new Hono<{ Bindings: Env }>();
 
@@ -128,6 +130,8 @@ app.route('/api/payment-transactions', paymentTransactionsRoutes);
 app.route('/api/shipping-zones', shippingZonesRoutes);
 app.route('/api/admin', adminStatsRoutes);
 app.route('/api/email', emailRoutes);
+app.route('/loyalty-settings', loyaltySettingsRoutes);
+app.route('/api/team-invitations', teamInvitationsRoutes);
 
 // 404 handler
 app.notFound((c) => {

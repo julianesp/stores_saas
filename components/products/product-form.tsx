@@ -21,7 +21,7 @@ import {
 } from "@/lib/cloudflare-api";
 import { Category, Supplier } from "@/lib/types";
 import { toast } from "sonner";
-import { Scan, Camera, X, Plus, Minus } from "lucide-react";
+import { Scan, Camera, X, Plus, Minus, Package } from "lucide-react";
 import { ImageUploader } from './image-uploader';
 import { Html5Qrcode } from "html5-qrcode";
 import { normalizeBarcode, barcodeEquals } from "@/lib/barcode-utils";
@@ -43,6 +43,13 @@ const productSchema = z.object({
     .int()
     .min(0, "El mínimo disponible debe ser mayor o igual a 0"),
   expiration_date: z.string().optional(),
+
+  // Campos para venta por unidades
+  sell_by_unit: z.boolean().optional(),
+  units_per_package: z.number().int().min(1).optional(),
+  unit_name: z.string().optional(),
+  package_name: z.string().optional(),
+  price_per_unit: z.number().min(0).optional(),
 });
 
 type ProductFormData = z.infer<typeof productSchema>;
@@ -61,6 +68,7 @@ export function ProductForm({ initialData, productId }: ProductFormProps) {
   const [productImages, setProductImages] = useState<string[]>(initialData?.images || []);
   const [mainImageIndex, setMainImageIndex] = useState<number>(initialData?.main_image_index ?? 0);
   const [doesNotExpire, setDoesNotExpire] = useState(!initialData?.expiration_date);
+  const [sellByUnit, setSellByUnit] = useState(initialData?.sell_by_unit || false);
   const [showScanner, setShowScanner] = useState(false);
   const [showScannerOptions, setShowScannerOptions] = useState(false); // Modal con opciones de escaneo
   const [showNewCategory, setShowNewCategory] = useState(false);
@@ -396,6 +404,22 @@ export function ProductForm({ initialData, productId }: ProductFormProps) {
         productData.expiration_date = undefined;
       }
 
+      // Limpiar campos de venta por unidades si está desactivado
+      if (!productData.sell_by_unit) {
+        productData.units_per_package = undefined;
+        productData.unit_name = undefined;
+        productData.package_name = undefined;
+        productData.price_per_unit = undefined;
+      } else {
+        // Asegurar que los campos de texto vacíos se conviertan a undefined
+        if (productData.unit_name === "") {
+          productData.unit_name = undefined;
+        }
+        if (productData.package_name === "") {
+          productData.package_name = undefined;
+        }
+      }
+
       // Log después de limpiar
       console.log('✅ Datos del producto a enviar:', productData);
 
@@ -709,6 +733,127 @@ export function ProductForm({ initialData, productId }: ProductFormProps) {
               )}
             </div>
           </div>
+
+          {/* Sección de Venta por Unidades */}
+          <Card className="border-blue-200 bg-blue-50/30">
+            <CardHeader>
+              <CardTitle className="text-lg flex items-center gap-2">
+                <Package className="h-5 w-5 text-blue-600" />
+                Venta por Unidades (Opcional)
+              </CardTitle>
+              <p className="text-sm text-gray-600">
+                Activa esta opción para productos que se venden tanto por paquete completo como por unidades sueltas (ej: huevos, gaseosas, etc.)
+              </p>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              {/* Toggle para activar venta por unidades */}
+              <div className="flex items-center space-x-2 p-4 bg-white rounded-lg border">
+                <input
+                  type="checkbox"
+                  id="sell_by_unit"
+                  checked={sellByUnit}
+                  onChange={(e) => {
+                    setSellByUnit(e.target.checked);
+                    setValue("sell_by_unit", e.target.checked);
+                    if (!e.target.checked) {
+                      // Limpiar campos si se desactiva
+                      setValue("units_per_package", undefined);
+                      setValue("unit_name", "");
+                      setValue("package_name", "");
+                      setValue("price_per_unit", undefined);
+                    }
+                  }}
+                  className="h-5 w-5 rounded border-gray-300"
+                />
+                <Label htmlFor="sell_by_unit" className="cursor-pointer font-medium">
+                  Permitir venta por unidades sueltas
+                </Label>
+              </div>
+
+              {sellByUnit && (
+                <div className="space-y-4 p-4 bg-white rounded-lg border">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="package_name">Nombre del Paquete *</Label>
+                      <Input
+                        id="package_name"
+                        {...register("package_name")}
+                        placeholder="ej: cubeta, caja, paquete"
+                      />
+                      <p className="text-xs text-gray-500">
+                        Cómo llamas al paquete completo
+                      </p>
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label htmlFor="unit_name">Nombre de la Unidad *</Label>
+                      <Input
+                        id="unit_name"
+                        {...register("unit_name")}
+                        placeholder="ej: huevo, botella, unidad"
+                      />
+                      <p className="text-xs text-gray-500">
+                        Cómo llamas a cada unidad suelta
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="units_per_package">Unidades por Paquete *</Label>
+                      <Input
+                        id="units_per_package"
+                        type="number"
+                        inputMode="numeric"
+                        {...register("units_per_package", {
+                          valueAsNumber: true,
+                          setValueAs: (value) => value === "" ? undefined : Number(value)
+                        })}
+                        placeholder="ej: 30"
+                      />
+                      <p className="text-xs text-gray-500">
+                        Cuántas unidades tiene el paquete completo
+                      </p>
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label htmlFor="price_per_unit">Precio por Unidad Suelta</Label>
+                      <Input
+                        id="price_per_unit"
+                        type="number"
+                        inputMode="decimal"
+                        step="0.01"
+                        {...register("price_per_unit", {
+                          valueAsNumber: true,
+                          setValueAs: (value) => value === "" ? undefined : Number(value)
+                        })}
+                        placeholder="Opcional (se calcula automáticamente)"
+                      />
+                      <p className="text-xs text-gray-500">
+                        Si no lo especificas, se calcula dividiendo el precio del paquete
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* Vista previa del cálculo */}
+                  {watch("units_per_package") && watch("sale_price") && (
+                    <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                      <p className="text-sm font-medium text-blue-900 mb-1">
+                        Vista Previa:
+                      </p>
+                      <p className="text-sm text-blue-800">
+                        • Paquete completo ({watch("units_per_package")} {watch("unit_name") || "unidades"}): ${watch("sale_price")?.toLocaleString()}
+                      </p>
+                      <p className="text-sm text-blue-800">
+                        • Precio por {watch("unit_name") || "unidad"} suelta:{" "}
+                        ${(watch("price_per_unit") || (watch("sale_price") || 0) / (watch("units_per_package") || 1)).toLocaleString()}
+                      </p>
+                    </div>
+                  )}
+                </div>
+              )}
+            </CardContent>
+          </Card>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="space-y-2">

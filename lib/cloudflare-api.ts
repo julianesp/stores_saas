@@ -122,6 +122,14 @@ export interface Product {
   expiration_date?: string;
   image_url?: string;
   images?: string;
+
+  // Campos para venta por unidades (ej: huevos sueltos de una cubeta)
+  sell_by_unit?: boolean;  // Permite venta por unidad
+  units_per_package?: number;  // Unidades por paquete (ej: 30 huevos por cubeta)
+  unit_name?: string;  // Nombre de la unidad (ej: 'huevo', 'gramo')
+  package_name?: string;  // Nombre del paquete (ej: 'cubeta', 'caja')
+  price_per_unit?: number;  // Precio por unidad suelta
+
   created_at: string;
   updated_at: string;
 }

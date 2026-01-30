@@ -27,6 +27,7 @@ import {
   Mail,
   TrendingUp,
   GripVertical,
+  UserCog,
 } from "lucide-react";
 import {
   getUserProfileByClerkId,
@@ -154,6 +155,12 @@ const storeMenuItems = [
     title: "Email Marketing",
     href: "/dashboard/email-settings",
     icon: Mail,
+    roles: ["admin"],
+  },
+  {
+    title: "Gestión de Equipo",
+    href: "/dashboard/team",
+    icon: UserCog,
     roles: ["admin"],
   },
 ];

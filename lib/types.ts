@@ -153,6 +153,12 @@ export interface Product {
   image_url?: string; // Deprecated: mantener por compatibilidad
   images?: string[]; // Array de URLs de imágenes (hasta 4 imágenes para tienda online)
   main_image_index?: number; // Índice de la imagen principal (0-3)
+  // Campos para venta por unidades
+  sell_by_unit?: boolean;
+  units_per_package?: number;
+  unit_name?: string;
+  package_name?: string;
+  price_per_unit?: number;
   created_at: string;
   updated_at: string;
 }
@@ -549,4 +555,164 @@ export interface AbandonedCartData {
   discount_percentage?: number;
   cart_url: string;
   store_name: string;
+}
+
+// ============================================================
+// SISTEMA DE PERMISOS Y USUARIOS COLABORADORES
+// ============================================================
+
+// Permisos granulares disponibles en el sistema
+export type Permission =
+  // Dashboard y reportes
+  | 'view_dashboard'
+  | 'view_reports'
+  | 'export_reports'
+
+  // Punto de Venta (POS)
+  | 'access_pos'
+  | 'process_sales'
+  | 'cancel_sales'
+  | 'apply_discounts'
+  | 'view_sales_history'
+
+  // Productos
+  | 'view_products'
+  | 'create_products'
+  | 'edit_products'
+  | 'delete_products'
+  | 'manage_stock'
+  | 'adjust_prices'
+
+  // Clientes
+  | 'view_customers'
+  | 'create_customers'
+  | 'edit_customers'
+  | 'delete_customers'
+  | 'manage_customer_credit'
+  | 'view_customer_history'
+  | 'manage_loyalty_points'
+
+  // Proveedores
+  | 'view_suppliers'
+  | 'create_suppliers'
+  | 'edit_suppliers'
+  | 'delete_suppliers'
+  | 'manage_purchase_orders'
+
+  // Inventario
+  | 'view_inventory'
+  | 'adjust_inventory'
+  | 'view_inventory_movements'
+
+  // Ofertas y promociones
+  | 'view_offers'
+  | 'create_offers'
+  | 'edit_offers'
+  | 'delete_offers'
+
+  // Categorías
+  | 'view_categories'
+  | 'manage_categories'
+
+  // Crédito y pagos
+  | 'view_debtors'
+  | 'receive_credit_payments'
+  | 'manage_credit_limits'
+
+  // Configuración de la tienda
+  | 'view_store_settings'
+  | 'edit_store_settings'
+  | 'manage_payment_methods'
+
+  // Tienda online (addon)
+  | 'access_online_store'
+  | 'manage_store_config'
+  | 'view_online_orders'
+  | 'manage_online_orders'
+
+  // Email marketing (addon)
+  | 'access_email_marketing'
+  | 'send_campaigns'
+  | 'view_email_logs'
+
+  // Analytics con IA (addon)
+  | 'access_ai_analytics'
+  | 'generate_insights'
+
+  // Administración de usuarios
+  | 'view_users'
+  | 'invite_users'
+  | 'edit_users'
+  | 'delete_users'
+  | 'manage_permissions';
+
+// Estado de invitación
+export type InvitationStatus = 'pending' | 'accepted' | 'expired' | 'revoked';
+
+// Usuario colaborador (invitado por el admin)
+export interface TeamMember {
+  id: string;
+  owner_id: string; // ID del administrador que lo invitó
+  clerk_user_id?: string; // ID de Clerk una vez que acepta la invitación
+  email: string;
+  full_name?: string;
+  phone?: string;
+  role: 'admin' | 'cajero' | 'custom'; // 'custom' para permisos personalizados
+  permissions: Permission[]; // Lista de permisos específicos
+  status: 'active' | 'inactive' | 'suspended';
+  invitation_status: InvitationStatus;
+  invitation_token?: string; // Token único para aceptar la invitación
+  invitation_sent_at?: string;
+  invitation_expires_at?: string;
+  invitation_accepted_at?: string;
+  last_login_at?: string;
+  created_at: string;
+  updated_at: string;
+}
+
+// Invitación pendiente
+export interface UserInvitation {
+  id: string;
+  owner_id: string; // ID del administrador que invita
+  email: string;
+  full_name?: string;
+  role: 'admin' | 'cajero' | 'custom';
+  permissions: Permission[];
+  token: string; // Token único para aceptar
+  status: InvitationStatus;
+  sent_at: string;
+  expires_at: string;
+  accepted_at?: string;
+  created_at: string;
+}
+
+// Rol predefinido con sus permisos
+export interface RoleDefinition {
+  role: 'admin' | 'cajero' | 'custom';
+  name: string;
+  description: string;
+  permissions: Permission[];
+  isCustomizable: boolean;
+}
+
+// Grupo de permisos para mejor organización
+export interface PermissionGroup {
+  id: string;
+  name: string;
+  description: string;
+  permissions: Permission[];
+}
+
+// Log de actividad de usuarios
+export interface UserActivityLog {
+  id: string;
+  user_id: string; // ID del TeamMember o UserProfile
+  owner_id: string; // ID del dueño de la tienda
+  action: string;
+  resource_type?: string; // 'product', 'sale', 'customer', etc.
+  resource_id?: string;
+  details?: string; // JSON string con detalles adicionales
+  ip_address?: string;
+  user_agent?: string;
+  created_at: string;
 }

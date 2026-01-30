@@ -24,6 +24,12 @@ interface Product {
   expiration_date?: string;
   image_url?: string;
   images?: string;
+  // Campos para venta por unidades
+  sell_by_unit?: number;
+  units_per_package?: number;
+  unit_name?: string;
+  package_name?: string;
+  price_per_unit?: number;
   created_at: string;
   updated_at: string;
 }

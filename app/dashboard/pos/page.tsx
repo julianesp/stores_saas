@@ -57,6 +57,7 @@ import {
 import Swal from "@/lib/sweetalert";
 import { BarcodeScannerZXing } from "@/components/products/barcode-scanner-zxing";
 import { InvoiceModal } from "@/components/sales/invoice-modal";
+import { UnitSelectorModal } from "@/components/pos/unit-selector-modal";
 import Link from "next/link";
 import { normalizeBarcode, barcodeEquals } from "@/lib/barcode-utils";
 // COMENTADO: Tour deshabilitado
@@ -69,6 +70,8 @@ interface CartItem {
   originalPrice?: number;
   discountPercentage?: number;
   hasOffer?: boolean;
+  isUnitSale?: boolean; // Indica si se vende por unidades sueltas
+  effectivePrice?: number; // Precio efectivo (por unidad o paquete)
 }
 
 export default function POSPage() {
@@ -117,6 +120,11 @@ export default function POSPage() {
     null,
   );
   const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
+
+  // Estados para el modal de selección de unidades
+  const [showUnitSelector, setShowUnitSelector] = useState(false);
+  const [selectedProductForUnits, setSelectedProductForUnits] =
+    useState<Product | null>(null);
 
   // COMENTADO: Tour deshabilitado
   // const { startTour } = useTour(posTourConfig, true, userId || undefined);
@@ -442,20 +450,46 @@ export default function POSPage() {
     }
   };
 
-  const addToCart = (product: Product) => {
+  const addToCart = (
+    product: Product,
+    quantity: number = 1,
+    isUnitSale: boolean = false,
+  ) => {
+    // Si el producto se vende por unidades y no se especificó el tipo de venta, abrir modal
+    if (product.sell_by_unit && !isUnitSale && quantity === 1) {
+      setSelectedProductForUnits(product);
+      setShowUnitSelector(true);
+      return;
+    }
+
     setCart((prev) => {
-      const existing = prev.find((item) => item.product.id === product.id);
+      // Buscar si ya existe en el carrito (del mismo tipo: paquete o unidad)
+      const existing = prev.find(
+        (item) =>
+          item.product.id === product.id && item.isUnitSale === isUnitSale,
+      );
+
+      // Calcular precio efectivo y stock disponible
+      const unitsPerPackage = product.units_per_package || 1;
+      const pricePerUnit =
+        product.price_per_unit || product.sale_price / unitsPerPackage;
+      const effectivePrice = isUnitSale ? pricePerUnit : product.sale_price;
+      const availableStock = isUnitSale
+        ? product.stock * unitsPerPackage
+        : product.stock;
+
       if (existing) {
-        if (existing.quantity >= product.stock) {
+        const newQuantity = existing.quantity + quantity;
+        if (newQuantity > availableStock) {
           Swal.warning(
             "Cantidad insuficiente",
-            "No hay más unidades disponibles",
+            `Solo hay ${availableStock} ${isUnitSale ? product.unit_name || "unidades" : product.package_name || "paquetes"} disponibles`,
           );
           return prev;
         }
         return prev.map((item) =>
-          item.product.id === product.id
-            ? { ...item, quantity: item.quantity + 1 }
+          item.product.id === product.id && item.isUnitSale === isUnitSale
+            ? { ...item, quantity: newQuantity }
             : item,
         );
       }
@@ -475,13 +509,32 @@ export default function POSPage() {
         ...prev,
         {
           product: productWithOffer,
-          quantity: 1,
+          quantity: quantity,
           originalPrice: hasOffer ? originalPrice : undefined,
           discountPercentage: hasOffer ? discountPercentage : undefined,
           hasOffer: hasOffer,
+          isUnitSale,
+          effectivePrice,
         },
       ];
     });
+  };
+
+  const handleUnitSelectorConfirm = (quantity: number, isUnitSale: boolean) => {
+    if (selectedProductForUnits) {
+      addToCart(selectedProductForUnits, quantity, isUnitSale);
+      setShowUnitSelector(false);
+      setSelectedProductForUnits(null);
+
+      // Toast de confirmación
+      const unitName = isUnitSale
+        ? selectedProductForUnits.unit_name || "unidad"
+        : selectedProductForUnits.package_name || "paquete";
+      Swal.productAdded(
+        `${selectedProductForUnits.name} (${quantity} ${unitName}${quantity > 1 ? "s" : ""})`,
+        quantity
+      );
+    }
   };
 
   const updateQuantity = (productId: string, delta: number) => {
@@ -531,10 +584,10 @@ export default function POSPage() {
   };
 
   const calculateTotal = () => {
-    const subtotal = cart.reduce(
-      (sum, item) => sum + item.product.sale_price * item.quantity,
-      0,
-    );
+    const subtotal = cart.reduce((sum, item) => {
+      const price = item.effectivePrice || item.product.sale_price;
+      return sum + price * item.quantity;
+    }, 0);
     return subtotal - discountAmount;
   };
 
@@ -682,18 +735,25 @@ export default function POSPage() {
       // Agregar items a la venta (la API de Cloudflare los crea automáticamente)
       const itemsPayload = cart.map((cartItem) => {
         // Calcular el descuento por oferta si existe
+        const price = cartItem.effectivePrice || cartItem.product.sale_price;
         const itemDiscount =
           cartItem.hasOffer && cartItem.originalPrice
-            ? (cartItem.originalPrice - cartItem.product.sale_price) *
-              cartItem.quantity
+            ? (cartItem.originalPrice - price) * cartItem.quantity
             : 0;
+
+        // Calcular cantidad real a descontar del inventario
+        // Si se vende por unidades, convertir a paquetes
+        const unitsPerPackage = cartItem.product.units_per_package || 1;
+        const quantityToDiscount = cartItem.isUnitSale
+          ? cartItem.quantity / unitsPerPackage
+          : cartItem.quantity;
 
         return {
           product_id: cartItem.product.id,
-          quantity: cartItem.quantity,
-          unit_price: cartItem.product.sale_price,
+          quantity: quantityToDiscount, // Cantidad en paquetes
+          unit_price: price,
           discount: itemDiscount,
-          subtotal: cartItem.product.sale_price * cartItem.quantity,
+          subtotal: price * cartItem.quantity,
         };
       });
       saleData.items = itemsPayload;
@@ -1675,126 +1735,137 @@ export default function POSPage() {
                     Carrito vacío
                   </p>
                 ) : (
-                  cart.map((item) => (
-                    <div
-                      key={item.product.id}
-                      className={`p-3 md:p-4 border-2 rounded-lg ${item.hasOffer ? "bg-orange-50 border-orange-300" : "border-gray-300"}`}
-                    >
-                      {/* Primera fila: Nombre, precio y cantidad */}
-                      <div className="mb-3">
-                        <div className="flex items-center gap-2 mb-2">
-                          <p className="font-bold text-base md:text-lg flex-1">
-                            {item.product.name}
-                          </p>
-                          {item.hasOffer && (
-                            <span className="text-sm md:text-base bg-orange-600 text-white px-2 py-1 rounded font-bold">
-                              -{item.discountPercentage}%
-                            </span>
-                          )}
-                        </div>
-                        <div className="flex items-baseline gap-2">
-                          {item.hasOffer && item.originalPrice && (
-                            <span className="text-base md:text-lg text-gray-400 line-through">
-                              {formatCurrency(item.originalPrice)}
-                            </span>
-                          )}
-                          <span
-                            className={`font-bold text-lg md:text-xl ${item.hasOffer ? "text-orange-600" : "text-blue-600"}`}
-                          >
-                            {formatCurrency(item.product.sale_price)}
-                          </span>
-                          <span className="text-base md:text-lg text-gray-600">
-                            x {item.quantity}
-                          </span>
-                          <span
-                            className={`ml-auto font-bold text-lg md:text-xl ${item.hasOffer ? "text-orange-600" : "text-blue-600"}`}
-                          >
-                            ={" "}
-                            {formatCurrency(
-                              item.product.sale_price * item.quantity,
-                            )}
-                          </span>
-                        </div>
-                      </div>
+                  cart.map((item) => {
+                    const price =
+                      item.effectivePrice || item.product.sale_price;
+                    const unitLabel = item.isUnitSale
+                      ? item.product.unit_name || "unidad"
+                      : item.product.package_name || "paquete";
 
-                      {/* Segunda fila: Controles de cantidad y eliminar */}
-                      <div className="flex items-center gap-2">
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          onClick={() => updateQuantity(item.product.id, -1)}
-                          className="h-12 w-12 p-0 md:h-14 md:w-14 bg-red-600  text-white border-red-600 rounded-2xl cursor-pointer hover:bg-red-700"
-                        >
-                          <Minus className="h-6 w-6 md:h-7 md:w-7" />
-                        </Button>
-                        <Input
-                          type="text"
-                          inputMode="numeric"
-                          value={item.quantity}
-                          onChange={(e) => {
-                            const value = e.target.value;
-                            // Permitir vacío o solo números
-                            if (value === "" || /^\d+$/.test(value)) {
-                              if (value === "") {
-                                // Permitir campo vacío temporalmente
-                                setCart((prev) =>
-                                  prev.map((cartItem) =>
-                                    cartItem.product.id === item.product.id
-                                      ? { ...cartItem, quantity: 0 }
-                                      : cartItem,
-                                  ),
-                                );
-                              } else {
-                                const val = parseInt(value);
-                                setDirectQuantity(item.product.id, val);
+                    return (
+                      <div
+                        key={`${item.product.id}-${item.isUnitSale ? "unit" : "package"}`}
+                        className={`p-3 md:p-4 border-2 rounded-lg ${item.hasOffer ? "bg-orange-50 border-orange-300" : "border-gray-300"}`}
+                      >
+                        {/* Primera fila: Nombre, precio y cantidad */}
+                        <div className="mb-3">
+                          <div className="flex items-center gap-2 mb-2">
+                            <p className="font-bold text-base md:text-lg flex-1">
+                              {item.product.name}
+                              {item.isUnitSale && (
+                                <span className="ml-2 text-xs md:text-sm bg-blue-100 text-blue-700 px-2 py-1 rounded">
+                                  {unitLabel}es sueltos
+                                </span>
+                              )}
+                            </p>
+                            {item.hasOffer && (
+                              <span className="text-sm md:text-base bg-orange-600 text-white px-2 py-1 rounded font-bold">
+                                -{item.discountPercentage}%
+                              </span>
+                            )}
+                          </div>
+                          <div className="flex items-baseline gap-2">
+                            {item.hasOffer && item.originalPrice && (
+                              <span className="text-base md:text-lg text-gray-400 line-through">
+                                {formatCurrency(item.originalPrice)}
+                              </span>
+                            )}
+                            <span
+                              className={`font-bold text-lg md:text-xl ${item.hasOffer ? "text-orange-600" : "text-blue-600"}`}
+                            >
+                              {formatCurrency(price)}
+                            </span>
+                            <span className="text-base md:text-lg text-gray-600">
+                              x {item.quantity} {unitLabel}
+                              {item.quantity > 1 ? "s" : ""}
+                            </span>
+                            <span
+                              className={`ml-auto font-bold text-lg md:text-xl ${item.hasOffer ? "text-orange-600" : "text-blue-600"}`}
+                            >
+                              = {formatCurrency(price * item.quantity)}
+                            </span>
+                          </div>
+                        </div>
+
+                        {/* Segunda fila: Controles de cantidad y eliminar */}
+                        <div className="flex items-center gap-2">
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => updateQuantity(item.product.id, -1)}
+                            className="h-12 w-12 p-0 md:h-14 md:w-14 bg-red-600  text-white border-red-600 rounded-2xl cursor-pointer hover:bg-red-700"
+                          >
+                            <Minus className="h-6 w-6 md:h-7 md:w-7" />
+                          </Button>
+                          <Input
+                            type="text"
+                            inputMode="numeric"
+                            value={item.quantity}
+                            onChange={(e) => {
+                              const value = e.target.value;
+                              // Permitir vacío o solo números
+                              if (value === "" || /^\d+$/.test(value)) {
+                                if (value === "") {
+                                  // Permitir campo vacío temporalmente
+                                  setCart((prev) =>
+                                    prev.map((cartItem) =>
+                                      cartItem.product.id === item.product.id
+                                        ? { ...cartItem, quantity: 0 }
+                                        : cartItem,
+                                    ),
+                                  );
+                                } else {
+                                  const val = parseInt(value);
+                                  setDirectQuantity(item.product.id, val);
+                                }
                               }
-                            }
-                          }}
-                          onBlur={(e) => {
-                            // Al perder el foco, si está vacío o es 0, establecer en 1
-                            if (
-                              e.target.value === "" ||
-                              parseInt(e.target.value) === 0
-                            ) {
-                              setDirectQuantity(item.product.id, 1);
-                            }
-                          }}
-                          onKeyDown={(e) => {
-                            // Permitir borrar con backspace/delete
-                            if (e.key === "Backspace" || e.key === "Delete") {
-                              return;
-                            }
-                            // Solo permitir números y teclas de control
-                            if (
-                              !/\d/.test(e.key) &&
-                              !["ArrowLeft", "ArrowRight", "Tab"].includes(
-                                e.key,
-                              )
-                            ) {
-                              e.preventDefault();
-                            }
-                          }}
-                          className="flex-1 h-12 md:h-14 text-center text-[16px] md:text-3xl font-bold p-1"
-                        />
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          onClick={() => updateQuantity(item.product.id, 1)}
-                          className="h-12 w-12 p-0 md:h-14 md:w-14 bg-green-600 hover:bg-green-700 text-white border-green-600 rounded-2xl cursor-pointer"
-                        >
-                          <Plus className="h-6 w-6 md:h-7 md:w-7" />
-                        </Button>
-                        <Button
-                          size="sm"
-                          variant="ghost"
-                          onClick={() => removeFromCart(item.product.id)}
-                          className="h-12 w-12 p-0 md:h-14 md:w-14 shrink-0 hover:bg-red-50 ml-2"
-                        >
-                          <Trash2 className="h-7 w-7 md:h-8 md:w-8 text-red-600" />
-                        </Button>
+                            }}
+                            onBlur={(e) => {
+                              // Al perder el foco, si está vacío o es 0, establecer en 1
+                              if (
+                                e.target.value === "" ||
+                                parseInt(e.target.value) === 0
+                              ) {
+                                setDirectQuantity(item.product.id, 1);
+                              }
+                            }}
+                            onKeyDown={(e) => {
+                              // Permitir borrar con backspace/delete
+                              if (e.key === "Backspace" || e.key === "Delete") {
+                                return;
+                              }
+                              // Solo permitir números y teclas de control
+                              if (
+                                !/\d/.test(e.key) &&
+                                !["ArrowLeft", "ArrowRight", "Tab"].includes(
+                                  e.key,
+                                )
+                              ) {
+                                e.preventDefault();
+                              }
+                            }}
+                            className="flex-1 h-12 md:h-14 text-center text-[16px] md:text-3xl font-bold p-1"
+                          />
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => updateQuantity(item.product.id, 1)}
+                            className="h-12 w-12 p-0 md:h-14 md:w-14 bg-green-600 hover:bg-green-700 text-white border-green-600 rounded-2xl cursor-pointer"
+                          >
+                            <Plus className="h-6 w-6 md:h-7 md:w-7" />
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            onClick={() => removeFromCart(item.product.id)}
+                            className="h-12 w-12 p-0 md:h-14 md:w-14 shrink-0 hover:bg-red-50 ml-2"
+                          >
+                            <Trash2 className="h-7 w-7 md:h-8 md:w-8 text-red-600" />
+                          </Button>
+                        </div>
                       </div>
-                    </div>
-                  ))
+                    );
+                  })
                 )}
               </div>
 
@@ -1883,6 +1954,19 @@ export default function POSPage() {
           customer={lastSaleCustomer}
           storeInfo={userProfile}
           cashierName={user?.fullName || undefined}
+        />
+      )}
+
+      {/* Modal de Selección de Unidades */}
+      {selectedProductForUnits && (
+        <UnitSelectorModal
+          product={selectedProductForUnits}
+          isOpen={showUnitSelector}
+          onClose={() => {
+            setShowUnitSelector(false);
+            setSelectedProductForUnits(null);
+          }}
+          onConfirm={handleUnitSelectorConfirm}
         />
       )}
     </div>

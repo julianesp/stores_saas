@@ -49,13 +49,9 @@ export function AutoReportsConfig() {
       if (response.ok) {
         const data = await response.json();
         setConfig(data);
-        // Si nunca ha configurado Y está desactivado, mostrar solicitud de permisos
-        // Si ya está activado, no mostrar solicitud
-        if (data.enabled === false && data.email === null) {
-          setShowPermissionRequest(true);
-        } else {
-          setShowPermissionRequest(false);
-        }
+        // No mostrar la solicitud si ya hay configuración guardada (enabled es true o false explícitamente)
+        // Solo mostrar si es null o undefined (primera vez)
+        setShowPermissionRequest(false);
       }
     } catch (error) {
       console.error("Error loading config:", error);
@@ -205,7 +201,10 @@ export function AutoReportsConfig() {
               {saving ? "Activando..." : "Activar Reportes Automáticos"}
             </Button>
             <Button
-              onClick={() => setShowPermissionRequest(false)}
+              onClick={() => {
+                // Guardar que el usuario rechazó la solicitud
+                saveConfig({ enabled: false });
+              }}
               variant="outline"
               disabled={saving}
             >

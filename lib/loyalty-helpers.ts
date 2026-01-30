@@ -22,27 +22,33 @@ export const REWARD_CONSTANTS = {
 };
 
 /**
- * Obtiene la configuración de lealtad del usuario actual
- * NOTA: Actualmente usa tiers por defecto.
- * TODO: Migrar loyalty_settings a Cloudflare para configuración personalizada
+ * Obtiene la configuración de lealtad del usuario actual desde Cloudflare
  */
-export async function getLoyaltySettings(userProfileId: string): Promise<LoyaltySettings> {
+export async function getLoyaltySettings(clerkUserId: string): Promise<LoyaltySettings> {
   try {
-    // Devolver configuración por defecto (siempre habilitado)
-    return {
-      id: 'default',
-      user_profile_id: userProfileId,
-      enabled: true,
-      tiers: DEFAULT_TIERS,
-      created_at: new Date().toISOString(),
-      updated_at: new Date().toISOString(),
-    };
+    const API_URL = process.env.NEXT_PUBLIC_CLOUDFLARE_API_URL;
+    const response = await fetch(`${API_URL}/loyalty-settings?clerk_user_id=${clerkUserId}`);
+
+    if (response.ok) {
+      const settings = await response.json();
+      return settings;
+    } else {
+      // Si no hay configuración, devolver valores por defecto
+      return {
+        id: 'default',
+        user_profile_id: clerkUserId,
+        enabled: true,
+        tiers: DEFAULT_TIERS,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      };
+    }
   } catch (error) {
     console.error('Error getting loyalty settings:', error);
     return {
       id: 'default',
-      user_profile_id: userProfileId,
-      enabled: false,
+      user_profile_id: clerkUserId,
+      enabled: true,
       tiers: DEFAULT_TIERS,
       created_at: new Date().toISOString(),
       updated_at: new Date().toISOString(),
@@ -71,15 +77,20 @@ export async function updateLoyaltySettings(
  * Calcula los puntos que debería ganar un cliente según el monto de la compra
  */
 export async function calculatePointsForPurchase(
-  userProfileId: string,
+  clerkUserId: string,
   purchaseAmount: number
 ): Promise<number> {
   try {
-    // Usar tiers por defecto directamente (sistema siempre habilitado)
-    const tiers = DEFAULT_TIERS;
+    // Obtener la configuración personalizada del usuario
+    const settings = await getLoyaltySettings(clerkUserId);
+
+    // Si el sistema está desactivado, no dar puntos
+    if (!settings.enabled) {
+      return 0;
+    }
 
     // Buscar el tier correspondiente al monto
-    const tier = tiers.find(
+    const tier = settings.tiers.find(
       (t) => purchaseAmount >= t.min_amount && purchaseAmount <= t.max_amount
     );
 
