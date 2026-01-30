@@ -8,7 +8,6 @@ import { getTeamInvitationEmailHtml, getTeamInvitationEmailText } from '@/lib/em
 import crypto from 'crypto';
 
 const API_URL = process.env.NEXT_PUBLIC_CLOUDFLARE_API_URL;
-const resend = new Resend(process.env.RESEND_API_KEY);
 
 /**
  * POST /api/team/invite
@@ -100,11 +99,16 @@ export async function POST(request: NextRequest) {
 
     // Enviar email de invitación
     try {
-      // Obtener información del usuario que invita
-      const userProfile = await getUserProfile(getToken);
-      const roleDef = ROLE_DEFINITIONS.find(r => r.role === role);
+      // Solo intentar enviar email si la API key está configurada
+      if (!process.env.RESEND_API_KEY) {
+        console.log('⚠️ RESEND_API_KEY no configurada, saltando envío de email');
+      } else {
+        // Obtener información del usuario que invita
+        const userProfile = await getUserProfile(getToken);
+        const roleDef = ROLE_DEFINITIONS.find(r => r.role === role);
 
-      await resend.emails.send({
+        const resend = new Resend(process.env.RESEND_API_KEY);
+        await resend.emails.send({
         from: 'Sistema POS <noreply@posib.dev>',
         to: email,
         subject: `Invitación al equipo de ${userProfile?.store_name || 'Sistema POS'}`,
@@ -124,9 +128,10 @@ export async function POST(request: NextRequest) {
           invitationLink,
           expiresInDays: 7,
         }),
-      });
+        });
 
-      console.log('✅ Email de invitación enviado a:', email);
+        console.log('✅ Email de invitación enviado a:', email);
+      }
     } catch (emailError) {
       console.error('❌ Error al enviar email de invitación:', emailError);
       // No fallar la invitación si el email falla, solo logear el error
