@@ -62,7 +62,9 @@ export function UnitSelectorModal({
 
   // Calcular stock disponible según tipo de venta
   const availableStock =
-    saleType === "package" ? product.stock : product.stock * unitsPerPackage;
+    saleType === "package"
+      ? Math.floor(product.stock) // Redondear hacia abajo para paquetes
+      : Math.floor(product.stock * unitsPerPackage); // Unidades disponibles
 
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && handleCancel()}>
@@ -137,7 +139,7 @@ export function UnitSelectorModal({
                 id="quantity"
                 type="text"
                 inputMode="numeric"
-                placeholder="1"
+                placeholder="0"
                 value={inputValue}
                 onFocus={(e) => {
                   // Limpiar el input al enfocar

@@ -15,25 +15,26 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Sistema POS - Gestión de Tienda",
+  title: "posib.dev - Sistema POS",
   description: "Sistema completo de punto de venta y gestión de inventario para tiendas",
   manifest: "/manifest.json",
   icons: {
     icon: [
+      { url: 'https://0dwas2ied3dcs14f.public.blob.vercel-storage.com/tienda_pos/posib_logo.png', type: 'image/png' },
       { url: '/favicon.ico', sizes: '32x32' },
       { url: '/icon-192x192.png', sizes: '192x192', type: 'image/png' },
       { url: '/icon-512x512.png', sizes: '512x512', type: 'image/png' },
     ],
     apple: [
-      { url: '/apple-touch-icon.png', sizes: '512x512', type: 'image/png' },
+      { url: 'https://0dwas2ied3dcs14f.public.blob.vercel-storage.com/tienda_pos/posib_logo.png', type: 'image/png' },
     ],
   },
   appleWebApp: {
     capable: true,
     statusBarStyle: 'default',
-    title: 'Sistema POS',
+    title: 'posib.dev',
   },
-  applicationName: 'Sistema POS',
+  applicationName: 'posib.dev',
 };
 
 export const viewport = {

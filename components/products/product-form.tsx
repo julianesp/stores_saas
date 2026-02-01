@@ -27,11 +27,11 @@ import { Html5Qrcode } from "html5-qrcode";
 import { normalizeBarcode, barcodeEquals } from "@/lib/barcode-utils";
 
 const productSchema = z.object({
-  barcode: z.string().optional(),
+  barcode: z.string().optional().or(z.literal("")),
   name: z.string().min(1, "El nombre es requerido"),
-  description: z.string().optional(),
-  category_id: z.string().optional(),
-  supplier_id: z.string().optional(),
+  description: z.string().optional().or(z.literal("")),
+  category_id: z.string().optional().or(z.literal("")),
+  supplier_id: z.string().optional().or(z.literal("")),
   cost_price: z.number().min(0, "El precio de compra debe ser mayor a 0"),
   sale_price: z.number().min(0, "El precio de venta debe ser mayor a 0"),
   stock: z
@@ -42,14 +42,14 @@ const productSchema = z.object({
     .number()
     .int()
     .min(0, "El mínimo disponible debe ser mayor o igual a 0"),
-  expiration_date: z.string().optional(),
+  expiration_date: z.string().optional().or(z.literal("")),
 
   // Campos para venta por unidades
   sell_by_unit: z.boolean().optional(),
-  units_per_package: z.number().int().min(1).optional(),
-  unit_name: z.string().optional(),
-  package_name: z.string().optional(),
-  price_per_unit: z.number().min(0).optional(),
+  units_per_package: z.number().int().min(1).optional().or(z.undefined()),
+  unit_name: z.string().optional().or(z.literal("")),
+  package_name: z.string().optional().or(z.literal("")),
+  price_per_unit: z.number().min(0).optional().or(z.undefined()),
 });
 
 type ProductFormData = z.infer<typeof productSchema>;
@@ -68,7 +68,7 @@ export function ProductForm({ initialData, productId }: ProductFormProps) {
   const [productImages, setProductImages] = useState<string[]>(initialData?.images || []);
   const [mainImageIndex, setMainImageIndex] = useState<number>(initialData?.main_image_index ?? 0);
   const [doesNotExpire, setDoesNotExpire] = useState(!initialData?.expiration_date);
-  const [sellByUnit, setSellByUnit] = useState(initialData?.sell_by_unit || false);
+  const [sellByUnit, setSellByUnit] = useState(Boolean(initialData?.sell_by_unit));
   const [showScanner, setShowScanner] = useState(false);
   const [showScannerOptions, setShowScannerOptions] = useState(false); // Modal con opciones de escaneo
   const [showNewCategory, setShowNewCategory] = useState(false);
@@ -95,12 +95,28 @@ export function ProductForm({ initialData, productId }: ProductFormProps) {
     defaultValues: initialData
       ? {
           ...initialData,
-          // Asegurarse de que los IDs se mantengan como están (no convertirlos a string vacío)
-          category_id: initialData.category_id || "",
-          supplier_id: initialData.supplier_id || "",
+          // Limpiar IDs que sean null, undefined o inválidos
+          category_id: (initialData.category_id && !initialData.category_id.includes('null')) ? initialData.category_id : "",
+          supplier_id: (initialData.supplier_id && !initialData.supplier_id.includes('null')) ? initialData.supplier_id : "",
+          // Asegurar que expiration_date sea string o undefined
+          expiration_date: initialData.expiration_date || undefined,
+          // Asegurar que sell_by_unit sea boolean
+          sell_by_unit: Boolean(initialData.sell_by_unit),
+          // Limpiar campos de unidades si son null
+          units_per_package: initialData.units_per_package || undefined,
+          unit_name: initialData.unit_name || undefined,
+          package_name: initialData.package_name || undefined,
+          price_per_unit: initialData.price_per_unit || undefined,
         }
       : {},
   });
+
+  // Log errors when they change
+  useEffect(() => {
+    if (Object.keys(errors).length > 0) {
+      console.error('❌ Form validation errors:', errors);
+    }
+  }, [errors]);
 
   // Obtener la ref del register de react-hook-form
   const { ref: barcodeRegisterRef, ...barcodeRegisterRest } = register("barcode", {
@@ -365,6 +381,8 @@ export function ProductForm({ initialData, productId }: ProductFormProps) {
   };
 
   const onSubmit = async (data: ProductFormData) => {
+    console.log('🚀 onSubmit called with data:', data);
+    console.log('🔍 productId:', productId);
     setLoading(true);
     try {
       const productData: any = {
@@ -387,11 +405,11 @@ export function ProductForm({ initialData, productId }: ProductFormProps) {
       }
 
       // Limpiar campos vacíos para evitar errores en la base de datos
-      // Convertir strings vacíos a undefined
-      if (productData.category_id === "") {
+      // Convertir strings vacíos a undefined y validar IDs
+      if (!productData.category_id || productData.category_id === "" || productData.category_id.includes('null')) {
         productData.category_id = undefined;
       }
-      if (productData.supplier_id === "") {
+      if (!productData.supplier_id || productData.supplier_id === "" || productData.supplier_id.includes('null')) {
         productData.supplier_id = undefined;
       }
       if (productData.barcode === "") {
@@ -424,10 +442,14 @@ export function ProductForm({ initialData, productId }: ProductFormProps) {
       console.log('✅ Datos del producto a enviar:', productData);
 
       if (productId) {
+        console.log('🔄 Calling updateProduct with:', { productId, productData });
         await updateProduct(productId, productData, getToken);
+        console.log('✅ Product updated successfully');
         toast.success("Producto actualizado correctamente");
       } else {
+        console.log('➕ Calling createProduct with:', { productData });
         await createProduct(productData, getToken);
+        console.log('✅ Product created successfully');
         toast.success("Producto creado correctamente");
       }
 
@@ -442,7 +464,10 @@ export function ProductForm({ initialData, productId }: ProductFormProps) {
   };
 
   return (
-    <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
+    <form onSubmit={(e) => {
+      console.log('📝 Form submit event triggered');
+      handleSubmit(onSubmit)(e);
+    }} className="space-y-6">
       <Card>
         <CardHeader>
           <CardTitle>Información Básica</CardTitle>

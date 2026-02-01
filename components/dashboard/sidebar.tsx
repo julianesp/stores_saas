@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef, useCallback } from "react";
 import Link from "next/link";
+import Image from "next/image";
 import { usePathname } from "next/navigation";
 import { useUser } from "@clerk/nextjs";
 import { cn } from "@/lib/utils";
@@ -315,16 +316,34 @@ export function Sidebar({ isMobile = false, onLinkClick }: SidebarProps) {
     >
       {/* Header - Solo visible en desktop */}
       <div className="hidden md:flex h-16 items-center px-6 border-b border-gray-800">
-        <h1 className="text-xl font-bold">
-          {isSuperAdmin ? "Admin Panel" : "Sistema POS"}
-        </h1>
+        {isSuperAdmin ? (
+          <h1 className="text-xl font-bold">Admin Panel</h1>
+        ) : (
+          <Image
+            src="https://0dwas2ied3dcs14f.public.blob.vercel-storage.com/tienda_pos/posib_logo.png"
+            alt="posib.dev"
+            width={120}
+            height={40}
+            className="h-10 w-auto"
+            priority
+          />
+        )}
       </div>
 
       {/* Header móvil */}
       <div className="flex md:hidden h-16 items-center justify-center border-b border-gray-800 relative">
-        <h1 className="text-xl font-bold">
-          {isSuperAdmin ? "Admin Panel" : "Sistema POS"}
-        </h1>
+        {isSuperAdmin ? (
+          <h1 className="text-xl font-bold">Admin Panel</h1>
+        ) : (
+          <Image
+            src="https://0dwas2ied3dcs14f.public.blob.vercel-storage.com/tienda_pos/posib_logo.png"
+            alt="posib.dev"
+            width={120}
+            height={40}
+            className="h-10 w-auto"
+            priority
+          />
+        )}
 
         {/* Botón de cerrar (solo móvil) */}
         <button

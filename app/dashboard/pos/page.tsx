@@ -453,42 +453,55 @@ export default function POSPage() {
   const addToCart = (
     product: Product,
     quantity: number = 1,
-    isUnitSale: boolean = false,
+    isUnitSale: boolean | undefined = undefined,
   ) => {
-    // Si el producto se vende por unidades y no se especificó el tipo de venta, abrir modal
-    if (product.sell_by_unit && !isUnitSale && quantity === 1) {
+    console.log('🛒 addToCart called:', {
+      product: product.name,
+      quantity,
+      isUnitSale,
+      sell_by_unit: product.sell_by_unit
+    });
+
+    // Si el producto se vende por unidades y no se especificó explícitamente el tipo de venta, abrir modal
+    // isUnitSale === undefined significa que se llamó desde la lista de productos
+    if (product.sell_by_unit && isUnitSale === undefined) {
+      console.log('📱 Opening unit selector modal (isUnitSale not specified)');
       setSelectedProductForUnits(product);
       setShowUnitSelector(true);
       return;
     }
 
+    // Si isUnitSale es undefined pero el producto no se vende por unidades, usar false por defecto
+    const finalIsUnitSale = isUnitSale ?? false;
+
+    console.log('➕ Adding to cart...', { finalIsUnitSale });
     setCart((prev) => {
       // Buscar si ya existe en el carrito (del mismo tipo: paquete o unidad)
       const existing = prev.find(
         (item) =>
-          item.product.id === product.id && item.isUnitSale === isUnitSale,
+          item.product.id === product.id && item.isUnitSale === finalIsUnitSale,
       );
 
       // Calcular precio efectivo y stock disponible
       const unitsPerPackage = product.units_per_package || 1;
       const pricePerUnit =
         product.price_per_unit || product.sale_price / unitsPerPackage;
-      const effectivePrice = isUnitSale ? pricePerUnit : product.sale_price;
-      const availableStock = isUnitSale
-        ? product.stock * unitsPerPackage
-        : product.stock;
+      const effectivePrice = finalIsUnitSale ? pricePerUnit : product.sale_price;
+      const availableStock = finalIsUnitSale
+        ? Math.floor(product.stock * unitsPerPackage)  // Unidades disponibles
+        : Math.floor(product.stock);  // Paquetes completos disponibles
 
       if (existing) {
         const newQuantity = existing.quantity + quantity;
         if (newQuantity > availableStock) {
           Swal.warning(
             "Cantidad insuficiente",
-            `Solo hay ${availableStock} ${isUnitSale ? product.unit_name || "unidades" : product.package_name || "paquetes"} disponibles`,
+            `Solo hay ${availableStock} ${finalIsUnitSale ? product.unit_name || "unidades" : product.package_name || "paquetes"} disponibles`,
           );
           return prev;
         }
         return prev.map((item) =>
-          item.product.id === product.id && item.isUnitSale === isUnitSale
+          item.product.id === product.id && item.isUnitSale === finalIsUnitSale
             ? { ...item, quantity: newQuantity }
             : item,
         );
@@ -513,7 +526,7 @@ export default function POSPage() {
           originalPrice: hasOffer ? originalPrice : undefined,
           discountPercentage: hasOffer ? discountPercentage : undefined,
           hasOffer: hasOffer,
-          isUnitSale,
+          isUnitSale: finalIsUnitSale,
           effectivePrice,
         },
       ];
@@ -521,6 +534,12 @@ export default function POSPage() {
   };
 
   const handleUnitSelectorConfirm = (quantity: number, isUnitSale: boolean) => {
+    console.log('✅ Unit selector confirmed:', {
+      product: selectedProductForUnits?.name,
+      quantity,
+      isUnitSale
+    });
+
     if (selectedProductForUnits) {
       addToCart(selectedProductForUnits, quantity, isUnitSale);
       setShowUnitSelector(false);
@@ -537,16 +556,26 @@ export default function POSPage() {
     }
   };
 
-  const updateQuantity = (productId: string, delta: number) => {
+  const updateQuantity = (productId: string, delta: number, isUnitSale: boolean = false) => {
     setCart((prev) =>
       prev.map((item) => {
-        if (item.product.id === productId) {
+        if (item.product.id === productId && item.isUnitSale === isUnitSale) {
           const newQuantity = item.quantity + delta;
           if (newQuantity <= 0) return item;
-          if (newQuantity > item.product.stock) {
+
+          // Calcular stock disponible según el tipo de venta
+          const unitsPerPackage = item.product.units_per_package || 1;
+          const availableStock = item.isUnitSale
+            ? Math.floor(item.product.stock * unitsPerPackage)
+            : Math.floor(item.product.stock);
+
+          if (newQuantity > availableStock) {
+            const unitLabel = item.isUnitSale
+              ? item.product.unit_name || "unidades"
+              : item.product.package_name || "paquetes";
             Swal.warning(
               "Cantidad insuficiente",
-              "No hay más unidades disponibles",
+              `Solo hay ${availableStock} ${unitLabel} disponibles`,
             );
             return item;
           }
@@ -557,20 +586,30 @@ export default function POSPage() {
     );
   };
 
-  const setDirectQuantity = (productId: string, quantity: number) => {
+  const setDirectQuantity = (productId: string, quantity: number, isUnitSale: boolean = false) => {
     setCart((prev) =>
       prev.map((item) => {
-        if (item.product.id === productId) {
+        if (item.product.id === productId && item.isUnitSale === isUnitSale) {
           if (quantity <= 0) {
             Swal.warning("Cantidad inválida", "La cantidad debe ser mayor a 0");
             return item;
           }
-          if (quantity > item.product.stock) {
+
+          // Calcular stock disponible según el tipo de venta
+          const unitsPerPackage = item.product.units_per_package || 1;
+          const availableStock = item.isUnitSale
+            ? Math.floor(item.product.stock * unitsPerPackage)
+            : Math.floor(item.product.stock);
+
+          if (quantity > availableStock) {
+            const unitLabel = item.isUnitSale
+              ? item.product.unit_name || "unidades"
+              : item.product.package_name || "paquetes";
             Swal.warning(
               "Cantidad insuficiente",
-              `Solo hay ${item.product.stock} unidades disponibles`,
+              `Solo hay ${availableStock} ${unitLabel} disponibles`,
             );
-            return { ...item, quantity: item.product.stock };
+            return { ...item, quantity: availableStock };
           }
           return { ...item, quantity };
         }
@@ -579,8 +618,8 @@ export default function POSPage() {
     );
   };
 
-  const removeFromCart = (productId: string) => {
-    setCart((prev) => prev.filter((item) => item.product.id !== productId));
+  const removeFromCart = (productId: string, isUnitSale: boolean = false) => {
+    setCart((prev) => prev.filter((item) => !(item.product.id === productId && item.isUnitSale === isUnitSale)));
   };
 
   const calculateTotal = () => {
@@ -797,7 +836,39 @@ export default function POSPage() {
 
       // Actualizar el stock de los productos
       for (const cartItem of cart) {
-        const newStock = cartItem.product.stock - cartItem.quantity;
+        // Calcular cuánto descontar del stock según si es venta por unidades o paquetes
+        let newStock: number;
+
+        if (cartItem.isUnitSale) {
+          // Si se vende por unidades, convertir las unidades vendidas a paquetes
+          const unitsPerPackage = cartItem.product.units_per_package || 1;
+          const unitsSold = cartItem.quantity; // unidades vendidas
+          const packagesSold = unitsSold / unitsPerPackage; // paquetes equivalentes
+
+          // Descontar del stock (que está en paquetes)
+          newStock = cartItem.product.stock - packagesSold;
+
+          console.log('🔄 Venta por unidades:', {
+            producto: cartItem.product.name,
+            stockAnterior: cartItem.product.stock,
+            unidadesVendidas: unitsSold,
+            unidadesPorPaquete: unitsPerPackage,
+            paquetesDescontados: packagesSold,
+            nuevoStock: newStock,
+            unidadesRestantes: newStock * unitsPerPackage
+          });
+        } else {
+          // Si se vende por paquetes, descontar directamente
+          newStock = cartItem.product.stock - cartItem.quantity;
+
+          console.log('📦 Venta por paquetes:', {
+            producto: cartItem.product.name,
+            stockAnterior: cartItem.product.stock,
+            paquetesVendidos: cartItem.quantity,
+            nuevoStock: newStock
+          });
+        }
+
         await updateProduct(
           cartItem.product.id,
           {
@@ -1426,7 +1497,11 @@ export default function POSPage() {
                             )}
                           </div>
                           <p className="text-xs text-gray-500">
-                            Disponible: {product.stock}
+                            Disponible: {
+                              product.sell_by_unit
+                                ? `${Math.floor(product.stock * (product.units_per_package || 1))} ${product.unit_name || 'unidades'}`
+                                : `${product.stock} ${product.package_name || 'unidades'}`
+                            }
                           </p>
                         </CardContent>
                       </Card>
@@ -1792,7 +1867,7 @@ export default function POSPage() {
                           <Button
                             size="sm"
                             variant="outline"
-                            onClick={() => updateQuantity(item.product.id, -1)}
+                            onClick={() => updateQuantity(item.product.id, -1, item.isUnitSale)}
                             className="h-12 w-12 p-0 md:h-14 md:w-14 bg-red-600  text-white border-red-600 rounded-2xl cursor-pointer hover:bg-red-700"
                           >
                             <Minus className="h-6 w-6 md:h-7 md:w-7" />
@@ -1809,14 +1884,14 @@ export default function POSPage() {
                                   // Permitir campo vacío temporalmente
                                   setCart((prev) =>
                                     prev.map((cartItem) =>
-                                      cartItem.product.id === item.product.id
+                                      cartItem.product.id === item.product.id && cartItem.isUnitSale === item.isUnitSale
                                         ? { ...cartItem, quantity: 0 }
                                         : cartItem,
                                     ),
                                   );
                                 } else {
                                   const val = parseInt(value);
-                                  setDirectQuantity(item.product.id, val);
+                                  setDirectQuantity(item.product.id, val, item.isUnitSale);
                                 }
                               }
                             }}
@@ -1826,7 +1901,7 @@ export default function POSPage() {
                                 e.target.value === "" ||
                                 parseInt(e.target.value) === 0
                               ) {
-                                setDirectQuantity(item.product.id, 1);
+                                setDirectQuantity(item.product.id, 1, item.isUnitSale);
                               }
                             }}
                             onKeyDown={(e) => {
@@ -1849,7 +1924,7 @@ export default function POSPage() {
                           <Button
                             size="sm"
                             variant="outline"
-                            onClick={() => updateQuantity(item.product.id, 1)}
+                            onClick={() => updateQuantity(item.product.id, 1, item.isUnitSale)}
                             className="h-12 w-12 p-0 md:h-14 md:w-14 bg-green-600 hover:bg-green-700 text-white border-green-600 rounded-2xl cursor-pointer"
                           >
                             <Plus className="h-6 w-6 md:h-7 md:w-7" />
@@ -1857,7 +1932,7 @@ export default function POSPage() {
                           <Button
                             size="sm"
                             variant="ghost"
-                            onClick={() => removeFromCart(item.product.id)}
+                            onClick={() => removeFromCart(item.product.id, item.isUnitSale)}
                             className="h-12 w-12 p-0 md:h-14 md:w-14 shrink-0 hover:bg-red-50 ml-2"
                           >
                             <Trash2 className="h-7 w-7 md:h-8 md:w-8 text-red-600" />

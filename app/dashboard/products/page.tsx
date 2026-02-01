@@ -353,7 +353,10 @@ export default function ProductsPage() {
                                       : 'bg-green-100 text-green-800'
                                   }`}
                                 >
-                                  {product.stock}
+                                  {product.sell_by_unit
+                                    ? `${Math.floor(product.stock * (product.units_per_package || 1))} ${product.unit_name || 'unidades'}`
+                                    : `${product.stock} ${product.package_name || 'unidades'}`
+                                  }
                                 </span>
                               </p>
                             </div>
