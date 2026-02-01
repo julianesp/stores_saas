@@ -184,8 +184,20 @@ export function UnitSelectorModal({
               </Button>
             </div>
             <p className="text-xs text-black">
-              Disponible: {availableStock}{" "}
-              {saleType === "package" ? packageName + "s" : unitName + "es"}
+              Disponible: {(() => {
+                if (saleType === "unit") {
+                  const fullPackages = Math.floor(product.stock);
+                  const totalUnits = Math.floor(product.stock * unitsPerPackage);
+                  const remainingUnits = totalUnits - (fullPackages * unitsPerPackage);
+                  const packageNameDisplay = fullPackages === 1 ? packageName : `${packageName}s`;
+                  const unitNameDisplay = remainingUnits === 1 ? unitName : `${unitName}es`;
+
+                  return `${totalUnits} ${unitName}${totalUnits === 1 ? '' : 'es'} (${fullPackages} ${packageNameDisplay}${remainingUnits > 0 ? ` + ${remainingUnits} ${unitNameDisplay}` : ''})`;
+                } else {
+                  const packageNameDisplay = availableStock === 1 ? packageName : `${packageName}s`;
+                  return `${availableStock} ${packageNameDisplay}`;
+                }
+              })()}
             </p>
           </div>
 

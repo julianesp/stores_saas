@@ -1499,7 +1499,18 @@ export default function POSPage() {
                           <p className="text-xs text-gray-500">
                             Disponible: {
                               product.sell_by_unit
-                                ? `${Math.floor(product.stock * (product.units_per_package || 1))} ${product.unit_name || 'unidades'}`
+                                ? (() => {
+                                    const unitsPerPackage = product.units_per_package || 1;
+                                    const totalUnits = Math.floor(product.stock * unitsPerPackage);
+                                    const fullPackages = Math.floor(product.stock);
+                                    const remainingUnits = totalUnits - (fullPackages * unitsPerPackage);
+                                    const packageName = product.package_name || 'paquete';
+                                    const packageNamePlural = fullPackages === 1 ? packageName : `${packageName}s`;
+                                    const unitName = product.unit_name || 'unidad';
+                                    const unitNamePlural = remainingUnits === 1 ? unitName : `${unitName}es`;
+
+                                    return `${totalUnits} ${unitName}${totalUnits === 1 ? '' : 'es'} (${fullPackages} ${packageNamePlural}${remainingUnits > 0 ? ` + ${remainingUnits} ${unitNamePlural}` : ''})`;
+                                  })()
                                 : `${product.stock} ${product.package_name || 'unidades'}`
                             }
                           </p>
