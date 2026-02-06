@@ -482,25 +482,33 @@ export default function PurchaseStatsPage() {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <ResponsiveContainer width="100%" height={300}>
-              <LineChart data={stats.monthlyInvestment}>
-                <CartesianGrid strokeDasharray="3 3" />
-                <XAxis dataKey="month" />
-                <YAxis />
-                <Tooltip
-                  formatter={(value: number) => formatCurrency(value)}
-                  labelStyle={{ color: "#000" }}
-                />
-                <Legend />
-                <Line
-                  type="monotone"
-                  dataKey="amount"
-                  stroke="#0088FE"
-                  name="Inversión"
-                  strokeWidth={2}
-                />
-              </LineChart>
-            </ResponsiveContainer>
+            {stats.monthlyInvestment.length > 0 ? (
+              <ResponsiveContainer width="100%" height={300}>
+                <LineChart data={stats.monthlyInvestment}>
+                  <CartesianGrid strokeDasharray="3 3" />
+                  <XAxis dataKey="month" />
+                  <YAxis />
+                  <Tooltip
+                    formatter={(value: number) => formatCurrency(value)}
+                    labelStyle={{ color: "#000" }}
+                  />
+                  <Legend />
+                  <Line
+                    type="monotone"
+                    dataKey="amount"
+                    stroke="#0088FE"
+                    name="Inversión"
+                    strokeWidth={2}
+                  />
+                </LineChart>
+              </ResponsiveContainer>
+            ) : (
+              <div className="flex flex-col items-center justify-center h-[300px] text-gray-400">
+                <BarChart3 className="h-16 w-16 mb-4 opacity-20" />
+                <p className="text-sm font-medium">No hay datos de inversión mensual</p>
+                <p className="text-xs mt-2">Crea órdenes de compra para ver esta gráfica</p>
+              </div>
+            )}
           </CardContent>
         </Card>
 
@@ -513,28 +521,36 @@ export default function PurchaseStatsPage() {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <ResponsiveContainer width="100%" height={300}>
-              <PieChart>
-                <Pie
-                  data={stats.supplierStats}
-                  dataKey="total"
-                  nameKey="supplier"
-                  cx="50%"
-                  cy="50%"
-                  outerRadius={80}
-                  label
-                >
-                  {stats.supplierStats.map((entry, index) => (
-                    <Cell
-                      key={`cell-${index}`}
-                      fill={COLORS[index % COLORS.length]}
-                    />
-                  ))}
-                </Pie>
-                <Tooltip formatter={(value: number) => formatCurrency(value)} />
-                <Legend />
-              </PieChart>
-            </ResponsiveContainer>
+            {stats.supplierStats.length > 0 ? (
+              <ResponsiveContainer width="100%" height={300}>
+                <PieChart>
+                  <Pie
+                    data={stats.supplierStats}
+                    dataKey="total"
+                    nameKey="supplier"
+                    cx="50%"
+                    cy="50%"
+                    outerRadius={80}
+                    label
+                  >
+                    {stats.supplierStats.map((entry, index) => (
+                      <Cell
+                        key={`cell-${index}`}
+                        fill={COLORS[index % COLORS.length]}
+                      />
+                    ))}
+                  </Pie>
+                  <Tooltip formatter={(value: number) => formatCurrency(value)} />
+                  <Legend />
+                </PieChart>
+              </ResponsiveContainer>
+            ) : (
+              <div className="flex flex-col items-center justify-center h-[300px] text-gray-400">
+                <PieChartIcon className="h-16 w-16 mb-4 opacity-20" />
+                <p className="text-sm font-medium">No hay datos de proveedores</p>
+                <p className="text-xs mt-2">Registra compras de proveedores para ver esta gráfica</p>
+              </div>
+            )}
           </CardContent>
         </Card>
       </div>
@@ -545,34 +561,45 @@ export default function PurchaseStatsPage() {
           <CardTitle>Top Proveedores por Inversión</CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="overflow-x-auto">
-            <table className="w-full">
-              <thead>
-                <tr className="border-b">
-                  <th className="text-left py-3 px-4">Proveedor</th>
-                  <th className="text-right py-3 px-4">Órdenes</th>
-                  <th className="text-right py-3 px-4">Total Invertido</th>
-                  <th className="text-right py-3 px-4">Promedio/Orden</th>
-                </tr>
-              </thead>
-              <tbody>
-                {stats.supplierStats.map((supplier, index) => (
-                  <tr key={index} className="border-b hover:bg-gray-50">
-                    <td className="py-3 px-4 font-medium">
-                      {supplier.supplier}
-                    </td>
-                    <td className="py-3 px-4 text-right">{supplier.orders}</td>
-                    <td className="py-3 px-4 text-right font-semibold">
-                      {formatCurrency(supplier.total)}
-                    </td>
-                    <td className="py-3 px-4 text-right text-gray-600">
-                      {formatCurrency(supplier.total / supplier.orders)}
-                    </td>
+          {stats.supplierStats.length > 0 ? (
+            <div className="overflow-x-auto">
+              <table className="w-full">
+                <thead>
+                  <tr className="border-b">
+                    <th className="text-left py-3 px-4">Proveedor</th>
+                    <th className="text-right py-3 px-4">Órdenes</th>
+                    <th className="text-right py-3 px-4">Total Invertido</th>
+                    <th className="text-right py-3 px-4">Promedio/Orden</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+                </thead>
+                <tbody>
+                  {stats.supplierStats.map((supplier, index) => (
+                    <tr key={index} className="border-b hover:bg-gray-50">
+                      <td className="py-3 px-4 font-medium">
+                        {supplier.supplier}
+                      </td>
+                      <td className="py-3 px-4 text-right">{supplier.orders}</td>
+                      <td className="py-3 px-4 text-right font-semibold">
+                        {formatCurrency(supplier.total)}
+                      </td>
+                      <td className="py-3 px-4 text-right text-gray-600">
+                        {formatCurrency(supplier.total / supplier.orders)}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          ) : (
+            <div className="flex flex-col items-center justify-center py-12 text-gray-400">
+              <ShoppingCart className="h-16 w-16 mb-4 opacity-20" />
+              <p className="text-sm font-medium">No hay datos de proveedores</p>
+              <p className="text-xs mt-2 text-center max-w-md">
+                Comienza registrando órdenes de compra a tus proveedores para ver<br />
+                estadísticas detalladas de inversión
+              </p>
+            </div>
+          )}
         </CardContent>
       </Card>
 
@@ -582,78 +609,89 @@ export default function PurchaseStatsPage() {
           <CardTitle>Top 10 Productos por Rentabilidad</CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="space-y-4">
-            <ResponsiveContainer width="100%" height={400}>
-              <BarChart data={stats.productStats}>
-                <CartesianGrid strokeDasharray="3 3" />
-                <XAxis
-                  dataKey="product"
-                  angle={-45}
-                  textAnchor="end"
-                  height={100}
-                />
-                <YAxis />
-                <Tooltip
-                  formatter={(value: number) => formatCurrency(value)}
-                  labelStyle={{ color: "#000" }}
-                />
-                <Legend />
-                <Bar dataKey="invested" fill="#FF8042" name="Invertido" />
-                <Bar dataKey="profit" fill="#00C49F" name="Ganancia" />
-              </BarChart>
-            </ResponsiveContainer>
+          {stats.productStats.length > 0 ? (
+            <div className="space-y-4">
+              <ResponsiveContainer width="100%" height={400}>
+                <BarChart data={stats.productStats}>
+                  <CartesianGrid strokeDasharray="3 3" />
+                  <XAxis
+                    dataKey="product"
+                    angle={-45}
+                    textAnchor="end"
+                    height={100}
+                  />
+                  <YAxis />
+                  <Tooltip
+                    formatter={(value: number) => formatCurrency(value)}
+                    labelStyle={{ color: "#000" }}
+                  />
+                  <Legend />
+                  <Bar dataKey="invested" fill="#FF8042" name="Invertido" />
+                  <Bar dataKey="profit" fill="#00C49F" name="Ganancia" />
+                </BarChart>
+              </ResponsiveContainer>
 
-            <div className="overflow-x-auto">
-              <table className="w-full mt-6">
-                <thead>
-                  <tr className="border-b">
-                    <th className="text-left py-3 px-4">Producto</th>
-                    <th className="text-right py-3 px-4">Unidades Vendidas</th>
-                    <th className="text-right py-3 px-4">Invertido</th>
-                    <th className="text-right py-3 px-4">Ganancia</th>
-                    <th className="text-right py-3 px-4">
-                      <span
-                        className="cursor-help"
-                        title="Retorno de la Inversión"
-                      >
-                        ROI
-                      </span>
-                    </th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {stats.productStats.map((product, index) => {
-                    const roi =
-                      product.invested > 0
-                        ? (product.profit / product.invested) * 100
-                        : 0;
-                    return (
-                      <tr key={index} className="border-b hover:bg-gray-50">
-                        <td className="py-3 px-4 font-medium">
-                          {product.product}
-                        </td>
-                        <td className="py-3 px-4 text-right">{product.sold}</td>
-                        <td className="py-3 px-4 text-right text-red-600">
-                          {formatCurrency(product.invested)}
-                        </td>
-                        <td className="py-3 px-4 text-right text-green-600 font-semibold">
-                          {formatCurrency(product.profit)}
-                        </td>
-                        <td className="py-3 px-4 text-right">
-                          <span
-                            className={`font-semibold ${roi > 0 ? "text-green-600" : "text-red-600"}`}
-                          >
-                            {roi > 0 ? "+" : ""}
-                            {roi.toFixed(1)}%
-                          </span>
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
+              <div className="overflow-x-auto">
+                <table className="w-full mt-6">
+                  <thead>
+                    <tr className="border-b">
+                      <th className="text-left py-3 px-4">Producto</th>
+                      <th className="text-right py-3 px-4">Unidades Vendidas</th>
+                      <th className="text-right py-3 px-4">Invertido</th>
+                      <th className="text-right py-3 px-4">Ganancia</th>
+                      <th className="text-right py-3 px-4">
+                        <span
+                          className="cursor-help"
+                          title="Retorno de la Inversión"
+                        >
+                          ROI
+                        </span>
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {stats.productStats.map((product, index) => {
+                      const roi =
+                        product.invested > 0
+                          ? (product.profit / product.invested) * 100
+                          : 0;
+                      return (
+                        <tr key={index} className="border-b hover:bg-gray-50">
+                          <td className="py-3 px-4 font-medium">
+                            {product.product}
+                          </td>
+                          <td className="py-3 px-4 text-right">{product.sold}</td>
+                          <td className="py-3 px-4 text-right text-red-600">
+                            {formatCurrency(product.invested)}
+                          </td>
+                          <td className="py-3 px-4 text-right text-green-600 font-semibold">
+                            {formatCurrency(product.profit)}
+                          </td>
+                          <td className="py-3 px-4 text-right">
+                            <span
+                              className={`font-semibold ${roi > 0 ? "text-green-600" : "text-red-600"}`}
+                            >
+                              {roi > 0 ? "+" : ""}
+                              {roi.toFixed(1)}%
+                            </span>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
             </div>
-          </div>
+          ) : (
+            <div className="flex flex-col items-center justify-center py-12 text-gray-400">
+              <Package className="h-16 w-16 mb-4 opacity-20" />
+              <p className="text-sm font-medium">No hay datos de rentabilidad de productos</p>
+              <p className="text-xs mt-2 text-center max-w-md">
+                Necesitas tener órdenes de compra y ventas registradas para ver<br />
+                el análisis de rentabilidad por producto
+              </p>
+            </div>
+          )}
         </CardContent>
       </Card>
     </div>

@@ -2,6 +2,8 @@
 
 import { useState, useEffect } from "react";
 import { useUser } from "@clerk/nextjs";
+import Link from "next/link";
+import Image from "next/image";
 import {
   Card,
   CardContent,
@@ -154,6 +156,23 @@ export default function ConfigPage() {
 
   return (
     <div className="space-y-6">
+      {/* Botón de WhatsApp flotante */}
+      <Link
+        href="https://wa.me/573174503604?text=Hola,%20tengo%20una%20pregunta%20sobre%20mi%20configuración"
+        target="_blank"
+        rel="noopener noreferrer"
+        className="fixed bottom-[10px] right-6 z-50 transition-transform hover:scale-110"
+        aria-label="Contactar por WhatsApp"
+      >
+        <Image
+          src="https://0dwas2ied3dcs14f.public.blob.vercel-storage.com/redes/social%20%281%29.png"
+          alt="WhatsApp"
+          className="w-14 h-14 md:w-16 md:h-16 drop-shadow-lg"
+          width={50}
+          height={50}
+        />
+      </Link>
+
       {/* Header */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
@@ -377,7 +396,7 @@ export default function ConfigPage() {
           </div>
 
           {/* Información sobre facturación electrónica */}
-          <div className="bg-white border border-gray-200 rounded-lg p-4">
+          {/* <div className="bg-white border border-gray-200 rounded-lg p-4">
             <h4 className="font-semibold text-gray-900 mb-3">
               ¿Necesitas Facturación Electrónica DIAN?
             </h4>
@@ -416,10 +435,10 @@ export default function ConfigPage() {
                 tecnológico. Nosotros solo integramos el sistema.
               </p>
             </div>
-          </div>
+          </div> */}
 
           {/* CTA para contactar */}
-          <div className="flex justify-center">
+          {/* <div className="flex justify-center">
             <Button
               variant="default"
               className="bg-green-600 hover:bg-green-700 cursor-pointer"
@@ -433,7 +452,7 @@ export default function ConfigPage() {
               <ExternalLink className="h-4 w-4 mr-2" />
               Contactar para Integración
             </Button>
-          </div>
+          </div> */}
         </CardContent>
       </Card>
 

@@ -122,11 +122,21 @@ export function SupplierForm({ initialData, supplierId }: SupplierFormProps) {
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="space-y-2">
-              <Label htmlFor="city">Ciudad <span className="text-gray-400"><i>(No obligatorio)</i></span></Label>
+              <Label htmlFor="city">
+                Ciudad{" "}
+                <span className="text-gray-400">
+                  <i>(No obligatorio)</i>
+                </span>
+              </Label>
               <Input id="city" {...register("city")} placeholder="Ej: Bogotá" />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="address">Dirección <span className="text-gray-400"><i>(No obligatorio)</i></span></Label>
+              <Label htmlFor="address">
+                Dirección{" "}
+                <span className="text-gray-400">
+                  <i>(No obligatorio)</i>
+                </span>
+              </Label>
               <Input
                 id="address"
                 {...register("address")}
@@ -148,7 +158,7 @@ export function SupplierForm({ initialData, supplierId }: SupplierFormProps) {
               <Label htmlFor="tax_id">NIT / RUT *</Label>
               <Input
                 id="tax_id"
-                {...register("tax_id", { required: true})}
+                {...register("tax_id", { required: true })}
                 placeholder="123456789-0"
               />
             </div>

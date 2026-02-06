@@ -30,7 +30,6 @@ import TrustBadges from "@/components/landing/TrustBadges";
 import VideoTutorials from "@/components/landing/VideoTutorials";
 import OvercomeResistance from "@/components/landing/OvercomeResistance";
 import FAQ from "@/components/landing/FAQ";
-import TawkToChat from "@/components/TawkToChat";
 import { landingConfig } from "@/lib/landing-config";
 
 export default function Home() {

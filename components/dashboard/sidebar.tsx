@@ -29,6 +29,8 @@ import {
   TrendingUp,
   GripVertical,
   UserCog,
+  ChevronLeft,
+  ChevronRight,
 } from "lucide-react";
 import {
   getUserProfileByClerkId,
@@ -174,7 +176,9 @@ interface SidebarProps {
 const MIN_WIDTH = 200;
 const MAX_WIDTH = 400;
 const DEFAULT_WIDTH = 256; // 16rem = 256px
+const COLLAPSED_WIDTH = 64; // Ancho cuando está colapsado
 const STORAGE_KEY = 'sidebar-width';
+const COLLAPSED_STORAGE_KEY = 'sidebar-collapsed';
 
 export function Sidebar({ isMobile = false, onLinkClick }: SidebarProps) {
   const pathname = usePathname();
@@ -188,9 +192,10 @@ export function Sidebar({ isMobile = false, onLinkClick }: SidebarProps) {
   // Estado para el ancho del sidebar
   const [sidebarWidth, setSidebarWidth] = useState(DEFAULT_WIDTH);
   const [isResizing, setIsResizing] = useState(false);
+  const [isCollapsed, setIsCollapsed] = useState(false);
   const sidebarRef = useRef<HTMLDivElement>(null);
 
-  // Cargar el ancho guardado del localStorage
+  // Cargar el ancho guardado y el estado de colapsado del localStorage
   useEffect(() => {
     if (!isMobile) {
       const savedWidth = localStorage.getItem(STORAGE_KEY);
@@ -200,15 +205,26 @@ export function Sidebar({ isMobile = false, onLinkClick }: SidebarProps) {
           setSidebarWidth(width);
         }
       }
+
+      const savedCollapsed = localStorage.getItem(COLLAPSED_STORAGE_KEY);
+      if (savedCollapsed === 'true') {
+        setIsCollapsed(true);
+      }
     }
   }, [isMobile]);
 
-  // Guardar el ancho en localStorage cuando cambia
+  // Guardar el ancho y estado de colapsado en localStorage cuando cambia
   useEffect(() => {
     if (!isMobile) {
       localStorage.setItem(STORAGE_KEY, sidebarWidth.toString());
+      localStorage.setItem(COLLAPSED_STORAGE_KEY, isCollapsed.toString());
     }
-  }, [sidebarWidth, isMobile]);
+  }, [sidebarWidth, isCollapsed, isMobile]);
+
+  // Función para alternar el estado de colapsado
+  const toggleCollapse = () => {
+    setIsCollapsed(!isCollapsed);
+  };
 
   // Manejar el redimensionamiento
   const handleMouseDown = useCallback((e: React.MouseEvent) => {
@@ -312,22 +328,39 @@ export function Sidebar({ isMobile = false, onLinkClick }: SidebarProps) {
     <aside
       ref={sidebarRef}
       className={sidebarClasses}
-      style={isMobile ? undefined : { width: `${sidebarWidth}px` }}
+      style={isMobile ? undefined : { width: isCollapsed ? `${COLLAPSED_WIDTH}px` : `${sidebarWidth}px` }}
     >
       {/* Header - Solo visible en desktop */}
-      <div className="hidden md:flex h-16 items-center px-6 border-b border-gray-800">
-        {isSuperAdmin ? (
-          <h1 className="text-xl font-bold">Admin Panel</h1>
-        ) : (
-          <Image
-            src="https://0dwas2ied3dcs14f.public.blob.vercel-storage.com/tienda_pos/posib_logo.png"
-            alt="posib.dev"
-            width={120}
-            height={40}
-            className="h-10 w-auto"
-            priority
-          />
+      <div className="hidden md:flex h-16 items-center px-6 border-b border-gray-800 justify-between">
+        {!isCollapsed && (
+          <>
+            {isSuperAdmin ? (
+              <h1 className="text-xl font-bold">Admin Panel</h1>
+            ) : (
+              <Image
+                src="https://0dwas2ied3dcs14f.public.blob.vercel-storage.com/tienda_pos/posib_logo.png"
+                alt="posib.dev"
+                width={120}
+                height={40}
+                className="h-10 w-auto"
+                priority
+              />
+            )}
+          </>
         )}
+
+        {/* Botón de colapsar/expandir */}
+        <button
+          onClick={toggleCollapse}
+          className="ml-auto p-2 rounded-lg hover:bg-gray-800 transition-colors"
+          aria-label={isCollapsed ? "Expandir menú" : "Colapsar menú"}
+        >
+          {isCollapsed ? (
+            <ChevronRight className="h-5 w-5 text-gray-400" />
+          ) : (
+            <ChevronLeft className="h-5 w-5 text-gray-400" />
+          )}
+        </button>
       </div>
 
       {/* Header móvil */}
@@ -386,53 +419,66 @@ export function Sidebar({ isMobile = false, onLinkClick }: SidebarProps) {
               key={item.href}
               href={item.href}
               onClick={onLinkClick}
+              title={isCollapsed ? item.title : undefined}
               className={cn(
-                "flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors",
+                "flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors relative group",
                 isActive
                   ? "bg-blue-600 text-white"
-                  : "text-gray-300 hover:bg-gray-800 hover:text-white"
+                  : "text-gray-300 hover:bg-gray-800 hover:text-white",
+                isCollapsed && "justify-center"
               )}
             >
-              <Icon className="h-5 w-5" />
-              <span className="flex-1">{item.title}</span>
-              {isAnalytics && userProfile && (
+              <Icon className={cn("h-5 w-5", isCollapsed && "flex-shrink-0")} />
+              {!isCollapsed && (
                 <>
-                  {userProfile.subscription_status === "trial" && (
-                    <span className="text-xs bg-gradient-to-r from-purple-500 to-pink-500 text-white px-2 py-0.5 rounded-full flex items-center gap-1">
-                      <Sparkles className="h-3 w-3" />
-                      Gratis
-                    </span>
+                  <span className="flex-1 whitespace-nowrap overflow-hidden text-ellipsis">{item.title}</span>
+                  {isAnalytics && userProfile && (
+                    <>
+                      {userProfile.subscription_status === "trial" && (
+                        <span className="text-xs bg-gradient-to-r from-purple-500 to-pink-500 text-white px-2 py-0.5 rounded-full flex items-center gap-1">
+                          <Sparkles className="h-3 w-3" />
+                          Gratis
+                        </span>
+                      )}
+                      {!hasAI && userProfile.subscription_status !== "trial" && (
+                        <Lock className="h-4 w-4 text-gray-400" />
+                      )}
+                    </>
                   )}
-                  {!hasAI && userProfile.subscription_status !== "trial" && (
-                    <Lock className="h-4 w-4 text-gray-400" />
+                  {isEmailMarketing && userProfile && (
+                    <>
+                      {userProfile.subscription_status === "trial" && (
+                        <span className="text-xs bg-gradient-to-r from-purple-500 to-pink-500 text-white px-2 py-0.5 rounded-full flex items-center gap-1">
+                          <Sparkles className="h-3 w-3" />
+                          Gratis
+                        </span>
+                      )}
+                      {!hasEmail && userProfile.subscription_status !== "trial" && (
+                        <Lock className="h-4 w-4 text-gray-400" />
+                      )}
+                    </>
+                  )}
+                  {(isStoreConfig || isWebOrders) && userProfile && (
+                    <>
+                      {userProfile.subscription_status === "trial" && (
+                        <span className="text-xs bg-gradient-to-r from-purple-500 to-pink-500 text-white px-2 py-0.5 rounded-full flex items-center gap-1">
+                          <Sparkles className="h-3 w-3" />
+                          Gratis
+                        </span>
+                      )}
+                      {!hasStore && userProfile.subscription_status !== "trial" && (
+                        <Lock className="h-4 w-4 text-gray-400" />
+                      )}
+                    </>
                   )}
                 </>
               )}
-              {isEmailMarketing && userProfile && (
-                <>
-                  {userProfile.subscription_status === "trial" && (
-                    <span className="text-xs bg-gradient-to-r from-purple-500 to-pink-500 text-white px-2 py-0.5 rounded-full flex items-center gap-1">
-                      <Sparkles className="h-3 w-3" />
-                      Gratis
-                    </span>
-                  )}
-                  {!hasEmail && userProfile.subscription_status !== "trial" && (
-                    <Lock className="h-4 w-4 text-gray-400" />
-                  )}
-                </>
-              )}
-              {(isStoreConfig || isWebOrders) && userProfile && (
-                <>
-                  {userProfile.subscription_status === "trial" && (
-                    <span className="text-xs bg-gradient-to-r from-purple-500 to-pink-500 text-white px-2 py-0.5 rounded-full flex items-center gap-1">
-                      <Sparkles className="h-3 w-3" />
-                      Gratis
-                    </span>
-                  )}
-                  {!hasStore && userProfile.subscription_status !== "trial" && (
-                    <Lock className="h-4 w-4 text-gray-400" />
-                  )}
-                </>
+
+              {/* Tooltip cuando está colapsado */}
+              {isCollapsed && (
+                <div className="absolute left-full ml-2 px-2 py-1 bg-gray-800 text-white text-xs rounded opacity-0 group-hover:opacity-100 pointer-events-none whitespace-nowrap z-50 transition-opacity">
+                  {item.title}
+                </div>
               )}
             </Link>
           );
@@ -518,36 +564,50 @@ export function Sidebar({ isMobile = false, onLinkClick }: SidebarProps) {
           <Link
             href="/dashboard/subscription"
             onClick={onLinkClick}
+            title={isCollapsed ? "Suscripción" : undefined}
             className={cn(
-              "flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors",
+              "flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors relative group",
               pathname === "/dashboard/subscription" ||
                 pathname?.startsWith("/dashboard/subscription/")
                 ? "bg-blue-600 text-white"
-                : "text-gray-300 hover:bg-gray-800 hover:text-white"
+                : "text-gray-300 hover:bg-gray-800 hover:text-white",
+              isCollapsed && "justify-center"
             )}
           >
             <CreditCard className="h-5 w-5" />
-            Suscripción
+            {!isCollapsed && <span>Suscripción</span>}
+            {isCollapsed && (
+              <div className="absolute left-full ml-2 px-2 py-1 bg-gray-800 text-white text-xs rounded opacity-0 group-hover:opacity-100 pointer-events-none whitespace-nowrap z-50 transition-opacity">
+                Suscripción
+              </div>
+            )}
           </Link>
         )}
         <Link
           href="/dashboard/config"
           onClick={onLinkClick}
+          title={isCollapsed ? "Configuración" : undefined}
           className={cn(
-            "flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors",
+            "flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors relative group",
             pathname === "/dashboard/config" ||
               pathname?.startsWith("/dashboard/config/")
               ? "bg-blue-600 text-white"
-              : "text-gray-300 hover:bg-gray-800 hover:text-white"
+              : "text-gray-300 hover:bg-gray-800 hover:text-white",
+            isCollapsed && "justify-center"
           )}
         >
           <Settings className="h-5 w-5" />
-          Configuración
+          {!isCollapsed && <span>Configuración</span>}
+          {isCollapsed && (
+            <div className="absolute left-full ml-2 px-2 py-1 bg-gray-800 text-white text-xs rounded opacity-0 group-hover:opacity-100 pointer-events-none whitespace-nowrap z-50 transition-opacity">
+              Configuración
+            </div>
+          )}
         </Link>
       </div>
 
-      {/* Handle de redimensionamiento - Solo visible en desktop */}
-      {!isMobile && (
+      {/* Handle de redimensionamiento - Solo visible en desktop y cuando NO está colapsado */}
+      {!isMobile && !isCollapsed && (
         <div
           onMouseDown={handleMouseDown}
           className={cn(

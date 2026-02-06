@@ -386,6 +386,7 @@ export interface PurchaseOrderItem {
 export interface PurchaseOrder {
   id: string;
   tenant_id: string;
+  user_profile_id: string;
   supplier_id: string;
   order_number: string;
   status: 'pendiente' | 'recibida' | 'cancelada';

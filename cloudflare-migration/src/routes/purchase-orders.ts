@@ -12,6 +12,7 @@ const app = new Hono<{ Bindings: Env }>();
 interface PurchaseOrder {
   id: string;
   tenant_id: string;
+  user_profile_id: string;
   supplier_id: string;
   order_number: string;
   status: 'pendiente' | 'recibida' | 'cancelada';
@@ -207,6 +208,7 @@ app.post('/', async (c) => {
 
     const orderData = {
       id: generateId('po'),
+      user_profile_id: tenant.id,
       supplier_id: body.supplier_id,
       order_number: orderNumber,
       status: body.status || 'pendiente',

@@ -8,6 +8,7 @@ import { Header } from "@/components/dashboard/header";
 import { TrialBanner } from "@/components/subscription/trial-banner";
 import { SubscriptionExpiredModal } from "@/components/subscription/expired-modal";
 import { ExpirationAlert } from "@/components/subscription/expiration-alert";
+import { TrialNotificationWrapper } from "@/components/subscription/trial-notification-wrapper";
 import OfflineProvider from "@/components/OfflineProvider";
 import {
   checkSubscriptionStatus,
@@ -151,6 +152,8 @@ export default function DashboardLayout({
   return (
     <OfflineProvider>
       <NoIndexMeta />
+      {/* Modal de notificación de trial - solo se muestra para usuarios en trial */}
+      {!isSuperAdmin && <TrialNotificationWrapper />}
       <div className="flex h-screen overflow-hidden">
         <Sidebar />
 

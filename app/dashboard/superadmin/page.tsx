@@ -285,6 +285,36 @@ export default function SuperAdminPage() {
     return Math.max(0, daysLeft);
   };
 
+  const getDaysRemainingForActive = (store: UserProfile): number | null => {
+    // Para usuarios activos con trial_end_date, mostrar días restantes hasta que termine la prueba
+    if (
+      store.subscription_status === "active" &&
+      store.trial_end_date
+    ) {
+      const now = new Date();
+      const trialEnd = new Date(store.trial_end_date);
+      const nowMidnight = new Date(
+        now.getFullYear(),
+        now.getMonth(),
+        now.getDate(),
+      );
+      const trialEndMidnight = new Date(
+        trialEnd.getFullYear(),
+        trialEnd.getMonth(),
+        trialEnd.getDate(),
+      );
+
+      const daysLeft = Math.ceil(
+        (trialEndMidnight.getTime() - nowMidnight.getTime()) /
+          (1000 * 60 * 60 * 24),
+      );
+
+      return Math.max(0, daysLeft);
+    }
+
+    return null;
+  };
+
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
@@ -768,7 +798,7 @@ export default function SuperAdminPage() {
                     <th className="text-left p-4 font-medium">Tienda</th>
                     <th className="text-left p-4 font-medium">Email</th>
                     <th className="text-left p-4 font-medium">Estado</th>
-                    <th className="text-left p-4 font-medium">Días Rest.</th>
+                    <th className="text-left p-4 font-medium">Días</th>
                     <th className="text-center p-4 font-medium">Productos</th>
                     <th className="text-center p-4 font-medium">Ventas</th>
                     <th className="text-center p-4 font-medium">Clientes</th>
@@ -802,6 +832,7 @@ export default function SuperAdminPage() {
 
                     const status = statusConfig[store.subscription_status];
                     const daysRemaining = getDaysRemaining(store);
+                    const daysRemainingActive = getDaysRemainingForActive(store);
                     const stats = storeStats.find(
                       (s) => s.storeId === store.id,
                     );
@@ -834,6 +865,18 @@ export default function SuperAdminPage() {
                               }`}
                             >
                               {daysRemaining} días
+                            </span>
+                          ) : daysRemainingActive !== null ? (
+                            <span
+                              className={`font-medium ${
+                                daysRemainingActive <= 3
+                                  ? "text-red-600"
+                                  : daysRemainingActive <= 7
+                                    ? "text-yellow-600"
+                                    : "text-blue-600"
+                              }`}
+                            >
+                              {daysRemainingActive} días
                             </span>
                           ) : (
                             <span className="text-gray-400">-</span>
