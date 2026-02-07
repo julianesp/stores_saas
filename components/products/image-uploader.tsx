@@ -76,9 +76,32 @@ export function ImageUploader({
     try {
       const uploadPromises = filesToUpload.map(async (file, index) => {
         try {
-          // Validar tipo de archivo
-          if (!file.type.startsWith('image/')) {
-            toast.error(`Solo se permiten imágenes. Archivo: ${file.name}`);
+          // Lista de extensiones válidas
+          const validExtensions = ['jpg', 'jpeg', 'png', 'gif', 'webp', 'bmp', 'svg', 'tiff', 'tif', 'avif', 'heic', 'heif'];
+          const validMimeTypes = [
+            'image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp',
+            'image/bmp', 'image/svg+xml', 'image/tiff', 'image/avif',
+            'image/heic', 'image/heif', 'image/x-icon'
+          ];
+
+          // Obtener extensión del archivo
+          const fileExtension = file.name.split('.').pop()?.toLowerCase() || '';
+
+          // Validar por tipo MIME o por extensión (más permisivo)
+          const isValidMimeType = file.type.startsWith('image/') || validMimeTypes.includes(file.type);
+          const isValidExtension = validExtensions.includes(fileExtension);
+
+          console.log('📋 Validación de archivo:', {
+            nombre: file.name,
+            tipo: file.type,
+            extensión: fileExtension,
+            tamañoMB: (file.size / 1024 / 1024).toFixed(2),
+            validMime: isValidMimeType,
+            validExt: isValidExtension
+          });
+
+          if (!isValidMimeType && !isValidExtension) {
+            toast.error(`Formato no soportado: ${file.name}. Usa: JPG, PNG, GIF, WebP, BMP, SVG, TIFF, AVIF, HEIC`);
             return null;
           }
 
@@ -582,7 +605,7 @@ export function ImageUploader({
           {/* Input oculto para selección de archivos */}
           <input
             type="file"
-            accept="image/*"
+            accept="image/jpeg,image/jpg,image/png,image/gif,image/webp,image/bmp,image/svg+xml,image/tiff,image/avif,image/heic,image/heif,.jpg,.jpeg,.png,.gif,.webp,.bmp,.svg,.tiff,.tif,.avif,.heic,.heif"
             multiple
             onChange={handleFileSelect}
             className="hidden"
@@ -639,7 +662,7 @@ export function ImageUploader({
           </div>
 
           <p className="text-xs text-gray-500 text-center">
-            {images.length}/{maxImages} {maxImages === 1 ? 'imagen' : 'imágenes'} • JPG, PNG o WEBP • Máx 5MB
+            {images.length}/{maxImages} {maxImages === 1 ? 'imagen' : 'imágenes'} • JPG, PNG, GIF, WebP, BMP, SVG, TIFF, AVIF, HEIC • Máx 5MB
           </p>
         </div>
       )}

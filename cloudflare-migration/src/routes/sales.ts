@@ -291,4 +291,84 @@ app.put('/:id', async (c) => {
   }
 });
 
+// DELETE /api/sales/:id - Delete sale and restore inventory
+app.delete('/:id', async (c) => {
+  const tenant: Tenant = c.get('tenant');
+  const saleId = c.req.param('id');
+
+  try {
+    const tenantDB = new TenantDB(c.env.DB, tenant.id);
+
+    // Obtener la venta antes de eliminarla
+    const sale = await tenantDB.getById<Sale>('sales', saleId);
+    if (!sale) {
+      return c.json<APIResponse>({
+        success: false,
+        error: 'Sale not found',
+      }, 404);
+    }
+
+    // Obtener los items de la venta para restaurar el inventario
+    const saleItems = await tenantDB.query<SaleItem>('sale_items', 'sale_id = ?', [saleId]);
+
+    // Restaurar el stock de cada producto
+    for (const item of saleItems) {
+      const product = await tenantDB.getById<any>('products', item.product_id);
+      if (product) {
+        // Restaurar el stock (sumar la cantidad que se había vendido)
+        const restoredStock = product.stock + item.quantity;
+        await tenantDB.update('products', item.product_id, {
+          stock: restoredStock
+        });
+
+        console.log(`📦 Stock restaurado para producto ${product.name}: ${product.stock} → ${restoredStock}`);
+      }
+    }
+
+    // Si la venta tenía puntos ganados y un cliente, restar esos puntos
+    if (sale.customer_id && sale.points_earned && sale.points_earned > 0) {
+      const customer = await tenantDB.getById<any>('customers', sale.customer_id);
+      if (customer) {
+        const updatedPoints = Math.max(0, (customer.loyalty_points || 0) - sale.points_earned);
+        await tenantDB.update('customers', sale.customer_id, {
+          loyalty_points: updatedPoints
+        });
+        console.log(`🎯 Puntos descontados del cliente: ${customer.loyalty_points} → ${updatedPoints}`);
+      }
+    }
+
+    // Si era una venta a crédito, actualizar la deuda del cliente
+    if (sale.customer_id && sale.payment_method === 'credito' && sale.amount_pending && sale.amount_pending > 0) {
+      const customer = await tenantDB.getById<any>('customers', sale.customer_id);
+      if (customer && customer.current_debt) {
+        const updatedDebt = Math.max(0, customer.current_debt - sale.amount_pending);
+        await tenantDB.update('customers', sale.customer_id, {
+          current_debt: updatedDebt
+        });
+        console.log(`💰 Deuda actualizada del cliente: ${customer.current_debt} → ${updatedDebt}`);
+      }
+    }
+
+    // Eliminar los items de la venta
+    await tenantDB.db
+      .prepare('DELETE FROM sale_items WHERE tenant_id = ? AND sale_id = ?')
+      .bind(tenant.id, saleId)
+      .run();
+
+    // Eliminar la venta
+    await tenantDB.delete('sales', saleId);
+
+    return c.json<APIResponse>({
+      success: true,
+      message: 'Sale deleted successfully and inventory restored',
+    });
+  } catch (error: any) {
+    console.error('Error deleting sale:', error);
+    return c.json<APIResponse>({
+      success: false,
+      error: error.message || 'Failed to delete sale',
+    }, 500);
+  }
+});
+
 export default app;

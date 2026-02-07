@@ -342,4 +342,34 @@ app.get('/low-stock', async (c) => {
   }
 });
 
+// GET /api/products/:id/has-sales - Check if product has sales
+app.get('/:id/has-sales', async (c) => {
+  const tenant: Tenant = c.get('tenant');
+  const productId = c.req.param('id');
+
+  try {
+    // Check if product has sales
+    const salesCount = await c.env.DB
+      .prepare('SELECT COUNT(*) as count FROM sale_items WHERE tenant_id = ? AND product_id = ?')
+      .bind(tenant.id, productId)
+      .first<{ count: number }>();
+
+    const hasSales = salesCount ? salesCount.count > 0 : false;
+
+    return c.json<APIResponse<{ hasSales: boolean; salesCount: number }>>({
+      success: true,
+      data: {
+        hasSales,
+        salesCount: salesCount?.count || 0,
+      },
+    });
+  } catch (error) {
+    console.error('Error checking product sales:', error);
+    return c.json<APIResponse>({
+      success: false,
+      error: 'Failed to check product sales',
+    }, 500);
+  }
+});
+
 export default app;

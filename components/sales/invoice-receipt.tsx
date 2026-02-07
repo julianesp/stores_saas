@@ -114,27 +114,42 @@ export const InvoiceReceipt = forwardRef<HTMLDivElement, InvoiceReceiptProps>(
           </div>
 
           {/* Items */}
-          {saleItems.map((item, index) => (
-            <div key={index} className="mb-2" style={{ color: '#000000' }}>
-              <div className="flex items-start">
-                <div className="flex-1 pr-2">
-                  <span className="font-medium" style={{ color: '#000000' }}>{item.product?.name || 'Producto'}</span>
-                  {item.discount > 0 && (
-                    <span className="text-xs ml-2" style={{ color: '#dc2626' }}>
-                      (Desc: {formatCurrency(item.discount)})
-                    </span>
-                  )}
-                </div>
-                <div className="w-16 text-center" style={{ color: '#000000' }}>{item.quantity}</div>
-                <div className="w-24 text-right" style={{ color: '#000000' }}>
-                  {formatCurrency(item.unit_price)}
-                </div>
-                <div className="w-24 text-right font-medium" style={{ color: '#000000' }}>
-                  {formatCurrency(item.subtotal)}
+          {saleItems.map((item, index) => {
+            // Si el producto se vende por unidades, convertir la cantidad de paquetes a unidades
+            let displayQuantity = item.quantity;
+
+            if (item.product?.sell_by_unit && item.product?.units_per_package) {
+              // Convertir de paquetes a unidades (ej: 0.1666 cubetas × 30 = 5 huevos)
+              displayQuantity = item.quantity * item.product.units_per_package;
+            }
+
+            // Formatear cantidad: mostrar como entero si es entero, o con máximo 2 decimales
+            const formattedQuantity = Number.isInteger(displayQuantity)
+              ? displayQuantity.toString()
+              : displayQuantity.toFixed(2).replace(/\.?0+$/, '');
+
+            return (
+              <div key={index} className="mb-2" style={{ color: '#000000' }}>
+                <div className="flex items-start">
+                  <div className="flex-1 pr-2">
+                    <span className="font-medium" style={{ color: '#000000' }}>{item.product?.name || 'Producto'}</span>
+                    {item.discount > 0 && (
+                      <span className="text-xs ml-2" style={{ color: '#dc2626' }}>
+                        (Desc: {formatCurrency(item.discount)})
+                      </span>
+                    )}
+                  </div>
+                  <div className="w-16 text-center" style={{ color: '#000000' }}>{formattedQuantity}</div>
+                  <div className="w-24 text-right" style={{ color: '#000000' }}>
+                    {formatCurrency(item.unit_price)}
+                  </div>
+                  <div className="w-24 text-right font-medium" style={{ color: '#000000' }}>
+                    {formatCurrency(item.subtotal)}
+                  </div>
                 </div>
               </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
 
         {/* Totales */}

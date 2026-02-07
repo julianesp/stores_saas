@@ -691,7 +691,10 @@ export default function POSPage() {
       }
 
       const subtotal = cart.reduce(
-        (sum, item) => sum + item.product.sale_price * item.quantity,
+        (sum, item) => {
+          const price = item.effectivePrice || item.product.sale_price;
+          return sum + price * item.quantity;
+        },
         0,
       );
       // El número de venta se genera automáticamente en la API de Cloudflare
@@ -1098,18 +1101,21 @@ export default function POSPage() {
               setLastSale(sale);
               // Construir los items con la información del producto
               const saleItemsWithProducts: SaleItemWithProduct[] = cart.map(
-                (cartItem) => ({
-                  id: "", // Se genera en la API
-                  user_profile_id: (sale as Sale).user_profile_id,
-                  sale_id: sale.id,
-                  product_id: cartItem.product.id,
-                  quantity: cartItem.quantity,
-                  unit_price: cartItem.product.sale_price,
-                  discount: 0,
-                  subtotal: cartItem.product.sale_price * cartItem.quantity,
-                  created_at: new Date().toISOString(),
-                  product: cartItem.product,
-                }),
+                (cartItem) => {
+                  const price = cartItem.effectivePrice || cartItem.product.sale_price;
+                  return {
+                    id: "", // Se genera en la API
+                    user_profile_id: (sale as Sale).user_profile_id,
+                    sale_id: sale.id,
+                    product_id: cartItem.product.id,
+                    quantity: cartItem.quantity,
+                    unit_price: price,
+                    discount: 0,
+                    subtotal: price * cartItem.quantity,
+                    created_at: new Date().toISOString(),
+                    product: cartItem.product,
+                  };
+                },
               );
               setLastSaleItems(saleItemsWithProducts);
               setLastSaleCustomer(selectedCustomer);
@@ -1600,9 +1606,10 @@ export default function POSPage() {
 
                               if (checked) {
                                 const total = cart.reduce(
-                                  (sum, item) =>
-                                    sum +
-                                    item.product.sale_price * item.quantity,
+                                  (sum, item) => {
+                                    const price = item.effectivePrice || item.product.sale_price;
+                                    return sum + price * item.quantity;
+                                  },
                                   0,
                                 );
                                 const discount = Math.round(
@@ -1965,8 +1972,10 @@ export default function POSPage() {
                           <span>
                             {formatCurrency(
                               cart.reduce(
-                                (sum, item) =>
-                                  sum + item.product.sale_price * item.quantity,
+                                (sum, item) => {
+                                  const price = item.effectivePrice || item.product.sale_price;
+                                  return sum + price * item.quantity;
+                                },
                                 0,
                               ),
                             )}

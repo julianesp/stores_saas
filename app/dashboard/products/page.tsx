@@ -9,10 +9,11 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { useAuth } from '@clerk/nextjs';
-import { getProducts, deleteProduct as deleteProductAPI, getCategories } from '@/lib/cloudflare-api';
+import { getProducts, deleteProduct as deleteProductAPI, checkProductHasSales, getCategories } from '@/lib/cloudflare-api';
 import { Product, ProductWithRelations, Category, Supplier } from '@/lib/types';
 import { formatCurrency } from '@/lib/utils';
 import Swal from '@/lib/sweetalert';
+import SwalOriginal from 'sweetalert2';
 import { CategoryManagerModal } from '@/components/products/category-manager-modal';
 // COMENTADO: Tour deshabilitado
 // import { useTour } from '@/hooks/useTour';
@@ -83,23 +84,82 @@ export default function ProductsPage() {
     const product = products.find(p => p.id === id);
     const productName = product?.name || 'este producto';
 
-    const confirmed = await Swal.deleteConfirm(
-      productName,
-      'Esta acción no se puede deshacer'
-    );
-
-    if (!confirmed) return;
-
     try {
+      // Primero verificar si el producto tiene ventas
+      Swal.loading('Verificando producto...');
+      const { hasSales, salesCount } = await checkProductHasSales(id, getToken);
+      Swal.closeLoading();
+
+      // Si tiene ventas, mostrar advertencia y no permitir eliminar
+      if (hasSales) {
+        const result = await SwalOriginal.fire({
+          icon: 'warning',
+          title: '⚠️ No se puede eliminar',
+          html: `
+            <div class="text-left space-y-3">
+              <p class="font-medium text-gray-800">
+                No se puede eliminar un producto que tiene ventas registradas.
+              </p>
+              <div class="bg-gray-50 border border-gray-200 rounded-lg p-3 text-sm mb-3">
+                <p class="text-gray-700">
+                  <strong>${productName}</strong> tiene <strong>${salesCount}</strong> venta${salesCount > 1 ? 's' : ''} registrada${salesCount > 1 ? 's' : ''} en el historial.
+                </p>
+              </div>
+              <div class="bg-blue-50 border border-blue-200 rounded-lg p-3 text-sm">
+                <p class="text-blue-800 mb-2">
+                  <strong>💡 ¿Por qué no se puede eliminar?</strong>
+                </p>
+                <p class="text-blue-700">
+                  Para mantener la integridad del historial de ventas, facturas e inventario,
+                  no podemos eliminar productos que ya se han vendido.
+                </p>
+              </div>
+              <div class="bg-green-50 border border-green-200 rounded-lg p-3 text-sm">
+                <p class="text-green-800 mb-2">
+                  <strong>✅ En su lugar, puedes establecer su cantidad en 0</strong>
+                </p>
+                <p class="text-green-700">
+                  Esto marcará el producto como no disponible.
+                  El producto dejará de aparecer en el POS pero se conservará en el historial.
+                </p>
+              </div>
+            </div>
+          `,
+          showCancelButton: true,
+          confirmButtonText: '✏️ Editar Producto',
+          cancelButtonText: 'Cerrar',
+          confirmButtonColor: '#3b82f6',
+          cancelButtonColor: '#6b7280',
+          width: '600px',
+        });
+
+        // Si el usuario quiere editar el producto, navegar a la página de edición
+        if (result.isConfirmed) {
+          window.location.href = `/dashboard/products/${id}`;
+        }
+        return;
+      }
+
+      // Si no tiene ventas, proceder con la confirmación normal
+      const confirmed = await Swal.deleteConfirm(
+        productName,
+        'Esta acción no se puede deshacer'
+      );
+
+      if (!confirmed) return;
+
       Swal.loading('Eliminando producto...');
       await deleteProductAPI(id, getToken);
       Swal.closeLoading();
       Swal.success('Producto eliminado correctamente');
       fetchProducts();
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error deleting product:', error);
       Swal.closeLoading();
-      Swal.error('No se pudo eliminar el producto', 'Intenta de nuevo');
+      Swal.error(
+        'No se pudo eliminar el producto',
+        error?.message || 'Intenta de nuevo'
+      );
     }
   };
 

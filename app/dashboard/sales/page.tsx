@@ -12,6 +12,7 @@ import {
   Brain,
   FileText,
   Printer,
+  Trash2,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -23,6 +24,7 @@ import {
   getSales,
   getAllUserProfiles,
   getUserProfile,
+  deleteSale,
 } from "@/lib/cloudflare-api";
 import {
   SaleWithRelations,
@@ -42,6 +44,8 @@ import {
   exportSalesForPredictions,
 } from "@/lib/excel-export";
 import { InvoiceModal } from "@/components/sales/invoice-modal";
+import Swal from "@/lib/sweetalert";
+import SwalOriginal from "sweetalert2";
 
 export default function SalesPage() {
   const { getToken } = useAuth();
@@ -50,6 +54,7 @@ export default function SalesPage() {
   const [sales, setSales] = useState<SaleWithRelations[]>([]);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState("all"); // all, today, week, month
+  const [selectedSales, setSelectedSales] = useState<Set<string>>(new Set());
   const [customStartDate, setCustomStartDate] = useState("");
   const [customEndDate, setCustomEndDate] = useState("");
   const [showCustomDateRange, setShowCustomDateRange] = useState(false);
@@ -248,6 +253,298 @@ export default function SalesPage() {
     setShowInvoiceModal(true);
   };
 
+  const handleDeleteSale = async (sale: SaleWithRelations) => {
+    // Construir mensaje detallado
+    const itemsCount = sale.items?.length || 0;
+    let warningMessage = `<div class="text-left">
+      <p class="mb-3"><strong>Venta:</strong> ${sale.sale_number}</p>
+      <p class="mb-3"><strong>Total:</strong> ${formatCurrency(sale.total)}</p>
+      <p class="mb-3"><strong>Productos:</strong> ${itemsCount} item(s)</p>
+
+      <div class="bg-yellow-50 border-l-4 border-yellow-400 p-4 my-4">
+        <p class="font-bold text-yellow-800 mb-2">⚠️ IMPORTANTE:</p>
+        <ul class="text-sm text-yellow-700 space-y-1">
+          <li>📦 Los productos volverán al inventario</li>`;
+
+    if (sale.points_earned && sale.points_earned > 0) {
+      warningMessage += `
+          <li>🎯 Se descontarán ${sale.points_earned} puntos del cliente</li>`;
+    }
+
+    if (sale.payment_method === 'credito' && sale.amount_pending && sale.amount_pending > 0) {
+      warningMessage += `
+          <li>💰 La deuda del cliente se reducirá en ${formatCurrency(sale.amount_pending)}</li>`;
+    }
+
+    warningMessage += `
+        </ul>
+      </div>
+
+      <p class="text-red-600 font-semibold">Esta acción no se puede deshacer</p>
+    </div>`;
+
+    const result = await SwalOriginal.fire({
+      title: "¿Eliminar esta venta?",
+      html: warningMessage,
+      icon: "warning",
+      showCancelButton: true,
+      confirmButtonText: "Sí, eliminar",
+      cancelButtonText: "Cancelar",
+      confirmButtonColor: "#dc2626",
+      cancelButtonColor: "#64748b",
+      reverseButtons: true,
+      focusCancel: true,
+    });
+
+    if (!result.isConfirmed) return;
+
+    try {
+      await deleteSale(sale.id, getToken);
+
+      Swal.success(
+        "Venta eliminada",
+        "La venta ha sido eliminada y el inventario restaurado correctamente"
+      );
+
+      // Recargar la lista de ventas
+      await fetchSales();
+    } catch (error: any) {
+      console.error("Error eliminando venta:", error);
+      Swal.error(
+        "Error al eliminar",
+        error.message || "No se pudo eliminar la venta"
+      );
+    }
+  };
+
+  const toggleSelectSale = (saleId: string) => {
+    const newSelected = new Set(selectedSales);
+    if (newSelected.has(saleId)) {
+      newSelected.delete(saleId);
+    } else {
+      newSelected.add(saleId);
+    }
+    setSelectedSales(newSelected);
+  };
+
+  const toggleSelectAll = () => {
+    if (selectedSales.size === sales.length) {
+      setSelectedSales(new Set());
+    } else {
+      setSelectedSales(new Set(sales.map(s => s.id)));
+    }
+  };
+
+  const handleDeleteSelected = async () => {
+    if (selectedSales.size === 0) {
+      Swal.warning("Sin selección", "No hay ventas seleccionadas para eliminar");
+      return;
+    }
+
+    const selectedSalesData = sales.filter(s => selectedSales.has(s.id));
+    const totalAmount = selectedSalesData.reduce((sum, s) => sum + s.total, 0);
+    const totalItems = selectedSalesData.reduce((sum, s) => sum + (s.items?.length || 0), 0);
+    const totalPoints = selectedSalesData.reduce((sum, s) => sum + (s.points_earned || 0), 0);
+    const creditSales = selectedSalesData.filter(s => s.payment_method === 'credito');
+
+    let warningMessage = `<div class="text-left">
+      <p class="mb-3"><strong>Ventas a eliminar:</strong> ${selectedSales.size}</p>
+      <p class="mb-3"><strong>Monto total:</strong> ${formatCurrency(totalAmount)}</p>
+      <p class="mb-3"><strong>Productos totales:</strong> ${totalItems} item(s)</p>
+
+      <div class="bg-yellow-50 border-l-4 border-yellow-400 p-4 my-4">
+        <p class="font-bold text-yellow-800 mb-2">⚠️ IMPORTANTE:</p>
+        <ul class="text-sm text-yellow-700 space-y-1">
+          <li>📦 Todos los productos volverán al inventario</li>`;
+
+    if (totalPoints > 0) {
+      warningMessage += `
+          <li>🎯 Se descontarán ${totalPoints} puntos totales de los clientes</li>`;
+    }
+
+    if (creditSales.length > 0) {
+      const totalCredit = creditSales.reduce((sum, s) => sum + (s.amount_pending || 0), 0);
+      warningMessage += `
+          <li>💰 ${creditSales.length} venta(s) a crédito - se reducirá la deuda en ${formatCurrency(totalCredit)}</li>`;
+    }
+
+    warningMessage += `
+        </ul>
+      </div>
+
+      <p class="text-red-600 font-semibold">Esta acción no se puede deshacer</p>
+    </div>`;
+
+    const result = await SwalOriginal.fire({
+      title: `¿Eliminar ${selectedSales.size} venta(s)?`,
+      html: warningMessage,
+      icon: "warning",
+      showCancelButton: true,
+      confirmButtonText: "Sí, eliminar todas",
+      cancelButtonText: "Cancelar",
+      confirmButtonColor: "#dc2626",
+      cancelButtonColor: "#64748b",
+      reverseButtons: true,
+      focusCancel: true,
+    });
+
+    if (!result.isConfirmed) return;
+
+    try {
+      let successCount = 0;
+      let errorCount = 0;
+
+      for (const saleId of selectedSales) {
+        try {
+          await deleteSale(saleId, getToken);
+          successCount++;
+        } catch (error) {
+          errorCount++;
+          console.error(`Error eliminando venta ${saleId}:`, error);
+        }
+      }
+
+      if (errorCount === 0) {
+        Swal.success(
+          "Ventas eliminadas",
+          `Se eliminaron ${successCount} venta(s) correctamente`
+        );
+      } else {
+        Swal.warning(
+          "Eliminación parcial",
+          `Se eliminaron ${successCount} venta(s). ${errorCount} fallaron.`
+        );
+      }
+
+      setSelectedSales(new Set());
+      await fetchSales();
+    } catch (error: any) {
+      console.error("Error eliminando ventas:", error);
+      Swal.error(
+        "Error al eliminar",
+        error.message || "No se pudieron eliminar las ventas"
+      );
+    }
+  };
+
+  const handleDeleteAll = async () => {
+    if (sales.length === 0) {
+      Swal.warning("Sin ventas", "No hay ventas para eliminar");
+      return;
+    }
+
+    const totalAmount = sales.reduce((sum, s) => sum + s.total, 0);
+    const totalItems = sales.reduce((sum, s) => sum + (s.items?.length || 0), 0);
+    const totalPoints = sales.reduce((sum, s) => sum + (s.points_earned || 0), 0);
+    const creditSales = sales.filter(s => s.payment_method === 'credito');
+
+    let warningMessage = `<div class="text-left">
+      <div class="bg-red-100 border-l-4 border-red-500 p-4 mb-4">
+        <p class="font-bold text-red-800 mb-2 text-lg">🚨 ACCIÓN IRREVERSIBLE</p>
+        <p class="text-red-700">Estás a punto de eliminar TODAS las ventas</p>
+      </div>
+
+      <p class="mb-3"><strong>Total de ventas:</strong> ${sales.length}</p>
+      <p class="mb-3"><strong>Monto total:</strong> ${formatCurrency(totalAmount)}</p>
+      <p class="mb-3"><strong>Productos totales:</strong> ${totalItems} item(s)</p>
+
+      <div class="bg-yellow-50 border-l-4 border-yellow-400 p-4 my-4">
+        <p class="font-bold text-yellow-800 mb-2">⚠️ QUÉ SUCEDERÁ:</p>
+        <ul class="text-sm text-yellow-700 space-y-2">
+          <li>📦 <strong>TODOS</strong> los productos volverán al inventario</li>`;
+
+    if (totalPoints > 0) {
+      warningMessage += `
+          <li>🎯 Se descontarán <strong>${totalPoints} puntos</strong> totales de los clientes</li>`;
+    }
+
+    if (creditSales.length > 0) {
+      const totalCredit = creditSales.reduce((sum, s) => sum + (s.amount_pending || 0), 0);
+      warningMessage += `
+          <li>💰 <strong>${creditSales.length} venta(s) a crédito</strong> - se reducirá la deuda total en ${formatCurrency(totalCredit)}</li>`;
+    }
+
+    warningMessage += `
+          <li>🗑️ Se eliminarán <strong>TODAS</strong> las ${sales.length} ventas del historial</li>
+        </ul>
+      </div>
+
+      <p class="text-red-600 font-bold text-lg mt-4">⚠️ ESTA ACCIÓN NO SE PUEDE DESHACER ⚠️</p>
+    </div>`;
+
+    const result = await SwalOriginal.fire({
+      title: `¿Eliminar TODAS las ${sales.length} ventas?`,
+      html: warningMessage,
+      icon: "error",
+      showCancelButton: true,
+      confirmButtonText: "Sí, eliminar TODAS",
+      cancelButtonText: "Cancelar",
+      confirmButtonColor: "#dc2626",
+      cancelButtonColor: "#64748b",
+      reverseButtons: true,
+      focusCancel: true,
+    });
+
+    if (!result.isConfirmed) return;
+
+    // Doble confirmación con advertencia más seria
+    const confirmAgain = await SwalOriginal.fire({
+      title: "🚨 ÚLTIMA CONFIRMACIÓN 🚨",
+      html: `<div class="text-center">
+        <p class="text-lg font-bold mb-3">¿Estás COMPLETAMENTE seguro?</p>
+        <p class="mb-3">Se eliminarán <strong class="text-red-600">${sales.length} ventas</strong></p>
+        <p class="mb-3">Por un total de <strong class="text-red-600">${formatCurrency(totalAmount)}</strong></p>
+        <p class="text-red-600 font-bold mt-4">NO PODRÁS RECUPERAR ESTA INFORMACIÓN</p>
+      </div>`,
+      icon: "error",
+      showCancelButton: true,
+      confirmButtonText: "SÍ, ELIMINAR TODO",
+      cancelButtonText: "Cancelar",
+      confirmButtonColor: "#dc2626",
+      cancelButtonColor: "#64748b",
+      reverseButtons: true,
+      focusCancel: true,
+    });
+
+    if (!confirmAgain.isConfirmed) return;
+
+    try {
+      let successCount = 0;
+      let errorCount = 0;
+
+      for (const sale of sales) {
+        try {
+          await deleteSale(sale.id, getToken);
+          successCount++;
+        } catch (error) {
+          errorCount++;
+          console.error(`Error eliminando venta ${sale.id}:`, error);
+        }
+      }
+
+      if (errorCount === 0) {
+        Swal.success(
+          "Todas las ventas eliminadas",
+          `Se eliminaron ${successCount} venta(s) correctamente`
+        );
+      } else {
+        Swal.warning(
+          "Eliminación parcial",
+          `Se eliminaron ${successCount} venta(s). ${errorCount} fallaron.`
+        );
+      }
+
+      setSelectedSales(new Set());
+      await fetchSales();
+    } catch (error: any) {
+      console.error("Error eliminando ventas:", error);
+      Swal.error(
+        "Error al eliminar",
+        error.message || "No se pudieron eliminar las ventas"
+      );
+    }
+  };
+
   return (
     <div className="space-y-4 md:space-y-6 ">
       <div className="flex flex-col md:flex-row md:justify-between md:items-center gap-4 ">
@@ -269,7 +566,8 @@ export default function SalesPage() {
             <FileSpreadsheet className="mr-2 h-4 w-4" />
             Exportar a Excel
           </Button>
-          <Button
+
+          {/* <Button
             variant="outline"
             onClick={handleExportForPredictions}
             disabled={sales.length === 0}
@@ -277,9 +575,10 @@ export default function SalesPage() {
           >
             <Brain className="mr-2 h-4 w-4" />
             Exportar para Predicciones
-          </Button>
+          </Button> */}
         </div>
       </div>
+
 
       {/* Filtros */}
       <Card>
@@ -403,11 +702,61 @@ export default function SalesPage() {
             </div>
           ) : (
             <>
+              {/* Botones de eliminación masiva - Sticky */}
+              {selectedSales.size > 0 && (
+                <div className="sticky top-0 z-10 bg-blue-50 border border-blue-200 rounded-lg p-3 mb-4 flex flex-col sm:flex-row items-center justify-between gap-3 shadow-md">
+                  <div className="text-sm font-medium text-blue-900">
+                    {selectedSales.size} venta(s) seleccionada(s)
+                  </div>
+                  <div className="flex gap-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setSelectedSales(new Set())}
+                    >
+                      Cancelar selección
+                    </Button>
+                    <Button
+                      variant="destructive"
+                      size="sm"
+                      onClick={handleDeleteSelected}
+                    >
+                      <Trash2 className="mr-2 h-4 w-4" />
+                      Eliminar seleccionadas
+                    </Button>
+                  </div>
+                </div>
+              )}
+
+              {/* Botón para eliminar todas */}
+              {/* {sales.length > 0 && (
+                <div className="flex justify-end mb-4">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={handleDeleteAll}
+                    className="text-red-600 hover:text-red-700 hover:bg-red-50 border-red-300"
+                  >
+                    <Trash2 className="mr-2 h-4 w-4" />
+                    Eliminar todas las ventas ({sales.length})
+                  </Button>
+                </div>
+              )} */}
+
               {/* Vista de tabla para desktop */}
               <div className="hidden lg:block overflow-x-auto">
                 <table className="w-full">
                   <thead>
                     <tr className="border-b">
+                      <th className="text-center py-3 px-4 w-12">
+                        <input
+                          type="checkbox"
+                          checked={selectedSales.size === sales.length && sales.length > 0}
+                          onChange={toggleSelectAll}
+                          className="w-4 h-4 cursor-pointer"
+                          title="Seleccionar todas"
+                        />
+                      </th>
                       <th className="text-left py-3 px-4">Número</th>
                       <th className="text-left py-3 px-4">Fecha</th>
                       <th className="text-left py-3 px-4">Cliente</th>
@@ -422,6 +771,14 @@ export default function SalesPage() {
                   <tbody>
                     {sales.map((sale) => (
                       <tr key={sale.id} className="border-b hover:bg-gray-50">
+                        <td className="py-3 px-4 text-center">
+                          <input
+                            type="checkbox"
+                            checked={selectedSales.has(sale.id)}
+                            onChange={() => toggleSelectSale(sale.id)}
+                            className="w-4 h-4 cursor-pointer"
+                          />
+                        </td>
                         <td className="py-3 px-4 font-mono text-sm">
                           {sale.sale_number}
                         </td>
@@ -537,6 +894,15 @@ export default function SalesPage() {
                             >
                               <FileText className="h-4 w-4" />
                             </Button>
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => handleDeleteSale(sale)}
+                              title="Eliminar venta"
+                              className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
                           </div>
                         </td>
                       </tr>
@@ -551,10 +917,17 @@ export default function SalesPage() {
                   <Card key={sale.id}>
                     <CardContent className="p-4">
                       <div className="flex justify-between items-start mb-3">
-                        <div>
-                          <p className="font-mono text-sm font-semibold">
-                            {sale.sale_number}
-                          </p>
+                        <div className="flex items-start gap-3">
+                          <input
+                            type="checkbox"
+                            checked={selectedSales.has(sale.id)}
+                            onChange={() => toggleSelectSale(sale.id)}
+                            className="w-4 h-4 cursor-pointer mt-1"
+                          />
+                          <div>
+                            <p className="font-mono text-sm font-semibold">
+                              {sale.sale_number}
+                            </p>
                           <p className="text-xs text-gray-500">
                             {format(
                               (sale.created_at as any)?.toDate
@@ -564,6 +937,7 @@ export default function SalesPage() {
                               { locale: es }
                             )}
                           </p>
+                          </div>
                         </div>
                         {sale.payment_method === "credito" ? (
                           <span
@@ -673,6 +1047,15 @@ export default function SalesPage() {
                         >
                           <FileText className="h-4 w-4 mr-1" />
                           Ver Factura
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => handleDeleteSale(sale)}
+                          className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                        >
+                          <Trash2 className="h-4 w-4 mr-1" />
+                          Eliminar
                         </Button>
                       </div>
                     </CardContent>

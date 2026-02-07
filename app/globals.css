@@ -43,3 +43,34 @@ body {
     top: 75px !important;
   }
 }
+
+/* Scrollbar personalizado para el sidebar */
+.custom-scrollbar {
+  scrollbar-width: thin;
+  scrollbar-color: #ffffff #141414;
+}
+
+/* Para navegadores Webkit (Chrome, Safari, Edge) */
+.custom-scrollbar::-webkit-scrollbar {
+  width: 8px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-track {
+  background: #141414;
+  border-radius: 10px;
+  margin: 4px 0;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  background: #374151;
+  border-radius: 10px;
+  transition: background 0.2s ease;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: #4b5563;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb:active {
+  background: #6b7280;
+}

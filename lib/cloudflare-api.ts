@@ -162,6 +162,10 @@ export async function deleteProduct(id: string, getToken: GetTokenFn): Promise<v
   });
 }
 
+export async function checkProductHasSales(id: string, getToken: GetTokenFn): Promise<{ hasSales: boolean; salesCount: number }> {
+  return fetchAPI<{ hasSales: boolean; salesCount: number }>(`/api/products/${id}/has-sales`, getToken);
+}
+
 export async function searchProducts(query: string, getToken: GetTokenFn): Promise<Product[]> {
   return fetchAPI<Product[]>(`/api/products/search?q=${encodeURIComponent(query)}`, getToken);
 }

@@ -177,8 +177,8 @@ const MIN_WIDTH = 200;
 const MAX_WIDTH = 400;
 const DEFAULT_WIDTH = 256; // 16rem = 256px
 const COLLAPSED_WIDTH = 64; // Ancho cuando está colapsado
-const STORAGE_KEY = 'sidebar-width';
-const COLLAPSED_STORAGE_KEY = 'sidebar-collapsed';
+const STORAGE_KEY = "sidebar-width";
+const COLLAPSED_STORAGE_KEY = "sidebar-collapsed";
 
 export function Sidebar({ isMobile = false, onLinkClick }: SidebarProps) {
   const pathname = usePathname();
@@ -207,7 +207,7 @@ export function Sidebar({ isMobile = false, onLinkClick }: SidebarProps) {
       }
 
       const savedCollapsed = localStorage.getItem(COLLAPSED_STORAGE_KEY);
-      if (savedCollapsed === 'true') {
+      if (savedCollapsed === "true") {
         setIsCollapsed(true);
       }
     }
@@ -232,14 +232,17 @@ export function Sidebar({ isMobile = false, onLinkClick }: SidebarProps) {
     setIsResizing(true);
   }, []);
 
-  const handleMouseMove = useCallback((e: MouseEvent) => {
-    if (!isResizing) return;
+  const handleMouseMove = useCallback(
+    (e: MouseEvent) => {
+      if (!isResizing) return;
 
-    const newWidth = e.clientX;
-    if (newWidth >= MIN_WIDTH && newWidth <= MAX_WIDTH) {
-      setSidebarWidth(newWidth);
-    }
-  }, [isResizing]);
+      const newWidth = e.clientX;
+      if (newWidth >= MIN_WIDTH && newWidth <= MAX_WIDTH) {
+        setSidebarWidth(newWidth);
+      }
+    },
+    [isResizing],
+  );
 
   const handleMouseUp = useCallback(() => {
     setIsResizing(false);
@@ -247,16 +250,16 @@ export function Sidebar({ isMobile = false, onLinkClick }: SidebarProps) {
 
   useEffect(() => {
     if (isResizing) {
-      document.addEventListener('mousemove', handleMouseMove);
-      document.addEventListener('mouseup', handleMouseUp);
-      document.body.style.cursor = 'col-resize';
-      document.body.style.userSelect = 'none';
+      document.addEventListener("mousemove", handleMouseMove);
+      document.addEventListener("mouseup", handleMouseUp);
+      document.body.style.cursor = "col-resize";
+      document.body.style.userSelect = "none";
 
       return () => {
-        document.removeEventListener('mousemove', handleMouseMove);
-        document.removeEventListener('mouseup', handleMouseUp);
-        document.body.style.cursor = '';
-        document.body.style.userSelect = '';
+        document.removeEventListener("mousemove", handleMouseMove);
+        document.removeEventListener("mouseup", handleMouseUp);
+        document.body.style.cursor = "";
+        document.body.style.userSelect = "";
       };
     }
   }, [isResizing, handleMouseMove, handleMouseUp]);
@@ -328,7 +331,13 @@ export function Sidebar({ isMobile = false, onLinkClick }: SidebarProps) {
     <aside
       ref={sidebarRef}
       className={sidebarClasses}
-      style={isMobile ? undefined : { width: isCollapsed ? `${COLLAPSED_WIDTH}px` : `${sidebarWidth}px` }}
+      style={
+        isMobile
+          ? undefined
+          : {
+              width: isCollapsed ? `${COLLAPSED_WIDTH}px` : `${sidebarWidth}px`,
+            }
+      }
     >
       {/* Header - Solo visible en desktop */}
       <div className="hidden md:flex h-16 items-center px-6 border-b border-gray-800 justify-between">
@@ -349,16 +358,17 @@ export function Sidebar({ isMobile = false, onLinkClick }: SidebarProps) {
           </>
         )}
 
-        {/* Botón de colapsar/expandir */}
+        {/* Botón de colapsar/expandir - Mejorado para mayor visibilidad */}
         <button
           onClick={toggleCollapse}
-          className="ml-auto p-2 rounded-lg hover:bg-gray-800 transition-colors"
+          className="ml-auto p-2 rounded-lg bg-gray-800/50 hover:bg-blue-600 transition-all duration-200 border border-gray-700 hover:border-blue-500 shadow-lg hover:shadow-blue-500/50 group"
           aria-label={isCollapsed ? "Expandir menú" : "Colapsar menú"}
+          title={isCollapsed ? "Expandir menú" : "Colapsar menú"}
         >
           {isCollapsed ? (
-            <ChevronRight className="h-5 w-5 text-gray-400" />
+            <ChevronRight className="h-5 w-5 text-gray-300 group-hover:text-white transition-colors" />
           ) : (
-            <ChevronLeft className="h-5 w-5 text-gray-400" />
+            <ChevronLeft className="h-5 w-5 text-gray-300 group-hover:text-white transition-colors" />
           )}
         </button>
       </div>
@@ -404,7 +414,7 @@ export function Sidebar({ isMobile = false, onLinkClick }: SidebarProps) {
       </div>
 
       {/* Layout Desktop - Lista vertical */}
-      <nav className="hidden md:flex flex-1 flex-col space-y-1 px-3 py-4 overflow-y-auto">
+      <nav className="hidden md:flex flex-1 flex-col space-y-1 px-3 py-4 overflow-y-auto custom-scrollbar">
         {menuItems.map((item) => {
           const Icon = item.icon;
           const isActive =
@@ -425,24 +435,27 @@ export function Sidebar({ isMobile = false, onLinkClick }: SidebarProps) {
                 isActive
                   ? "bg-blue-600 text-white"
                   : "text-gray-300 hover:bg-gray-800 hover:text-white",
-                isCollapsed && "justify-center"
+                isCollapsed && "justify-center",
               )}
             >
-              <Icon className={cn("h-5 w-5", isCollapsed && "flex-shrink-0")} />
+              <Icon className={cn("h-5 w-5", isCollapsed && "shrink-0")} />
               {!isCollapsed && (
                 <>
-                  <span className="flex-1 whitespace-nowrap overflow-hidden text-ellipsis">{item.title}</span>
+                  <span className="flex-1 whitespace-nowrap overflow-hidden text-ellipsis">
+                    {item.title}
+                  </span>
                   {isAnalytics && userProfile && (
                     <>
                       {userProfile.subscription_status === "trial" && (
-                        <span className="text-xs bg-gradient-to-r from-purple-500 to-pink-500 text-white px-2 py-0.5 rounded-full flex items-center gap-1">
+                        <span className="text-xs bg-linear-to-r from-purple-500 to-pink-500 text-white px-2 py-0.5 rounded-full flex items-center gap-1">
                           <Sparkles className="h-3 w-3" />
                           Gratis
                         </span>
                       )}
-                      {!hasAI && userProfile.subscription_status !== "trial" && (
-                        <Lock className="h-4 w-4 text-gray-400" />
-                      )}
+                      {!hasAI &&
+                        userProfile.subscription_status !== "trial" && (
+                          <Lock className="h-4 w-4 text-gray-400" />
+                        )}
                     </>
                   )}
                   {isEmailMarketing && userProfile && (
@@ -453,9 +466,10 @@ export function Sidebar({ isMobile = false, onLinkClick }: SidebarProps) {
                           Gratis
                         </span>
                       )}
-                      {!hasEmail && userProfile.subscription_status !== "trial" && (
-                        <Lock className="h-4 w-4 text-gray-400" />
-                      )}
+                      {!hasEmail &&
+                        userProfile.subscription_status !== "trial" && (
+                          <Lock className="h-4 w-4 text-gray-400" />
+                        )}
                     </>
                   )}
                   {(isStoreConfig || isWebOrders) && userProfile && (
@@ -466,9 +480,10 @@ export function Sidebar({ isMobile = false, onLinkClick }: SidebarProps) {
                           Gratis
                         </span>
                       )}
-                      {!hasStore && userProfile.subscription_status !== "trial" && (
-                        <Lock className="h-4 w-4 text-gray-400" />
-                      )}
+                      {!hasStore &&
+                        userProfile.subscription_status !== "trial" && (
+                          <Lock className="h-4 w-4 text-gray-400" />
+                        )}
                     </>
                   )}
                 </>
@@ -486,7 +501,7 @@ export function Sidebar({ isMobile = false, onLinkClick }: SidebarProps) {
       </nav>
 
       {/* Layout Móvil - Grid de 2 columnas con cuadrados */}
-      <nav className="md:hidden flex-1 overflow-y-auto px-2 ">
+      <nav className="md:hidden flex-1 overflow-y-auto px-2 custom-scrollbar">
         <div className="grid grid-cols-2 gap-2 w-full">
           {allMenuItemsForMobile.map((item) => {
             const Icon = item.icon;
@@ -506,7 +521,7 @@ export function Sidebar({ isMobile = false, onLinkClick }: SidebarProps) {
                   "flex flex-col items-center justify-center gap-2 rounded-lg p-4 aspect-square text-sm font-medium transition-colors relative",
                   isActive
                     ? "bg-blue-600 text-white"
-                    : "text-gray-300 hover:bg-gray-800 hover:text-white"
+                    : "text-gray-300 hover:bg-gray-800 hover:text-white",
                 )}
               >
                 <Icon className="h-8 w-8" />
@@ -534,9 +549,10 @@ export function Sidebar({ isMobile = false, onLinkClick }: SidebarProps) {
                         Gratis
                       </span>
                     )}
-                    {!hasEmail && userProfile.subscription_status !== "trial" && (
-                      <Lock className="absolute top-1 right-1 h-3 w-3 text-gray-400" />
-                    )}
+                    {!hasEmail &&
+                      userProfile.subscription_status !== "trial" && (
+                        <Lock className="absolute top-1 right-1 h-3 w-3 text-gray-400" />
+                      )}
                   </>
                 )}
                 {(isStoreConfig || isWebOrders) && userProfile && (
@@ -547,9 +563,10 @@ export function Sidebar({ isMobile = false, onLinkClick }: SidebarProps) {
                         Gratis
                       </span>
                     )}
-                    {!hasStore && userProfile.subscription_status !== "trial" && (
-                      <Lock className="absolute top-1 right-1 h-3 w-3 text-gray-400" />
-                    )}
+                    {!hasStore &&
+                      userProfile.subscription_status !== "trial" && (
+                        <Lock className="absolute top-1 right-1 h-3 w-3 text-gray-400" />
+                      )}
                   </>
                 )}
               </Link>
@@ -571,7 +588,7 @@ export function Sidebar({ isMobile = false, onLinkClick }: SidebarProps) {
                 pathname?.startsWith("/dashboard/subscription/")
                 ? "bg-blue-600 text-white"
                 : "text-gray-300 hover:bg-gray-800 hover:text-white",
-              isCollapsed && "justify-center"
+              isCollapsed && "justify-center",
             )}
           >
             <CreditCard className="h-5 w-5" />
@@ -593,7 +610,7 @@ export function Sidebar({ isMobile = false, onLinkClick }: SidebarProps) {
               pathname?.startsWith("/dashboard/config/")
               ? "bg-blue-600 text-white"
               : "text-gray-300 hover:bg-gray-800 hover:text-white",
-            isCollapsed && "justify-center"
+            isCollapsed && "justify-center",
           )}
         >
           <Settings className="h-5 w-5" />
@@ -611,12 +628,38 @@ export function Sidebar({ isMobile = false, onLinkClick }: SidebarProps) {
         <div
           onMouseDown={handleMouseDown}
           className={cn(
-            "absolute top-0 right-0 w-1 h-full cursor-col-resize hover:bg-blue-500 transition-colors group",
-            isResizing && "bg-blue-500"
+            "absolute top-0 right-0 w-2 h-full cursor-col-resize bg-gray-800/30 hover:bg-blue-500/50 transition-all duration-200 group border-r-2 border-gray-700/50 hover:border-blue-500 shadow-lg",
+            isResizing && "bg-blue-500 border-blue-500",
           )}
+          title="Arrastrar para redimensionar"
         >
-          <div className="absolute right-0 top-1/2 -translate-y-1/2 -translate-x-1/2 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">
-            <GripVertical className="w-4 h-4 text-blue-500" />
+          {/* Indicador visual permanente con tooltip */}
+          <div
+            className={cn(
+              "absolute right-0 top-1/2 -translate-y-1/2 -translate-x-1/2 transition-all duration-200 pointer-events-none",
+              "opacity-60 group-hover:opacity-100 group-hover:scale-125",
+              isResizing && "opacity-100 scale-125",
+            )}
+          >
+            <GripVertical
+              className={cn(
+                "w-5 h-5 transition-colors",
+                isResizing
+                  ? "text-blue-400"
+                  : "text-gray-400 group-hover:text-blue-400",
+              )}
+            />
+          </div>
+
+          {/* Tooltip informativo */}
+          <div className="absolute left-full ml-3 top-1/2 -translate-y-1/2 px-3 py-2 bg-gray-900 text-white text-xs rounded-lg opacity-0 group-hover:opacity-100 pointer-events-none whitespace-nowrap z-50 transition-opacity shadow-xl border border-gray-700">
+            <div className="flex items-center gap-2">
+              <GripVertical className="w-4 h-4 text-blue-400" />
+              <span>Arrastrar para redimensionar</span>
+            </div>
+            <div className="absolute right-full top-1/2 -translate-y-1/2 mr-1">
+              <div className="border-8 border-transparent border-r-gray-900"></div>
+            </div>
           </div>
         </div>
       )}
