@@ -17,7 +17,8 @@ import {
   TrendingUp,
   ArrowRight,
   Calendar,
-  AlertCircle
+  AlertCircle,
+  X
 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { formatCurrency } from '@/lib/utils';
@@ -44,12 +45,23 @@ export function TrialUsageModal({
     const lastShown = localStorage.getItem('trial-modal-last-shown');
     const today = new Date().toDateString();
 
+    console.log('[TrialUsageModal] Check display conditions:', {
+      lastShown,
+      today,
+      dismissed,
+      shouldShow: lastShown !== today && !dismissed
+    });
+
     if (lastShown === today || dismissed) {
+      console.log('[TrialUsageModal] Not showing modal - already shown today or dismissed');
       return;
     }
 
+    console.log('[TrialUsageModal] Will show modal in 3 seconds');
+
     // Mostrar el modal después de 3 segundos de cargar la página
     const timer = setTimeout(() => {
+      console.log('[TrialUsageModal] Showing modal now');
       setOpen(true);
       localStorage.setItem('trial-modal-last-shown', today);
     }, 3000);
@@ -91,28 +103,37 @@ export function TrialUsageModal({
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
-      <DialogContent className="sm:max-w-[600px] p-0 overflow-hidden">
+      <DialogContent className="sm:max-w-[600px] max-h-[90vh] p-0 overflow-hidden flex flex-col">
+        {/* Botón de cerrar */}
+        <button
+          onClick={handleDismiss}
+          className="absolute right-4 top-4 z-50 rounded-sm opacity-70 ring-offset-white transition-opacity hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-gray-950 focus:ring-offset-2 disabled:pointer-events-none data-[state=open]:bg-gray-100 data-[state=open]:text-gray-500"
+        >
+          <X className="h-5 w-5 text-white hover:text-gray-200" />
+          <span className="sr-only">Cerrar</span>
+        </button>
+
         {/* Header con gradiente */}
-        <div className="bg-gradient-to-r from-purple-600 via-pink-600 to-purple-700 p-6 text-white">
+        <div className="bg-gradient-to-r from-purple-600 via-pink-600 to-purple-700 p-4 text-white flex-shrink-0">
           <DialogHeader>
-            <div className="flex items-center gap-3 mb-2">
-              <div className="p-2 bg-white/20 rounded-lg backdrop-blur">
-                <Clock className="h-6 w-6" />
+            <div className="flex items-center gap-2 mb-1">
+              <div className="p-1.5 bg-white/20 rounded-lg backdrop-blur">
+                <Clock className="h-5 w-5" />
               </div>
-              <DialogTitle className="text-2xl font-bold text-white">
+              <DialogTitle className="text-xl font-bold text-white">
                 Estado de tu Prueba Gratuita
               </DialogTitle>
             </div>
-            <DialogDescription className="text-purple-100 text-base">
+            <DialogDescription className="text-purple-100 text-sm">
               Estás probando nuestro sistema completo sin costo
             </DialogDescription>
           </DialogHeader>
         </div>
 
-        {/* Contenido principal */}
-        <div className="p-6 space-y-6">
+        {/* Contenido principal con scroll */}
+        <div className="p-4 space-y-4 overflow-y-auto flex-1">
           {/* Barra de progreso visual */}
-          <div className={`${getBgColor()} border-2 ${usagePercentage >= 75 ? 'border-red-200' : usagePercentage >= 50 ? 'border-yellow-200' : 'border-green-200'} rounded-lg p-5`}>
+          <div className={`${getBgColor()} border-2 ${usagePercentage >= 75 ? 'border-red-200' : usagePercentage >= 50 ? 'border-yellow-200' : 'border-green-200'} rounded-lg p-4`}>
             <div className="flex items-center justify-between mb-3">
               <div className="flex items-center gap-2">
                 <Calendar className={`h-5 w-5 ${getTextColor()}`} />
@@ -210,7 +231,7 @@ export function TrialUsageModal({
         </div>
 
         {/* Footer con botones */}
-        <DialogFooter className="border-t bg-gray-50 p-6">
+        <DialogFooter className="border-t bg-gray-50 p-4 flex-shrink-0">
           <div className="flex flex-col sm:flex-row gap-3 w-full">
             <Button
               variant="outline"

@@ -18,20 +18,36 @@ export function TrialNotificationWrapper() {
 
   useEffect(() => {
     async function checkTrialStatus() {
-      if (!user || !getToken) return;
+      if (!user || !getToken) {
+        console.log('[TrialNotification] No user or getToken');
+        return;
+      }
 
       try {
         const userProfile = await getUserProfile(getToken);
 
-        if (!userProfile) return;
+        console.log('[TrialNotification] User profile loaded:', {
+          email: userProfile?.email,
+          subscription_status: userProfile?.subscription_status,
+          trial_start_date: userProfile?.trial_start_date,
+          trial_end_date: userProfile?.trial_end_date,
+        });
+
+        if (!userProfile) {
+          console.log('[TrialNotification] No user profile found');
+          return;
+        }
 
         // Solo mostrar para usuarios en trial
         if (userProfile.subscription_status === 'trial') {
+          console.log('[TrialNotification] User is in trial, showing modal');
           setProfile(userProfile);
           setShowModal(true);
+        } else {
+          console.log('[TrialNotification] User is NOT in trial, status:', userProfile.subscription_status);
         }
       } catch (error) {
-        console.error('Error checking trial status:', error);
+        console.error('[TrialNotification] Error checking trial status:', error);
       }
     }
 
