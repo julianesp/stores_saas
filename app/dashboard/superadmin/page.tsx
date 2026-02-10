@@ -791,19 +791,19 @@ export default function SuperAdminPage() {
               <p className="mt-4 text-black">No hay tiendas registradas</p>
             </div>
           ) : (
-            <div className="overflow-x-auto">
+            <div className="overflow-x-auto max-h-[600px] overflow-y-auto">
               <table className="w-full">
-                <thead>
+                <thead className="sticky top-0 z-10 bg-white shadow-sm">
                   <tr className="border-b">
-                    <th className="text-left p-4 font-medium">Tienda</th>
-                    <th className="text-left p-4 font-medium">Email</th>
-                    <th className="text-left p-4 font-medium">Estado</th>
-                    <th className="text-left p-4 font-medium">Días</th>
-                    <th className="text-center p-4 font-medium">Productos</th>
-                    <th className="text-center p-4 font-medium">Ventas</th>
-                    <th className="text-center p-4 font-medium">Clientes</th>
-                    <th className="text-left p-4 font-medium">Última Venta</th>
-                    <th className="text-right p-4 font-medium">Acciones</th>
+                    <th className="text-left p-4 font-medium bg-white">Tienda</th>
+                    <th className="text-left p-4 font-medium bg-white">Email</th>
+                    <th className="text-left p-4 font-medium bg-white">Estado</th>
+                    <th className="text-left p-4 font-medium bg-white">Días</th>
+                    <th className="text-center p-4 font-medium bg-white">Productos</th>
+                    <th className="text-center p-4 font-medium bg-white">Ventas</th>
+                    <th className="text-center p-4 font-medium bg-white">Clientes</th>
+                    <th className="text-left p-4 font-medium bg-white">Última Venta</th>
+                    <th className="text-right p-4 font-medium bg-white">Acciones</th>
                   </tr>
                 </thead>
                 <tbody>

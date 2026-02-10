@@ -31,6 +31,7 @@ import {
   UserCog,
   ChevronLeft,
   ChevronRight,
+  Calendar,
 } from "lucide-react";
 import {
   getUserProfileByClerkId,
@@ -66,6 +67,11 @@ const superAdminMenuItems = [
     title: "Historial de Cobros",
     href: "/dashboard/admin/billing",
     icon: Banknote,
+  },
+  {
+    title: "Corregir Fechas de Pago",
+    href: "/dashboard/admin/fix-payment-dates",
+    icon: Calendar,
   },
   {
     title: "Reportes Globales",
