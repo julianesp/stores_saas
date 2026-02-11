@@ -31,6 +31,7 @@ import emailRoutes from './routes/email';
 import statsRoutes from './routes/stats';
 import loyaltySettingsRoutes from './routes/loyalty-settings';
 import teamInvitationsRoutes from './routes/team-invitations';
+import analyticsRoutes from './routes/analytics';
 
 const app = new Hono<{ Bindings: Env }>();
 
@@ -132,6 +133,7 @@ app.route('/api/admin', adminStatsRoutes);
 app.route('/api/email', emailRoutes);
 app.route('/loyalty-settings', loyaltySettingsRoutes);
 app.route('/api/team-invitations', teamInvitationsRoutes);
+app.route('/api/analytics', analyticsRoutes);
 
 // 404 handler
 app.notFound((c) => {

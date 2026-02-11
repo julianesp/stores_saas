@@ -15,6 +15,7 @@ import {
   getUserProfileByClerkId,
 } from "@/lib/cloudflare-subscription-helpers";
 import { SubscriptionStatus } from "@/lib/types";
+import { usePageTracking } from "@/lib/hooks/use-analytics";
 import styles from "./styles/Layout.module.scss";
 
 // Component to add noindex meta tag
@@ -50,6 +51,9 @@ export default function DashboardLayout({
     useState<SubscriptionStatus | null>(null);
   const [loading, setLoading] = useState(true);
   const [isSuperAdmin, setIsSuperAdmin] = useState(false);
+
+  // Rastrear automáticamente todas las visitas a páginas
+  usePageTracking();
 
   useEffect(() => {
     async function checkAccess() {

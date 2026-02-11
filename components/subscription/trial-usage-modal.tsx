@@ -41,19 +41,19 @@ export function TrialUsageModal({
   const router = useRouter();
 
   useEffect(() => {
-    // Verificar si ya se mostró el modal hoy
-    const lastShown = localStorage.getItem('trial-modal-last-shown');
-    const today = new Date().toDateString();
+    // Verificar si ya se mostró el modal en esta sesión
+    const sessionKey = `trial-modal-session-${userEmail}`;
+    const shownInSession = sessionStorage.getItem(sessionKey);
 
     console.log('[TrialUsageModal] Check display conditions:', {
-      lastShown,
-      today,
+      userEmail,
+      shownInSession,
       dismissed,
-      shouldShow: lastShown !== today && !dismissed
+      shouldShow: !shownInSession && !dismissed
     });
 
-    if (lastShown === today || dismissed) {
-      console.log('[TrialUsageModal] Not showing modal - already shown today or dismissed');
+    if (shownInSession || dismissed) {
+      console.log('[TrialUsageModal] Not showing modal - already shown in this session or dismissed');
       return;
     }
 
@@ -63,11 +63,12 @@ export function TrialUsageModal({
     const timer = setTimeout(() => {
       console.log('[TrialUsageModal] Showing modal now');
       setOpen(true);
-      localStorage.setItem('trial-modal-last-shown', today);
+      // Marcar como mostrado en esta sesión (se borra al cerrar el navegador)
+      sessionStorage.setItem(sessionKey, 'true');
     }, 3000);
 
     return () => clearTimeout(timer);
-  }, [dismissed]);
+  }, [dismissed, userEmail]);
 
   const handleSubscribe = () => {
     setOpen(false);

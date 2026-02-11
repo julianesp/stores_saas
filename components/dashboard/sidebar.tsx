@@ -32,6 +32,7 @@ import {
   ChevronLeft,
   ChevronRight,
   Calendar,
+  CheckCircle,
 } from "lucide-react";
 import {
   getUserProfileByClerkId,
@@ -72,6 +73,16 @@ const superAdminMenuItems = [
     title: "Corregir Fechas de Pago",
     href: "/dashboard/admin/fix-payment-dates",
     icon: Calendar,
+  },
+  {
+    title: "Activar Planes",
+    href: "/dashboard/admin/activate-plan-manually",
+    icon: CheckCircle,
+  },
+  {
+    title: "Analytics del Sistema",
+    href: "/dashboard/admin/analytics",
+    icon: TrendingUp,
   },
   {
     title: "Reportes Globales",

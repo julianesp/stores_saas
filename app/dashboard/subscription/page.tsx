@@ -9,6 +9,11 @@ import {
   Sparkles,
   Store,
   Mail,
+  Copy,
+  ExternalLink,
+  Phone,
+  DollarSign,
+  AlertCircle,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -18,6 +23,13 @@ import {
   CardTitle,
   CardDescription,
 } from "@/components/ui/card";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+} from "@/components/ui/dialog";
 import { getUserProfile } from "@/lib/cloudflare-api";
 import { UserProfile } from "@/lib/types";
 import { toast } from "sonner";
@@ -105,6 +117,8 @@ export default function SubscriptionPageWompi() {
   const [loading, setLoading] = useState(false);
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [selectedItem, setSelectedItem] = useState<string | null>(null);
+  const [showNequiModal, setShowNequiModal] = useState(false);
+  const [selectedPlan, setSelectedPlan] = useState<any>(null);
 
   useEffect(() => {
     async function fetchProfile() {
@@ -120,45 +134,25 @@ export default function SubscriptionPageWompi() {
     fetchProfile();
   }, [getToken]);
 
-  const handleSubscribe = async (itemId: string) => {
+  const handleSubscribe = (itemId: string) => {
     if (!user) return;
 
-    setLoading(true);
-    setSelectedItem(itemId);
-
-    try {
-      // Llamar a la API local que luego llama al worker
-      const response = await fetch("/api/subscriptions/create-payment-link", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          planId: itemId,
-        }),
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || "Error al crear el link de pago");
-      }
-
-      const data = await response.json();
-
-      if (!data.success || !data.data?.checkout_url) {
-        throw new Error("No se recibió el link de pago");
-      }
-
-      // Redirigir al checkout de Wompi
-      window.location.href = data.data.checkout_url;
-    } catch (error) {
-      console.error("Error:", error);
-      const errorMessage =
-        error instanceof Error ? error.message : "Error al procesar el pago";
-      toast.error(errorMessage);
-      setLoading(false);
-      setSelectedItem(null);
+    // Encontrar el plan o addon seleccionado
+    let plan;
+    if (itemId === BASE_PLAN.id) {
+      plan = BASE_PLAN;
+    } else {
+      plan = ADDONS.find(addon => addon.id === itemId);
     }
+
+    if (!plan) {
+      toast.error("Plan no encontrado");
+      return;
+    }
+
+    setSelectedPlan(plan);
+    setSelectedItem(itemId);
+    setShowNequiModal(true);
   };
 
   const getDaysLeft = () => {
@@ -298,34 +292,25 @@ export default function SubscriptionPageWompi() {
         </Card>
       )}
 
-      {/* Métodos de pago aceptados */}
+      {/* Método de pago aceptado */}
       <Card>
         <CardHeader>
-          <CardTitle className="text-lg">Métodos de pago aceptados</CardTitle>
+          <CardTitle className="text-lg">Método de pago</CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="flex flex-wrap gap-4 items-center">
-            <div className="flex items-center gap-2 text-sm font-medium text-purple-600">
-              <svg className="h-5 w-5" viewBox="0 0 24 24" fill="currentColor">
-                <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2z" />
-              </svg>
-              <span>Nequi</span>
+          <div className="flex flex-wrap gap-4 items-center justify-center">
+            <div className="flex items-center gap-3 bg-purple-50 border border-purple-200 rounded-lg px-6 py-4">
+              <Phone className="h-8 w-8 text-purple-600" />
+              <div>
+                <p className="font-bold text-lg text-purple-900">Transferencia Nequi</p>
+                <p className="text-sm text-purple-700">Pago rápido y seguro</p>
+              </div>
             </div>
-            <div className="flex items-center gap-2 text-sm">
-              <CreditCard className="h-5 w-5 text-blue-600" />
-              <span>Tarjetas (Visa, Mastercard)</span>
-            </div>
-            <div className="flex items-center gap-2 text-sm text-green-600">
-              <svg className="h-5 w-5" fill="currentColor" viewBox="0 0 24 24">
-                <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2z" />
-              </svg>
-              <span>PSE</span>
-            </div>
-            <div className="flex items-center gap-2 text-sm">
-              <span className="text-xs bg-gray-200 px-2 py-1 rounded">
-                Procesado por Wompi
-              </span>
-            </div>
+          </div>
+          <div className="mt-4 bg-blue-50 border border-blue-200 rounded-lg p-4">
+            <p className="text-sm text-blue-900 text-center">
+              💳 <strong>Fácil y seguro:</strong> Transfiere desde tu app de Nequi y envíanos el comprobante por WhatsApp para activación inmediata
+            </p>
           </div>
         </CardContent>
       </Card>
@@ -470,27 +455,24 @@ export default function SubscriptionPageWompi() {
         <CardContent className="pt-6">
           <div className="space-y-3 text-sm text-gray-600">
             <p>
-              ✓ <strong>Pago seguro</strong> procesado por Wompi
+              ✓ <strong>Pago seguro</strong> por transferencia Nequi
             </p>
             <p>
-              ✓ <strong>Múltiples métodos de pago</strong> - Nequi, PSE,
-              tarjetas
+              ✓ <strong>Activación rápida</strong> - En menos de 1 hora tras verificar el pago
             </p>
             <p>
-              ✓ <strong>Facturación mensual</strong> automática e independiente
+              ✓ <strong>Facturación mensual</strong> - Paga solo por lo que necesites
             </p>
             <p>
-              ✓ <strong>Cancela los complementos cuando quieras</strong> - Sin
-              penalizaciones
+              ✓ <strong>Cancela cuando quieras</strong> - Sin penalizaciones ni compromisos largos
             </p>
             <p>
-              ✓ <strong>Soporte técnico</strong> incluido. Escríbeme a través
-              del botón de WhatsApp.
+              ✓ <strong>Soporte técnico incluido</strong> - Escríbenos por WhatsApp
             </p>
             <p className="text-xs text-gray-500 mt-4 pt-4 border-t">
-              Los pagos son procesados de forma segura por Wompi. Cada addon se
-              factura de manera independiente y puedes activarlos o
-              desactivarlos en cualquier momento.
+              Los pagos se procesan de forma manual mediante transferencia Nequi. Cada addon se
+              factura de manera independiente y puedes activarlos o desactivarlos en cualquier momento.
+              Una vez realices el pago, envíanos el comprobante por WhatsApp y activaremos tu plan inmediatamente.
             </p>
           </div>
         </CardContent>
@@ -548,6 +530,166 @@ export default function SubscriptionPageWompi() {
           </CardContent>
         </Card>
       )}
+
+      {/* Modal de Instrucciones de Pago por Nequi */}
+      <Dialog open={showNequiModal} onOpenChange={setShowNequiModal}>
+        <DialogContent className="sm:max-w-[600px] max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="text-2xl flex items-center gap-3">
+              <div className="p-2 bg-purple-100 rounded-lg">
+                <Phone className="h-6 w-6 text-purple-600" />
+              </div>
+              Instrucciones de Pago - Nequi
+            </DialogTitle>
+            <DialogDescription>
+              Realiza la transferencia y envíanos el comprobante para activar tu plan
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-6 py-4">
+            {/* Resumen del Plan */}
+            {selectedPlan && (
+              <Card className="border-purple-200 bg-purple-50">
+                <CardHeader className="pb-3">
+                  <CardTitle className="text-lg">Plan Seleccionado</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="flex justify-between items-center">
+                    <div>
+                      <p className="font-bold text-xl text-purple-900">{selectedPlan.name}</p>
+                      <p className="text-sm text-purple-700">
+                        {selectedPlan.id === BASE_PLAN.id ? "Todo lo esencial para tu negocio" : "Addon mensual"}
+                      </p>
+                    </div>
+                    <div className="text-right">
+                      <p className="text-3xl font-bold text-purple-900">
+                        {formatCurrency(selectedPlan.price)}
+                      </p>
+                      <p className="text-sm text-purple-700">/mes</p>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+
+            {/* Paso 1: Datos de Nequi */}
+            <div className="space-y-3">
+              <h3 className="font-semibold text-lg flex items-center gap-2">
+                <DollarSign className="h-5 w-5 text-purple-600" />
+                Paso 1: Realiza la transferencia a Nequi
+              </h3>
+
+              <div className="bg-gradient-to-r from-purple-50 to-pink-50 border-2 border-purple-200 rounded-lg p-4 space-y-3">
+                <div className="flex justify-between items-center">
+                  <span className="text-sm font-medium text-gray-700">Número de Nequi:</span>
+                  <div className="flex items-center gap-2">
+                    <span className="text-2xl font-bold text-purple-900 font-mono">317 450 3604</span>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => {
+                        navigator.clipboard.writeText('3174503604');
+                        toast.success('Número copiado al portapapeles');
+                      }}
+                    >
+                      <Copy className="h-4 w-4" />
+                    </Button>
+                  </div>
+                </div>
+
+                <div className="flex justify-between items-center">
+                  <span className="text-sm font-medium text-gray-700">Titular:</span>
+                  <span className="font-bold text-gray-900">Julián Alexander España Riobamba</span>
+                </div>
+
+                <div className="flex justify-between items-center">
+                  <span className="text-sm font-medium text-gray-700">Valor a transferir:</span>
+                  <span className="text-xl font-bold text-purple-900">
+                    {selectedPlan && formatCurrency(selectedPlan.price)}
+                  </span>
+                </div>
+              </div>
+
+              {/* Botón para ir a Nequi */}
+              <a
+                href="https://clientes.nequi.com.co/recargas"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="w-full"
+              >
+                <Button className="w-full bg-purple-600 hover:bg-purple-700" size="lg">
+                  <ExternalLink className="mr-2 h-5 w-5" />
+                  Ir a Nequi para Transferir
+                </Button>
+              </a>
+
+              <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
+                <p className="text-sm text-blue-900">
+                  💡 <strong>Tip:</strong> Si usas la app de Nequi desde tu celular, puedes copiar el número
+                  directamente desde aquí y pegarlo en la app.
+                </p>
+              </div>
+            </div>
+
+            {/* Paso 2: Enviar Comprobante */}
+            <div className="space-y-3">
+              <h3 className="font-semibold text-lg flex items-center gap-2">
+                <Mail className="h-5 w-5 text-purple-600" />
+                Paso 2: Envía el comprobante
+              </h3>
+
+              <div className="bg-gradient-to-r from-green-50 to-emerald-50 border-2 border-green-200 rounded-lg p-4 space-y-3">
+                <p className="text-sm text-gray-700">
+                  Una vez realices la transferencia, envíanos el comprobante por WhatsApp para activar tu plan inmediatamente.
+                </p>
+
+                <a
+                  href={`https://wa.me/573174503604?text=Hola,%20acabo%20de%20realizar%20una%20transferencia%20por%20Nequi%20para%20el%20plan:%20${selectedPlan?.name}%20por%20valor%20de%20${selectedPlan ? formatCurrency(selectedPlan.price) : ''}.%20Mi%20email%20registrado%20es:%20${user?.emailAddresses[0]?.emailAddress || ''}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="w-full block"
+                >
+                  <Button className="w-full bg-green-600 hover:bg-green-700" size="lg">
+                    <Image
+                      src="https://0dwas2ied3dcs14f.public.blob.vercel-storage.com/redes/social%20%281%29.png"
+                      alt="WhatsApp"
+                      width={24}
+                      height={24}
+                      className="mr-2"
+                    />
+                    Enviar Comprobante por WhatsApp
+                  </Button>
+                </a>
+              </div>
+            </div>
+
+            {/* Información Importante */}
+            <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
+              <div className="flex items-start gap-3">
+                <AlertCircle className="h-5 w-5 text-yellow-600 mt-0.5 flex-shrink-0" />
+                <div className="space-y-2 text-sm text-yellow-900">
+                  <p className="font-medium">Información Importante:</p>
+                  <ul className="list-disc list-inside space-y-1 text-yellow-800">
+                    <li>Tu plan se activará en menos de 1 hora después de verificar el pago</li>
+                    <li>Asegúrate de enviar el comprobante con tu email registrado</li>
+                    <li>El pago es por 30 días de servicio</li>
+                    <li>Recibirás confirmación por email una vez activado</li>
+                  </ul>
+                </div>
+              </div>
+            </div>
+
+            {/* Botón de Cerrar */}
+            <Button
+              variant="outline"
+              className="w-full"
+              onClick={() => setShowNequiModal(false)}
+            >
+              Cerrar
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
