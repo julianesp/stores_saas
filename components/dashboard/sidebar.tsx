@@ -40,7 +40,8 @@ import {
   hasEmailMarketingAccess,
   hasStoreAccess,
 } from "@/lib/cloudflare-subscription-helpers";
-import { UserProfile } from "@/lib/types";
+import { UserProfile, Permission } from "@/lib/types";
+import { usePermissions } from "@/hooks/usePermissions";
 
 // Menú para Super Administradores (gestión del SaaS)
 const superAdminMenuItems = [
@@ -98,90 +99,109 @@ const storeMenuItems = [
     href: "/dashboard",
     icon: LayoutDashboard,
     roles: ["admin", "cajero"],
+    permissions: ["view_dashboard"] as const,
   },
   {
     title: "Punto de Venta",
     href: "/dashboard/pos",
     icon: ShoppingCart,
     roles: ["admin", "cajero"],
+    permissions: ["access_pos"] as const,
   },
   {
     title: "Productos",
     href: "/dashboard/products",
     icon: Package,
     roles: ["admin", "cajero"],
+    permissions: ["view_products"] as const,
   },
   {
     title: "Clientes",
     href: "/dashboard/customers",
     icon: Users,
     roles: ["admin", "cajero"],
+    permissions: ["view_customers"] as const,
   },
   {
     title: "Deudores",
     href: "/dashboard/debtors",
     icon: Receipt,
     roles: ["admin", "cajero"],
+    permissions: ["view_debtors"] as const,
   },
   {
     title: "Proveedores",
     href: "/dashboard/suppliers",
     icon: Truck,
     roles: ["admin"],
+    permissions: ["view_suppliers"] as const,
   },
   {
     title: "Estadísticas de Compras",
     href: "/dashboard/purchase-stats",
     icon: TrendingUp,
     roles: ["admin"],
+    permissions: ["view_suppliers"] as const,
   },
   {
     title: "Ventas",
     href: "/dashboard/sales",
     icon: BarChart3,
     roles: ["admin", "cajero"],
+    permissions: ["view_sales_history"] as const,
   },
   {
     title: "Ofertas",
     href: "/dashboard/offers",
     icon: Percent,
     roles: ["admin"],
+    permissions: ["view_offers"] as const,
   },
   {
     title: "Tienda Online",
     href: "/dashboard/store-config",
     icon: Store,
     roles: ["admin"],
+    permissions: ["access_online_store"] as const,
+    requiresAddon: "store" as const,
   },
   {
     title: "Pedidos Web",
     href: "/dashboard/web-orders",
     icon: ShoppingCart,
     roles: ["admin"],
+    permissions: ["manage_online_orders"] as const,
+    requiresAddon: "store" as const,
   },
   {
     title: "Inventario",
     href: "/dashboard/inventory",
     icon: Scan,
     roles: ["admin"],
+    permissions: ["view_inventory"] as const,
   },
   {
     title: "Análisis IA",
     href: "/dashboard/analytics",
     icon: Brain,
     roles: ["admin"],
+    permissions: ["access_ai_insights"] as const,
+    requiresAddon: "ai" as const,
   },
   {
     title: "Email Marketing",
     href: "/dashboard/email-settings",
     icon: Mail,
     roles: ["admin"],
+    permissions: ["access_email_marketing"] as const,
+    requiresAddon: "email" as const,
   },
   {
     title: "Gestión de Equipo",
     href: "/dashboard/team",
     icon: UserCog,
     roles: ["admin"],
+    ownerOnly: true,
   },
 ];
 
@@ -200,6 +220,7 @@ const COLLAPSED_STORAGE_KEY = "sidebar-collapsed";
 export function Sidebar({ isMobile = false, onLinkClick }: SidebarProps) {
   const pathname = usePathname();
   const { user } = useUser();
+  const { isOwner, can, loading: permissionsLoading } = usePermissions();
   const [isSuperAdmin, setIsSuperAdmin] = useState(false);
   const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
   const [hasAI, setHasAI] = useState(false);
@@ -315,13 +336,40 @@ export function Sidebar({ isMobile = false, onLinkClick }: SidebarProps) {
     checkSuperAdmin();
   }, [user]);
 
-  // Seleccionar el menú correcto según el tipo de usuario
-  const menuItems = isSuperAdmin ? superAdminMenuItems : storeMenuItems;
+  // Filtrar items del menú según permisos
+  const getFilteredMenuItems = () => {
+    if (isSuperAdmin) return superAdminMenuItems;
+
+    return storeMenuItems.filter((item) => {
+      // Si es solo para owners y el usuario no es owner, ocultar
+      if (item.ownerOnly && !isOwner) return false;
+
+      // Si requiere un permiso específico, verificarlo
+      if (item.permissions && item.permissions.length > 0) {
+        // El owner siempre tiene acceso
+        if (isOwner) {
+          // Verificar addons solo para owners
+          if (item.requiresAddon === "ai" && !hasAI) return false;
+          if (item.requiresAddon === "email" && !hasEmail) return false;
+          if (item.requiresAddon === "store" && !hasStore) return false;
+          return true;
+        }
+        // Para team members, verificar permisos
+        return item.permissions.some((permission) => can(permission as Permission));
+      }
+
+      // Por defecto, mostrar el item
+      return true;
+    });
+  };
+
+  const menuItems = getFilteredMenuItems();
 
   // Combinar todos los items para móvil
   const allMenuItemsForMobile = [
     ...menuItems,
-    ...(!isSuperAdmin
+    // Solo mostrar Suscripción y Configuración para owners (no para team members)
+    ...(!isSuperAdmin && isOwner
       ? [
           {
             title: "Suscripción",
@@ -331,12 +379,16 @@ export function Sidebar({ isMobile = false, onLinkClick }: SidebarProps) {
           },
         ]
       : []),
-    {
-      title: "Configuración",
-      href: "/dashboard/config",
-      icon: Settings,
-      roles: ["admin"] as string[],
-    },
+    ...(isOwner
+      ? [
+          {
+            title: "Configuración",
+            href: "/dashboard/config",
+            icon: Settings,
+            roles: ["admin"] as string[],
+          },
+        ]
+      : []),
   ];
 
   // Mostrar sidebar en pantallas >= 768px (md breakpoint)
