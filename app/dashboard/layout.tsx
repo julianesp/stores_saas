@@ -59,6 +59,21 @@ export default function DashboardLayout({
     async function checkAccess() {
       if (user) {
         try {
+          // Verificación de email del super admin como fallback
+          const userEmail = user.emailAddresses[0]?.emailAddress || "";
+          const superAdminEmail = "admin@neurai.dev"; // Hardcoded para evitar problemas con env
+          const isAdminByEmail = userEmail === superAdminEmail;
+
+          // Si es el admin por email, establecer inmediatamente como superadmin
+          if (isAdminByEmail) {
+            setIsSuperAdmin(true);
+            setSubscriptionInfo({
+              canAccess: true,
+              status: "active",
+            });
+            console.log("🔐 Usuario verificado como Super Admin por email");
+          }
+
           // Primero, asegurarse de que el perfil de usuario existe
           try {
             await fetch("/api/user/init-profile", {
@@ -69,10 +84,7 @@ export default function DashboardLayout({
           }
 
           // Intentar auto-upgrade si es el super admin
-          const userEmail = user.emailAddresses[0]?.emailAddress || "";
-          const superAdminEmail = "admin@neurai.dev"; // Hardcoded para evitar problemas con env
-
-          if (userEmail === superAdminEmail) {
+          if (isAdminByEmail) {
             try {
               const upgradeResponse = await fetch("/api/admin/auto-upgrade", {
                 method: "POST",
@@ -89,13 +101,17 @@ export default function DashboardLayout({
             } catch (err) {
               console.warn("Error en auto-upgrade:", err);
             }
+
+            // Salir temprano para admin, ya está configurado
+            setLoading(false);
+            return;
           }
 
           // Inicializar categorías por defecto si no existen (opcional, no crítico)
           // COMENTADO: No es necesario para el funcionamiento del sistema
           // await fetch('/api/categories/seed', { method: 'POST' }).catch(() => {});
 
-          // Verificar si es superadmin
+          // Verificar si es superadmin (solo para usuarios no-admin)
           const profile = await getUserProfileByClerkId(getToken);
           const isSuperAdminUser = profile?.is_superadmin || false;
           setIsSuperAdmin(isSuperAdminUser);
