@@ -182,9 +182,9 @@ export async function authMiddleware(c: Context<{ Bindings: Env }>, next: Next) 
 
         // ⚠️ VALIDACIÓN: Verificar si ya existe un perfil con este email
         const existingProfileByEmail = await c.env.DB
-          .prepare('SELECT id, clerk_user_id, email FROM user_profiles WHERE email = ?')
+          .prepare('SELECT id, clerk_user_id, email, is_superadmin, subscription_status FROM user_profiles WHERE email = ?')
           .bind(userEmail)
-          .first<{ id: string; clerk_user_id: string; email: string }>();
+          .first<{ id: string; clerk_user_id: string; email: string; is_superadmin: number; subscription_status: string }>();
 
         if (existingProfileByEmail) {
           console.warn('⚠️ Email already exists in database:', userEmail, 'for clerk_user_id:', existingProfileByEmail.clerk_user_id);
@@ -192,8 +192,12 @@ export async function authMiddleware(c: Context<{ Bindings: Env }>, next: Next) 
 
           // Si es el mismo clerk_user_id, solo retornar el perfil existente
           if (existingProfileByEmail.clerk_user_id === clerkUserId) {
-            console.log('Same clerk_user_id, returning existing profile');
-            userProfile = { id: existingProfileByEmail.id, is_superadmin: 0 };
+            console.log('✅ Same clerk_user_id, returning existing profile');
+            userProfile = {
+              id: existingProfileByEmail.id,
+              is_superadmin: existingProfileByEmail.is_superadmin,
+              subscription_status: existingProfileByEmail.subscription_status
+            };
           } else {
             // Email duplicado con diferente clerk_user_id - NO PERMITIR
             return c.json({
@@ -236,7 +240,11 @@ export async function authMiddleware(c: Context<{ Bindings: Env }>, next: Next) 
           ).run();
 
           console.log('User profile created successfully:', profileId);
-          userProfile = { id: profileId, is_superadmin: isSuperAdmin ? 1 : 0 };
+          userProfile = {
+            id: profileId,
+            is_superadmin: isSuperAdmin ? 1 : 0,
+            subscription_status: isSuperAdmin ? 'active' : 'trial'
+          };
         }
       } catch (error) {
         console.error('Error creating user_profile:', error);

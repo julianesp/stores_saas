@@ -122,13 +122,16 @@ app.post('/api/team-invitations/accept', async (c) => {
 
     // Obtener datos del body
     const body = await c.req.json();
-    const { token: invitationToken, clerk_user_id } = body;
-    const userId = clerk_user_id || clerkUserId;
+    const { token: invitationToken } = body;
+
+    // IMPORTANTE: Usar SOLO el clerk_user_id del token JWT autenticado
+    // NO usar el que viene en el body, ya que podría ser diferente
+    const userId = clerkUserId;
 
     if (!invitationToken || !userId) {
       return c.json({
         success: false,
-        error: 'Token y clerk_user_id son requeridos',
+        error: 'Token de invitación requerido',
       }, 400);
     }
 

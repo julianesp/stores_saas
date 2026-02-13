@@ -60,7 +60,69 @@ export default function DashboardLayout({
     async function checkAccess() {
       if (user) {
         try {
-          // Primero, asegurarse de que el perfil de usuario existe
+          const token = await getToken();
+          const userEmail = user.emailAddresses[0]?.emailAddress || "";
+          const superAdminEmail = "admin@neurai.dev";
+
+          // PASO 1: Verificar si el usuario es team member PRIMERO
+          let userIsTeamMember = false;
+          let teamMemberStores: any[] = [];
+
+          try {
+            const storesResponse = await fetch(
+              `${process.env.NEXT_PUBLIC_CLOUDFLARE_API_URL}/api/user-stores`,
+              {
+                headers: {
+                  Authorization: `Bearer ${token}`,
+                },
+              }
+            );
+
+            if (storesResponse.ok) {
+              const storesData = await storesResponse.json();
+              const stores = storesData.data || [];
+
+              // Verificar si tiene acceso como team member a alguna tienda
+              teamMemberStores = stores.filter(
+                (store: any) => store.access_type === "team_member"
+              );
+
+              if (teamMemberStores.length > 0) {
+                userIsTeamMember = true;
+                setIsTeamMember(true);
+
+                // IMPORTANTE: Establecer el tenant_id ANTES de hacer otras llamadas
+                const selectedTenantId = localStorage.getItem("selected_tenant_id");
+                if (!selectedTenantId) {
+                  console.log(
+                    "🏪 Seleccionando tienda del team member:",
+                    teamMemberStores[0].store_name,
+                    "ID:",
+                    teamMemberStores[0].id
+                  );
+                  localStorage.setItem(
+                    "selected_tenant_id",
+                    teamMemberStores[0].id
+                  );
+                }
+
+                // Team members siempre tienen acceso (usan la suscripción del owner)
+                setSubscriptionInfo({
+                  canAccess: true,
+                  status: "active",
+                });
+
+                setLoading(false);
+                return; // Terminar aquí para team members
+              }
+            }
+          } catch (error) {
+            console.error("Error verificando team membership:", error);
+          }
+
+          // PASO 2: Si NO es team member, continuar con el flujo normal de owner
+
+          // Asegurarse de que el perfil de usuario existe
           try {
             await fetch("/api/user/init-profile", {
               method: "POST",
@@ -70,9 +132,6 @@ export default function DashboardLayout({
           }
 
           // Intentar auto-upgrade si es el super admin
-          const userEmail = user.emailAddresses[0]?.emailAddress || "";
-          const superAdminEmail = "admin@neurai.dev"; // Hardcoded para evitar problemas con env
-
           if (userEmail === superAdminEmail) {
             try {
               const upgradeResponse = await fetch("/api/admin/auto-upgrade", {
@@ -92,10 +151,6 @@ export default function DashboardLayout({
             }
           }
 
-          // Inicializar categorías por defecto si no existen (opcional, no crítico)
-          // COMENTADO: No es necesario para el funcionamiento del sistema
-          // await fetch('/api/categories/seed', { method: 'POST' }).catch(() => {});
-
           // Verificar si es superadmin
           const profile = await getUserProfileByClerkId(getToken);
           const isSuperAdminUser = profile?.is_superadmin || false;
@@ -103,65 +158,14 @@ export default function DashboardLayout({
 
           if (isSuperAdminUser) {
             console.log("🔐 Usuario verificado como Super Admin");
-          }
-
-          // Verificar si el usuario es team member de alguna tienda
-          let userIsTeamMember = false;
-          try {
-            const token = await getToken();
-            const storesResponse = await fetch(
-              `${process.env.NEXT_PUBLIC_CLOUDFLARE_API_URL}/api/user-stores`,
-              {
-                headers: {
-                  Authorization: `Bearer ${token}`,
-                },
-              }
-            );
-
-            if (storesResponse.ok) {
-              const storesData = await storesResponse.json();
-              const stores = storesData.data || [];
-
-              // Verificar si tiene acceso como team member a alguna tienda
-              const teamMemberStores = stores.filter(
-                (store: any) => store.access_type === "team_member"
-              );
-
-              if (teamMemberStores.length > 0) {
-                userIsTeamMember = true;
-                setIsTeamMember(true);
-
-                // Si el usuario tiene tiendas como team member, seleccionar la primera por defecto
-                // Guardar en localStorage la tienda seleccionada (usar el mismo key que cloudflare-api.ts)
-                const selectedTenantId = localStorage.getItem("selected_tenant_id");
-                if (!selectedTenantId && teamMemberStores.length > 0) {
-                  console.log(
-                    "🏪 Seleccionando tienda del team member:",
-                    teamMemberStores[0].store_name,
-                    "ID:",
-                    teamMemberStores[0].id
-                  );
-                  localStorage.setItem(
-                    "selected_tenant_id",
-                    teamMemberStores[0].id
-                  );
-                }
-              }
-            }
-          } catch (error) {
-            console.error("Error verificando team membership:", error);
-          }
-
-          // Luego, verificar el estado de suscripción (excepto para superadmin y team members)
-          if (!isSuperAdminUser && !userIsTeamMember) {
-            const info = await checkSubscriptionStatus(getToken);
-            setSubscriptionInfo(info);
-          } else {
-            // Super admin y team members siempre tienen acceso
             setSubscriptionInfo({
               canAccess: true,
               status: "active",
             });
+          } else {
+            // Verificar el estado de suscripción para owners normales
+            const info = await checkSubscriptionStatus(getToken);
+            setSubscriptionInfo(info);
           }
         } catch (error) {
           console.error("Error checking subscription:", error);
