@@ -48,7 +48,7 @@ app.use('/*', cors({
     return 'http://localhost:3000'; // fallback
   },
   allowMethods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH'],
-  allowHeaders: ['Content-Type', 'Authorization'],
+  allowHeaders: ['Content-Type', 'Authorization', 'X-Tenant-ID'],
   exposeHeaders: ['Content-Length'],
   maxAge: 600,
   credentials: true,
