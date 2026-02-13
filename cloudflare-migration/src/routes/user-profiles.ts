@@ -134,10 +134,12 @@ app.put('/:id', async (c) => {
       'trial_start_date',
       'trial_end_date',
       'subscription_id',
+      'plan_id',
       'last_payment_date',
       'next_billing_date',
       'loyalty_points',
       'loyalty_tier',
+      'is_superadmin',
       // Addon subscriptions
       'has_ai_addon',
       'has_store_addon',
