@@ -106,7 +106,16 @@ export function useTeamManagement() {
         throw new Error('Error al cargar miembros del equipo');
       }
       const data = await response.json();
-      setMembers(data);
+
+      // Parsear permissions si vienen como string JSON
+      const parsedData = data.map((member: any) => ({
+        ...member,
+        permissions: typeof member.permissions === 'string'
+          ? JSON.parse(member.permissions)
+          : member.permissions || []
+      }));
+
+      setMembers(parsedData);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Error desconocido');
     } finally {
