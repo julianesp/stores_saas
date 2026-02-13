@@ -51,6 +51,7 @@ export default function DashboardLayout({
     useState<SubscriptionStatus | null>(null);
   const [loading, setLoading] = useState(true);
   const [isSuperAdmin, setIsSuperAdmin] = useState(false);
+  const [isTeamMember, setIsTeamMember] = useState(false);
 
   // Rastrear automáticamente todas las visitas a páginas
   usePageTracking();
@@ -104,12 +105,59 @@ export default function DashboardLayout({
             console.log("🔐 Usuario verificado como Super Admin");
           }
 
-          // Luego, verificar el estado de suscripción (excepto para superadmin)
-          if (!isSuperAdminUser) {
+          // Verificar si el usuario es team member de alguna tienda
+          let userIsTeamMember = false;
+          try {
+            const token = await getToken();
+            const storesResponse = await fetch(
+              `${process.env.NEXT_PUBLIC_CLOUDFLARE_API_URL}/api/user-stores`,
+              {
+                headers: {
+                  Authorization: `Bearer ${token}`,
+                },
+              }
+            );
+
+            if (storesResponse.ok) {
+              const storesData = await storesResponse.json();
+              const stores = storesData.data || [];
+
+              // Verificar si tiene acceso como team member a alguna tienda
+              const teamMemberStores = stores.filter(
+                (store: any) => store.access_type === "team_member"
+              );
+
+              if (teamMemberStores.length > 0) {
+                userIsTeamMember = true;
+                setIsTeamMember(true);
+
+                // Si el usuario tiene tiendas como team member, seleccionar la primera por defecto
+                // Guardar en localStorage la tienda seleccionada (usar el mismo key que cloudflare-api.ts)
+                const selectedTenantId = localStorage.getItem("selected_tenant_id");
+                if (!selectedTenantId && teamMemberStores.length > 0) {
+                  console.log(
+                    "🏪 Seleccionando tienda del team member:",
+                    teamMemberStores[0].store_name,
+                    "ID:",
+                    teamMemberStores[0].id
+                  );
+                  localStorage.setItem(
+                    "selected_tenant_id",
+                    teamMemberStores[0].id
+                  );
+                }
+              }
+            }
+          } catch (error) {
+            console.error("Error verificando team membership:", error);
+          }
+
+          // Luego, verificar el estado de suscripción (excepto para superadmin y team members)
+          if (!isSuperAdminUser && !userIsTeamMember) {
             const info = await checkSubscriptionStatus(getToken);
             setSubscriptionInfo(info);
           } else {
-            // Super admin siempre tiene acceso
+            // Super admin y team members siempre tienen acceso
             setSubscriptionInfo({
               canAccess: true,
               status: "active",
@@ -128,10 +176,11 @@ export default function DashboardLayout({
   // Permitir acceso a la página de suscripción incluso si está expirado
   const isSubscriptionPage = pathname?.startsWith("/dashboard/subscription");
 
-  // Si no puede acceder y no está en la página de suscripción, mostrar modal (excepto superadmin)
+  // Si no puede acceder y no está en la página de suscripción, mostrar modal (excepto superadmin y team members)
   if (
     !loading &&
     !isSuperAdmin &&
+    !isTeamMember &&
     subscriptionInfo &&
     !subscriptionInfo.canAccess &&
     !isSubscriptionPage
@@ -156,8 +205,8 @@ export default function DashboardLayout({
   return (
     <OfflineProvider>
       <NoIndexMeta />
-      {/* Modal de notificación de trial - solo se muestra para usuarios en trial */}
-      {!isSuperAdmin && <TrialNotificationWrapper />}
+      {/* Modal de notificación de trial - solo se muestra para usuarios en trial (no team members) */}
+      {!isSuperAdmin && !isTeamMember && <TrialNotificationWrapper />}
       <div className="flex h-screen overflow-hidden">
         <Sidebar />
 
@@ -179,9 +228,10 @@ export default function DashboardLayout({
         )}
 
         <div className="flex flex-col flex-1 overflow-hidden text-black">
-          {/* Mostrar banner de trial si aplica (excepto superadmin) */}
+          {/* Mostrar banner de trial si aplica (excepto superadmin y team members) */}
           {!loading &&
             !isSuperAdmin &&
+            !isTeamMember &&
             subscriptionInfo?.status === "trial" &&
             subscriptionInfo.daysLeft !== undefined && (
               <TrialBanner daysLeft={subscriptionInfo.daysLeft} />
@@ -198,9 +248,10 @@ export default function DashboardLayout({
           />
 
           <main className="flex-1 overflow-y-auto bg-gray-50 p-4 md:p-6">
-            {/* Alerta de expiración cuando faltan 3 días o menos */}
+            {/* Alerta de expiración cuando faltan 3 días o menos (no para team members) */}
             {!loading &&
               !isSuperAdmin &&
+              !isTeamMember &&
               subscriptionInfo?.daysLeft !== undefined &&
               subscriptionInfo.daysLeft <= 3 && (
                 <div className="mb-4">

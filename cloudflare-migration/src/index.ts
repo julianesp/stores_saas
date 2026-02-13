@@ -89,6 +89,120 @@ app.route('/api/storefront', storefrontRoutes);
 // Stats public API (NO auth required - estadísticas públicas)
 app.route('/stats', statsRoutes);
 
+// Team invitations accept endpoint (NO auth middleware - maneja autenticación internamente)
+app.post('/api/team-invitations/accept', async (c) => {
+  try {
+    const authHeader = c.req.header('Authorization');
+
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+      return c.json({
+        success: false,
+        error: 'No autorizado',
+      }, 401);
+    }
+
+    const token = authHeader.substring(7);
+
+    // Verificar token de Clerk manualmente
+    const { decodeClerkToken } = await import('./middleware/auth-helpers');
+    let clerkUserId: string;
+
+    try {
+      const payload = await decodeClerkToken(token);
+      clerkUserId = payload.sub || '';
+      if (!clerkUserId) {
+        throw new Error('Invalid token');
+      }
+    } catch (error) {
+      return c.json({
+        success: false,
+        error: 'Token inválido',
+      }, 401);
+    }
+
+    // Obtener datos del body
+    const body = await c.req.json();
+    const { token: invitationToken, clerk_user_id } = body;
+    const userId = clerk_user_id || clerkUserId;
+
+    if (!invitationToken || !userId) {
+      return c.json({
+        success: false,
+        error: 'Token y clerk_user_id son requeridos',
+      }, 400);
+    }
+
+    // Buscar la invitación
+    const member = await c.env.DB
+      .prepare('SELECT * FROM team_members WHERE invitation_token = ?')
+      .bind(invitationToken)
+      .first<any>();
+
+    if (!member) {
+      return c.json({
+        success: false,
+        error: 'Invitación no encontrada',
+      }, 404);
+    }
+
+    // Verificar si la invitación ya fue aceptada
+    if (member.invitation_status === 'accepted') {
+      return c.json({
+        success: false,
+        error: 'Esta invitación ya fue aceptada',
+      }, 400);
+    }
+
+    // Verificar si la invitación expiró
+    if (member.invitation_expires_at && new Date(member.invitation_expires_at) < new Date()) {
+      return c.json({
+        success: false,
+        error: 'Esta invitación ha expirado',
+      }, 400);
+    }
+
+    // Verificar si la invitación fue revocada
+    if (member.invitation_status === 'revoked') {
+      return c.json({
+        success: false,
+        error: 'Esta invitación ha sido revocada',
+      }, 400);
+    }
+
+    // Actualizar el miembro con el clerk_user_id y marcar como aceptado
+    const now = new Date().toISOString();
+    await c.env.DB
+      .prepare(`
+        UPDATE team_members
+        SET clerk_user_id = ?,
+            invitation_status = 'accepted',
+            invitation_accepted_at = ?,
+            status = 'active',
+            updated_at = ?
+        WHERE id = ?
+      `)
+      .bind(userId, now, now, member.id)
+      .run();
+
+    const updatedMember = await c.env.DB
+      .prepare('SELECT * FROM team_members WHERE id = ?')
+      .bind(member.id)
+      .first<any>();
+
+    return c.json({
+      success: true,
+      teamMember: updatedMember,
+      message: 'Invitación aceptada exitosamente',
+    });
+  } catch (error: any) {
+    console.error('Error aceptando invitación:', error);
+    return c.json({
+      success: false,
+      error: error.message || 'Error al aceptar invitación',
+    }, 500);
+  }
+});
+
 // Email CRON endpoints (NO auth - solo para llamadas internas de CRON)
 // IMPORTANTE: Estos endpoints solo deben ser llamados por el CRON scheduler
 // Necesitamos crear un handler específico que llame al sub-router sin autenticación

@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
+import { useUser } from "@clerk/nextjs";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -26,6 +27,7 @@ interface InvitationData {
 export default function AcceptInvitationContent() {
   const searchParams = useSearchParams();
   const router = useRouter();
+  const { user, isLoaded: userLoaded } = useUser();
   const token = searchParams.get("token");
 
   const [loading, setLoading] = useState(true);
@@ -33,6 +35,7 @@ export default function AcceptInvitationContent() {
   const [invitation, setInvitation] = useState<InvitationData | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [accepted, setAccepted] = useState(false);
+  const [needsAuth, setNeedsAuth] = useState(false);
 
   useEffect(() => {
     if (!token) {
@@ -41,8 +44,11 @@ export default function AcceptInvitationContent() {
       return;
     }
 
+    // Esperar a que Clerk cargue
+    if (!userLoaded) return;
+
     validateInvitation();
-  }, [token]);
+  }, [token, userLoaded]);
 
   const validateInvitation = async () => {
     try {
@@ -60,6 +66,20 @@ export default function AcceptInvitationContent() {
 
       const data = await response.json();
       setInvitation(data);
+
+      // Verificar si el usuario está autenticado
+      if (!user) {
+        setNeedsAuth(true);
+        return;
+      }
+
+      // Verificar que el email del usuario coincida con la invitación
+      const userEmail = user.emailAddresses[0]?.emailAddress;
+      if (userEmail !== data.email) {
+        setError(
+          `Esta invitación es para ${data.email}, pero estás autenticado como ${userEmail}. Por favor, cierra sesión e inicia sesión con la cuenta correcta.`
+        );
+      }
     } catch (err) {
       setError(err instanceof Error ? err.message : "Error al validar la invitación");
     } finally {

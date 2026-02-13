@@ -41,6 +41,7 @@ export async function authMiddleware(c: Context<{ Bindings: Env }>, next: Next) 
 
     let tenant = null;
     let userProfileId = null;
+    let isTeamMember = false; // Flag to track if user is accessing as team member
 
     // If a specific tenant is requested, validate access
     if (requestedTenantId) {
@@ -61,6 +62,7 @@ export async function authMiddleware(c: Context<{ Bindings: Env }>, next: Next) 
       if (teamMember) {
         // User is a team member - load the owner's tenant
         // The tenant system uses user_profile.id as tenant_id
+        isTeamMember = true;
         tenant = await tenantManager.getTenantById(requestedTenantId);
         if (!tenant) {
           // If tenant doesn't exist in TENANTS_DB, create a minimal one
@@ -76,7 +78,7 @@ export async function authMiddleware(c: Context<{ Bindings: Env }>, next: Next) 
             updatedAt: new Date().toISOString(),
           };
         }
-        userProfileId = requestedTenantId;
+        userProfileId = requestedTenantId; // This is the OWNER's profile ID
       } else {
         // Check if user is the owner of this tenant
         const ownerProfile = await c.env.DB
@@ -253,8 +255,9 @@ export async function authMiddleware(c: Context<{ Bindings: Env }>, next: Next) 
     // Attach is_superadmin flag to tenant object
     (tenant as any).is_superadmin = userProfile.is_superadmin === 1;
 
-    // Check subscription status (skip for superadmin)
-    if (userProfile.is_superadmin !== 1) {
+    // Check subscription status (skip for superadmin and team members)
+    // Team members don't need their own subscription - they use the owner's subscription
+    if (userProfile.is_superadmin !== 1 && !isTeamMember) {
       const userSubscriptionStatus = userProfile.subscription_status || tenant.subscriptionStatus;
       if (userSubscriptionStatus === 'expired' || userSubscriptionStatus === 'canceled') {
         return c.json({
@@ -262,6 +265,25 @@ export async function authMiddleware(c: Context<{ Bindings: Env }>, next: Next) 
           error: 'Subscription required',
           message: 'Your subscription has expired. Please renew to continue.'
         }, 402); // Payment Required
+      }
+    }
+
+    // If user is a team member, verify the OWNER's subscription instead
+    if (isTeamMember && userProfileId) {
+      const ownerProfile = await c.env.DB
+        .prepare('SELECT subscription_status FROM user_profiles WHERE id = ?')
+        .bind(userProfileId)
+        .first<{ subscription_status: string }>();
+
+      if (ownerProfile) {
+        const ownerSubscriptionStatus = ownerProfile.subscription_status;
+        if (ownerSubscriptionStatus === 'expired' || ownerSubscriptionStatus === 'canceled') {
+          return c.json({
+            success: false,
+            error: 'Store subscription expired',
+            message: 'The store owner\'s subscription has expired. Please contact the store owner.'
+          }, 402); // Payment Required
+        }
       }
     }
 
@@ -281,6 +303,9 @@ export async function authMiddleware(c: Context<{ Bindings: Env }>, next: Next) 
   }
 }
 
+// Re-export helper function
+export { decodeClerkToken } from './auth-helpers';
+
 /**
  * Verify Clerk JWT token
  * Returns Clerk user ID if valid, null otherwise
@@ -291,7 +316,8 @@ async function verifyClerkToken(token: string, env: Env): Promise<string | null>
     // This is a simplified version - in production use Clerk's verification
 
     // Decode without verification first (for development)
-    const payload = await decodeClerkToken(token);
+    const { decodeClerkToken: decode } = await import('./auth-helpers');
+    const payload = await decode(token);
 
     // In production, uncomment this and use proper verification:
     /*
@@ -309,22 +335,6 @@ async function verifyClerkToken(token: string, env: Env): Promise<string | null>
     console.error('Token verification error:', error);
     return null;
   }
-}
-
-/**
- * Decode Clerk JWT (without verification - for development only)
- */
-async function decodeClerkToken(token: string): Promise<ClerkJWTPayload> {
-  const parts = token.split('.');
-  if (parts.length !== 3) {
-    throw new Error('Invalid JWT format');
-  }
-
-  const payload = JSON.parse(
-    atob(parts[1].replace(/-/g, '+').replace(/_/g, '/'))
-  );
-
-  return payload;
 }
 
 /**
