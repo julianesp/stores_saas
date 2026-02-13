@@ -151,15 +151,15 @@ export async function authMiddleware(c: Context<{ Bindings: Env }>, next: Next) 
     if (userProfileId) {
       // We already have the userProfileId from tenant selection logic
       userProfile = await c.env.DB
-        .prepare('SELECT id, is_superadmin FROM user_profiles WHERE id = ?')
+        .prepare('SELECT id, is_superadmin, subscription_status FROM user_profiles WHERE id = ?')
         .bind(userProfileId)
-        .first<{ id: string; is_superadmin: number }>();
+        .first<{ id: string; is_superadmin: number; subscription_status: string }>();
     } else {
       // Fallback to clerk_user_id lookup
       userProfile = await c.env.DB
-        .prepare('SELECT id, is_superadmin FROM user_profiles WHERE clerk_user_id = ?')
+        .prepare('SELECT id, is_superadmin, subscription_status FROM user_profiles WHERE clerk_user_id = ?')
         .bind(clerkUserId)
-        .first<{ id: string; is_superadmin: number }>();
+        .first<{ id: string; is_superadmin: number; subscription_status: string }>();
     }
 
     if (!userProfile) {
@@ -255,7 +255,8 @@ export async function authMiddleware(c: Context<{ Bindings: Env }>, next: Next) 
 
     // Check subscription status (skip for superadmin)
     if (userProfile.is_superadmin !== 1) {
-      if (tenant.subscriptionStatus === 'expired' || tenant.subscriptionStatus === 'canceled') {
+      const userSubscriptionStatus = userProfile.subscription_status || tenant.subscriptionStatus;
+      if (userSubscriptionStatus === 'expired' || userSubscriptionStatus === 'canceled') {
         return c.json({
           success: false,
           error: 'Subscription required',
