@@ -32,6 +32,7 @@ import statsRoutes from './routes/stats';
 import loyaltySettingsRoutes from './routes/loyalty-settings';
 import teamInvitationsRoutes from './routes/team-invitations';
 import analyticsRoutes from './routes/analytics';
+import userStoresRoutes from './routes/user-stores';
 
 const app = new Hono<{ Bindings: Env }>();
 
@@ -107,6 +108,76 @@ app.post('/api/email/subscription-reminders', emailCronHandler);
 app.post('/api/email/stock-alerts', emailCronHandler);
 app.post('/api/email/abandoned-carts', emailCronHandler);
 
+// Team invitations public endpoint (NO auth - para usuarios no autenticados)
+app.get('/api/team-invitations/validate', async (c) => {
+  const token = c.req.query('token');
+
+  if (!token) {
+    return c.json({
+      error: 'Token requerido',
+    }, 400);
+  }
+
+  try {
+    // Buscar la invitación por token
+    const member = await c.env.DB
+      .prepare('SELECT * FROM team_members WHERE invitation_token = ?')
+      .bind(token)
+      .first<any>();
+
+    if (!member) {
+      return c.json({
+        error: 'Invitación no encontrada',
+      }, 404);
+    }
+
+    // Verificar si la invitación ya fue aceptada
+    if (member.invitation_status === 'accepted') {
+      return c.json({
+        error: 'Esta invitación ya fue aceptada',
+      }, 400);
+    }
+
+    // Verificar si la invitación expiró
+    if (member.invitation_expires_at && new Date(member.invitation_expires_at) < new Date()) {
+      return c.json({
+        error: 'Esta invitación ha expirado',
+      }, 400);
+    }
+
+    // Verificar si la invitación fue revocada
+    if (member.invitation_status === 'revoked') {
+      return c.json({
+        error: 'Esta invitación ha sido revocada',
+      }, 400);
+    }
+
+    // Obtener información del tenant y owner
+    const tenant = await c.env.DB
+      .prepare('SELECT * FROM tenants WHERE id = ?')
+      .bind(member.tenant_id)
+      .first<any>();
+
+    const owner = await c.env.DB
+      .prepare('SELECT * FROM user_profiles WHERE id = ?')
+      .bind(member.owner_id)
+      .first<any>();
+
+    return c.json({
+      email: member.email,
+      role: member.role,
+      store_name: tenant?.business_name || owner?.store_name || 'Sistema POS',
+      inviter_name: owner?.full_name || owner?.email,
+      expires_at: member.invitation_expires_at,
+    });
+  } catch (error: any) {
+    console.error('Error validando invitación:', error);
+    return c.json({
+      error: error.message || 'Error al validar invitación',
+    }, 500);
+  }
+});
+
 // Apply authentication middleware to all API routes
 app.use('/api/*', authMiddleware);
 
@@ -134,6 +205,7 @@ app.route('/api/email', emailRoutes);
 app.route('/loyalty-settings', loyaltySettingsRoutes);
 app.route('/api/team-invitations', teamInvitationsRoutes);
 app.route('/api/analytics', analyticsRoutes);
+app.route('/api/user-stores', userStoresRoutes);
 
 // 404 handler
 app.notFound((c) => {

@@ -31,6 +31,26 @@ interface APIResponse<T = any> {
 }
 
 /**
+ * Get the selected tenant ID from localStorage
+ */
+function getSelectedTenantId(): string | null {
+  if (typeof window === 'undefined') return null;
+  return localStorage.getItem('selected_tenant_id');
+}
+
+/**
+ * Set the selected tenant ID in localStorage
+ */
+export function setSelectedTenantId(tenantId: string | null) {
+  if (typeof window === 'undefined') return;
+  if (tenantId) {
+    localStorage.setItem('selected_tenant_id', tenantId);
+  } else {
+    localStorage.removeItem('selected_tenant_id');
+  }
+}
+
+/**
  * Realizar petición HTTP a la API
  */
 async function fetchAPI<T = any>(
@@ -50,6 +70,12 @@ async function fetchAPI<T = any>(
     const headers = new Headers(options.headers);
     headers.set('Authorization', `Bearer ${token}`);
     headers.set('Content-Type', 'application/json');
+
+    // Agregar tenant ID si está seleccionado
+    const tenantId = getSelectedTenantId();
+    if (tenantId) {
+      headers.set('X-Tenant-ID', tenantId);
+    }
 
     // Realizar petición
     const response = await fetch(`${API_BASE_URL}${endpoint}`, {

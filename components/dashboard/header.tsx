@@ -5,6 +5,7 @@ import { Menu } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { RefreshProfileButton } from './refresh-profile-button';
 import { NotificationPanel } from './notification-panel';
+import StoreSwitcher from '@/components/layout/StoreSwitcher';
 
 interface HeaderProps {
   onMenuClick?: () => void;
@@ -31,6 +32,10 @@ export function Header({ onMenuClick }: HeaderProps) {
       </div>
 
       <div className="flex items-center gap-2 shrink-0">
+        <div className="hidden md:block">
+          <StoreSwitcher />
+        </div>
+
         <div className="hidden sm:block">
           <NotificationPanel />
         </div>

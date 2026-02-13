@@ -35,9 +35,70 @@ export async function authMiddleware(c: Context<{ Bindings: Env }>, next: Next) 
       }, 401);
     }
 
-    // Get or create tenant for this user
+    // Get tenant - either from X-Tenant-ID header or from user's own tenant
     const tenantManager = new TenantManager(c.env);
-    let tenant = await tenantManager.getTenantByClerkId(clerkUserId);
+    const requestedTenantId = c.req.header('X-Tenant-ID');
+
+    let tenant = null;
+    let userProfileId = null;
+
+    // If a specific tenant is requested, validate access
+    if (requestedTenantId) {
+      // Check if user is a team member of this tenant
+      const teamMember = await c.env.DB
+        .prepare(`
+          SELECT tm.*, up.id as user_profile_id
+          FROM team_members tm
+          JOIN user_profiles up ON up.id = tm.owner_id
+          WHERE tm.clerk_user_id = ?
+            AND tm.owner_id = ?
+            AND tm.status = 'active'
+            AND tm.invitation_status = 'accepted'
+        `)
+        .bind(clerkUserId, requestedTenantId)
+        .first<any>();
+
+      if (teamMember) {
+        // User is a team member - load the owner's tenant
+        // The tenant system uses user_profile.id as tenant_id
+        tenant = await tenantManager.getTenantById(requestedTenantId);
+        if (!tenant) {
+          // If tenant doesn't exist in TENANTS_DB, create a minimal one
+          // This is for compatibility with the user_profiles-based system
+          tenant = {
+            id: requestedTenantId,
+            clerkUserId: '', // Will be filled from user_profile
+            email: '',
+            databaseName: 'shared',
+            databaseId: 'shared',
+            subscriptionStatus: 'active',
+            createdAt: new Date().toISOString(),
+            updatedAt: new Date().toISOString(),
+          };
+        }
+        userProfileId = requestedTenantId;
+      } else {
+        // Check if user is the owner of this tenant
+        const ownerProfile = await c.env.DB
+          .prepare('SELECT id FROM user_profiles WHERE clerk_user_id = ? AND id = ?')
+          .bind(clerkUserId, requestedTenantId)
+          .first<{ id: string }>();
+
+        if (ownerProfile) {
+          tenant = await tenantManager.getTenantByClerkId(clerkUserId);
+          userProfileId = ownerProfile.id;
+        } else {
+          return c.json({
+            success: false,
+            error: 'Access denied to requested tenant',
+            message: 'You do not have access to this store'
+          }, 403);
+        }
+      }
+    } else {
+      // No specific tenant requested - use user's own tenant
+      tenant = await tenantManager.getTenantByClerkId(clerkUserId);
+    }
 
     // Fetch Clerk user data once to use for both tenant and user_profile creation
     let clerkUser = null;
@@ -85,10 +146,21 @@ export async function authMiddleware(c: Context<{ Bindings: Env }>, next: Next) 
 
     // IMPORTANT: Get user_profile.id to use as tenant_id for FK constraints
     // The products table has FK to user_profiles, not to tenants table
-    let userProfile = await c.env.DB
-      .prepare('SELECT id, is_superadmin FROM user_profiles WHERE clerk_user_id = ?')
-      .bind(clerkUserId)
-      .first<{ id: string; is_superadmin: number }>();
+    let userProfile = null;
+
+    if (userProfileId) {
+      // We already have the userProfileId from tenant selection logic
+      userProfile = await c.env.DB
+        .prepare('SELECT id, is_superadmin FROM user_profiles WHERE id = ?')
+        .bind(userProfileId)
+        .first<{ id: string; is_superadmin: number }>();
+    } else {
+      // Fallback to clerk_user_id lookup
+      userProfile = await c.env.DB
+        .prepare('SELECT id, is_superadmin FROM user_profiles WHERE clerk_user_id = ?')
+        .bind(clerkUserId)
+        .first<{ id: string; is_superadmin: number }>();
+    }
 
     if (!userProfile) {
       // Auto-create user profile on first API call

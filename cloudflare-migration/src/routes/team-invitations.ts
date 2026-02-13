@@ -287,4 +287,170 @@ app.delete('/:id', async (c) => {
   }
 });
 
+// GET /api/team-invitations/validate?token=xxx - Validar invitación por token (sin autenticación)
+app.get('/validate', async (c) => {
+  try {
+    const token = c.req.query('token');
+
+    if (!token) {
+      return c.json({
+        success: false,
+        error: 'Token requerido',
+      }, 400);
+    }
+
+    // Buscar la invitación por token
+    const member = await c.env.DB
+      .prepare('SELECT * FROM team_members WHERE invitation_token = ?')
+      .bind(token)
+      .first<TeamMember>();
+
+    if (!member) {
+      return c.json({
+        success: false,
+        error: 'Invitación no encontrada',
+      }, 404);
+    }
+
+    // Verificar si la invitación ya fue aceptada
+    if (member.invitation_status === 'accepted') {
+      return c.json({
+        success: false,
+        error: 'Esta invitación ya fue aceptada',
+      }, 400);
+    }
+
+    // Verificar si la invitación expiró
+    if (member.invitation_expires_at && new Date(member.invitation_expires_at) < new Date()) {
+      return c.json({
+        success: false,
+        error: 'Esta invitación ha expirado',
+      }, 400);
+    }
+
+    // Verificar si la invitación fue revocada
+    if (member.invitation_status === 'revoked') {
+      return c.json({
+        success: false,
+        error: 'Esta invitación ha sido revocada',
+      }, 400);
+    }
+
+    // Obtener información del tenant y owner
+    const tenant = await c.env.DB
+      .prepare('SELECT * FROM tenants WHERE id = ?')
+      .bind(member.tenant_id)
+      .first<any>();
+
+    const owner = await c.env.DB
+      .prepare('SELECT * FROM user_profiles WHERE id = ?')
+      .bind(member.owner_id)
+      .first<any>();
+
+    return c.json({
+      success: true,
+      email: member.email,
+      role: member.role,
+      store_name: tenant?.business_name || owner?.store_name || 'Sistema POS',
+      inviter_name: owner?.full_name || owner?.email,
+      expires_at: member.invitation_expires_at,
+    });
+  } catch (error: any) {
+    console.error('Error validando invitación:', error);
+    return c.json({
+      success: false,
+      error: error.message || 'Error al validar invitación',
+    }, 500);
+  }
+});
+
+// POST /api/team-invitations/accept - Aceptar invitación
+app.post('/accept', async (c) => {
+  const tenant: Tenant = c.get('tenant');
+  const clerkUserId = c.req.header('X-Clerk-User-Id');
+
+  try {
+    const body = await c.req.json();
+    const { token, clerk_user_id } = body;
+
+    const userId = clerk_user_id || clerkUserId;
+
+    if (!token || !userId) {
+      return c.json({
+        success: false,
+        error: 'Token y clerk_user_id son requeridos',
+      }, 400);
+    }
+
+    // Buscar la invitación
+    const member = await c.env.DB
+      .prepare('SELECT * FROM team_members WHERE invitation_token = ?')
+      .bind(token)
+      .first<TeamMember>();
+
+    if (!member) {
+      return c.json({
+        success: false,
+        error: 'Invitación no encontrada',
+      }, 404);
+    }
+
+    // Verificar si la invitación ya fue aceptada
+    if (member.invitation_status === 'accepted') {
+      return c.json({
+        success: false,
+        error: 'Esta invitación ya fue aceptada',
+      }, 400);
+    }
+
+    // Verificar si la invitación expiró
+    if (member.invitation_expires_at && new Date(member.invitation_expires_at) < new Date()) {
+      return c.json({
+        success: false,
+        error: 'Esta invitación ha expirado',
+      }, 400);
+    }
+
+    // Verificar si la invitación fue revocada
+    if (member.invitation_status === 'revoked') {
+      return c.json({
+        success: false,
+        error: 'Esta invitación ha sido revocada',
+      }, 400);
+    }
+
+    // Actualizar el miembro con el clerk_user_id y marcar como aceptado
+    const now = new Date().toISOString();
+    await c.env.DB
+      .prepare(`
+        UPDATE team_members
+        SET clerk_user_id = ?,
+            invitation_status = 'accepted',
+            invitation_accepted_at = ?,
+            status = 'active',
+            updated_at = ?
+        WHERE id = ?
+      `)
+      .bind(userId, now, now, member.id)
+      .run();
+
+    const updatedMember = await c.env.DB
+      .prepare('SELECT * FROM team_members WHERE id = ?')
+      .bind(member.id)
+      .first<TeamMember>();
+
+    return c.json({
+      success: true,
+      teamMember: updatedMember,
+      message: 'Invitación aceptada exitosamente',
+    });
+  } catch (error: any) {
+    console.error('Error aceptando invitación:', error);
+    return c.json({
+      success: false,
+      error: error.message || 'Error al aceptar invitación',
+    }, 500);
+  }
+});
+
 export default app;
