@@ -336,12 +336,7 @@ app.get('/validate', async (c) => {
       }, 400);
     }
 
-    // Obtener información del tenant y owner
-    const tenant = await c.env.DB
-      .prepare('SELECT * FROM tenants WHERE id = ?')
-      .bind(member.tenant_id)
-      .first<any>();
-
+    // Obtener información del owner (dueño de la tienda)
     const owner = await c.env.DB
       .prepare('SELECT * FROM user_profiles WHERE id = ?')
       .bind(member.owner_id)
@@ -351,7 +346,7 @@ app.get('/validate', async (c) => {
       success: true,
       email: member.email,
       role: member.role,
-      store_name: tenant?.business_name || owner?.store_name || 'Sistema POS',
+      store_name: owner?.store_name || 'Sistema POS',
       inviter_name: owner?.full_name || owner?.email,
       expires_at: member.invitation_expires_at,
     });
