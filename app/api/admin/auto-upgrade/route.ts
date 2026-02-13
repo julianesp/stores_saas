@@ -60,8 +60,6 @@ export async function POST(req: NextRequest) {
       const updatedProfile = await updateUserProfile(currentProfile.id, {
         is_superadmin: true,
         subscription_status: 'active',
-        trial_start_date: undefined,
-        trial_end_date: undefined,
       }, getToken);
 
       return NextResponse.json({
