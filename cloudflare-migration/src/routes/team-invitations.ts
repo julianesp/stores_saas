@@ -362,11 +362,23 @@ app.get('/validate', async (c) => {
 // NOTE: POST /accept endpoint is now handled directly in index.ts as a public route
 // This is to avoid auth middleware conflicts when users already have accounts
 
+// GET /api/team-invitations/test - Endpoint de prueba público
+app.get('/test', async (c) => {
+  return c.json({
+    success: true,
+    message: 'El endpoint de team-invitations está funcionando',
+    timestamp: new Date().toISOString()
+  });
+});
+
 // GET /api/team-invitations/me - Obtener perfil del team member actual
 app.get('/me', async (c) => {
   const clerkUserId: string = c.get('clerkUserId');
+  console.log('🔍 [GET /api/team-invitations/me] Llamado con clerkUserId:', clerkUserId);
 
   try {
+    console.log('🔍 [GET /api/team-invitations/me] Buscando en DB con clerk_user_id:', clerkUserId);
+
     // Buscar el team member por clerk_user_id
     const member = await c.env.DB
       .prepare(`
@@ -378,10 +390,19 @@ app.get('/me', async (c) => {
       .bind(clerkUserId)
       .first<TeamMember>();
 
+    console.log('📦 [GET /api/team-invitations/me] Resultado de DB:', {
+      found: !!member,
+      email: member?.email,
+      role: member?.role,
+      permissionsLength: member?.permissions?.length
+    });
+
     if (!member) {
+      console.log('❌ [GET /api/team-invitations/me] No se encontró team member activo');
       return c.json({
         success: false,
         error: 'No es un miembro del equipo activo',
+        clerkUserId
       }, 404);
     }
 

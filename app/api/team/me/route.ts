@@ -11,16 +11,23 @@ export async function GET() {
   try {
     const { userId, getToken } = await auth();
 
+    console.log('🔍 [/api/team/me] Iniciando...');
+    console.log('   userId:', userId);
+    console.log('   API_URL:', API_URL);
+
     if (!userId) {
       console.log('❌ [/api/team/me] No userId');
       return NextResponse.json({ error: 'No autorizado' }, { status: 401 });
     }
 
     const token = await getToken();
+    console.log('🔑 [/api/team/me] Token obtenido, length:', token?.length || 0);
 
     // Intentar obtener el perfil de TeamMember
-    console.log('🔍 [/api/team/me] Llamando a Cloudflare API...');
-    const response = await fetch(`${API_URL}/api/team-members/me`, {
+    const url = `${API_URL}/api/team-members/me`;
+    console.log('📡 [/api/team/me] Llamando a:', url);
+
+    const response = await fetch(url, {
       headers: {
         Authorization: `Bearer ${token}`,
         'Content-Type': 'application/json',
@@ -28,6 +35,8 @@ export async function GET() {
     });
 
     console.log('📡 [/api/team/me] Response status:', response.status);
+    console.log('📡 [/api/team/me] Response ok:', response.ok);
+    console.log('📡 [/api/team/me] Response headers:', Object.fromEntries(response.headers.entries()));
 
     if (!response.ok) {
       const errorText = await response.text();
