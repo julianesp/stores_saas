@@ -84,7 +84,16 @@ export async function checkSubscriptionStatus(
       if (userProfile.next_billing_date) {
         const nextBilling = new Date(userProfile.next_billing_date);
 
-        if (now > nextBilling) {
+        // Normalizar ambas fechas a medianoche para comparación precisa
+        const nowMidnight = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+        const nextBillingMidnight = new Date(
+          nextBilling.getFullYear(),
+          nextBilling.getMonth(),
+          nextBilling.getDate()
+        );
+
+        // Verificar si ya expiró
+        if (nowMidnight > nextBillingMidnight) {
           // La suscripción debería renovarse, pero no lo ha hecho
           // Marcar como expirada
           await updateUserProfile(userProfile.id, {
@@ -94,8 +103,21 @@ export async function checkSubscriptionStatus(
           return {
             canAccess: false,
             status: 'expired',
+            daysLeft: 0,
           };
         }
+
+        // Calcular días restantes hasta el próximo pago
+        const daysLeft = Math.ceil(
+          (nextBillingMidnight.getTime() - nowMidnight.getTime()) / (1000 * 60 * 60 * 24)
+        );
+
+        return {
+          canAccess: true,
+          status: 'active',
+          nextBillingDate: userProfile.next_billing_date,
+          daysLeft, // ✅ Ahora incluye días restantes
+        };
       }
 
       return {

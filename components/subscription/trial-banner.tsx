@@ -5,10 +5,12 @@ import { AlertCircle, Clock } from 'lucide-react';
 
 interface TrialBannerProps {
   daysLeft: number;
+  subscriptionType?: 'trial' | 'active';
 }
 
-export function TrialBanner({ daysLeft }: TrialBannerProps) {
+export function TrialBanner({ daysLeft, subscriptionType = 'trial' }: TrialBannerProps) {
   const isUrgent = daysLeft <= 7;
+  const isTrial = subscriptionType === 'trial';
 
   return (
     <div
@@ -29,15 +31,17 @@ export function TrialBanner({ daysLeft }: TrialBannerProps) {
         >
           {daysLeft === 1 ? (
             <>
-              ⚠️ <strong>¡Último día de prueba gratuita!</strong> Tu acceso expirará mañana.{' '}
+              ⚠️ <strong>¡Último día!</strong>{' '}
+              {isTrial ? 'Tu prueba gratuita expirará mañana' : 'Tu suscripción vence mañana'}.{' '}
             </>
           ) : daysLeft === 0 ? (
             <>
-              ⚠️ <strong>¡Tu prueba gratuita expira hoy!</strong>{' '}
+              ⚠️ <strong>¡{isTrial ? 'Tu prueba gratuita' : 'Tu suscripción'} expira hoy!</strong>{' '}
             </>
           ) : (
             <>
-              Te {isUrgent && '¡solo '}quedan <strong>{daysLeft} días</strong> de prueba gratuita
+              Te {isUrgent && '¡solo '}quedan <strong>{daysLeft} días</strong>{' '}
+              {isTrial ? 'de prueba gratuita' : 'en tu suscripción'}
               {isUrgent && '!'}.{' '}
             </>
           )}
@@ -47,7 +51,7 @@ export function TrialBanner({ daysLeft }: TrialBannerProps) {
               isUrgent ? 'text-red-900' : 'text-yellow-900'
             } hover:no-underline`}
           >
-            Suscríbete ahora
+            {isTrial ? 'Suscríbete ahora' : 'Renovar ahora'}
           </Link>
         </p>
       </div>

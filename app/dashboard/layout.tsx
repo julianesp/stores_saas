@@ -288,13 +288,16 @@ export default function DashboardLayout({
         )}
 
         <div className="flex flex-col flex-1 overflow-hidden text-black">
-          {/* Mostrar banner de trial si aplica (excepto superadmin y team members) */}
+          {/* Mostrar banner para trial o suscripciones activas próximas a vencer */}
           {!loading &&
             !isSuperAdmin &&
             !isTeamMember &&
-            subscriptionInfo?.status === "trial" &&
-            subscriptionInfo.daysLeft !== undefined && (
-              <TrialBanner daysLeft={subscriptionInfo.daysLeft} />
+            subscriptionInfo?.daysLeft !== undefined &&
+            (subscriptionInfo.status === "trial" || subscriptionInfo.status === "active") && (
+              <TrialBanner
+                daysLeft={subscriptionInfo.daysLeft}
+                subscriptionType={subscriptionInfo.status}
+              />
             )}
 
           {/* Mostrar banner de addons próximos a vencer */}
