@@ -18,6 +18,29 @@ export const metadata: Metadata = {
   title: "posib.dev - Sistema POS",
   description: "Sistema completo de punto de venta y gestión de inventario para tiendas",
   manifest: "/manifest.json",
+  metadataBase: new URL('https://posib.dev'),
+  openGraph: {
+    type: 'website',
+    locale: 'es_ES',
+    url: 'https://posib.dev',
+    title: 'posib.dev - Sistema POS',
+    description: 'Sistema completo de punto de venta y gestión de inventario para tiendas',
+    siteName: 'posib.dev',
+    images: [
+      {
+        url: 'https://0dwas2ied3dcs14f.public.blob.vercel-storage.com/tienda_pos/posib_logo_1200x630.png',
+        width: 1200,
+        height: 630,
+        alt: 'posib.dev - Sistema POS',
+      }
+    ],
+  },
+  twitter: {
+    card: 'summary_large_image',
+    title: 'posib.dev - Sistema POS',
+    description: 'Sistema completo de punto de venta y gestión de inventario para tiendas',
+    images: ['https://0dwas2ied3dcs14f.public.blob.vercel-storage.com/tienda_pos/posib_logo_1200x630.png'],
+  },
   icons: {
     icon: [
       { url: 'https://0dwas2ied3dcs14f.public.blob.vercel-storage.com/tienda_pos/posib_logo.png', type: 'image/png' },
