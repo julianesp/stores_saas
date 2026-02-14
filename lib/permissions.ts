@@ -270,18 +270,31 @@ export function hasPermission(
   // Si es un TeamMember
   const teamMember = user as TeamMember;
 
+  console.log(`🔍 [hasPermission] Verificando permiso "${permission}" para usuario:`, {
+    email: teamMember.email,
+    role: teamMember.role,
+    status: teamMember.status,
+    permissions: teamMember.permissions,
+    permissionsType: typeof teamMember.permissions,
+    isArray: Array.isArray(teamMember.permissions)
+  });
+
   // Verificar si el usuario está activo
   if (teamMember.status !== 'active') {
+    console.log(`❌ [hasPermission] Usuario no está activo`);
     return false;
   }
 
   // Si es admin, tiene todos los permisos
   if (teamMember.role === 'admin') {
+    console.log(`✅ [hasPermission] Usuario es admin, tiene todos los permisos`);
     return true;
   }
 
   // Verificar en la lista de permisos
-  return teamMember.permissions.includes(permission);
+  const hasIt = teamMember.permissions.includes(permission);
+  console.log(`🔍 [hasPermission] permissions.includes("${permission}"):`, hasIt);
+  return hasIt;
 }
 
 /**
