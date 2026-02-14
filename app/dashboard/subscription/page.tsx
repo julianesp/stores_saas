@@ -390,13 +390,32 @@ export default function SubscriptionPageWompi() {
                     </span>
                   </div>
                 )}
-                {isActive && subscriptionStatus?.status === "active" && (
-                  <div className="absolute -top-3 left-1/2 transform -translate-x-1/2">
-                    <span className="bg-green-500 text-white px-3 py-1 rounded-full text-xs font-medium">
-                      ✓ Activo
-                    </span>
-                  </div>
-                )}
+                {isActive && subscriptionStatus?.status === "active" && (() => {
+                  // Obtener fecha de vencimiento según el tipo de addon
+                  let expiresAt: string | null | undefined = null;
+                  if (addon.type === 'ai') expiresAt = profile?.ai_addon_expires_at;
+                  else if (addon.type === 'store') expiresAt = profile?.store_addon_expires_at;
+                  else if (addon.type === 'email') expiresAt = profile?.email_addon_expires_at;
+
+                  // Calcular días restantes
+                  let daysLeft = 0;
+                  let isNearExpiry = false;
+                  if (expiresAt) {
+                    const expiryDate = new Date(expiresAt);
+                    const today = new Date();
+                    const diffTime = expiryDate.getTime() - today.getTime();
+                    daysLeft = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+                    isNearExpiry = daysLeft <= 3 && daysLeft > 0;
+                  }
+
+                  return (
+                    <div className="absolute -top-3 left-1/2 transform -translate-x-1/2">
+                      <span className={`${isNearExpiry ? 'bg-orange-500' : 'bg-green-500'} text-white px-3 py-1 rounded-full text-xs font-medium`}>
+                        ✓ Activo
+                      </span>
+                    </div>
+                  );
+                })()}
 
                 <CardHeader>
                   <div className="flex items-center gap-2">
@@ -422,6 +441,54 @@ export default function SubscriptionPageWompi() {
                       </li>
                     ))}
                   </ul>
+
+                  {/* Mostrar información de fecha de vencimiento si está activo */}
+                  {isActive && subscriptionStatus?.status === "active" && (() => {
+                    let expiresAt: string | null | undefined = null;
+                    if (addon.type === 'ai') expiresAt = profile?.ai_addon_expires_at;
+                    else if (addon.type === 'store') expiresAt = profile?.store_addon_expires_at;
+                    else if (addon.type === 'email') expiresAt = profile?.email_addon_expires_at;
+
+                    if (!expiresAt) return null;
+
+                    const expiryDate = new Date(expiresAt);
+                    const today = new Date();
+                    const diffTime = expiryDate.getTime() - today.getTime();
+                    const daysLeft = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+                    const isNearExpiry = daysLeft <= 3 && daysLeft > 0;
+                    const isExpired = daysLeft <= 0;
+
+                    return (
+                      <div className={`p-3 rounded-lg border ${
+                        isExpired ? 'bg-red-50 border-red-200' :
+                        isNearExpiry ? 'bg-orange-50 border-orange-200' :
+                        'bg-green-50 border-green-200'
+                      }`}>
+                        <p className="text-xs font-medium mb-1 flex items-center gap-1">
+                          <AlertCircle className={`h-3 w-3 ${
+                            isExpired ? 'text-red-600' :
+                            isNearExpiry ? 'text-orange-600' :
+                            'text-green-600'
+                          }`} />
+                          {isExpired ? 'Expirado' : isNearExpiry ? '¡Próximo a vencer!' : 'Información del Addon'}
+                        </p>
+                        <p className="text-xs text-gray-700">
+                          <strong>Vence:</strong> {expiryDate.toLocaleDateString('es-CO', {
+                            year: 'numeric',
+                            month: 'long',
+                            day: 'numeric'
+                          })}
+                        </p>
+                        {!isExpired && (
+                          <p className={`text-xs mt-1 ${
+                            isNearExpiry ? 'text-orange-700 font-medium' : 'text-gray-600'
+                          }`}>
+                            {daysLeft === 1 ? '¡Queda 1 día!' : `Quedan ${daysLeft} días`}
+                          </p>
+                        )}
+                      </div>
+                    );
+                  })()}
 
                   <Button
                     className={`w-full ${colors.button}`}

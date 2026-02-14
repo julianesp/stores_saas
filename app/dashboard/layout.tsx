@@ -9,6 +9,7 @@ import { TrialBanner } from "@/components/subscription/trial-banner";
 import { SubscriptionExpiredModal } from "@/components/subscription/expired-modal";
 import { ExpirationAlert } from "@/components/subscription/expiration-alert";
 import { TrialNotificationWrapper } from "@/components/subscription/trial-notification-wrapper";
+import { AddonExpiryBanner } from "@/components/subscription/addon-expiry-banner";
 import OfflineProvider from "@/components/OfflineProvider";
 import {
   checkSubscriptionStatus,
@@ -52,6 +53,11 @@ export default function DashboardLayout({
   const [loading, setLoading] = useState(true);
   const [isSuperAdmin, setIsSuperAdmin] = useState(false);
   const [isTeamMember, setIsTeamMember] = useState(false);
+  const [expiringAddons, setExpiringAddons] = useState<Array<{
+    name: string;
+    daysLeft: number;
+    expiresAt: string;
+  }>>([]);
 
   // Rastrear automáticamente todas las visitas a páginas
   usePageTracking();
@@ -156,6 +162,56 @@ export default function DashboardLayout({
           const isSuperAdminUser = profile?.is_superadmin || false;
           setIsSuperAdmin(isSuperAdminUser);
 
+          // Verificar addons próximos a vencer (solo para owners, no para team members ni superadmin)
+          if (profile && !isSuperAdminUser && !userIsTeamMember && profile.subscription_status === 'active') {
+            const today = new Date();
+            const expiring: Array<{ name: string; daysLeft: number; expiresAt: string }> = [];
+
+            // Verificar addon de IA
+            if (profile.has_ai_addon && profile.ai_addon_expires_at) {
+              const expiryDate = new Date(profile.ai_addon_expires_at);
+              const diffTime = expiryDate.getTime() - today.getTime();
+              const daysLeft = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+              if (daysLeft <= 3 && daysLeft >= 0) {
+                expiring.push({
+                  name: 'Análisis con IA',
+                  daysLeft,
+                  expiresAt: profile.ai_addon_expires_at
+                });
+              }
+            }
+
+            // Verificar addon de Tienda
+            if (profile.has_store_addon && profile.store_addon_expires_at) {
+              const expiryDate = new Date(profile.store_addon_expires_at);
+              const diffTime = expiryDate.getTime() - today.getTime();
+              const daysLeft = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+              if (daysLeft <= 3 && daysLeft >= 0) {
+                expiring.push({
+                  name: 'Tienda Online',
+                  daysLeft,
+                  expiresAt: profile.store_addon_expires_at
+                });
+              }
+            }
+
+            // Verificar addon de Email
+            if (profile.has_email_addon && profile.email_addon_expires_at) {
+              const expiryDate = new Date(profile.email_addon_expires_at);
+              const diffTime = expiryDate.getTime() - today.getTime();
+              const daysLeft = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+              if (daysLeft <= 3 && daysLeft >= 0) {
+                expiring.push({
+                  name: 'Email Marketing',
+                  daysLeft,
+                  expiresAt: profile.email_addon_expires_at
+                });
+              }
+            }
+
+            setExpiringAddons(expiring);
+          }
+
           if (isSuperAdminUser) {
             console.log("🔐 Usuario verificado como Super Admin");
             setSubscriptionInfo({
@@ -240,6 +296,11 @@ export default function DashboardLayout({
             subscriptionInfo.daysLeft !== undefined && (
               <TrialBanner daysLeft={subscriptionInfo.daysLeft} />
             )}
+
+          {/* Mostrar banner de addons próximos a vencer */}
+          {!loading && !isSuperAdmin && !isTeamMember && expiringAddons.length > 0 && (
+            <AddonExpiryBanner addons={expiringAddons} />
+          )}
 
           <Header
             onMenuClick={() => {
