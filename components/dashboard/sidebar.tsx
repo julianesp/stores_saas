@@ -402,12 +402,9 @@ export function Sidebar({ isMobile = false, onLinkClick }: SidebarProps) {
 
   // Filtrar items del menú según permisos
   const getFilteredMenuItems = () => {
-    console.log('🔍 [Sidebar] Filtrando items. isOwner:', isOwner, 'isSuperAdmin:', isSuperAdmin, 'permissionsLoading:', permissionsLoading);
-
     // IMPORTANTE: No filtrar hasta que termine de cargar los permisos
     // Si filtramos mientras loading=true, currentUser será null y no se mostrará nada
     if (permissionsLoading) {
-      console.log('⏳ [Sidebar] Esperando a que terminen de cargar los permisos...');
       return [];
     }
 
@@ -416,7 +413,6 @@ export function Sidebar({ isMobile = false, onLinkClick }: SidebarProps) {
     const filtered = storeMenuItems.filter((item) => {
       // Si es solo para owners y el usuario no es owner, ocultar
       if ((item as any).ownerOnly && !isOwner) {
-        console.log(`❌ [Sidebar] ${item.title} - ownerOnly y usuario no es owner`);
         return false;
       }
 
@@ -426,34 +422,27 @@ export function Sidebar({ isMobile = false, onLinkClick }: SidebarProps) {
         if (isOwner) {
           // Verificar addons solo para owners
           if (item.requiresAddon === "ai" && !hasAI) {
-            console.log(`❌ [Sidebar] ${item.title} - owner pero sin addon AI`);
             return false;
           }
           if (item.requiresAddon === "email" && !hasEmail) {
-            console.log(`❌ [Sidebar] ${item.title} - owner pero sin addon Email`);
             return false;
           }
           if (item.requiresAddon === "store" && !hasStore) {
-            console.log(`❌ [Sidebar] ${item.title} - owner pero sin addon Store`);
             return false;
           }
-          console.log(`✅ [Sidebar] ${item.title} - owner tiene acceso`);
           return true;
         }
         // Para team members, verificar permisos
         const hasPermission = item.permissions.some((permission) => can(permission as Permission));
-        console.log(`🔍 [Sidebar] ${item.title} - Team member, permisos requeridos:`, item.permissions, 'tiene acceso:', hasPermission);
         return hasPermission;
       }
 
       // Si no tiene permisos definidos, SOLO mostrar a owners
       // Esto evita que team members vean items sin restricciones de permisos
       const showToOwner = isOwner;
-      console.log(`🔍 [Sidebar] ${item.title} - Sin permisos definidos, mostrar a owner:`, showToOwner);
       return showToOwner;
     });
 
-    console.log('📋 [Sidebar] Items filtrados:', filtered.length, 'de', storeMenuItems.length);
     return filtered;
   };
 

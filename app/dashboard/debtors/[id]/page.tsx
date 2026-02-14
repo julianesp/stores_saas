@@ -15,7 +15,7 @@ import {
   registerCreditPayment,
   updateCustomerCreditLimit,
 } from '@/lib/cloudflare-credit-helpers';
-import { Customer, Sale, UserProfile } from '@/lib/types';
+import { Customer, SaleWithRelations, UserProfile } from '@/lib/types';
 import type { CreditPaymentData } from '@/lib/cloudflare-api';
 import { formatCurrency } from '@/lib/utils';
 import {
@@ -43,8 +43,8 @@ export default function DebtorDetailPage() {
 
   const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
   const [customer, setCustomer] = useState<Customer | null>(null);
-  const [creditSales, setCreditSales] = useState<Sale[]>([]);
-  const [selectedSale, setSelectedSale] = useState<Sale | null>(null);
+  const [creditSales, setCreditSales] = useState<SaleWithRelations[]>([]);
+  const [selectedSale, setSelectedSale] = useState<SaleWithRelations | null>(null);
   const [paymentHistory, setPaymentHistory] = useState<CreditPaymentData[]>([]);
   const [loading, setLoading] = useState(true);
   const [showPaymentModal, setShowPaymentModal] = useState(false);
@@ -84,7 +84,7 @@ export default function DebtorDetailPage() {
     }
   };
 
-  const handleSaleClick = async (sale: Sale) => {
+  const handleSaleClick = async (sale: SaleWithRelations) => {
     setSelectedSale(sale);
     const history = await getCreditPaymentHistory(sale.id, getToken);
     setPaymentHistory(history);

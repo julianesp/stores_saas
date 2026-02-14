@@ -144,7 +144,7 @@ export async function checkSubscriptionStatus(
 /**
  * Obtiene el perfil de usuario actual usando Cloudflare API
  */
-export async function getUserProfileByClerkId(getToken: GetTokenFn) {
+export async function getUserProfileByClerkId(getToken: GetTokenFn): Promise<UserProfile | null> {
   try {
     const userProfile = await getUserProfile(getToken);
     return userProfile;
