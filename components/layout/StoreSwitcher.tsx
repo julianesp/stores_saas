@@ -73,8 +73,12 @@ export default function StoreSwitcher() {
     }
   };
 
-  // No mostrar si solo hay una tienda
-  if (stores.length <= 1) {
+  // No mostrar el selector si:
+  // 1. Solo hay una tienda O
+  // 2. El usuario solo es team member (no tiene tiendas como owner)
+  const hasOwnerStore = stores.some((s) => s.access_type === "owner");
+
+  if (stores.length <= 1 || !hasOwnerStore) {
     return null;
   }
 

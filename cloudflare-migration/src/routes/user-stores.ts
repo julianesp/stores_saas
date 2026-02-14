@@ -29,6 +29,7 @@ app.get('/', async (c) => {
     const stores: AccessibleStore[] = [];
 
     // 1. Get user's own store (as owner)
+    // Solo incluir como owner si tiene store_name configurado
     const ownProfile = await c.env.DB
       .prepare(`
         SELECT id, store_name, store_slug, subscription_status, role
@@ -38,10 +39,12 @@ app.get('/', async (c) => {
       .bind(clerkUserId)
       .first<any>();
 
-    if (ownProfile) {
+    // Solo agregar como "owner" si tiene un store_name configurado
+    // Esto evita que usuarios que solo son team members tengan una tienda propia
+    if (ownProfile && ownProfile.store_name) {
       stores.push({
         id: ownProfile.id,
-        store_name: ownProfile.store_name || 'Mi Tienda',
+        store_name: ownProfile.store_name,
         store_slug: ownProfile.store_slug,
         role: 'owner',
         access_type: 'owner',
