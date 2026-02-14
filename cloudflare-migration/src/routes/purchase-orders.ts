@@ -50,6 +50,13 @@ app.get('/', async (c) => {
     // Get all items for all orders
     const allItems = await tenantDB.getAll<PurchaseOrderItem>('purchase_order_items');
 
+    // Get all suppliers
+    const allSuppliers = await tenantDB.getAll<any>('suppliers');
+    const suppliersMap = new Map();
+    allSuppliers.forEach(supplier => {
+      suppliersMap.set(supplier.id, supplier);
+    });
+
     // Group items by order_id
     const itemsMap = new Map<string, PurchaseOrderItem[]>();
     allItems.forEach(item => {
@@ -59,13 +66,14 @@ app.get('/', async (c) => {
       itemsMap.get(item.purchase_order_id)!.push(item);
     });
 
-    // Add items to each order
+    // Add items and supplier to each order
     const ordersWithItems = orders.map(order => ({
       ...order,
-      items: itemsMap.get(order.id) || []
+      items: itemsMap.get(order.id) || [],
+      supplier: suppliersMap.get(order.supplier_id) || null
     }));
 
-    return c.json<APIResponse<Array<PurchaseOrder & { items: PurchaseOrderItem[] }>>>(
+    return c.json<APIResponse<Array<PurchaseOrder & { items: PurchaseOrderItem[], supplier: any }>>>(
 {
         success: true,
         data: ordersWithItems,
@@ -101,6 +109,9 @@ app.get('/:id', async (c) => {
       );
     }
 
+    // Get supplier info
+    const supplier = await tenantDB.getById<any>('suppliers', order.supplier_id);
+
     // Get order items
     const items = await tenantDB.query<PurchaseOrderItem>(
       'purchase_order_items',
@@ -108,10 +119,10 @@ app.get('/:id', async (c) => {
       [orderId]
     );
 
-    return c.json<APIResponse<PurchaseOrder & { items: PurchaseOrderItem[] }>>(
+    return c.json<APIResponse<PurchaseOrder & { items: PurchaseOrderItem[], supplier: any }>>(
       {
         success: true,
-        data: { ...order, items },
+        data: { ...order, items, supplier: supplier || null },
       }
     );
   } catch (error) {
@@ -139,6 +150,9 @@ app.get('/supplier/:supplierId', async (c) => {
       [supplierId]
     );
 
+    // Get supplier info
+    const supplier = await tenantDB.getById<any>('suppliers', supplierId);
+
     // Get all items for these orders
     const allItems = await tenantDB.getAll<PurchaseOrderItem>('purchase_order_items');
 
@@ -151,13 +165,14 @@ app.get('/supplier/:supplierId', async (c) => {
       itemsMap.get(item.purchase_order_id)!.push(item);
     });
 
-    // Add items to each order
+    // Add items and supplier to each order
     const ordersWithItems = orders.map(order => ({
       ...order,
-      items: itemsMap.get(order.id) || []
+      items: itemsMap.get(order.id) || [],
+      supplier: supplier || null
     }));
 
-    return c.json<APIResponse<Array<PurchaseOrder & { items: PurchaseOrderItem[] }>>>({
+    return c.json<APIResponse<Array<PurchaseOrder & { items: PurchaseOrderItem[], supplier: any }>>>({
       success: true,
       data: ordersWithItems,
     });
