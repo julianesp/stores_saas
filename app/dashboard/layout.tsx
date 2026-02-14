@@ -210,7 +210,7 @@ export default function DashboardLayout({
     <OfflineProvider>
       <NoIndexMeta />
       {/* Modal de notificación de trial - solo se muestra para usuarios en trial (no team members) */}
-      {!isSuperAdmin && !isTeamMember && <TrialNotificationWrapper />}
+      {!loading && !isSuperAdmin && !isTeamMember && <TrialNotificationWrapper />}
       <div className="flex h-screen overflow-hidden">
         <Sidebar />
 

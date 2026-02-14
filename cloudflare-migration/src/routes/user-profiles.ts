@@ -11,13 +11,39 @@ const app = new Hono<{ Bindings: Env }>();
 app.get('/', async (c) => {
   try {
     const tenant: Tenant = c.get('tenant');
+    const clerkUserId: string = c.get('clerkUserId');
 
-    // Obtener el perfil del usuario actual (basado en el tenant)
+    console.log('🔍 [GET /api/user-profiles] clerk_user_id:', clerkUserId);
+
+    // Primero verificar si el usuario es un team member
+    // Los team members NO tienen user_profile, solo tienen registro en team_members
+    const teamMember = await c.env.DB.prepare(
+      `SELECT id FROM team_members
+       WHERE clerk_user_id = ?
+       AND invitation_status = 'accepted'
+       AND status = 'active'`
+    )
+      .bind(clerkUserId)
+      .first<{ id: string }>();
+
+    if (teamMember) {
+      console.log('👥 [GET /api/user-profiles] Usuario es team member, retornando 404');
+      // Team members no tienen user_profile
+      return c.json<APIResponse<null>>({
+        success: false,
+        error: 'User is a team member, not an owner',
+        data: null
+      }, 404);
+    }
+
+    // Obtener el perfil del usuario actual (owner)
     const result = await c.env.DB.prepare(
       'SELECT * FROM user_profiles WHERE clerk_user_id = ?'
     )
-      .bind(tenant.clerk_user_id)
+      .bind(clerkUserId)
       .first<UserProfile>();
+
+    console.log('📦 [GET /api/user-profiles] Perfil encontrado:', !!result);
 
     if (!result) {
       return c.json<APIResponse<null>>({
