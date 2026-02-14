@@ -13,8 +13,8 @@ interface Customer {
   id: string;
   tenant_id: string;
   name: string;
-  email?: string;
-  phone?: string;
+  email: string; // Obligatorio para recordatorios de pago
+  phone: string; // Obligatorio para recordatorios de pago
   address?: string;
   city?: string;
   id_number?: string;
@@ -80,10 +80,43 @@ app.post('/', async (c) => {
   try {
     const body = await c.req.json();
 
+    // Validar campos obligatorios
     if (!body.name) {
       return c.json<APIResponse>({
         success: false,
-        error: 'Missing required field: name',
+        error: 'El nombre es requerido',
+      }, 400);
+    }
+
+    if (!body.email || body.email.trim() === '') {
+      return c.json<APIResponse>({
+        success: false,
+        error: 'El email es requerido para enviar recordatorios de pago',
+      }, 400);
+    }
+
+    if (!body.phone || body.phone.trim() === '') {
+      return c.json<APIResponse>({
+        success: false,
+        error: 'El teléfono es requerido para enviar recordatorios de pago',
+      }, 400);
+    }
+
+    // Validar formato de email
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(body.email)) {
+      return c.json<APIResponse>({
+        success: false,
+        error: 'El email no tiene un formato válido',
+      }, 400);
+    }
+
+    // Validar que el teléfono tenga al menos 7 dígitos
+    const phoneDigits = body.phone.replace(/\D/g, '');
+    if (phoneDigits.length < 7) {
+      return c.json<APIResponse>({
+        success: false,
+        error: 'El teléfono debe tener al menos 7 dígitos',
       }, 400);
     }
 
@@ -92,8 +125,8 @@ app.post('/', async (c) => {
     const customerData = {
       id: generateId('cust'),
       name: body.name,
-      email: body.email || null,
-      phone: body.phone || null,
+      email: body.email.trim(),
+      phone: body.phone.trim(),
       address: body.address || null,
       city: body.city || null,
       id_number: body.id_number || null,

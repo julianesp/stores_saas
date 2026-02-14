@@ -15,8 +15,8 @@ import { toast } from 'sonner';
 
 const customerSchema = z.object({
   name: z.string().min(1, 'El nombre es requerido'),
-  email: z.string().email('Email inválido').optional().or(z.literal('')),
-  phone: z.string().optional(),
+  email: z.string().min(1, 'El email es requerido').email('Email inválido'),
+  phone: z.string().min(1, 'El teléfono es requerido').min(7, 'El teléfono debe tener al menos 7 dígitos'),
   address: z.string().optional(),
   city: z.string().optional(),
   id_number: z.string().optional(),
@@ -94,12 +94,13 @@ export default function NewCustomerPage() {
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label htmlFor="email">Email</Label>
+                <Label htmlFor="email">Email *</Label>
                 <Input
                   id="email"
                   type="email"
                   {...register('email')}
                   placeholder="cliente@ejemplo.com"
+                  required
                 />
                 {errors.email && (
                   <p className="text-sm text-red-600">{errors.email.message}</p>
@@ -107,15 +108,18 @@ export default function NewCustomerPage() {
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="phone">Teléfono</Label>
+                <Label htmlFor="phone">Teléfono *</Label>
                 <Input
                   id="phone"
                   type="tel"
                   inputMode="numeric"
-                  pattern="[0-9]*"
                   {...register('phone')}
-                  placeholder="Número de teléfono"
+                  placeholder="3001234567"
+                  required
                 />
+                {errors.phone && (
+                  <p className="text-sm text-red-600">{errors.phone.message}</p>
+                )}
               </div>
             </div>
 
