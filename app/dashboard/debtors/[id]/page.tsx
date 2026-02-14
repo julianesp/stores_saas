@@ -382,6 +382,34 @@ export default function DebtorDetailPage() {
                       </p>
                     </div>
                   </div>
+
+                  {/* Lista de Productos */}
+                  {sale.items && sale.items.length > 0 && (
+                    <div className="mb-3 border-t pt-3">
+                      <p className="text-xs font-semibold text-gray-600 mb-2">Productos:</p>
+                      <div className="space-y-1.5">
+                        {sale.items.map((item: any, idx: number) => (
+                          <div
+                            key={idx}
+                            className="flex justify-between items-center text-sm bg-gray-50 rounded px-2 py-1.5"
+                          >
+                            <div className="flex-1">
+                              <span className="font-medium text-gray-800">
+                                {item.product?.name || 'Producto desconocido'}
+                              </span>
+                              <span className="text-gray-500 text-xs ml-2">
+                                × {item.quantity}
+                              </span>
+                            </div>
+                            <span className="font-medium text-gray-700">
+                              ${item.subtotal.toLocaleString('es-CO')}
+                            </span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
                   {/* Botón de Registrar Pago */}
                   <Button
                     onClick={() => handleSaleClick(sale)}
