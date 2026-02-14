@@ -31,7 +31,7 @@ export async function GET() {
       '/api/team-invitations/me'
     ];
 
-    const results = {};
+    const results: Record<string, any> = {};
 
     for (const route of routes) {
       try {
