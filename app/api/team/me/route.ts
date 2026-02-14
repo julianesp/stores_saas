@@ -12,12 +12,14 @@ export async function GET() {
     const { userId, getToken } = await auth();
 
     if (!userId) {
+      console.log('❌ [/api/team/me] No userId');
       return NextResponse.json({ error: 'No autorizado' }, { status: 401 });
     }
 
     const token = await getToken();
 
     // Intentar obtener el perfil de TeamMember
+    console.log('🔍 [/api/team/me] Llamando a Cloudflare API...');
     const response = await fetch(`${API_URL}/api/team-members/me`, {
       headers: {
         Authorization: `Bearer ${token}`,
@@ -25,7 +27,11 @@ export async function GET() {
       },
     });
 
+    console.log('📡 [/api/team/me] Response status:', response.status);
+
     if (!response.ok) {
+      const errorText = await response.text();
+      console.log('❌ [/api/team/me] Error response:', errorText);
       // Si no es un TeamMember, devolver 404
       return NextResponse.json(
         { error: 'No es un miembro del equipo' },
@@ -33,11 +39,17 @@ export async function GET() {
       );
     }
 
-    const teamMember = await response.json();
+    const data = await response.json();
+    console.log('✅ [/api/team/me] Team member encontrado:', {
+      email: data.data?.email,
+      role: data.data?.role,
+      permissions: data.data?.permissions
+    });
 
-    return NextResponse.json(teamMember);
+    // Devolver solo los datos del team member (sin el wrapper success/data)
+    return NextResponse.json(data.data || data);
   } catch (error) {
-    console.error('Error en GET /api/team/me:', error);
+    console.error('❌ [/api/team/me] Error:', error);
     return NextResponse.json(
       { error: 'Error al obtener perfil de miembro del equipo' },
       { status: 500 }

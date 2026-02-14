@@ -20,12 +20,20 @@ export function usePermissions() {
       }
 
       try {
+        console.log('🔍 [usePermissions] Verificando tipo de usuario...');
+
         // PRIMERO verificar si es un miembro del equipo
         // Esto es importante porque un usuario puede tener perfil pero solo ser team member
         const memberResponse = await fetch('/api/team/me');
+        console.log('🔍 [usePermissions] Team member response status:', memberResponse.status);
 
         if (memberResponse.ok) {
           const member = await memberResponse.json();
+          console.log('👥 [usePermissions] Usuario es TEAM MEMBER:', {
+            email: member.email,
+            role: member.role,
+            permissions: member.permissions
+          });
           setCurrentUser(member);
           setIsOwner(false);
           setLoading(false);
@@ -34,17 +42,23 @@ export function usePermissions() {
 
         // Si no es team member, verificar si es el dueño de la tienda
         const profileResponse = await fetch('/api/user/profile');
+        console.log('🔍 [usePermissions] Owner profile response status:', profileResponse.status);
 
         if (profileResponse.ok) {
           const profile = await profileResponse.json();
+          console.log('🔍 [usePermissions] Perfil encontrado:', {
+            email: profile.email,
+            store_name: profile.store_name
+          });
 
           // Verificar que realmente tenga una tienda configurada
           // Si no tiene store_name, no es un owner real
           if (profile.store_name) {
+            console.log('👑 [usePermissions] Usuario es OWNER');
             setCurrentUser(profile);
             setIsOwner(true);
           } else {
-            // Tiene perfil pero no tienda = probablemente es solo team member
+            console.log('⚠️ [usePermissions] Tiene perfil pero NO tiene tienda');
             setIsOwner(false);
           }
           setLoading(false);
@@ -52,9 +66,10 @@ export function usePermissions() {
         }
 
         // Si no es ni team member ni owner, no tiene acceso
+        console.log('❌ [usePermissions] Usuario no tiene acceso');
         setIsOwner(false);
       } catch (error) {
-        console.error('Error al cargar perfil de usuario:', error);
+        console.error('❌ [usePermissions] Error al cargar perfil:', error);
       } finally {
         setLoading(false);
       }
@@ -67,9 +82,17 @@ export function usePermissions() {
    * Verifica si el usuario tiene un permiso específico
    */
   const can = (permission: Permission): boolean => {
-    if (!currentUser) return false;
-    if (isOwner) return true; // El dueño tiene todos los permisos
-    return hasPermission(currentUser, permission);
+    if (!currentUser) {
+      console.log(`❌ [usePermissions.can] No currentUser para permiso: ${permission}`);
+      return false;
+    }
+    if (isOwner) {
+      console.log(`✅ [usePermissions.can] ${permission} - Usuario es owner, tiene todos los permisos`);
+      return true; // El dueño tiene todos los permisos
+    }
+    const hasIt = hasPermission(currentUser, permission);
+    console.log(`🔍 [usePermissions.can] ${permission} - Usuario tiene permiso:`, hasIt, 'permisos del usuario:', (currentUser as any).permissions);
+    return hasIt;
   };
 
   /**
