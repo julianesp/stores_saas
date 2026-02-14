@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '@clerk/nextjs';
 import Link from 'next/link';
-import { DollarSign, Users, Eye, Search, Filter, CreditCard, FileSpreadsheet, Download } from 'lucide-react';
+import { DollarSign, Users, Eye, Search, Filter, CreditCard, FileSpreadsheet, Download, MessageCircle, Mail } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -350,19 +350,40 @@ export default function DebtorsPage() {
                     <tr className="border-b">
                       <th className="text-left py-3 px-4">Nombre</th>
                       <th className="text-left py-3 px-4">Contacto</th>
-                      <th className="text-right py-3 px-4">Límite de Crédito</th>
                       <th className="text-right py-3 px-4">Deuda Actual</th>
-                      <th className="text-right py-3 px-4">Crédito Disponible</th>
-                      <th className="text-center py-3 px-4">Estado</th>
+                      <th className="text-center py-3 px-4">Recordatorios</th>
                       <th className="text-center py-3 px-4">Acciones</th>
                     </tr>
                   </thead>
                   <tbody>
                     {filteredDebtors.map((debtor) => {
-                      const creditLimit = debtor.credit_limit || 0;
                       const currentDebt = debtor.current_debt || 0;
-                      const availableCredit = creditLimit - currentDebt;
-                      const debtPercentage = creditLimit > 0 ? (currentDebt / creditLimit) * 100 : 0;
+
+                      const handleWhatsAppReminder = () => {
+                        if (!debtor.phone) {
+                          toast.error('Este cliente no tiene teléfono registrado');
+                          return;
+                        }
+                        const message = encodeURIComponent(
+                          `Hola ${debtor.name}, te recordamos que tienes una deuda pendiente de $${currentDebt.toLocaleString('es-CO')}. Por favor, cuando puedas realiza el pago. ¡Gracias!`
+                        );
+                        const phoneNumber = debtor.phone.replace(/\D/g, ''); // Eliminar caracteres no numéricos
+                        const whatsappUrl = `https://wa.me/${phoneNumber}?text=${message}`;
+                        window.open(whatsappUrl, '_blank');
+                      };
+
+                      const handleEmailReminder = () => {
+                        if (!debtor.email) {
+                          toast.error('Este cliente no tiene email registrado');
+                          return;
+                        }
+                        const subject = encodeURIComponent('Recordatorio de pago');
+                        const body = encodeURIComponent(
+                          `Estimado/a ${debtor.name},\n\nTe recordamos que tienes una deuda pendiente de $${currentDebt.toLocaleString('es-CO')}.\n\nPor favor, cuando puedas realiza el pago.\n\n¡Gracias por tu preferencia!`
+                        );
+                        const mailtoUrl = `mailto:${debtor.email}?subject=${subject}&body=${body}`;
+                        window.location.href = mailtoUrl;
+                      };
 
                       return (
                         <tr key={debtor.id} className="border-b hover:bg-gray-50">
@@ -378,38 +399,33 @@ export default function DebtorsPage() {
                             </div>
                           </td>
                           <td className="py-3 px-4 text-right">
-                            {creditLimit > 0 ? `$${creditLimit.toLocaleString('es-CO')}` : 'Sin límite'}
-                          </td>
-                          <td className="py-3 px-4 text-right">
                             <span className="font-semibold text-red-600">
                               ${currentDebt.toLocaleString('es-CO')}
                             </span>
                           </td>
-                          <td className="py-3 px-4 text-right">
-                            <span className={availableCredit > 0 ? 'text-green-600' : creditLimit === 0 ? 'text-blue-600' : 'text-red-600'}>
-                              {creditLimit === 0 ? 'Ilimitado' : `$${availableCredit.toLocaleString('es-CO')}`}
-                            </span>
-                          </td>
-                          <td className="py-3 px-4 text-center">
-                            <span
-                              className={`inline-flex items-center justify-center px-2 py-1 rounded text-xs font-semibold ${
-                                creditLimit === 0
-                                  ? 'bg-blue-100 text-blue-800'
-                                  : debtPercentage >= 90
-                                  ? 'bg-red-100 text-red-800'
-                                  : debtPercentage >= 70
-                                  ? 'bg-yellow-100 text-yellow-800'
-                                  : 'bg-green-100 text-green-800'
-                              }`}
-                            >
-                              {creditLimit === 0
-                                ? 'Sin Límite'
-                                : debtPercentage >= 90
-                                ? 'Crítico'
-                                : debtPercentage >= 70
-                                ? 'Alerta'
-                                : 'Normal'}
-                            </span>
+                          <td className="py-3 px-4">
+                            <div className="flex items-center justify-center gap-2">
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={handleWhatsAppReminder}
+                                disabled={!debtor.phone}
+                                title={debtor.phone ? 'Enviar recordatorio por WhatsApp' : 'No tiene teléfono'}
+                                className="bg-green-50 hover:bg-green-100 border-green-200"
+                              >
+                                <MessageCircle className="h-4 w-4 text-green-600" />
+                              </Button>
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={handleEmailReminder}
+                                disabled={!debtor.email}
+                                title={debtor.email ? 'Enviar recordatorio por Email' : 'No tiene email'}
+                                className="bg-blue-50 hover:bg-blue-100 border-blue-200"
+                              >
+                                <Mail className="h-4 w-4 text-blue-600" />
+                              </Button>
+                            </div>
                           </td>
                           <td className="py-3 px-4 text-center">
                             <Link href={`/dashboard/debtors/${debtor.id}`}>
@@ -429,36 +445,38 @@ export default function DebtorsPage() {
               {/* Vista de cards para móvil */}
               <div className="md:hidden space-y-3">
                 {filteredDebtors.map((debtor) => {
-                  const creditLimit = debtor.credit_limit || 0;
                   const currentDebt = debtor.current_debt || 0;
-                  const availableCredit = creditLimit - currentDebt;
-                  const debtPercentage = creditLimit > 0 ? (currentDebt / creditLimit) * 100 : 0;
+
+                  const handleWhatsAppReminder = () => {
+                    if (!debtor.phone) {
+                      toast.error('Este cliente no tiene teléfono registrado');
+                      return;
+                    }
+                    const message = encodeURIComponent(
+                      `Hola ${debtor.name}, te recordamos que tienes una deuda pendiente de $${currentDebt.toLocaleString('es-CO')}. Por favor, cuando puedas realiza el pago. ¡Gracias!`
+                    );
+                    const phoneNumber = debtor.phone.replace(/\D/g, '');
+                    const whatsappUrl = `https://wa.me/${phoneNumber}?text=${message}`;
+                    window.open(whatsappUrl, '_blank');
+                  };
+
+                  const handleEmailReminder = () => {
+                    if (!debtor.email) {
+                      toast.error('Este cliente no tiene email registrado');
+                      return;
+                    }
+                    const subject = encodeURIComponent('Recordatorio de pago');
+                    const body = encodeURIComponent(
+                      `Estimado/a ${debtor.name},\n\nTe recordamos que tienes una deuda pendiente de $${currentDebt.toLocaleString('es-CO')}.\n\nPor favor, cuando puedas realiza el pago.\n\n¡Gracias por tu preferencia!`
+                    );
+                    const mailtoUrl = `mailto:${debtor.email}?subject=${subject}&body=${body}`;
+                    window.location.href = mailtoUrl;
+                  };
 
                   return (
                     <Card key={debtor.id}>
                       <CardContent className="p-4">
-                        <div className="flex justify-between items-start mb-3">
-                          <h3 className="font-semibold text-base">{debtor.name}</h3>
-                          <span
-                            className={`inline-flex items-center justify-center px-2 py-1 rounded text-xs font-semibold ${
-                              creditLimit === 0
-                                ? 'bg-blue-100 text-blue-800'
-                                : debtPercentage >= 90
-                                ? 'bg-red-100 text-red-800'
-                                : debtPercentage >= 70
-                                ? 'bg-yellow-100 text-yellow-800'
-                                : 'bg-green-100 text-green-800'
-                            }`}
-                          >
-                            {creditLimit === 0
-                              ? 'Sin Límite'
-                              : debtPercentage >= 90
-                              ? 'Crítico'
-                              : debtPercentage >= 70
-                              ? 'Alerta'
-                              : 'Normal'}
-                          </span>
-                        </div>
+                        <h3 className="font-semibold text-base mb-3">{debtor.name}</h3>
                         <div className="space-y-2 text-sm mb-3">
                           {debtor.phone && (
                             <div className="flex justify-between">
@@ -466,23 +484,43 @@ export default function DebtorsPage() {
                               <span>{debtor.phone}</span>
                             </div>
                           )}
-                          <div className="flex justify-between">
-                            <span className="text-gray-500">Límite:</span>
-                            <span>{creditLimit > 0 ? `$${creditLimit.toLocaleString('es-CO')}` : 'Sin límite'}</span>
-                          </div>
+                          {debtor.email && (
+                            <div className="flex justify-between">
+                              <span className="text-gray-500">Email:</span>
+                              <span className="truncate max-w-[180px]">{debtor.email}</span>
+                            </div>
+                          )}
                           <div className="flex justify-between">
                             <span className="text-gray-500">Deuda:</span>
                             <span className="font-semibold text-red-600">
                               ${currentDebt.toLocaleString('es-CO')}
                             </span>
                           </div>
-                          <div className="flex justify-between">
-                            <span className="text-gray-500">Disponible:</span>
-                            <span className={availableCredit > 0 ? 'text-green-600' : creditLimit === 0 ? 'text-blue-600' : 'text-red-600'}>
-                              {creditLimit === 0 ? 'Ilimitado' : `$${availableCredit.toLocaleString('es-CO')}`}
-                            </span>
-                          </div>
                         </div>
+
+                        <div className="flex gap-2 mb-3">
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={handleWhatsAppReminder}
+                            disabled={!debtor.phone}
+                            className="flex-1 bg-green-50 hover:bg-green-100 border-green-200"
+                          >
+                            <MessageCircle className="h-4 w-4 mr-1 text-green-600" />
+                            WhatsApp
+                          </Button>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={handleEmailReminder}
+                            disabled={!debtor.email}
+                            className="flex-1 bg-blue-50 hover:bg-blue-100 border-blue-200"
+                          >
+                            <Mail className="h-4 w-4 mr-1 text-blue-600" />
+                            Email
+                          </Button>
+                        </div>
+
                         <Link href={`/dashboard/debtors/${debtor.id}`}>
                           <Button variant="outline" size="sm" className="w-full">
                             <Eye className="h-4 w-4 mr-1" />
