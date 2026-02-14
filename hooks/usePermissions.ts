@@ -28,16 +28,32 @@ export function usePermissions() {
         console.log('🔍 [usePermissions] Team member response status:', memberResponse.status);
 
         if (memberResponse.ok) {
-          const member = await memberResponse.json();
+          const memberData = await memberResponse.json();
+          console.log('📦 [usePermissions] Respuesta de /api/team/me:', memberData);
+
+          // El endpoint devuelve los datos directamente, no en un wrapper
+          const member = memberData;
+
           console.log('👥 [usePermissions] Usuario es TEAM MEMBER:', {
-            email: member.email,
-            role: member.role,
-            permissions: member.permissions
+            email: member?.email,
+            role: member?.role,
+            permissions: member?.permissions,
+            hasData: !!member
           });
+
+          if (!member || !member.email) {
+            console.error('❌ [usePermissions] Datos de team member inválidos:', member);
+            setIsOwner(false);
+            setLoading(false);
+            return;
+          }
+
           setCurrentUser(member);
           setIsOwner(false);
           setLoading(false);
           return;
+        } else {
+          console.log('❌ [usePermissions] /api/team/me devolvió error:', memberResponse.status);
         }
 
         // Si no es team member, verificar si es el dueño de la tienda

@@ -40,14 +40,19 @@ export async function GET() {
     }
 
     const data = await response.json();
+    console.log('📦 [/api/team/me] Respuesta de Cloudflare:', data);
     console.log('✅ [/api/team/me] Team member encontrado:', {
-      email: data.data?.email,
-      role: data.data?.role,
-      permissions: data.data?.permissions
+      hasData: !!data.data,
+      hasDataDirectly: !!data.email,
+      email: data.data?.email || data.email,
+      role: data.data?.role || data.role,
+      permissions: data.data?.permissions || data.permissions
     });
 
     // Devolver solo los datos del team member (sin el wrapper success/data)
-    return NextResponse.json(data.data || data);
+    const teamMemberData = data.data || data;
+    console.log('📤 [/api/team/me] Enviando al cliente:', teamMemberData);
+    return NextResponse.json(teamMemberData);
   } catch (error) {
     console.error('❌ [/api/team/me] Error:', error);
     return NextResponse.json(
