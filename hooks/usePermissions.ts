@@ -20,25 +20,39 @@ export function usePermissions() {
       }
 
       try {
-        // Primero verificar si es el dueño de la tienda
-        const profileResponse = await fetch('/api/user/profile');
-
-        if (profileResponse.ok) {
-          const profile = await profileResponse.json();
-          setCurrentUser(profile);
-          setIsOwner(true);
-          setLoading(false);
-          return;
-        }
-
-        // Si no es el dueño, verificar si es un miembro del equipo
+        // PRIMERO verificar si es un miembro del equipo
+        // Esto es importante porque un usuario puede tener perfil pero solo ser team member
         const memberResponse = await fetch('/api/team/me');
 
         if (memberResponse.ok) {
           const member = await memberResponse.json();
           setCurrentUser(member);
           setIsOwner(false);
+          setLoading(false);
+          return;
         }
+
+        // Si no es team member, verificar si es el dueño de la tienda
+        const profileResponse = await fetch('/api/user/profile');
+
+        if (profileResponse.ok) {
+          const profile = await profileResponse.json();
+
+          // Verificar que realmente tenga una tienda configurada
+          // Si no tiene store_name, no es un owner real
+          if (profile.store_name) {
+            setCurrentUser(profile);
+            setIsOwner(true);
+          } else {
+            // Tiene perfil pero no tienda = probablemente es solo team member
+            setIsOwner(false);
+          }
+          setLoading(false);
+          return;
+        }
+
+        // Si no es ni team member ni owner, no tiene acceso
+        setIsOwner(false);
       } catch (error) {
         console.error('Error al cargar perfil de usuario:', error);
       } finally {

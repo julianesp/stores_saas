@@ -316,6 +316,8 @@ app.route('/api/admin', adminStatsRoutes);
 app.route('/api/email', emailRoutes);
 app.route('/loyalty-settings', loyaltySettingsRoutes);
 app.route('/api/team-invitations', teamInvitationsRoutes);
+// Alias para team-members (mismas rutas que team-invitations)
+app.route('/api/team-members', teamInvitationsRoutes);
 app.route('/api/analytics', analyticsRoutes);
 app.route('/api/user-stores', userStoresRoutes);
 

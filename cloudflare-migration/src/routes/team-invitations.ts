@@ -362,4 +362,48 @@ app.get('/validate', async (c) => {
 // NOTE: POST /accept endpoint is now handled directly in index.ts as a public route
 // This is to avoid auth middleware conflicts when users already have accounts
 
+// GET /api/team-invitations/me - Obtener perfil del team member actual
+app.get('/me', async (c) => {
+  const clerkUserId: string = c.get('clerkUserId');
+
+  try {
+    // Buscar el team member por clerk_user_id
+    const member = await c.env.DB
+      .prepare(`
+        SELECT * FROM team_members
+        WHERE clerk_user_id = ?
+          AND invitation_status = 'accepted'
+          AND status = 'active'
+      `)
+      .bind(clerkUserId)
+      .first<TeamMember>();
+
+    if (!member) {
+      return c.json({
+        success: false,
+        error: 'No es un miembro del equipo activo',
+      }, 404);
+    }
+
+    // Parsear permissions si vienen como string
+    const parsedMember = {
+      ...member,
+      permissions: typeof member.permissions === 'string'
+        ? JSON.parse(member.permissions)
+        : member.permissions || []
+    };
+
+    return c.json({
+      success: true,
+      data: parsedMember,
+    });
+  } catch (error: any) {
+    console.error('Error obteniendo perfil de team member:', error);
+    return c.json({
+      success: false,
+      error: error.message || 'Error al obtener perfil',
+    }, 500);
+  }
+});
+
 export default app;

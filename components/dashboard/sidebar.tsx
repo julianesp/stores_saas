@@ -358,8 +358,9 @@ export function Sidebar({ isMobile = false, onLinkClick }: SidebarProps) {
         return item.permissions.some((permission) => can(permission as Permission));
       }
 
-      // Por defecto, mostrar el item
-      return true;
+      // Si no tiene permisos definidos, SOLO mostrar a owners
+      // Esto evita que team members vean items sin restricciones de permisos
+      return isOwner;
     });
   };
 
