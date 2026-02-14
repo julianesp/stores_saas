@@ -369,24 +369,50 @@ export function debtReminderTemplate(data: {
   store_name: string;
   store_phone?: string;
   overdue_days?: number;
+  days_until_due?: number;
   payment_methods?: string;
 }): string {
+  // Determinar el mensaje según el estado del pago
+  let reminderMessage = '';
+  let boxColor = '#fef2f2'; // rojo claro por defecto
+  let borderColor = '#dc2626'; // rojo por defecto
+
+  if (data.overdue_days && data.overdue_days > 0) {
+    // Pago vencido
+    reminderMessage = `Te escribimos para recordarte que tienes un pago vencido desde hace ${data.overdue_days} ${data.overdue_days === 1 ? 'día' : 'días'}.`;
+    boxColor = '#fef2f2';
+    borderColor = '#dc2626';
+  } else if (data.days_until_due !== undefined) {
+    // Pago próximo a vencer
+    if (data.days_until_due === 0) {
+      reminderMessage = 'Te escribimos para recordarte que tu pago <strong>vence HOY</strong>.';
+      boxColor = '#fef3c7';
+      borderColor = '#f59e0b';
+    } else if (data.days_until_due === 1) {
+      reminderMessage = 'Te escribimos para recordarte que tu pago vence <strong>mañana</strong>.';
+      boxColor = '#fef3c7';
+      borderColor = '#f59e0b';
+    } else {
+      reminderMessage = `Te escribimos para recordarte que tu pago vence en <strong>${data.days_until_due} días</strong>.`;
+      boxColor = '#fef9c3';
+      borderColor = '#eab308';
+    }
+  } else {
+    reminderMessage = 'Te escribimos para recordarte que tienes un saldo pendiente de pago.';
+  }
+
   const content = `
     <div class="content">
       <h2 style="color: #1f2937; margin-top: 0;">Hola ${data.customer_name} 👋</h2>
 
       <p style="color: #4b5563; font-size: 16px; line-height: 1.6;">
-        ${
-          data.overdue_days && data.overdue_days > 0
-            ? `Te escribimos para recordarte que tienes un pago vencido desde hace ${data.overdue_days} ${data.overdue_days === 1 ? 'día' : 'días'}.`
-            : 'Te escribimos para recordarte que tienes un saldo pendiente de pago.'
-        }
+        ${reminderMessage}
       </p>
 
-      <div class="stats-box" style="background-color: #fef2f2; border-left: 4px solid #dc2626;">
+      <div class="stats-box" style="background-color: ${boxColor}; border-left: 4px solid ${borderColor};">
         <div class="stat-item" style="border: none;">
           <span style="color: #4b5563; font-weight: 500;">Monto adeudado:</span>
-          <span style="color: #dc2626; font-weight: 700; font-size: 20px;">
+          <span style="color: ${borderColor}; font-weight: 700; font-size: 20px;">
             $${data.debt_amount.toLocaleString('es-CO')}
           </span>
         </div>

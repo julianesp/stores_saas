@@ -1036,17 +1036,25 @@ app.post('/debt-reminders', async (c) => {
               .bind(store.id, debtor.id)
               .first<{ due_date: string | null }>();
 
-            // Calcular días vencidos si hay fecha de vencimiento
-            let overdueDays = 0;
+            // Calcular días hasta el vencimiento
+            let daysUntilDue = 999; // Valor alto por defecto
+            let isOverdue = false;
+
             if (oldestSale?.due_date) {
               const dueDate = new Date(oldestSale.due_date);
               const today = new Date();
-              const diffTime = today.getTime() - dueDate.getTime();
-              overdueDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
+              // Resetear horas para comparar solo fechas
+              dueDate.setHours(0, 0, 0, 0);
+              today.setHours(0, 0, 0, 0);
+
+              const diffTime = dueDate.getTime() - today.getTime();
+              daysUntilDue = Math.floor(diffTime / (1000 * 60 * 60 * 24));
+              isOverdue = daysUntilDue < 0;
             }
 
-            // Solo enviar si está vencido o si no tiene fecha (enviar de todos modos)
-            if (overdueDays >= 0 || !oldestSale?.due_date) {
+            // Solo enviar si faltan 3 días o menos (incluye vencidos)
+            // Esto evita enviar recordatorios justo después de fiar
+            if (daysUntilDue <= 3) {
               // Importar el template
               const { debtReminderTemplate } = await import('../utils/email-templates');
 
@@ -1055,7 +1063,8 @@ app.post('/debt-reminders', async (c) => {
                 debt_amount: debtor.current_debt,
                 store_name: store.store_name || 'Tu tienda',
                 store_phone: store.phone,
-                overdue_days: overdueDays > 0 ? overdueDays : undefined,
+                overdue_days: isOverdue ? Math.abs(daysUntilDue) : undefined,
+                days_until_due: !isOverdue ? daysUntilDue : undefined,
                 payment_methods: 'Efectivo, Transferencia, Tarjeta',
               };
 
@@ -1067,10 +1076,11 @@ app.post('/debt-reminders', async (c) => {
                   toName: debtor.name,
                   from: 'noreply@posib.dev',
                   fromName: store.store_name || 'Tienda POS',
-                  subject:
-                    overdueDays > 0
-                      ? `Recordatorio: Pago vencido - $${debtor.current_debt.toLocaleString('es-CO')}`
-                      : `Recordatorio de pago - $${debtor.current_debt.toLocaleString('es-CO')}`,
+                  subject: isOverdue
+                    ? `Recordatorio: Pago vencido - $${debtor.current_debt.toLocaleString('es-CO')}`
+                    : daysUntilDue === 0
+                    ? `Recordatorio: Tu pago vence HOY - $${debtor.current_debt.toLocaleString('es-CO')}`
+                    : `Recordatorio: Tu pago vence en ${daysUntilDue} ${daysUntilDue === 1 ? 'día' : 'días'} - $${debtor.current_debt.toLocaleString('es-CO')}`,
                   html,
                   replyTo: store.email,
                 },
@@ -1091,7 +1101,8 @@ app.post('/debt-reminders', async (c) => {
                   {
                     customer_id: debtor.id,
                     debt_amount: debtor.current_debt,
-                    overdue_days: overdueDays,
+                    days_until_due: daysUntilDue,
+                    is_overdue: isOverdue,
                   }
                 );
               } else {
@@ -1107,7 +1118,8 @@ app.post('/debt-reminders', async (c) => {
                   {
                     customer_id: debtor.id,
                     debt_amount: debtor.current_debt,
-                    overdue_days: overdueDays,
+                    days_until_due: daysUntilDue,
+                    is_overdue: isOverdue,
                   }
                 );
               }

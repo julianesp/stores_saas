@@ -87,6 +87,7 @@ export default function POSPage() {
   const [paymentMethod, setPaymentMethod] = useState<
     "efectivo" | "tarjeta" | "transferencia" | "credito"
   >("efectivo");
+  const [creditDays, setCreditDays] = useState<number>(7); // Plazo por defecto: 7 días
   const [processing, setProcessing] = useState(false);
   const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(
     null,
@@ -763,9 +764,9 @@ export default function POSPage() {
         saleData.payment_status = "pendiente";
         saleData.amount_paid = 0;
         saleData.amount_pending = total;
-        // Fecha de vencimiento: 30 días desde hoy
+        // Fecha de vencimiento: según días acordados
         const dueDate = new Date();
-        dueDate.setDate(dueDate.getDate() + 30);
+        dueDate.setDate(dueDate.getDate() + creditDays);
         saleData.due_date = dueDate.toISOString();
       } else {
         saleData.payment_status = undefined;
@@ -1054,10 +1055,10 @@ export default function POSPage() {
         // Agregar mensaje especial para ventas a crédito
         if (paymentMethod === "credito") {
           const dueDate = new Date();
-          dueDate.setDate(dueDate.getDate() + 30);
+          dueDate.setDate(dueDate.getDate() + creditDays);
           htmlContent += `
             <div class="bg-orange-50 border border-orange-200 rounded-lg p-3 mt-2">
-              <p class="text-sm font-semibold text-orange-800">💳 Venta a Crédito</p>
+              <p class="text-sm font-semibold text-orange-800">💳 Venta a Crédito (${creditDays} ${creditDays === 1 ? 'día' : 'días'})</p>
               <p class="text-xs text-gray-600 mt-1">Fecha de vencimiento: ${dueDate.toLocaleDateString(
                 "es-CO",
               )}</p>
@@ -2021,6 +2022,28 @@ export default function POSPage() {
                         </option>
                       </select>
                     </div>
+
+                    {/* Selector de plazo de crédito - solo visible cuando se selecciona crédito */}
+                    {paymentMethod === "credito" && (
+                      <div className="space-y-1.5 md:space-y-2">
+                        <label className="text-xs md:text-sm font-medium">
+                          Plazo de Pago:
+                        </label>
+                        <select
+                          value={creditDays}
+                          onChange={(e: React.ChangeEvent<HTMLSelectElement>) =>
+                            setCreditDays(Number(e.target.value))
+                          }
+                          className="w-full h-9 md:h-10 rounded-md border border-gray-300 px-3 text-sm"
+                        >
+                          <option value={7}>7 días</option>
+                          <option value={15}>15 días</option>
+                          <option value={30}>30 días</option>
+                          <option value={45}>45 días</option>
+                          <option value={60}>60 días</option>
+                        </select>
+                      </div>
+                    )}
 
                     <Button
                       className="w-full text-sm md:text-base"
