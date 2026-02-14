@@ -93,8 +93,9 @@ const superAdminMenuItems = [
 ];
 
 // Menú para usuarios normales (gestión de su tienda)
-const storeMenuItems = [
+const defaultStoreMenuItems = [
   {
+    id: "dashboard",
     title: "Dashboard",
     href: "/dashboard",
     icon: LayoutDashboard,
@@ -102,6 +103,7 @@ const storeMenuItems = [
     permissions: ["view_dashboard"] as const,
   },
   {
+    id: "pos",
     title: "Punto de Venta",
     href: "/dashboard/pos",
     icon: ShoppingCart,
@@ -109,6 +111,7 @@ const storeMenuItems = [
     permissions: ["access_pos"] as const,
   },
   {
+    id: "products",
     title: "Productos",
     href: "/dashboard/products",
     icon: Package,
@@ -116,6 +119,7 @@ const storeMenuItems = [
     permissions: ["view_products"] as const,
   },
   {
+    id: "customers",
     title: "Clientes",
     href: "/dashboard/customers",
     icon: Users,
@@ -123,6 +127,7 @@ const storeMenuItems = [
     permissions: ["view_customers"] as const,
   },
   {
+    id: "debtors",
     title: "Deudores",
     href: "/dashboard/debtors",
     icon: Receipt,
@@ -130,6 +135,7 @@ const storeMenuItems = [
     permissions: ["view_debtors"] as const,
   },
   {
+    id: "suppliers",
     title: "Proveedores",
     href: "/dashboard/suppliers",
     icon: Truck,
@@ -137,6 +143,7 @@ const storeMenuItems = [
     permissions: ["view_suppliers"] as const,
   },
   {
+    id: "purchase-stats",
     title: "Estadísticas de Compras",
     href: "/dashboard/purchase-stats",
     icon: TrendingUp,
@@ -144,6 +151,7 @@ const storeMenuItems = [
     permissions: ["view_suppliers"] as const,
   },
   {
+    id: "sales",
     title: "Ventas",
     href: "/dashboard/sales",
     icon: BarChart3,
@@ -151,6 +159,7 @@ const storeMenuItems = [
     permissions: ["view_sales_history"] as const,
   },
   {
+    id: "offers",
     title: "Ofertas",
     href: "/dashboard/offers",
     icon: Percent,
@@ -158,6 +167,7 @@ const storeMenuItems = [
     permissions: ["view_offers"] as const,
   },
   {
+    id: "store-config",
     title: "Tienda Online",
     href: "/dashboard/store-config",
     icon: Store,
@@ -166,6 +176,7 @@ const storeMenuItems = [
     requiresAddon: "store" as const,
   },
   {
+    id: "web-orders",
     title: "Pedidos Web",
     href: "/dashboard/web-orders",
     icon: ShoppingCart,
@@ -174,6 +185,7 @@ const storeMenuItems = [
     requiresAddon: "store" as const,
   },
   {
+    id: "inventory",
     title: "Inventario",
     href: "/dashboard/inventory",
     icon: Scan,
@@ -181,6 +193,7 @@ const storeMenuItems = [
     permissions: ["view_inventory"] as const,
   },
   {
+    id: "analytics",
     title: "Análisis IA",
     href: "/dashboard/analytics",
     icon: Brain,
@@ -189,6 +202,7 @@ const storeMenuItems = [
     requiresAddon: "ai" as const,
   },
   {
+    id: "email-settings",
     title: "Email Marketing",
     href: "/dashboard/email-settings",
     icon: Mail,
@@ -216,6 +230,7 @@ const DEFAULT_WIDTH = 256; // 16rem = 256px
 const COLLAPSED_WIDTH = 64; // Ancho cuando está colapsado
 const STORAGE_KEY = "sidebar-width";
 const COLLAPSED_STORAGE_KEY = "sidebar-collapsed";
+const MENU_ORDER_STORAGE_KEY = "sidebar-menu-order";
 
 export function Sidebar({ isMobile = false, onLinkClick }: SidebarProps) {
   const pathname = usePathname();
@@ -233,6 +248,10 @@ export function Sidebar({ isMobile = false, onLinkClick }: SidebarProps) {
   const [isCollapsed, setIsCollapsed] = useState(false);
   const sidebarRef = useRef<HTMLDivElement>(null);
 
+  // Estado para el orden del menú (drag and drop)
+  const [storeMenuItems, setStoreMenuItems] = useState(defaultStoreMenuItems);
+  const [draggedItem, setDraggedItem] = useState<number | null>(null);
+
   // Cargar el ancho guardado y el estado de colapsado del localStorage
   useEffect(() => {
     if (!isMobile) {
@@ -247,6 +266,26 @@ export function Sidebar({ isMobile = false, onLinkClick }: SidebarProps) {
       const savedCollapsed = localStorage.getItem(COLLAPSED_STORAGE_KEY);
       if (savedCollapsed === "true") {
         setIsCollapsed(true);
+      }
+
+      // Cargar orden del menú guardado
+      const savedOrder = localStorage.getItem(MENU_ORDER_STORAGE_KEY);
+      if (savedOrder) {
+        try {
+          const orderIds = JSON.parse(savedOrder) as string[];
+          // Reordenar items según el orden guardado
+          const orderedItems = [...defaultStoreMenuItems].sort((a, b) => {
+            const indexA = orderIds.indexOf(a.id);
+            const indexB = orderIds.indexOf(b.id);
+            // Si no está en el orden guardado, poner al final
+            if (indexA === -1) return 1;
+            if (indexB === -1) return -1;
+            return indexA - indexB;
+          });
+          setStoreMenuItems(orderedItems);
+        } catch (error) {
+          console.error('Error loading menu order:', error);
+        }
       }
     }
   }, [isMobile]);
@@ -301,6 +340,31 @@ export function Sidebar({ isMobile = false, onLinkClick }: SidebarProps) {
       };
     }
   }, [isResizing, handleMouseMove, handleMouseUp]);
+
+  // Handlers para drag and drop del menú
+  const handleDragStart = (index: number) => {
+    setDraggedItem(index);
+  };
+
+  const handleDragOver = (e: React.DragEvent, index: number) => {
+    e.preventDefault();
+    if (draggedItem === null || draggedItem === index) return;
+
+    const items = [...storeMenuItems];
+    const draggedItemContent = items[draggedItem];
+    items.splice(draggedItem, 1);
+    items.splice(index, 0, draggedItemContent);
+
+    setDraggedItem(index);
+    setStoreMenuItems(items);
+  };
+
+  const handleDragEnd = () => {
+    setDraggedItem(null);
+    // Guardar el nuevo orden en localStorage
+    const orderIds = storeMenuItems.map(item => item.id);
+    localStorage.setItem(MENU_ORDER_STORAGE_KEY, JSON.stringify(orderIds));
+  };
 
   useEffect(() => {
     async function checkSuperAdmin() {
@@ -514,7 +578,7 @@ export function Sidebar({ isMobile = false, onLinkClick }: SidebarProps) {
 
       {/* Layout Desktop - Lista vertical */}
       <nav className="hidden md:flex flex-1 flex-col space-y-1 px-3 py-4 overflow-y-auto custom-scrollbar">
-        {menuItems.map((item) => {
+        {menuItems.map((item, index) => {
           const Icon = item.icon;
           const isActive =
             pathname === item.href || pathname?.startsWith(item.href + "/");
@@ -524,20 +588,34 @@ export function Sidebar({ isMobile = false, onLinkClick }: SidebarProps) {
           const isWebOrders = item.href === "/dashboard/web-orders";
 
           return (
-            <Link
+            <div
               key={item.href}
-              href={item.href}
-              onClick={onLinkClick}
-              title={isCollapsed ? item.title : undefined}
+              draggable={!isSuperAdmin}
+              onDragStart={() => !isSuperAdmin && handleDragStart(index)}
+              onDragOver={(e) => !isSuperAdmin && handleDragOver(e, index)}
+              onDragEnd={handleDragEnd}
               className={cn(
-                "flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors relative group",
-                isActive
-                  ? "bg-blue-600 text-white"
-                  : "text-gray-300 hover:bg-gray-800 hover:text-white",
-                isCollapsed && "justify-center",
+                "relative group",
+                draggedItem === index && "opacity-50"
               )}
             >
-              <Icon className={cn("h-5 w-5", isCollapsed && "shrink-0")} />
+              <Link
+                href={item.href}
+                onClick={onLinkClick}
+                title={isCollapsed ? item.title : undefined}
+                className={cn(
+                  "flex items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium transition-colors relative",
+                  isActive
+                    ? "bg-blue-600 text-white"
+                    : "text-gray-300 hover:bg-gray-800 hover:text-white",
+                  isCollapsed && "justify-center",
+                )}
+              >
+                {/* Drag handle - solo mostrar para usuarios normales */}
+                {!isSuperAdmin && !isCollapsed && (
+                  <GripVertical className="h-4 w-4 flex-shrink-0 cursor-move opacity-40 hover:opacity-100 transition-opacity" />
+                )}
+                <Icon className={cn("h-5 w-5", isCollapsed && "shrink-0")} />
               {!isCollapsed && (
                 <>
                   <span className="flex-1 whitespace-nowrap overflow-hidden text-ellipsis">
@@ -588,13 +666,14 @@ export function Sidebar({ isMobile = false, onLinkClick }: SidebarProps) {
                 </>
               )}
 
-              {/* Tooltip cuando está colapsado */}
-              {isCollapsed && (
-                <div className="absolute left-full ml-2 px-2 py-1 bg-gray-800 text-white text-xs rounded opacity-0 group-hover:opacity-100 pointer-events-none whitespace-nowrap z-50 transition-opacity">
-                  {item.title}
-                </div>
-              )}
-            </Link>
+                {/* Tooltip cuando está colapsado */}
+                {isCollapsed && (
+                  <div className="absolute left-full ml-2 px-2 py-1 bg-gray-800 text-white text-xs rounded opacity-0 group-hover:opacity-100 pointer-events-none whitespace-nowrap z-50 transition-opacity">
+                    {item.title}
+                  </div>
+                )}
+              </Link>
+            </div>
           );
         })}
       </nav>
