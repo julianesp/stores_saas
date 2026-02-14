@@ -196,13 +196,13 @@ const storeMenuItems = [
     permissions: ["access_email_marketing"] as const,
     requiresAddon: "email" as const,
   },
-  {
-    title: "Gestión de Equipo",
-    href: "/dashboard/team",
-    icon: UserCog,
-    roles: ["admin"],
-    ownerOnly: true,
-  },
+  // {
+  //   title: "Gestión de Equipo",
+  //   href: "/dashboard/team",
+  //   icon: UserCog,
+  //   roles: ["admin"],
+  //   ownerOnly: true,
+  // },
 ];
 
 interface SidebarProps {
