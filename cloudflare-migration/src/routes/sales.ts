@@ -38,33 +38,70 @@ interface SaleItem {
   created_at: string;
 }
 
-// GET /api/sales - Get all sales with items
+// GET /api/sales - Get all sales with items and product names
 app.get('/', async (c) => {
   const tenant: Tenant = c.get('tenant');
 
   try {
-    const tenantDB = new TenantDB(c.env.DB, tenant.id);
-    const sales = await tenantDB.getAll<Sale>('sales');
+    const db = c.env.DB;
+    const sales = await db
+      .prepare('SELECT * FROM sales WHERE tenant_id = ? ORDER BY created_at DESC')
+      .bind(tenant.id)
+      .all();
 
-    // Get all sale_items for this tenant
-    const allItems = await tenantDB.getAll<SaleItem>('sale_items');
+    // Get all sale_items with product info using JOIN
+    const itemsResult = await db
+      .prepare(`
+        SELECT
+          si.id,
+          si.tenant_id,
+          si.sale_id,
+          si.product_id,
+          si.quantity,
+          si.unit_price,
+          si.discount,
+          si.subtotal,
+          si.created_at,
+          p.name as product_name,
+          p.barcode as product_barcode
+        FROM sale_items si
+        LEFT JOIN products p ON si.product_id = p.id AND si.tenant_id = p.tenant_id
+        WHERE si.tenant_id = ?
+      `)
+      .bind(tenant.id)
+      .all();
 
     // Group items by sale_id
-    const itemsMap = new Map<string, SaleItem[]>();
-    allItems.forEach(item => {
+    const itemsMap = new Map<string, any[]>();
+    (itemsResult.results || []).forEach((item: any) => {
       if (!itemsMap.has(item.sale_id)) {
         itemsMap.set(item.sale_id, []);
       }
-      itemsMap.get(item.sale_id)!.push(item);
+      // Agregar objeto product con el nombre
+      itemsMap.get(item.sale_id)!.push({
+        id: item.id,
+        tenant_id: item.tenant_id,
+        sale_id: item.sale_id,
+        product_id: item.product_id,
+        quantity: item.quantity,
+        unit_price: item.unit_price,
+        discount: item.discount,
+        subtotal: item.subtotal,
+        created_at: item.created_at,
+        product: {
+          name: item.product_name || 'Producto desconocido',
+          barcode: item.product_barcode
+        }
+      });
     });
 
     // Add items to each sale
-    const salesWithItems = sales.map(sale => ({
+    const salesWithItems = (sales.results || []).map((sale: any) => ({
       ...sale,
       items: itemsMap.get(sale.id) || []
     }));
 
-    return c.json<APIResponse<Array<Sale & { items: SaleItem[] }>>>({
+    return c.json<APIResponse<any[]>>({
       success: true,
       data: salesWithItems,
     });
@@ -77,14 +114,19 @@ app.get('/', async (c) => {
   }
 });
 
-// GET /api/sales/:id - Get single sale with items
+// GET /api/sales/:id - Get single sale with items and product names
 app.get('/:id', async (c) => {
   const tenant: Tenant = c.get('tenant');
   const saleId = c.req.param('id');
 
   try {
-    const tenantDB = new TenantDB(c.env.DB, tenant.id);
-    const sale = await tenantDB.getById<Sale>('sales', saleId);
+    const db = c.env.DB;
+
+    // Get sale
+    const sale = await db
+      .prepare('SELECT * FROM sales WHERE id = ? AND tenant_id = ?')
+      .bind(saleId, tenant.id)
+      .first();
 
     if (!sale) {
       return c.json<APIResponse>({
@@ -93,10 +135,46 @@ app.get('/:id', async (c) => {
       }, 404);
     }
 
-    // Get sale items
-    const items = await tenantDB.query<SaleItem>('sale_items', 'sale_id = ?', [saleId]);
+    // Get sale items with product info using JOIN
+    const itemsResult = await db
+      .prepare(`
+        SELECT
+          si.id,
+          si.tenant_id,
+          si.sale_id,
+          si.product_id,
+          si.quantity,
+          si.unit_price,
+          si.discount,
+          si.subtotal,
+          si.created_at,
+          p.name as product_name,
+          p.barcode as product_barcode
+        FROM sale_items si
+        LEFT JOIN products p ON si.product_id = p.id AND si.tenant_id = p.tenant_id
+        WHERE si.sale_id = ? AND si.tenant_id = ?
+      `)
+      .bind(saleId, tenant.id)
+      .all();
 
-    return c.json<APIResponse<Sale & { items: SaleItem[] }>>({
+    // Format items with product object
+    const items = (itemsResult.results || []).map((item: any) => ({
+      id: item.id,
+      tenant_id: item.tenant_id,
+      sale_id: item.sale_id,
+      product_id: item.product_id,
+      quantity: item.quantity,
+      unit_price: item.unit_price,
+      discount: item.discount,
+      subtotal: item.subtotal,
+      created_at: item.created_at,
+      product: {
+        name: item.product_name || 'Producto desconocido',
+        barcode: item.product_barcode
+      }
+    }));
+
+    return c.json<APIResponse<any>>({
       success: true,
       data: { ...sale, items },
     });
