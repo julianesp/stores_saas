@@ -151,7 +151,9 @@ app.post('/', async (c) => {
       discount: body.discount ?? 0,
       total: body.total,
       payment_method: body.payment_method,
-      status: body.status || 'completada',
+      // IMPORTANTE: Las ventas a crédito se marcan como 'pendiente', no como 'completada'
+      // Esto hace que NO cuenten en las estadísticas de ventas hasta que se paguen
+      status: body.payment_method === 'credito' ? 'pendiente' : (body.status || 'completada'),
       points_earned: body.points_earned ?? 0,
       notes: body.notes ?? null,
     };

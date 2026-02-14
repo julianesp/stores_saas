@@ -129,6 +129,8 @@ export async function getTopProducts(limit: number = 4, getToken: GetTokenFn): P
     const productSales = new Map<string, { name: string; quantity: number }>();
 
     for (const sale of allSales) {
+      // Solo contar ventas completadas (excluir ventas a crédito pendientes)
+      if (sale.status !== 'completada') continue;
       if (!sale.items) continue;
 
       for (const item of sale.items) {

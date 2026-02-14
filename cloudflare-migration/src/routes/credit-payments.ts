@@ -148,11 +148,20 @@ app.post('/', async (c) => {
     await tenantDB.insert('credit_payments', creditPayment);
 
     // Update sale with new amounts and status
-    await tenantDB.update('sales', sale_id, {
+    // IMPORTANTE: Cuando se paga completamente un crédito, cambiar status a 'completada'
+    // para que ahora SÍ cuente en las estadísticas de ventas
+    const updateData: any = {
       amount_paid: newAmountPaid,
       amount_pending: newAmountPending,
       payment_status: paymentStatus,
-    });
+    };
+
+    // Si se pagó completamente, cambiar status de 'pendiente' a 'completada'
+    if (paymentStatus === 'pagado') {
+      updateData.status = 'completada';
+    }
+
+    await tenantDB.update('sales', sale_id, updateData);
 
     // Update customer debt (reduce by payment amount)
     const customer = await tenantDB.getById('customers', customer_id);
