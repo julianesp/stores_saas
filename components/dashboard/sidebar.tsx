@@ -340,6 +340,13 @@ export function Sidebar({ isMobile = false, onLinkClick }: SidebarProps) {
   const getFilteredMenuItems = () => {
     console.log('🔍 [Sidebar] Filtrando items. isOwner:', isOwner, 'isSuperAdmin:', isSuperAdmin, 'permissionsLoading:', permissionsLoading);
 
+    // IMPORTANTE: No filtrar hasta que termine de cargar los permisos
+    // Si filtramos mientras loading=true, currentUser será null y no se mostrará nada
+    if (permissionsLoading) {
+      console.log('⏳ [Sidebar] Esperando a que terminen de cargar los permisos...');
+      return [];
+    }
+
     if (isSuperAdmin) return superAdminMenuItems;
 
     const filtered = storeMenuItems.filter((item) => {
