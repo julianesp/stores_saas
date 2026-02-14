@@ -131,16 +131,43 @@ export default function POSPage() {
   // const { startTour } = useTour(posTourConfig, true, userId || undefined);
 
   const handleCreateCustomer = async () => {
+    // Validar nombre
     if (!newCustomerData.name.trim()) {
       Swal.warning("Nombre requerido", "Debes ingresar el nombre del cliente");
+      return;
+    }
+
+    // Validar email
+    if (!newCustomerData.email.trim()) {
+      Swal.warning("Email requerido", "El email es necesario para enviar recordatorios de pago");
+      return;
+    }
+
+    // Validar formato de email
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(newCustomerData.email.trim())) {
+      Swal.warning("Email inválido", "Por favor ingresa un email válido");
+      return;
+    }
+
+    // Validar teléfono
+    if (!newCustomerData.phone.trim()) {
+      Swal.warning("Teléfono requerido", "El teléfono es necesario para enviar recordatorios de pago");
+      return;
+    }
+
+    // Validar que el teléfono tenga al menos 7 dígitos
+    const phoneDigits = newCustomerData.phone.replace(/\D/g, '');
+    if (phoneDigits.length < 7) {
+      Swal.warning("Teléfono inválido", "El teléfono debe tener al menos 7 dígitos");
       return;
     }
 
     try {
       const customerData: Partial<Customer> = {
         name: newCustomerData.name.trim(),
-        phone: newCustomerData.phone.trim() || undefined,
-        email: newCustomerData.email.trim() || undefined,
+        phone: newCustomerData.phone.trim(),
+        email: newCustomerData.email.trim(),
         loyalty_points: 0,
       };
 
@@ -161,9 +188,11 @@ export default function POSPage() {
 
       // Actualizar lista de clientes
       await fetchCustomers();
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error creating customer:", error);
-      Swal.error("Error al crear cliente", "Intenta nuevamente");
+      // Mostrar el mensaje de error específico del backend
+      const errorMessage = error?.message || "Por favor verifica los datos ingresados";
+      Swal.error("Error al crear cliente", errorMessage);
     }
   };
 
@@ -1741,10 +1770,9 @@ export default function POSPage() {
                               className="text-xs h-8"
                             />
                             <Input
-                              placeholder="Teléfono"
+                              placeholder="Teléfono *"
                               type="tel"
                               inputMode="numeric"
-                              pattern="[0-9]*"
                               value={newCustomerData.phone}
                               onChange={(e) =>
                                 setNewCustomerData({
@@ -1753,9 +1781,10 @@ export default function POSPage() {
                                 })
                               }
                               className="text-xs h-8"
+                              required
                             />
                             <Input
-                              placeholder="Email"
+                              placeholder="Email *"
                               type="email"
                               value={newCustomerData.email}
                               onChange={(e) =>
@@ -1765,6 +1794,7 @@ export default function POSPage() {
                                 })
                               }
                               className="text-xs h-8"
+                              required
                             />
                             <Button
                               size="sm"
