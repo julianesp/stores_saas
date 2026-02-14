@@ -968,4 +968,185 @@ app.post('/campaign', async (c) => {
   }
 });
 
+/**
+ * CRON: Send debt reminder emails
+ * Trigger: Diariamente a las 8 AM
+ * Envía recordatorios automáticos a clientes con deudas vencidas
+ */
+app.post('/debt-reminders', async (c) => {
+  const db = c.env.DB;
+
+  try {
+    console.log('🔔 Iniciando envío de recordatorios de deudas...');
+
+    // Obtener todas las tiendas activas
+    const stores = await db
+      .prepare(
+        `SELECT id, email, full_name, store_name, phone
+         FROM user_profiles
+         WHERE subscription_status IN ('active', 'trial')
+           AND deleted_at IS NULL`
+      )
+      .all();
+
+    let totalEmailsSent = 0;
+    let totalEmailsFailed = 0;
+    let totalStoresProcessed = 0;
+
+    for (const store of stores.results as any[]) {
+      try {
+        // TODO: Verificar preferencias de email cuando la tabla email_preferences esté implementada
+        // Por ahora, enviaremos a todos los clientes con deuda
+
+        // Obtener todos los clientes con deuda de esta tienda
+        const debtors = await db
+          .prepare(
+            `SELECT c.id, c.name, c.email, c.phone, c.current_debt, c.credit_limit
+             FROM customers c
+             WHERE c.tenant_id = ?
+               AND c.current_debt > 0
+               AND c.email IS NOT NULL
+               AND c.email != ''`
+          )
+          .bind(store.id)
+          .all();
+
+        if (!debtors.results || debtors.results.length === 0) {
+          continue;
+        }
+
+        totalStoresProcessed++;
+        let storeEmailsSent = 0;
+
+        // Para cada deudor, obtener su venta más antigua pendiente para calcular días vencidos
+        for (const debtor of debtors.results as any[]) {
+          try {
+            // Obtener la venta a crédito más antigua pendiente
+            const oldestSale = await db
+              .prepare(
+                `SELECT due_date
+                 FROM sales
+                 WHERE tenant_id = ?
+                   AND customer_id = ?
+                   AND payment_method = 'credito'
+                   AND payment_status IN ('pendiente', 'parcial')
+                 ORDER BY created_at ASC
+                 LIMIT 1`
+              )
+              .bind(store.id, debtor.id)
+              .first<{ due_date: string | null }>();
+
+            // Calcular días vencidos si hay fecha de vencimiento
+            let overdueDays = 0;
+            if (oldestSale?.due_date) {
+              const dueDate = new Date(oldestSale.due_date);
+              const today = new Date();
+              const diffTime = today.getTime() - dueDate.getTime();
+              overdueDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
+            }
+
+            // Solo enviar si está vencido o si no tiene fecha (enviar de todos modos)
+            if (overdueDays >= 0 || !oldestSale?.due_date) {
+              // Importar el template
+              const { debtReminderTemplate } = await import('../utils/email-templates');
+
+              const emailData = {
+                customer_name: debtor.name,
+                debt_amount: debtor.current_debt,
+                store_name: store.store_name || 'Tu tienda',
+                store_phone: store.phone,
+                overdue_days: overdueDays > 0 ? overdueDays : undefined,
+                payment_methods: 'Efectivo, Transferencia, Tarjeta',
+              };
+
+              const html = debtReminderTemplate(emailData);
+
+              const result = await sendEmail(
+                {
+                  to: debtor.email,
+                  toName: debtor.name,
+                  from: 'noreply@posib.dev',
+                  fromName: store.store_name || 'Tienda POS',
+                  subject:
+                    overdueDays > 0
+                      ? `Recordatorio: Pago vencido - $${debtor.current_debt.toLocaleString('es-CO')}`
+                      : `Recordatorio de pago - $${debtor.current_debt.toLocaleString('es-CO')}`,
+                  html,
+                  replyTo: store.email,
+                },
+                c.env.RESEND_API_KEY
+              );
+
+              if (result.success) {
+                storeEmailsSent++;
+                totalEmailsSent++;
+                await logEmail(
+                  db,
+                  store.id,
+                  'debt_reminder',
+                  debtor.email,
+                  `Recordatorio de deuda - $${debtor.current_debt}`,
+                  'sent',
+                  undefined,
+                  {
+                    customer_id: debtor.id,
+                    debt_amount: debtor.current_debt,
+                    overdue_days: overdueDays,
+                  }
+                );
+              } else {
+                totalEmailsFailed++;
+                await logEmail(
+                  db,
+                  store.id,
+                  'debt_reminder',
+                  debtor.email,
+                  `Recordatorio de deuda - $${debtor.current_debt}`,
+                  'failed',
+                  result.error,
+                  {
+                    customer_id: debtor.id,
+                    debt_amount: debtor.current_debt,
+                    overdue_days: overdueDays,
+                  }
+                );
+              }
+            }
+          } catch (debtorError) {
+            console.error(`Error procesando deudor ${debtor.id}:`, debtorError);
+            totalEmailsFailed++;
+          }
+        }
+
+        console.log(
+          `✅ Tienda ${store.store_name}: ${storeEmailsSent} recordatorios enviados`
+        );
+      } catch (storeError) {
+        console.error(`Error procesando tienda ${store.id}:`, storeError);
+      }
+    }
+
+    console.log(
+      `🎉 Recordatorios de deudas completados: ${totalEmailsSent} enviados, ${totalEmailsFailed} fallidos en ${totalStoresProcessed} tiendas`
+    );
+
+    return c.json({
+      success: true,
+      emailsSent: totalEmailsSent,
+      emailsFailed: totalEmailsFailed,
+      storesProcessed: totalStoresProcessed,
+      message: `Debt reminder emails processed: ${totalEmailsSent} sent, ${totalEmailsFailed} failed`,
+    });
+  } catch (error) {
+    console.error('Error en cron de recordatorios de deudas:', error);
+    return c.json(
+      {
+        success: false,
+        error: error instanceof Error ? error.message : 'Unknown error',
+      },
+      500
+    );
+  }
+});
+
 export default app;

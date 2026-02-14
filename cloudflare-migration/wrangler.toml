@@ -47,5 +47,6 @@ crons = [
   "0 9 * * *",    # Recordatorios de suscripción - 9 AM diario
   "0 */1 * * *",  # Reportes diarios - cada hora (verifica preferencias)
   "0 */2 * * *",  # Alertas de stock - cada 2 horas
-  "0 * * * *"     # Carritos abandonados - cada hora
+  "0 * * * *",    # Carritos abandonados - cada hora
+  "0 8 * * *"     # Recordatorios de deudas - 8 AM diario
 ]

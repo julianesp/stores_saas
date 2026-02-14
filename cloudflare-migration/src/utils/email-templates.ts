@@ -359,3 +359,77 @@ export function abandonedCartTemplate(data: AbandonedCartData, emailNumber: 1 | 
 
   return baseTemplate(content, '#8b5cf6');
 }
+
+/**
+ * Debt Reminder Template
+ */
+export function debtReminderTemplate(data: {
+  customer_name: string;
+  debt_amount: number;
+  store_name: string;
+  store_phone?: string;
+  overdue_days?: number;
+  payment_methods?: string;
+}): string {
+  const content = `
+    <div class="content">
+      <h2 style="color: #1f2937; margin-top: 0;">Hola ${data.customer_name} 👋</h2>
+
+      <p style="color: #4b5563; font-size: 16px; line-height: 1.6;">
+        ${
+          data.overdue_days && data.overdue_days > 0
+            ? `Te escribimos para recordarte que tienes un pago vencido desde hace ${data.overdue_days} ${data.overdue_days === 1 ? 'día' : 'días'}.`
+            : 'Te escribimos para recordarte que tienes un saldo pendiente de pago.'
+        }
+      </p>
+
+      <div class="stats-box" style="background-color: #fef2f2; border-left: 4px solid #dc2626;">
+        <div class="stat-item" style="border: none;">
+          <span style="color: #4b5563; font-weight: 500;">Monto adeudado:</span>
+          <span style="color: #dc2626; font-weight: 700; font-size: 20px;">
+            $${data.debt_amount.toLocaleString('es-CO')}
+          </span>
+        </div>
+      </div>
+
+      <p style="color: #4b5563; font-size: 16px; line-height: 1.6;">
+        Valoramos mucho tu confianza y queremos ayudarte a mantener tu cuenta al día.
+        Por favor, cuando puedas, realiza el pago correspondiente.
+      </p>
+
+      ${
+        data.payment_methods
+          ? `
+      <p style="color: #4b5563; font-size: 16px; line-height: 1.6; margin-top: 20px;">
+        <strong>Métodos de pago disponibles:</strong><br/>
+        ${data.payment_methods}
+      </p>
+      `
+          : ''
+      }
+
+      ${
+        data.store_phone
+          ? `
+      <p style="color: #4b5563; font-size: 16px; line-height: 1.6; margin-top: 20px;">
+        Si tienes alguna pregunta o necesitas hacer un acuerdo de pago, no dudes en contactarnos:
+      </p>
+
+      <div style="text-align: center; margin: 30px 0;">
+        <a href="https://wa.me/${data.store_phone.replace(/\D/g, '')}" class="button" style="background-color: #25d366;">
+          💬 Contactar por WhatsApp
+        </a>
+      </div>
+      `
+          : ''
+      }
+
+      <p style="font-size: 14px; color: #6b7280; margin-top: 30px; border-top: 1px solid #e5e7eb; padding-top: 20px;">
+        Gracias por tu preferencia,<br/>
+        <strong>${data.store_name}</strong>
+      </p>
+    </div>
+  `;
+
+  return baseTemplate(content, '#dc2626');
+}

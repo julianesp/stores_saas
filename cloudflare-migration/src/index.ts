@@ -393,6 +393,13 @@ async function scheduled(event: ScheduledEvent, env: Env, ctx: ExecutionContext)
   const cartsResult = await makeRequest('api/email/abandoned-carts');
   console.log('Abandoned carts result:', cartsResult);
 
+  // A las 8 AM - Recordatorios de deudas
+  if (hour === 8) {
+    console.log('Running debt reminders...');
+    const debtResult = await makeRequest('api/email/debt-reminders');
+    console.log('Debt reminders result:', debtResult);
+  }
+
   console.log('Cron jobs completed');
 }
 
