@@ -351,7 +351,7 @@ export function Sidebar({ isMobile = false, onLinkClick }: SidebarProps) {
 
     const filtered = storeMenuItems.filter((item) => {
       // Si es solo para owners y el usuario no es owner, ocultar
-      if (item.ownerOnly && !isOwner) {
+      if ((item as any).ownerOnly && !isOwner) {
         console.log(`❌ [Sidebar] ${item.title} - ownerOnly y usuario no es owner`);
         return false;
       }
