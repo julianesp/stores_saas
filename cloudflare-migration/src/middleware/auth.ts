@@ -98,8 +98,47 @@ export async function authMiddleware(c: Context<{ Bindings: Env }>, next: Next) 
         }
       }
     } else {
-      // No specific tenant requested - use user's own tenant
-      tenant = await tenantManager.getTenantByClerkId(clerkUserId);
+      // No specific tenant requested - check if user is a team member first
+      console.log('🔍 [authMiddleware] No X-Tenant-ID provided, checking if user is team member...');
+
+      const teamMembership = await c.env.DB
+        .prepare(`
+          SELECT tm.*, up.id as owner_profile_id, up.store_name
+          FROM team_members tm
+          JOIN user_profiles up ON up.id = tm.owner_id
+          WHERE tm.clerk_user_id = ?
+            AND tm.status = 'active'
+            AND tm.invitation_status = 'accepted'
+          LIMIT 1
+        `)
+        .bind(clerkUserId)
+        .first<any>();
+
+      if (teamMembership) {
+        console.log('👥 [authMiddleware] Usuario es team member de:', teamMembership.store_name);
+        // User is a team member - use the owner's tenant
+        isTeamMember = true;
+        userProfileId = teamMembership.owner_profile_id;
+        tenant = await tenantManager.getTenantById(userProfileId);
+
+        if (!tenant) {
+          // Create minimal tenant object
+          tenant = {
+            id: userProfileId,
+            clerkUserId: '',
+            email: '',
+            databaseName: 'shared',
+            databaseId: 'shared',
+            subscriptionStatus: 'active',
+            createdAt: new Date().toISOString(),
+            updatedAt: new Date().toISOString(),
+          };
+        }
+      } else {
+        console.log('👑 [authMiddleware] Usuario no es team member, buscando su propio tenant...');
+        // No specific tenant requested - use user's own tenant
+        tenant = await tenantManager.getTenantByClerkId(clerkUserId);
+      }
     }
 
     // Fetch Clerk user data once to use for both tenant and user_profile creation
