@@ -198,6 +198,10 @@ app.put('/:id', async (c) => {
       'wompi_public_key',
       'wompi_private_key',
       'wompi_enabled',
+      // Reportes automáticos
+      'auto_reports_enabled',
+      'auto_reports_time',
+      'auto_reports_email',
     ];
 
     const updates: string[] = [];

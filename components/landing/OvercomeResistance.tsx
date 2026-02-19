@@ -44,12 +44,6 @@ export default function OvercomeResistance() {
                 <li className="flex items-start gap-2 text-red-200">
                   <X className="h-5 w-5 text-red-400 flex-shrink-0 mt-0.5" />
                   <span className="text-sm">
-                    Riesgo de multas por no cumplir con la DIAN
-                  </span>
-                </li>
-                <li className="flex items-start gap-2 text-red-200">
-                  <X className="h-5 w-5 text-red-400 flex-shrink-0 mt-0.5" />
-                  <span className="text-sm">
                     No sabes qué productos te generan más ganancia
                   </span>
                 </li>
@@ -85,12 +79,6 @@ export default function OvercomeResistance() {
                     Inventario actualizado en tiempo real, sin esfuerzo
                   </span>
                 </li>
-                {/* <li className="flex items-start gap-2 text-green-200">
-                  <Check className="h-5 w-5 text-green-400 flex-shrink-0 mt-0.5" />
-                  <span className="text-sm">
-                    100% cumplimiento DIAN con facturación electrónica
-                  </span>
-                </li> */}
                 <li className="flex items-start gap-2 text-green-200">
                   <Check className="h-5 w-5 text-green-400 flex-shrink-0 mt-0.5" />
                   <span className="text-sm">
@@ -138,7 +126,7 @@ export default function OvercomeResistance() {
               </div>
               <h4 className="font-semibold text-gray-900 mb-1">Evita Pérdidas</h4>
               <p className="text-sm text-gray-800">
-                Reduce mermas, robos y multas DIAN significativamente
+                Reduce mermas, robos y pérdidas significativamente
               </p>
             </div>
           </div>

@@ -23,8 +23,6 @@ import {
 } from "@/components/ui/card";
 import WhatsAppButton from "@/components/landing/WhatsAppButton";
 import PricingPlans from "@/components/landing/PricingPlans";
-import DianCompliance from "@/components/landing/DianCompliance";
-import DianGuarantee from "@/components/landing/DianGuarantee";
 import FreeMigration from "@/components/landing/FreeMigration";
 import TrustBadges from "@/components/landing/TrustBadges";
 import VideoTutorials from "@/components/landing/VideoTutorials";
@@ -180,7 +178,7 @@ export default function Home() {
               </CardTitle>
               <CardDescription className="text-sm">
                 Sistema POS rápido con escaneo de códigos de barras, múltiples
-                métodos de pago y facturación electrónica
+                métodos de pago y recibos de venta
               </CardDescription>
             </CardHeader>
           </Card>
@@ -364,12 +362,6 @@ export default function Home() {
       {/* Pricing Plans */}
       <PricingPlans />
 
-      {/* DIAN Compliance */}
-      {/* <DianCompliance /> */}
-
-      {/* DIAN Guarantee */}
-      {/* <DianGuarantee /> */}
-
       {/* Free Migration */}
       {/* <FreeMigration /> */}
 
@@ -424,18 +416,13 @@ export default function Home() {
       <footer className="border-t bg-gray-800 py-6 md:py-8">
         <div className="container mx-auto px-4 text-center text-gray-300">
           <p className="text-sm md:text-base">
-            Posib.dev - Sistema POS con Cumplimiento DIAN
+            Posib.dev - Sistema POS para tu Negocio
           </p>
           <p className="text-xs md:text-sm text-gray-400 mt-2">
-            Gestión profesional para tu negocio con facturación electrónica
-            certificada
+            Gestión profesional para tu negocio
           </p>
           <div className="mt-4 text-xs text-gray-500">
             <p>© 2025 Posib.dev - Todos los derechos reservados</p>
-            <p className="mt-1">
-              Solución tecnológica que cumple con las normativas de la DIAN para
-              facturación electrónica en Colombia
-            </p>
           </div>
         </div>
       </footer>

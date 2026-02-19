@@ -26,8 +26,8 @@ export const landingConfig = {
   // Nombre de la marca
   brand: {
     name: 'Posib.dev',
-    tagline: 'Sistema POS con Cumplimiento DIAN',
-    description: 'Gestión profesional para tu negocio con facturación electrónica certificada',
+    tagline: 'Sistema POS para tu Negocio',
+    description: 'Gestión profesional para tu negocio',
   },
 
   // Configuración de planes con precios y límites
@@ -41,7 +41,6 @@ export const landingConfig = {
         inventory: true,
         reports: 'basic',
         onlineStore: false,
-        dianInvoicing: false,
         loyaltyPoints: false,
         suppliers: false,
         analytics: false,
@@ -57,7 +56,6 @@ export const landingConfig = {
         inventory: true,
         reports: 'advanced',
         onlineStore: true,
-        dianInvoicing: true,
         loyaltyPoints: true,
         suppliers: true,
         analytics: false,
@@ -73,7 +71,6 @@ export const landingConfig = {
     //       inventory: true,
     //       reports: 'advanced',
     //       onlineStore: true,
-    //       dianInvoicing: true,
     //       loyaltyPoints: true,
     //       suppliers: true,
     //       analytics: true,
@@ -89,7 +86,6 @@ export const landingConfig = {
     //       inventory: true,
     //       reports: 'custom',
     //       onlineStore: true,
-    //       dianInvoicing: true,
     //       loyaltyPoints: true,
     //       suppliers: true,
     //       analytics: true,
@@ -105,7 +101,6 @@ export const landingConfig = {
     stats: {
       satisfaction: '98%',
       rating: '4.9/5',
-      dianCompliance: '100%',
     },
 
     // Feature flags - Activa/desactiva secciones
@@ -113,8 +108,6 @@ export const landingConfig = {
       showWhatsAppButton: true,
       showDemoButton: true,
       showPricingPlans: true,
-      showDianCompliance: true,
-      showDianGuarantee: true,
       showFreeMigration: true,
       showTrustBadges: true,
       showVideoTutorials: true,
@@ -129,15 +122,6 @@ export const landingConfig = {
       migrationTutorial: '/videos/migration-tutorial.mp4',
     },
 
-    // Legal - IMPORTANTE: Verifica estos valores anualmente
-    dian: {
-      uvt: {
-        year: 2025,
-        // Valores UVT para declaración de renta (actualiza cada año)
-        patrimonioMinimo: '4.500 UVT (≈$214 millones COP)',
-        ingresosMinimos: '1.400 UVT (≈$66 millones COP)',
-      },
-    },
   }
 };
 

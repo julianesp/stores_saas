@@ -47,8 +47,8 @@ export default function VideoTutorials() {
       icon: '📊',
     },
     {
-      title: 'Facturación DIAN',
-      description: 'Configura facturación electrónica paso a paso',
+      title: 'Reportes y Exportación',
+      description: 'Exporta datos en Excel y genera reportes personalizados',
       icon: '📄',
     },
   ];

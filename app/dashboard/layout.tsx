@@ -157,9 +157,11 @@ export default function DashboardLayout({
             }
           }
 
-          // Verificar si es superadmin
+          // Verificar si es superadmin — el email del admin SIEMPRE tiene acceso
+          // independientemente de lo que diga la BD (protección contra resets)
           const profile = await getUserProfileByClerkId(getToken);
-          const isSuperAdminUser = profile?.is_superadmin || false;
+          const isSuperAdminUser =
+            profile?.is_superadmin || userEmail === superAdminEmail;
           setIsSuperAdmin(isSuperAdminUser);
 
           // Verificar addons próximos a vencer (solo para owners, no para team members ni superadmin)

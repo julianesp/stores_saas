@@ -57,7 +57,7 @@ export default function TrustBadges() {
               <Award className="h-8 w-8 text-yellow-400 mx-auto" />
             </div>
             <div className="text-3xl font-bold text-white">100%</div>
-            <div className="text-sm text-gray-400">Cumplimiento DIAN</div>
+            <div className="text-sm text-gray-400">Datos Seguros</div>
           </div>
         </div>
 
@@ -90,7 +90,7 @@ export default function TrustBadges() {
                 </div>
                 <div className="text-center">
                   <div className="text-3xl font-bold text-purple-400 mb-2">100%</div>
-                  <p className="text-gray-300 text-sm">Cumplimiento DIAN garantizado</p>
+                  <p className="text-gray-300 text-sm">Datos encriptados y seguros</p>
                 </div>
               </div>
             </CardContent>

@@ -56,26 +56,6 @@ const faqs = [
     ],
   },
   {
-    category: 'Facturación Electrónica',
-    questions: [
-      {
-        question: '¿El sistema genera facturas electrónicas ante la DIAN?',
-        answer:
-          'El sistema genera recibos de venta internos, perfectos para pequeños negocios. Si tu negocio está obligado a facturar electrónicamente ante la DIAN, podemos integrarlo con proveedores autorizados como Alegra o Siigo. Contáctanos para más información.',
-      },
-      {
-        question: '¿Estoy obligado a facturar electrónicamente?',
-        answer:
-          'Depende de tu nivel de ingresos y tipo de negocio. La DIAN exige facturación electrónica si superas ciertos montos de ingresos anuales. Consulta con tu contador o contáctanos para asesorarte.',
-      },
-      {
-        question: '¿Cómo funciona la integración con proveedores de facturación?',
-        answer:
-          'Si necesitas facturación electrónica, tú contratas el proveedor (Alegra, Siigo, etc.) y nosotros integramos nuestro sistema con su API para que las facturas se generen automáticamente desde el POS.',
-      },
-    ],
-  },
-  {
     category: 'Tienda Online',
     questions: [
       {

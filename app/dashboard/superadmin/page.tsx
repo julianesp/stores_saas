@@ -91,14 +91,38 @@ export default function SuperAdminPage() {
 
     try {
       setLoading(true);
-      const allProfiles = await getAllUserProfiles(getToken);
 
-      // Obtener perfil del usuario actual
-      const myProfile = allProfiles.find((p) => p.clerk_user_id === user.id);
-      setCurrentUserProfile(myProfile || null);
+      // Superadmin necesita ver TODOS los perfiles sin filtro de tenant.
+      // Guardamos y limpiamos el selected_tenant_id temporalmente para que
+      // fetchAPI no envíe X-Tenant-ID y el worker retorne todos los perfiles.
+      const savedTenantId =
+        typeof window !== "undefined"
+          ? localStorage.getItem("selected_tenant_id")
+          : null;
+      if (savedTenantId) localStorage.removeItem("selected_tenant_id");
 
-      // Verificar si es super admin
-      if (!myProfile?.is_superadmin) {
+      let allProfiles: UserProfile[] = [];
+      try {
+        allProfiles = await getAllUserProfiles(getToken);
+      } finally {
+        if (savedTenantId)
+          localStorage.setItem("selected_tenant_id", savedTenantId);
+      }
+
+      const userEmail = user.emailAddresses[0]?.emailAddress || "";
+
+      // Obtener perfil del usuario actual — busca por clerk_user_id primero,
+      // luego por email como fallback para el admin
+      const myProfile =
+        allProfiles.find((p) => p.clerk_user_id === user.id) ||
+        allProfiles.find((p) => p.email === userEmail) ||
+        null;
+      setCurrentUserProfile(myProfile);
+
+      // Verificar si es super admin — email del admin siempre tiene acceso
+      const isSuperAdmin =
+        myProfile?.is_superadmin || userEmail === "admin@neurai.dev";
+      if (!isSuperAdmin) {
         toast.error("No tienes permisos para acceder a esta página");
         return;
       }
@@ -323,7 +347,11 @@ export default function SuperAdminPage() {
     );
   }
 
-  if (!currentUserProfile?.is_superadmin) {
+  const userEmail = user?.emailAddresses[0]?.emailAddress || "";
+  const isSuperAdmin =
+    currentUserProfile?.is_superadmin || userEmail === "admin@neurai.dev";
+
+  if (!isSuperAdmin) {
     return (
       <div className="flex items-center justify-center h-64">
         <Card className="max-w-md">
@@ -798,6 +826,7 @@ export default function SuperAdminPage() {
                     <th className="text-left p-4 font-medium bg-white">Tienda</th>
                     <th className="text-left p-4 font-medium bg-white">Email</th>
                     <th className="text-left p-4 font-medium bg-white">Estado</th>
+                    <th className="text-left p-4 font-medium bg-white">Facturación</th>
                     <th className="text-left p-4 font-medium bg-white">Días</th>
                     <th className="text-center p-4 font-medium bg-white">Productos</th>
                     <th className="text-center p-4 font-medium bg-white">Ventas</th>
@@ -853,6 +882,78 @@ export default function SuperAdminPage() {
                             {status.label}
                           </span>
                         </td>
+
+                        {/* Columna de Facturación */}
+                        <td className="p-4 text-sm min-w-[160px]">
+                          {store.subscription_status === "active" ? (
+                            <div className="space-y-1">
+                              {store.last_payment_date ? (
+                                <div className="flex items-center gap-1">
+                                  <span className="text-gray-400 text-xs">Pagó:</span>
+                                  <span className="text-green-700 font-medium text-xs">
+                                    {new Date(store.last_payment_date).toLocaleDateString("es-CO", {
+                                      day: "2-digit",
+                                      month: "short",
+                                      year: "numeric",
+                                    })}
+                                  </span>
+                                </div>
+                              ) : null}
+                              {store.next_billing_date ? (
+                                <>
+                                  <div className="flex items-center gap-1">
+                                    <span className="text-gray-400 text-xs">Vence:</span>
+                                    <span className="text-blue-700 font-medium text-xs">
+                                      {new Date(store.next_billing_date).toLocaleDateString("es-CO", {
+                                        day: "2-digit",
+                                        month: "short",
+                                        year: "numeric",
+                                      })}
+                                    </span>
+                                  </div>
+                                  {(() => {
+                                    const today = new Date();
+                                    const billing = new Date(store.next_billing_date!);
+                                    const daysLeft = Math.ceil(
+                                      (billing.getTime() - today.getTime()) / (1000 * 60 * 60 * 24)
+                                    );
+                                    const color =
+                                      daysLeft <= 3
+                                        ? "text-red-600 bg-red-50"
+                                        : daysLeft <= 7
+                                        ? "text-yellow-700 bg-yellow-50"
+                                        : "text-blue-700 bg-blue-50";
+                                    return (
+                                      <div className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-bold ${color}`}>
+                                        {daysLeft > 0
+                                          ? `${daysLeft} días restantes`
+                                          : "Vencido"}
+                                      </div>
+                                    );
+                                  })()}
+                                </>
+                              ) : null}
+                              {!store.last_payment_date && !store.next_billing_date && (
+                                <span className="text-gray-400 text-xs">Sin info de pago</span>
+                              )}
+                            </div>
+                          ) : store.subscription_status === "trial" && store.trial_end_date ? (
+                            <div className="space-y-1">
+                              <div className="flex items-center gap-1">
+                                <span className="text-gray-400 text-xs">Trial hasta:</span>
+                                <span className="text-yellow-700 font-medium text-xs">
+                                  {new Date(store.trial_end_date).toLocaleDateString("es-CO", {
+                                    day: "2-digit",
+                                    month: "short",
+                                  })}
+                                </span>
+                              </div>
+                            </div>
+                          ) : (
+                            <span className="text-gray-400 text-xs">-</span>
+                          )}
+                        </td>
+
                         <td className="p-4 text-sm">
                           {daysRemaining !== null ? (
                             <span

@@ -19,7 +19,7 @@ import {
   Mail,
   CheckCircle2,
 } from "lucide-react";
-import { toast } from "sonner";
+import Swal from "sweetalert2";
 
 interface AutoReportsConfig {
   enabled: boolean;
@@ -49,13 +49,16 @@ export function AutoReportsConfig() {
       if (response.ok) {
         const data = await response.json();
         setConfig(data);
-        // No mostrar la solicitud si ya hay configuración guardada (enabled es true o false explícitamente)
-        // Solo mostrar si es null o undefined (primera vez)
         setShowPermissionRequest(false);
       }
     } catch (error) {
       console.error("Error loading config:", error);
-      toast.error("Error al cargar configuración");
+      Swal.fire({
+        icon: "error",
+        title: "Error",
+        text: "Error al cargar la configuración de reportes",
+        confirmButtonColor: "#2563eb",
+      });
     } finally {
       setLoading(false);
     }
@@ -76,14 +79,33 @@ export function AutoReportsConfig() {
         const data = await response.json();
         setConfig(updatedConfig);
         setShowPermissionRequest(false);
-        toast.success(data.message);
+
+        await Swal.fire({
+          icon: "success",
+          title: "¡Guardado!",
+          text: data.message,
+          confirmButtonColor: "#2563eb",
+          timer: 2500,
+          timerProgressBar: true,
+          showConfirmButton: false,
+        });
       } else {
         const error = await response.json();
-        toast.error(error.error || "Error al guardar configuración");
+        Swal.fire({
+          icon: "error",
+          title: "Error al guardar",
+          text: error.error || "No se pudo guardar la configuración",
+          confirmButtonColor: "#2563eb",
+        });
       }
     } catch (error) {
       console.error("Error saving config:", error);
-      toast.error("Error al guardar configuración");
+      Swal.fire({
+        icon: "error",
+        title: "Error",
+        text: "Ocurrió un error al guardar la configuración",
+        confirmButtonColor: "#2563eb",
+      });
     } finally {
       setSaving(false);
     }
@@ -93,13 +115,35 @@ export function AutoReportsConfig() {
     saveConfig({ enabled: true });
   };
 
-  const handleDisableReports = () => {
-    saveConfig({ enabled: false });
+  const handleDisableReports = async () => {
+    const result = await Swal.fire({
+      icon: "question",
+      title: "¿Desactivar reportes?",
+      text: "Los reportes automáticos diarios se desactivarán.",
+      showCancelButton: true,
+      confirmButtonText: "Sí, desactivar",
+      cancelButtonText: "Cancelar",
+      confirmButtonColor: "#dc2626",
+      cancelButtonColor: "#6b7280",
+    });
+
+    if (result.isConfirmed) {
+      saveConfig({ enabled: false });
+    }
   };
 
   const downloadManualReport = async () => {
+    Swal.fire({
+      title: "Generando reporte...",
+      text: "Por favor espera un momento",
+      allowOutsideClick: false,
+      allowEscapeKey: false,
+      didOpen: () => {
+        Swal.showLoading();
+      },
+    });
+
     try {
-      toast.loading("Generando reporte...");
       const today = new Date().toISOString().split("T")[0];
       const response = await fetch(`/api/reports/daily?date=${today}`);
 
@@ -113,17 +157,43 @@ export function AutoReportsConfig() {
         a.click();
         window.URL.revokeObjectURL(url);
         document.body.removeChild(a);
-        toast.dismiss();
-        toast.success("Reporte descargado exitosamente");
+
+        Swal.fire({
+          icon: "success",
+          title: "¡Reporte descargado!",
+          text: `El reporte de ventas del ${today} se descargó correctamente`,
+          confirmButtonColor: "#2563eb",
+          timer: 3000,
+          timerProgressBar: true,
+          showConfirmButton: false,
+        });
       } else {
         const error = await response.json();
-        toast.dismiss();
-        toast.error(error.error || "Error al generar reporte");
+
+        if (response.status === 404) {
+          Swal.fire({
+            icon: "info",
+            title: "Sin ventas",
+            text: error.error || "No hay ventas registradas para el día de hoy",
+            confirmButtonColor: "#2563eb",
+          });
+        } else {
+          Swal.fire({
+            icon: "error",
+            title: "Error al generar reporte",
+            text: error.error || "No se pudo generar el reporte",
+            confirmButtonColor: "#2563eb",
+          });
+        }
       }
     } catch (error) {
       console.error("Error downloading report:", error);
-      toast.dismiss();
-      toast.error("Error al descargar reporte");
+      Swal.fire({
+        icon: "error",
+        title: "Error de conexión",
+        text: "No se pudo conectar con el servidor para generar el reporte",
+        confirmButtonColor: "#2563eb",
+      });
     }
   };
 
@@ -202,7 +272,6 @@ export function AutoReportsConfig() {
             </Button>
             <Button
               onClick={() => {
-                // Guardar que el usuario rechazó la solicitud
                 saveConfig({ enabled: false });
               }}
               variant="outline"

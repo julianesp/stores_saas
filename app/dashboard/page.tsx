@@ -17,8 +17,6 @@ import {
   Calendar,
   Database,
   Trash2,
-  FileText,
-  Info,
 } from "lucide-react";
 import { getUserProfileByClerkId } from "@/lib/cloudflare-subscription-helpers";
 import { getAllUserProfiles } from "@/lib/cloudflare-api";
@@ -828,51 +826,6 @@ export default function DashboardPage() {
         </Card>
       </div>
 
-      {/* Banner informativo sobre Facturación Electrónica */}
-      <Card className="border-blue-200 bg-gradient-to-r from-blue-50 to-indigo-50">
-        <CardContent className="p-4 md:p-6">
-          <div className="flex flex-col md:flex-row items-start md:items-center gap-4">
-            <div className="flex-shrink-0">
-              <div className="p-3 bg-blue-600 rounded-lg">
-                <FileText className="h-6 w-6 text-white" />
-              </div>
-            </div>
-            <div className="flex-1">
-              <h3 className="font-semibold text-blue-900 mb-1 text-sm md:text-base">
-                💡 Sobre Facturación Electrónica DIAN
-              </h3>
-              <p className="text-sm text-blue-800 mb-2">
-                Este sistema genera <strong>recibos de venta internos</strong>{" "}
-                perfectos para control de tu negocio. Si necesitas{" "}
-                <strong>facturación electrónica ante la DIAN</strong>,
-                contáctame a través del botón de WhatsApp que aparece en{" "}
-                <Link
-                  href="/dashboard/config"
-                  className="underline hover:text-blue-900 font-semibold"
-                >
-                  Configuración
-                </Link>
-              </p>
-              <div className="flex flex-col sm:flex-row gap-2">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="text-xs bg-green-600 hover:bg-green-700 text-white border-green-600"
-                  onClick={() =>
-                    window.open(
-                      "https://wa.me/573174503604?text=Hola,%20necesito%20información%20sobre%20facturación%20electrónica",
-                      "_blank",
-                    )
-                  }
-                >
-                  <Info className="h-3 w-3 mr-1" />
-                  Contactar para Integración
-                </Button>
-              </div>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
     </div>
   );
 }

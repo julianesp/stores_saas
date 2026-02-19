@@ -90,11 +90,23 @@ export async function authMiddleware(c: Context<{ Bindings: Env }>, next: Next) 
           tenant = await tenantManager.getTenantByClerkId(clerkUserId);
           userProfileId = ownerProfile.id;
         } else {
-          return c.json({
-            success: false,
-            error: 'Access denied to requested tenant',
-            message: 'You do not have access to this store'
-          }, 403);
+          // Verificar si es superadmin — los superadmins pueden acceder a cualquier tenant
+          const superAdminProfile = await c.env.DB
+            .prepare('SELECT id FROM user_profiles WHERE clerk_user_id = ? AND is_superadmin = 1')
+            .bind(clerkUserId)
+            .first<{ id: string }>();
+
+          if (superAdminProfile) {
+            // Superadmin accede con su propio tenant context
+            userProfileId = superAdminProfile.id;
+            tenant = await tenantManager.getTenantByClerkId(clerkUserId);
+          } else {
+            return c.json({
+              success: false,
+              error: 'Access denied to requested tenant',
+              message: 'You do not have access to this store'
+            }, 403);
+          }
         }
       }
     } else {
