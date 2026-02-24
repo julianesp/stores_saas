@@ -24,6 +24,13 @@ import {
   Instagram,
   Package,
   Filter,
+  Truck,
+  Shield,
+  CreditCard,
+  Clock,
+  Star,
+  TrendingUp,
+  Tag,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -90,6 +97,35 @@ export default function StorefrontPage() {
       index === self.findIndex((p) => p.id === product.id)
     );
 
+  // Función para formatear stock de huevos
+  const formatEggStock = (stock: number, productName: string) => {
+    // Detectar si es un producto de huevos
+    const isEgg = productName.toLowerCase().includes('huevo');
+
+    if (!isEgg) {
+      return `${Math.round(stock)} disponibles`;
+    }
+
+    // Redondear el stock para evitar decimales raros
+    const roundedStock = Math.round(stock);
+
+    if (roundedStock === 0) {
+      return 'Agotado';
+    }
+
+    const EGGS_PER_TRAY = 30;
+    const trays = Math.floor(roundedStock / EGGS_PER_TRAY);
+    const units = roundedStock % EGGS_PER_TRAY;
+
+    if (trays === 0) {
+      return `${units} ${units === 1 ? 'unidad' : 'unidades'}`;
+    } else if (units === 0) {
+      return `${trays} ${trays === 1 ? 'cubeta' : 'cubetas'}`;
+    } else {
+      return `${trays} ${trays === 1 ? 'cubeta' : 'cubetas'} + ${units} ${units === 1 ? 'unidad' : 'unidades'}`;
+    }
+  };
+
   const openWhatsApp = () => {
     if (config?.store_whatsapp) {
       const phone = config.store_whatsapp.replace(/\D/g, '');
@@ -148,8 +184,8 @@ export default function StorefrontPage() {
       </div>
 
       {/* Hero Section con Banner */}
-      {/* {config.store_banner_url ? (
-        <div className="relative w-full h-64 md:h-96 lg:h-[500px]">
+      {config.store_banner_url ? (
+        <div className="relative w-full h-64 md:h-96 lg:h-[450px]">
           <Image
             src={config.store_banner_url}
             alt={`Banner de ${config.store_name}`}
@@ -157,40 +193,98 @@ export default function StorefrontPage() {
             className="object-cover"
             priority
           />
-          
-          <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/20 to-transparent">
-            <div className="max-w-7xl mx-auto px-4 h-full flex items-end pb-8 md:pb-12">
-              <div className="text-white">
-                <h1 className="text-3xl md:text-5xl font-bold mb-2">
+
+          <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/30 to-transparent">
+            <div className="max-w-7xl mx-auto px-4 h-full flex items-end pb-12 md:pb-16">
+              <div className="text-white animate-fade-in">
+                <h1 className="text-4xl md:text-6xl font-bold mb-3">
                   {config.store_name}
                 </h1>
                 {config.store_description && (
-                  <p className="text-lg md:text-xl text-white/90 max-w-2xl">
+                  <p className="text-lg md:text-2xl text-white/90 max-w-2xl mb-6">
                     {config.store_description}
                   </p>
                 )}
+                <Button
+                  size="lg"
+                  className="bg-white hover:bg-gray-100 text-gray-900 font-semibold shadow-xl"
+                  onClick={() => document.getElementById('productos')?.scrollIntoView({ behavior: 'smooth' })}
+                >
+                  Ver Productos
+                </Button>
               </div>
             </div>
           </div>
         </div>
       ) : (
-        
         <div
-          className="relative w-full py-12 md:py-16"
-          style={{ backgroundColor: `${primaryColor}15` }}
+          className="relative w-full py-16 md:py-24 overflow-hidden"
+          style={{ background: `linear-gradient(135deg, ${primaryColor}15 0%, ${secondaryColor}15 100%)` }}
         >
-          <div className="max-w-7xl mx-auto px-4 text-center">
-            <h1 className="text-3xl md:text-5xl font-bold mb-4" style={{ color: primaryColor }}>
+          <div className="absolute inset-0 opacity-10">
+            <div className="absolute top-10 left-10 w-72 h-72 bg-blue-400 rounded-full blur-3xl"></div>
+            <div className="absolute bottom-10 right-10 w-96 h-96 bg-purple-400 rounded-full blur-3xl"></div>
+          </div>
+
+          <div className="max-w-7xl mx-auto px-4 text-center relative z-10">
+            <h1 className="text-4xl md:text-6xl font-bold mb-4 bg-gradient-to-r from-gray-900 to-gray-700 bg-clip-text text-transparent">
               {config.store_name}
             </h1>
             {config.store_description && (
-              <p className="text-lg md:text-xl text-gray-700 max-w-2xl mx-auto">
+              <p className="text-lg md:text-2xl text-gray-700 max-w-2xl mx-auto mb-8">
                 {config.store_description}
               </p>
             )}
+            <Button
+              size="lg"
+              style={{ backgroundColor: primaryColor }}
+              className="text-white hover:opacity-90 font-semibold shadow-xl px-8"
+              onClick={() => document.getElementById('productos')?.scrollIntoView({ behavior: 'smooth' })}
+            >
+              Explorar Productos
+            </Button>
           </div>
         </div>
-      )} */}
+      )}
+
+      {/* Sección de confianza */}
+      <div className="bg-white border-y">
+        <div className="max-w-7xl mx-auto px-4 py-8">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
+            <div className="flex flex-col items-center text-center gap-2">
+              <div className="p-3 rounded-full" style={{ backgroundColor: `${primaryColor}15` }}>
+                <Truck className="h-6 w-6" style={{ color: primaryColor }} />
+              </div>
+              <h3 className="font-semibold text-sm md:text-base">Envío {config.store_shipping_enabled ? 'disponible' : 'rápido'}</h3>
+              <p className="text-xs text-gray-600">A todo el país</p>
+            </div>
+
+            <div className="flex flex-col items-center text-center gap-2">
+              <div className="p-3 rounded-full" style={{ backgroundColor: `${primaryColor}15` }}>
+                <Shield className="h-6 w-6" style={{ color: primaryColor }} />
+              </div>
+              <h3 className="font-semibold text-sm md:text-base">Compra segura</h3>
+              <p className="text-xs text-gray-600">Protección garantizada</p>
+            </div>
+
+            <div className="flex flex-col items-center text-center gap-2">
+              <div className="p-3 rounded-full" style={{ backgroundColor: `${primaryColor}15` }}>
+                <CreditCard className="h-6 w-6" style={{ color: primaryColor }} />
+              </div>
+              <h3 className="font-semibold text-sm md:text-base">Pago fácil</h3>
+              <p className="text-xs text-gray-600">Múltiples opciones</p>
+            </div>
+
+            <div className="flex flex-col items-center text-center gap-2">
+              <div className="p-3 rounded-full" style={{ backgroundColor: `${primaryColor}15` }}>
+                <Clock className="h-6 w-6" style={{ color: primaryColor }} />
+              </div>
+              <h3 className="font-semibold text-sm md:text-base">Atención 24/7</h3>
+              <p className="text-xs text-gray-600">Siempre disponibles</p>
+            </div>
+          </div>
+        </div>
+      </div>
 
       <div className="max-w-7xl mx-auto px-4 py-6">
         <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
@@ -330,7 +424,7 @@ export default function StorefrontPage() {
                 <p className="text-black text-lg">No hay productos disponibles</p>
               </div>
             ) : (
-              <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 md:gap-6">
                 {filteredProducts.map((product) => {
                   const images = parseProductImages(product.images);
                   const hasOffer = product.discount_percentage && product.discount_percentage > 0;
@@ -338,19 +432,28 @@ export default function StorefrontPage() {
                   const finalPrice = hasOffer
                     ? calculateDiscountedPrice(originalPrice, product.discount_percentage!)
                     : originalPrice;
+                  const isLowStock = product.stock > 0 && product.stock <= 5;
 
                   return (
                     <Link key={product.id} href={`/store/${slug}/product/${product.id}`}>
-                      <Card className="hover:shadow-lg transition-shadow cursor-pointer h-full">
+                      <Card className="group hover:shadow-2xl hover:-translate-y-1 transition-all duration-300 cursor-pointer h-full overflow-hidden border-2 hover:border-gray-300">
                         <CardContent className="p-0">
                           {/* Imagen */}
-                          <div className="relative aspect-square bg-gray-100">
+                          <div className="relative aspect-square bg-gradient-to-br from-gray-50 to-gray-100 overflow-hidden">
                             {hasOffer && (
-                              <div
-                                className="absolute top-2 right-2 z-10 text-white px-2 py-1 rounded-md text-sm font-bold"
-                                style={{ backgroundColor: secondaryColor }}
-                              >
-                                -{product.discount_percentage}%
+                              <div className="absolute top-3 right-3 z-10 flex flex-col gap-1">
+                                <div
+                                  className="text-white px-3 py-1.5 rounded-lg text-xs md:text-sm font-bold shadow-lg flex items-center gap-1"
+                                  style={{ backgroundColor: secondaryColor }}
+                                >
+                                  <Tag className="h-3 w-3" />
+                                  -{product.discount_percentage}%
+                                </div>
+                              </div>
+                            )}
+                            {isLowStock && (
+                              <div className="absolute top-3 left-3 z-10 bg-orange-500 text-white px-2 py-1 rounded-md text-xs font-semibold shadow-lg">
+                                ¡Últimas unidades!
                               </div>
                             )}
                             {images.length > 0 ? (
@@ -358,38 +461,58 @@ export default function StorefrontPage() {
                                 src={images[0]}
                                 alt={product.name}
                                 fill
-                                className="object-cover rounded-t-lg"
+                                className="object-cover group-hover:scale-110 transition-transform duration-500"
                               />
                             ) : (
                               <div className="w-full h-full flex items-center justify-center">
-                                <Package className="h-16 w-16 text-black" />
+                                <Package className="h-16 w-16 text-gray-300 group-hover:scale-110 transition-transform" />
                               </div>
                             )}
+
+                            {/* Overlay hover */}
+                            <div className="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-all duration-300" />
                           </div>
 
                           {/* Info */}
                           <div className="p-4">
-                            <h3 className="font-semibold text-sm md:text-base mb-2 line-clamp-2">
+                            <h3 className="font-semibold text-sm md:text-base mb-3 line-clamp-2 text-gray-900 group-hover:text-gray-700 transition-colors">
                               {product.name}
                             </h3>
 
-                            <div className="space-y-1">
+                            <div className="space-y-2">
                               {hasOffer && (
-                                <p className="text-xs md:text-sm text-black line-through">
-                                  {formatCurrency(originalPrice)}
-                                </p>
+                                <div className="flex items-center gap-2">
+                                  <p className="text-xs md:text-sm text-gray-400 line-through">
+                                    {formatCurrency(originalPrice)}
+                                  </p>
+                                  <span className="text-xs bg-green-100 text-green-700 px-2 py-0.5 rounded-full font-medium">
+                                    Ahorra {formatCurrency(originalPrice - finalPrice)}
+                                  </span>
+                                </div>
                               )}
                               <p
-                                className="text-lg md:text-xl font-bold"
+                                className="text-xl md:text-2xl font-bold"
                                 style={{ color: hasOffer ? secondaryColor : primaryColor }}
                               >
                                 {formatCurrency(finalPrice)}
                               </p>
                             </div>
 
-                            <p className="text-xs text-black mt-2">
-                              {product.stock > 0 ? `${product.stock} disponibles` : 'Agotado'}
-                            </p>
+                            <div className="mt-3 pt-3 border-t border-gray-100">
+                              {product.stock > 0 ? (
+                                <div className="flex items-center gap-1.5 text-xs">
+                                  <div className={`w-2 h-2 rounded-full ${isLowStock ? 'bg-orange-400' : 'bg-green-400'}`} />
+                                  <span className={isLowStock ? 'text-orange-600 font-medium' : 'text-green-600'}>
+                                    {formatEggStock(product.stock, product.name)}
+                                  </span>
+                                </div>
+                              ) : (
+                                <div className="flex items-center gap-1.5 text-xs">
+                                  <div className="w-2 h-2 rounded-full bg-red-400" />
+                                  <span className="text-red-600 font-medium">Agotado</span>
+                                </div>
+                              )}
+                            </div>
                           </div>
                         </CardContent>
                       </Card>

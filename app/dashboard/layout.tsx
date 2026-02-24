@@ -268,7 +268,10 @@ export default function DashboardLayout({
     <OfflineProvider>
       <NoIndexMeta />
       {/* Modal de notificación de trial - solo se muestra para usuarios en trial (no team members) */}
-      {!loading && !isSuperAdmin && !isTeamMember && <TrialNotificationWrapper />}
+      {!loading && !isSuperAdmin && !isTeamMember &&
+        // Ocultar para la cuenta de demostración (julii1295@gmail.com)
+        user?.emailAddresses[0]?.emailAddress !== "julii1295@gmail.com" &&
+        <TrialNotificationWrapper />}
       <div className="flex h-screen overflow-hidden">
         <Sidebar />
 
@@ -295,7 +298,9 @@ export default function DashboardLayout({
             !isSuperAdmin &&
             !isTeamMember &&
             subscriptionInfo?.daysLeft !== undefined &&
-            (subscriptionInfo.status === "trial" || subscriptionInfo.status === "active") && (
+            (subscriptionInfo.status === "trial" || subscriptionInfo.status === "active") &&
+            // Ocultar para la cuenta de demostración (julii1295@gmail.com)
+            user?.emailAddresses[0]?.emailAddress !== "julii1295@gmail.com" && (
               <TrialBanner
                 daysLeft={subscriptionInfo.daysLeft}
                 subscriptionType={subscriptionInfo.status}
@@ -303,7 +308,9 @@ export default function DashboardLayout({
             )}
 
           {/* Mostrar banner de addons próximos a vencer */}
-          {!loading && !isSuperAdmin && !isTeamMember && expiringAddons.length > 0 && (
+          {!loading && !isSuperAdmin && !isTeamMember && expiringAddons.length > 0 &&
+            // Ocultar para la cuenta de demostración (julii1295@gmail.com)
+            user?.emailAddresses[0]?.emailAddress !== "julii1295@gmail.com" && (
             <AddonExpiryBanner addons={expiringAddons} />
           )}
 
@@ -323,7 +330,9 @@ export default function DashboardLayout({
               !isSuperAdmin &&
               !isTeamMember &&
               subscriptionInfo?.daysLeft !== undefined &&
-              subscriptionInfo.daysLeft <= 3 && (
+              subscriptionInfo.daysLeft <= 3 &&
+              // Ocultar para la cuenta de demostración (julii1295@gmail.com)
+              user?.emailAddresses[0]?.emailAddress !== "julii1295@gmail.com" && (
                 <div className="mb-4">
                   <ExpirationAlert
                     type={

@@ -1536,18 +1536,39 @@ export default function POSPage() {
                             Disponible: {
                               product.sell_by_unit
                                 ? (() => {
+                                    // Detectar si es un producto de huevos
+                                    const isEggProduct = product.name.toLowerCase().includes('huevo');
                                     const unitsPerPackage = product.units_per_package || 1;
-                                    const totalUnits = Math.floor(product.stock * unitsPerPackage);
-                                    const fullPackages = Math.floor(product.stock);
-                                    const remainingUnits = totalUnits - (fullPackages * unitsPerPackage);
                                     const packageName = product.package_name || 'paquete';
-                                    const packageNamePlural = fullPackages === 1 ? packageName : `${packageName}s`;
                                     const unitName = product.unit_name || 'unidad';
-                                    const unitNamePlural = remainingUnits === 1 ? unitName : `${unitName}es`;
 
-                                    return `${totalUnits} ${unitName}${totalUnits === 1 ? '' : 'es'} (${fullPackages} ${packageNamePlural}${remainingUnits > 0 ? ` + ${remainingUnits} ${unitNamePlural}` : ''})`;
+                                    if (isEggProduct) {
+                                      // Para huevos: el stock YA está en unidades individuales
+                                      const totalUnits = Math.round(product.stock);
+                                      const fullPackages = Math.floor(totalUnits / unitsPerPackage);
+                                      const remainingUnits = totalUnits % unitsPerPackage;
+                                      const packageNamePlural = fullPackages === 1 ? packageName : `${packageName}s`;
+                                      const unitNamePlural = remainingUnits === 1 ? unitName : `${unitName}es`;
+
+                                      if (fullPackages === 0) {
+                                        return `${totalUnits} ${unitName}${totalUnits === 1 ? '' : 'es'}`;
+                                      } else if (remainingUnits === 0) {
+                                        return `${totalUnits} ${unitName}es (${fullPackages} ${packageNamePlural})`;
+                                      } else {
+                                        return `${totalUnits} ${unitName}es (${fullPackages} ${packageNamePlural} + ${remainingUnits} ${unitNamePlural})`;
+                                      }
+                                    } else {
+                                      // Para otros productos: stock está en paquetes
+                                      const totalUnits = Math.floor(product.stock * unitsPerPackage);
+                                      const fullPackages = Math.floor(product.stock);
+                                      const remainingUnits = totalUnits - (fullPackages * unitsPerPackage);
+                                      const packageNamePlural = fullPackages === 1 ? packageName : `${packageName}s`;
+                                      const unitNamePlural = remainingUnits === 1 ? unitName : `${unitName}es`;
+
+                                      return `${totalUnits} ${unitName}${totalUnits === 1 ? '' : 'es'} (${fullPackages} ${packageNamePlural}${remainingUnits > 0 ? ` + ${remainingUnits} ${unitNamePlural}` : ''})`;
+                                    }
                                   })()
-                                : `${product.stock} ${product.package_name || 'unidades'}`
+                                : `${Math.round(product.stock)} ${product.package_name || 'unidades'}`
                             }
                           </p>
                         </CardContent>

@@ -60,11 +60,14 @@ export function UnitSelectorModal({
     onClose();
   };
 
+  // Detectar si es un producto de huevos
+  const isEggProduct = product.name.toLowerCase().includes('huevo');
+
   // Calcular stock disponible según tipo de venta
   const availableStock =
     saleType === "package"
-      ? Math.floor(product.stock) // Redondear hacia abajo para paquetes
-      : Math.floor(product.stock * unitsPerPackage); // Unidades disponibles
+      ? Math.floor(product.stock / (isEggProduct ? unitsPerPackage : 1)) // Para huevos: dividir stock entre 30
+      : Math.floor(product.stock); // El stock ya está en unidades individuales
 
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && handleCancel()}>
@@ -186,13 +189,32 @@ export function UnitSelectorModal({
             <p className="text-xs text-black">
               Disponible: {(() => {
                 if (saleType === "unit") {
-                  const fullPackages = Math.floor(product.stock);
-                  const totalUnits = Math.floor(product.stock * unitsPerPackage);
-                  const remainingUnits = totalUnits - (fullPackages * unitsPerPackage);
-                  const packageNameDisplay = fullPackages === 1 ? packageName : `${packageName}s`;
-                  const unitNameDisplay = remainingUnits === 1 ? unitName : `${unitName}es`;
+                  // Para huevos, el stock ya está en unidades individuales
+                  const totalUnits = Math.round(product.stock);
 
-                  return `${totalUnits} ${unitName}${totalUnits === 1 ? '' : 'es'} (${fullPackages} ${packageNameDisplay}${remainingUnits > 0 ? ` + ${remainingUnits} ${unitNameDisplay}` : ''})`;
+                  if (isEggProduct) {
+                    const fullPackages = Math.floor(totalUnits / unitsPerPackage);
+                    const remainingUnits = totalUnits % unitsPerPackage;
+                    const packageNameDisplay = fullPackages === 1 ? packageName : `${packageName}s`;
+                    const unitNameDisplay = remainingUnits === 1 ? unitName : `${unitName}es`;
+
+                    if (fullPackages === 0) {
+                      return `${totalUnits} ${unitName}${totalUnits === 1 ? '' : 'es'}`;
+                    } else if (remainingUnits === 0) {
+                      return `${totalUnits} ${unitName}es (${fullPackages} ${packageNameDisplay})`;
+                    } else {
+                      return `${totalUnits} ${unitName}es (${fullPackages} ${packageNameDisplay} + ${remainingUnits} ${unitNameDisplay})`;
+                    }
+                  } else {
+                    // Para otros productos con venta por unidad
+                    const fullPackages = Math.floor(product.stock);
+                    const totalUnitsOther = Math.floor(product.stock * unitsPerPackage);
+                    const remainingUnits = totalUnitsOther - (fullPackages * unitsPerPackage);
+                    const packageNameDisplay = fullPackages === 1 ? packageName : `${packageName}s`;
+                    const unitNameDisplay = remainingUnits === 1 ? unitName : `${unitName}es`;
+
+                    return `${totalUnitsOther} ${unitName}${totalUnitsOther === 1 ? '' : 'es'} (${fullPackages} ${packageNameDisplay}${remainingUnits > 0 ? ` + ${remainingUnits} ${unitNameDisplay}` : ''})`;
+                  }
                 } else {
                   const packageNameDisplay = availableStock === 1 ? packageName : `${packageName}s`;
                   return `${availableStock} ${packageNameDisplay}`;

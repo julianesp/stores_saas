@@ -420,16 +420,9 @@ export function Sidebar({ isMobile = false, onLinkClick }: SidebarProps) {
       if (item.permissions && item.permissions.length > 0) {
         // El owner siempre tiene acceso
         if (isOwner) {
-          // Verificar addons solo para owners
-          if (item.requiresAddon === "ai" && !hasAI) {
-            return false;
-          }
-          if (item.requiresAddon === "email" && !hasEmail) {
-            return false;
-          }
-          if (item.requiresAddon === "store" && !hasStore) {
-            return false;
-          }
+          // IMPORTANTE: NO ocultar los addons, solo mostrarlos con candado
+          // Los usuarios deben poder VER los addons para saber que existen y comprarlos
+          // El candado se muestra automáticamente en las líneas 621-654
           return true;
         }
         // Para team members, verificar permisos

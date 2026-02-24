@@ -80,6 +80,36 @@ export default function ProductsPage() {
     }
   };
 
+  // Función para formatear stock de huevos
+  const formatEggStock = (stock: number, productName: string) => {
+    // Detectar si es un producto de huevos
+    const isEgg = productName.toLowerCase().includes('huevo');
+
+    if (!isEgg) {
+      // Para productos normales, redondear y mostrar solo el número
+      return Math.round(stock);
+    }
+
+    // Para huevos, calcular cubetas y unidades
+    const roundedStock = Math.round(stock);
+
+    if (roundedStock === 0) {
+      return 0;
+    }
+
+    const EGGS_PER_TRAY = 30;
+    const trays = Math.floor(roundedStock / EGGS_PER_TRAY);
+    const units = roundedStock % EGGS_PER_TRAY;
+
+    if (trays === 0) {
+      return `${units} ${units === 1 ? 'unidad' : 'unidades'}`;
+    } else if (units === 0) {
+      return `${trays} ${trays === 1 ? 'cubeta' : 'cubetas'}`;
+    } else {
+      return `${trays} ${trays === 1 ? 'cubeta' : 'cubetas'} + ${units} ${units === 1 ? 'unidad' : 'unidades'}`;
+    }
+  };
+
   const deleteProduct = async (id: string) => {
     const product = products.find(p => p.id === id);
     const productName = product?.name || 'este producto';
@@ -346,7 +376,7 @@ export default function ProductsPage() {
                                 : 'bg-green-100 text-green-800'
                             }`}
                           >
-                            {product.stock}
+                            {formatEggStock(product.stock, product.name)}
                           </span>
                         </td>
                         <td className="py-3 px-4">
@@ -426,7 +456,7 @@ export default function ProductsPage() {
 
                                         return `${totalUnits} ${unitName}${totalUnits === 1 ? '' : 'es'} (${fullPackages} ${packageNamePlural}${remainingUnits > 0 ? ` + ${remainingUnits} ${unitNamePlural}` : ''})`;
                                       })()
-                                    : `${product.stock} ${product.package_name || 'unidades'}`
+                                    : formatEggStock(product.stock, product.name)
                                   }
                                 </span>
                               </p>
