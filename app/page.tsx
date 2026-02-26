@@ -130,14 +130,14 @@ export default function Home() {
               </CardHeader>
             </Card>
 
-            {/* Video 2 - Inventario */}
+            {/* Video 2 - Vender Producto */}
             <Card className="bg-gray-800/50 border-gray-600 overflow-hidden">
               <CardHeader className="p-4">
                 <div className="aspect-video bg-gray-700 rounded-lg mb-3 overflow-hidden">
                   <iframe
                     className="w-full h-full rounded-lg"
-                    src="https://youtu.be/b-yYlIAqopM"
-                    title="Demo: Punto de Venta Rápido - Posib.dev"
+                    src="https://www.youtube.com/embed/b-yYlIAqopM"
+                    title="Demo: Vende un producto - Posib.dev"
                     allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
                     allowFullScreen
                   ></iframe>
