@@ -118,20 +118,48 @@ export async function getDashboardMetrics(getToken: GetTokenFn): Promise<Dashboa
  */
 export async function getTopProducts(limit: number = 4, getToken: GetTokenFn): Promise<TopProduct[]> {
   try {
-    // Obtener todas las ventas (que ya incluyen los items)
+    // Obtener todas las ventas completadas
     const allSales = await getSales(getToken);
+    const completedSales = allSales.filter(sale => sale.status === 'completada');
+
+    // Si no hay ventas, retornar array vacío
+    if (completedSales.length === 0) {
+      return [];
+    }
+
     const allProducts = await getProducts(getToken);
 
     // Crear un mapa de productos por ID para búsqueda rápida
     const productsMap = new Map(allProducts.map(p => [p.id, p]));
 
+    // Obtener los items de cada venta mediante fetch individual
+    const allSalesWithItems = await Promise.all(
+      completedSales.map(async (sale) => {
+        try {
+          // Usar la ruta de Cloudflare directa
+          const token = await getToken();
+          const CLOUDFLARE_API_URL = process.env.NEXT_PUBLIC_CLOUDFLARE_API_URL || 'https://pos-api.neneagency.workers.dev';
+          const response = await fetch(`${CLOUDFLARE_API_URL}/api/sales/${sale.id}`, {
+            headers: {
+              'Authorization': `Bearer ${token}`,
+              'Content-Type': 'application/json'
+            },
+          });
+
+          if (!response.ok) return null;
+          const data = await response.json();
+          return data.data;
+        } catch {
+          return null;
+        }
+      })
+    );
+
     // Agrupar por producto y sumar cantidades
     const productSales = new Map<string, { name: string; quantity: number }>();
 
-    for (const sale of allSales) {
-      // Solo contar ventas completadas (excluir ventas a crédito pendientes)
-      if (sale.status !== 'completada') continue;
-      if (!sale.items) continue;
+    for (const sale of allSalesWithItems) {
+      if (!sale || !sale.items) continue;
 
       for (const item of sale.items) {
         const productId = item.product_id;

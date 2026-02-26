@@ -139,8 +139,33 @@ export function generateInvoicePDF(data: InvoiceData): jsPDF {
     // Limitar nombre del producto a 50 caracteres
     const truncatedName = productName.length > 50 ? productName.substring(0, 47) + '...' : productName;
 
+    // Determinar cómo mostrar la cantidad
+    let displayQuantity = item.quantity;
+    let quantityText = item.quantity.toString();
+
+    if (item.product?.sell_by_unit && item.product?.units_per_package) {
+      if (item.quantity < 1) {
+        // Venta vieja: convertir de paquetes a unidades
+        displayQuantity = item.quantity * item.product.units_per_package;
+        quantityText = `${displayQuantity} ${item.product.unit_name || 'und'}`;
+      } else {
+        // Venta nueva: determinar si es paquetes o unidades
+        const unitsPerPackage = item.product.units_per_package;
+        if (item.quantity >= unitsPerPackage && item.quantity % unitsPerPackage === 0) {
+          const packages = item.quantity / unitsPerPackage;
+          if (packages >= 1) {
+            quantityText = `${packages} ${item.product.package_name || 'paq'}`;
+          } else {
+            quantityText = `${item.quantity} ${item.product.unit_name || 'und'}`;
+          }
+        } else {
+          quantityText = `${item.quantity} ${item.product.unit_name || 'und'}`;
+        }
+      }
+    }
+
     doc.text(truncatedName, margin, yPos);
-    doc.text(item.quantity.toString(), pageWidth - margin - 80, yPos);
+    doc.text(quantityText, pageWidth - margin - 80, yPos);
     doc.text(formatCurrency(item.unit_price), pageWidth - margin - 55, yPos);
     doc.text(formatCurrency(item.subtotal), pageWidth - margin - 25, yPos, { align: 'right' });
     yPos += 6;
@@ -294,8 +319,32 @@ export function generateWhatsAppMessage(data: InvoiceData): string {
   message += `*DETALLE DE LA COMPRA:*\n\n`;
 
   saleItems.forEach((item, index) => {
+    // Determinar cómo mostrar la cantidad
+    let quantityText = item.quantity.toString();
+
+    if (item.product?.sell_by_unit && item.product?.units_per_package) {
+      if (item.quantity < 1) {
+        // Venta vieja: convertir de paquetes a unidades
+        const displayQuantity = item.quantity * item.product.units_per_package;
+        quantityText = `${displayQuantity} ${item.product.unit_name || 'unidades'}`;
+      } else {
+        // Venta nueva: determinar si es paquetes o unidades
+        const unitsPerPackage = item.product.units_per_package;
+        if (item.quantity >= unitsPerPackage && item.quantity % unitsPerPackage === 0) {
+          const packages = item.quantity / unitsPerPackage;
+          if (packages >= 1) {
+            quantityText = `${packages} ${item.product.package_name || 'paquete'}${packages > 1 ? 's' : ''}`;
+          } else {
+            quantityText = `${item.quantity} ${item.product.unit_name || 'unidad'}${item.quantity > 1 ? 'es' : ''}`;
+          }
+        } else {
+          quantityText = `${item.quantity} ${item.product.unit_name || 'unidad'}${item.quantity > 1 ? 'es' : ''}`;
+        }
+      }
+    }
+
     message += `${index + 1}. *${item.product?.name || 'Producto'}*\n`;
-    message += `   Cantidad: ${item.quantity} x ${formatCurrency(item.unit_price)}\n`;
+    message += `   Cantidad: ${quantityText} x ${formatCurrency(item.unit_price)}\n`;
     if (item.discount > 0) {
       message += `   Descuento: -${formatCurrency(item.discount)}\n`;
     }

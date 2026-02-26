@@ -5,12 +5,17 @@ import { useAuth } from '@clerk/nextjs';
 import { useParams, useRouter } from 'next/navigation';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { getCustomerById } from '@/lib/cloudflare-api';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { getCustomerById, updateCustomer } from '@/lib/cloudflare-api';
 import { getCustomerPurchaseHistory } from '@/lib/loyalty-helpers';
-import { Customer, CustomerPurchaseHistory } from '@/lib/types';
+import { Customer, CustomerPurchaseHistory, Sale, SaleItemWithProduct, UserProfile } from '@/lib/types';
 import { formatCurrency } from '@/lib/utils';
-import { ArrowLeft, User, Mail, Phone, MapPin, Award, ShoppingBag, Calendar, CreditCard } from 'lucide-react';
+import { ArrowLeft, User, Mail, Phone, MapPin, Award, ShoppingBag, Calendar, CreditCard, FileText, Edit } from 'lucide-react';
 import Link from 'next/link';
+import { InvoiceModal } from '@/components/sales/invoice-modal';
+import { getUserProfileByClerkId } from '@/lib/cloudflare-subscription-helpers';
 
 export default function CustomerDetailPage() {
   const { getToken } = useAuth();
@@ -22,6 +27,22 @@ export default function CustomerDetailPage() {
   const [customer, setCustomer] = useState<Customer | null>(null);
   const [purchaseHistory, setPurchaseHistory] = useState<CustomerPurchaseHistory[]>([]);
   const [loading, setLoading] = useState(true);
+  const [selectedSale, setSelectedSale] = useState<Sale | null>(null);
+  const [selectedSaleItems, setSelectedSaleItems] = useState<SaleItemWithProduct[]>([]);
+  const [invoiceModalOpen, setInvoiceModalOpen] = useState(false);
+  const [storeInfo, setStoreInfo] = useState<UserProfile | null>(null);
+
+  // Estados para edición
+  const [editModalOpen, setEditModalOpen] = useState(false);
+  const [editForm, setEditForm] = useState({
+    name: '',
+    email: '',
+    phone: '',
+    address: '',
+    city: '',
+    id_number: '',
+  });
+  const [saving, setSaving] = useState(false);
 
   useEffect(() => {
     loadCustomerData();
@@ -30,16 +51,103 @@ export default function CustomerDetailPage() {
   const loadCustomerData = async () => {
     try {
       setLoading(true);
-      const customerData = await getCustomerById(customerId, getToken);
-      setCustomer(customerData as Customer);
+      const [customerData, history, profile] = await Promise.all([
+        getCustomerById(customerId, getToken),
+        getCustomerPurchaseHistory(customerId, getToken),
+        getUserProfileByClerkId(getToken),
+      ]);
 
-      const history = await getCustomerPurchaseHistory(customerId, getToken) as any;
-      setPurchaseHistory(history);
+      setCustomer(customerData as Customer);
+      setPurchaseHistory(history as any);
+      setStoreInfo(profile);
     } catch (error) {
       console.error('Error loading customer data:', error);
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleEditClick = () => {
+    if (!customer) return;
+
+    // Inicializar el formulario con los datos actuales del cliente
+    setEditForm({
+      name: customer.name || '',
+      email: customer.email || '',
+      phone: customer.phone || '',
+      address: customer.address || '',
+      city: customer.city || '',
+      id_number: customer.id_number || '',
+    });
+    setEditModalOpen(true);
+  };
+
+  const handleSaveCustomer = async () => {
+    if (!customer) return;
+
+    try {
+      setSaving(true);
+
+      // Actualizar cliente
+      const updatedCustomer = await updateCustomer(
+        customer.id,
+        {
+          name: editForm.name,
+          email: editForm.email || undefined,
+          phone: editForm.phone || undefined,
+          address: editForm.address || undefined,
+          city: editForm.city || undefined,
+          id_number: editForm.id_number || undefined,
+        },
+        getToken
+      );
+
+      // Actualizar el estado local
+      setCustomer(updatedCustomer as Customer);
+      setEditModalOpen(false);
+    } catch (error) {
+      console.error('Error al actualizar cliente:', error);
+      alert('Error al actualizar el cliente');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleViewInvoice = (purchase: CustomerPurchaseHistory) => {
+    // Convertir CustomerPurchaseHistory a Sale
+    const sale: Sale = {
+      id: purchase.sale_id,
+      sale_number: purchase.sale_number,
+      customer_id: customerId,
+      user_profile_id: storeInfo?.id || '',
+      payment_method: purchase.payment_method as 'efectivo' | 'tarjeta' | 'transferencia' | 'credito',
+      total: purchase.total,
+      subtotal: purchase.total,
+      tax: 0,
+      discount: 0,
+      status: 'completada',
+      created_at: purchase.date,
+      updated_at: purchase.date,
+      cashier_id: '',
+    };
+
+    // Convertir items a SaleItemWithProduct
+    const saleItems: SaleItemWithProduct[] = purchase.items.map(item => ({
+      id: item.id,
+      sale_id: purchase.sale_id,
+      product_id: item.product_id,
+      quantity: item.quantity,
+      unit_price: item.unit_price,
+      discount: 0,
+      subtotal: item.subtotal,
+      product: item.product,
+      user_profile_id: storeInfo?.id || '',
+      created_at: purchase.date,
+    }));
+
+    setSelectedSale(sale);
+    setSelectedSaleItems(saleItems);
+    setInvoiceModalOpen(true);
   };
 
   if (loading) {
@@ -78,10 +186,16 @@ export default function CustomerDetailPage() {
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         <Card>
           <CardHeader>
-            <CardTitle className="text-lg flex items-center gap-2">
-              <User className="h-5 w-5" />
-              Información Personal
-            </CardTitle>
+            <div className="flex items-center justify-between">
+              <CardTitle className="text-lg flex items-center gap-2">
+                <User className="h-5 w-5" />
+                Información Personal
+              </CardTitle>
+              <Button variant="outline" size="sm" onClick={handleEditClick}>
+                <Edit className="h-4 w-4 mr-2" />
+                Editar
+              </Button>
+            </div>
           </CardHeader>
           <CardContent className="space-y-3">
             {customer.email && (
@@ -193,16 +307,27 @@ export default function CustomerDetailPage() {
                           </div>
                         </div>
                       </div>
-                      <div className="text-right mt-2 md:mt-0">
-                        <p className="text-sm text-gray-500">Total</p>
-                        <p className="text-2xl font-bold text-blue-600">
-                          {formatCurrency(purchase.total)}
-                        </p>
-                        {purchase.points_earned > 0 && (
-                          <p className="text-sm text-yellow-600 font-medium">
-                            +{purchase.points_earned} puntos
+                      <div className="flex flex-col md:flex-row md:items-center gap-3 mt-2 md:mt-0">
+                        <div className="text-right">
+                          <p className="text-sm text-gray-500">Total</p>
+                          <p className="text-2xl font-bold text-blue-600">
+                            {formatCurrency(purchase.total)}
                           </p>
-                        )}
+                          {purchase.points_earned > 0 && (
+                            <p className="text-sm text-yellow-600 font-medium">
+                              +{purchase.points_earned} puntos
+                            </p>
+                          )}
+                        </div>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => handleViewInvoice(purchase)}
+                          className="gap-2"
+                        >
+                          <FileText className="h-4 w-4" />
+                          Ver Factura
+                        </Button>
                       </div>
                     </div>
 
@@ -239,6 +364,93 @@ export default function CustomerDetailPage() {
           )}
         </CardContent>
       </Card>
+
+      {/* Modal de Factura */}
+      {selectedSale && selectedSaleItems && storeInfo && (
+        <InvoiceModal
+          open={invoiceModalOpen}
+          onOpenChange={setInvoiceModalOpen}
+          sale={selectedSale}
+          saleItems={selectedSaleItems}
+          customer={customer}
+          storeInfo={storeInfo}
+          cashierName={storeInfo.store_name || 'Cajero'}
+        />
+      )}
+
+      {/* Modal de Edición */}
+      <Dialog open={editModalOpen} onOpenChange={setEditModalOpen}>
+        <DialogContent className="sm:max-w-[500px]">
+          <DialogHeader>
+            <DialogTitle>Editar Cliente</DialogTitle>
+          </DialogHeader>
+          <div className="grid gap-4 py-4">
+            <div className="grid gap-2">
+              <Label htmlFor="name">Nombre *</Label>
+              <Input
+                id="name"
+                value={editForm.name}
+                onChange={(e) => setEditForm({ ...editForm, name: e.target.value })}
+                placeholder="Nombre del cliente"
+              />
+            </div>
+            <div className="grid gap-2">
+              <Label htmlFor="email">Email</Label>
+              <Input
+                id="email"
+                type="email"
+                value={editForm.email}
+                onChange={(e) => setEditForm({ ...editForm, email: e.target.value })}
+                placeholder="cliente@ejemplo.com"
+              />
+            </div>
+            <div className="grid gap-2">
+              <Label htmlFor="phone">Teléfono</Label>
+              <Input
+                id="phone"
+                value={editForm.phone}
+                onChange={(e) => setEditForm({ ...editForm, phone: e.target.value })}
+                placeholder="3001234567"
+              />
+            </div>
+            <div className="grid gap-2">
+              <Label htmlFor="id_number">Número de Identificación</Label>
+              <Input
+                id="id_number"
+                value={editForm.id_number}
+                onChange={(e) => setEditForm({ ...editForm, id_number: e.target.value })}
+                placeholder="1234567890"
+              />
+            </div>
+            <div className="grid gap-2">
+              <Label htmlFor="address">Dirección</Label>
+              <Input
+                id="address"
+                value={editForm.address}
+                onChange={(e) => setEditForm({ ...editForm, address: e.target.value })}
+                placeholder="Calle 123 #45-67"
+              />
+            </div>
+            <div className="grid gap-2">
+              <Label htmlFor="city">Ciudad</Label>
+              <Input
+                id="city"
+                value={editForm.city}
+                onChange={(e) => setEditForm({ ...editForm, city: e.target.value })}
+                placeholder="Bogotá"
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setEditModalOpen(false)} disabled={saving}>
+              Cancelar
+            </Button>
+            <Button onClick={handleSaveCustomer} disabled={saving || !editForm.name.trim()}>
+              {saving ? 'Guardando...' : 'Guardar Cambios'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

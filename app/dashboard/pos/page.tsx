@@ -813,16 +813,11 @@ export default function POSPage() {
             ? (cartItem.originalPrice - price) * cartItem.quantity
             : 0;
 
-        // Calcular cantidad real a descontar del inventario
-        // Si se vende por unidades, convertir a paquetes
-        const unitsPerPackage = cartItem.product.units_per_package || 1;
-        const quantityToDiscount = cartItem.isUnitSale
-          ? cartItem.quantity / unitsPerPackage
-          : cartItem.quantity;
-
+        // IMPORTANTE: Guardar la cantidad REAL vendida (8 unidades o 2 paquetes)
+        // NO convertir a paquetes aquí, eso se hace solo para el descuento de inventario
         return {
           product_id: cartItem.product.id,
-          quantity: quantityToDiscount, // Cantidad en paquetes
+          quantity: cartItem.quantity, // Cantidad real vendida
           unit_price: price,
           discount: itemDiscount,
           subtotal: price * cartItem.quantity,
@@ -869,16 +864,16 @@ export default function POSPage() {
 
       // Actualizar el stock de los productos
       for (const cartItem of cart) {
+        const unitsPerPackage = cartItem.product.units_per_package || 1;
+
         // Calcular cuánto descontar del stock según si es venta por unidades o paquetes
+        // IMPORTANTE: El stock SIEMPRE está en paquetes para TODOS los productos
         let newStock: number;
 
         if (cartItem.isUnitSale) {
-          // Si se vende por unidades, convertir las unidades vendidas a paquetes
-          const unitsPerPackage = cartItem.product.units_per_package || 1;
-          const unitsSold = cartItem.quantity; // unidades vendidas
-          const packagesSold = unitsSold / unitsPerPackage; // paquetes equivalentes
-
-          // Descontar del stock (que está en paquetes)
+          // Venta por unidades: convertir las unidades vendidas a paquetes
+          const unitsSold = cartItem.quantity;
+          const packagesSold = unitsSold / unitsPerPackage;
           newStock = cartItem.product.stock - packagesSold;
 
           console.log('🔄 Venta por unidades:', {
@@ -888,10 +883,10 @@ export default function POSPage() {
             unidadesPorPaquete: unitsPerPackage,
             paquetesDescontados: packagesSold,
             nuevoStock: newStock,
-            unidadesRestantes: newStock * unitsPerPackage
+            unidadesRestantes: Math.floor(newStock * unitsPerPackage)
           });
         } else {
-          // Si se vende por paquetes, descontar directamente
+          // Venta por paquetes: descontar directamente
           newStock = cartItem.product.stock - cartItem.quantity;
 
           console.log('📦 Venta por paquetes:', {
@@ -1536,37 +1531,19 @@ export default function POSPage() {
                             Disponible: {
                               product.sell_by_unit
                                 ? (() => {
-                                    // Detectar si es un producto de huevos
-                                    const isEggProduct = product.name.toLowerCase().includes('huevo');
+                                    // IMPORTANTE: El stock está en PAQUETES para TODOS los productos
                                     const unitsPerPackage = product.units_per_package || 1;
                                     const packageName = product.package_name || 'paquete';
                                     const unitName = product.unit_name || 'unidad';
 
-                                    if (isEggProduct) {
-                                      // Para huevos: el stock YA está en unidades individuales
-                                      const totalUnits = Math.round(product.stock);
-                                      const fullPackages = Math.floor(totalUnits / unitsPerPackage);
-                                      const remainingUnits = totalUnits % unitsPerPackage;
-                                      const packageNamePlural = fullPackages === 1 ? packageName : `${packageName}s`;
-                                      const unitNamePlural = remainingUnits === 1 ? unitName : `${unitName}es`;
+                                    // Calcular unidades totales y desglosar
+                                    const totalUnits = Math.floor(product.stock * unitsPerPackage);
+                                    const fullPackages = Math.floor(product.stock);
+                                    const remainingUnits = totalUnits - (fullPackages * unitsPerPackage);
+                                    const packageNamePlural = fullPackages === 1 ? packageName : `${packageName}s`;
+                                    const unitNamePlural = remainingUnits === 1 ? unitName : `${unitName}es`;
 
-                                      if (fullPackages === 0) {
-                                        return `${totalUnits} ${unitName}${totalUnits === 1 ? '' : 'es'}`;
-                                      } else if (remainingUnits === 0) {
-                                        return `${totalUnits} ${unitName}es (${fullPackages} ${packageNamePlural})`;
-                                      } else {
-                                        return `${totalUnits} ${unitName}es (${fullPackages} ${packageNamePlural} + ${remainingUnits} ${unitNamePlural})`;
-                                      }
-                                    } else {
-                                      // Para otros productos: stock está en paquetes
-                                      const totalUnits = Math.floor(product.stock * unitsPerPackage);
-                                      const fullPackages = Math.floor(product.stock);
-                                      const remainingUnits = totalUnits - (fullPackages * unitsPerPackage);
-                                      const packageNamePlural = fullPackages === 1 ? packageName : `${packageName}s`;
-                                      const unitNamePlural = remainingUnits === 1 ? unitName : `${unitName}es`;
-
-                                      return `${totalUnits} ${unitName}${totalUnits === 1 ? '' : 'es'} (${fullPackages} ${packageNamePlural}${remainingUnits > 0 ? ` + ${remainingUnits} ${unitNamePlural}` : ''})`;
-                                    }
+                                    return `${totalUnits} ${unitName}${totalUnits === 1 ? '' : 'es'} (${fullPackages} ${packageNamePlural}${remainingUnits > 0 ? ` + ${remainingUnits} ${unitNamePlural}` : ''})`;
                                   })()
                                 : `${Math.round(product.stock)} ${product.package_name || 'unidades'}`
                             }

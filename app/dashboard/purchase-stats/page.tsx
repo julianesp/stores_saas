@@ -10,11 +10,15 @@ import {
   DollarSign,
   ShoppingCart,
   Package,
-  Calendar,
+  AlertTriangle,
   BarChart3,
   PieChart as PieChartIcon,
-  HelpCircle,
+  Zap,
+  Clock,
+  Star,
   X,
+  RefreshCw,
+  Target,
 } from "lucide-react";
 import {
   BarChart,
@@ -32,8 +36,25 @@ import {
   ResponsiveContainer,
 } from "recharts";
 import { formatCurrency } from "@/lib/utils";
-import { getPurchaseOrders, getSales, getProducts } from "@/lib/cloudflare-api";
-import type { PurchaseOrderWithItems, Sale, Product } from "@/lib/types";
+import { getPurchaseOrders, getSales, getProducts, getCategories } from "@/lib/cloudflare-api";
+import type { PurchaseOrderWithItems, Sale, Product, Category } from "@/lib/types";
+
+interface ProductAnalysis {
+  id: string;
+  name: string;
+  stock: number;
+  minStock: number;
+  sold: number;
+  revenue: number;
+  invested: number;
+  profit: number;
+  profitMargin: number;
+  rotationDays: number;
+  category: string;
+  needsRestock: boolean;
+  isSlowMoving: boolean;
+  isFastMoving: boolean;
+}
 
 interface PurchaseStats {
   totalInvestment: number;
@@ -42,15 +63,22 @@ interface PurchaseStats {
   totalProducts: number;
   monthlyInvestment: { month: string; amount: number }[];
   supplierStats: { supplier: string; total: number; orders: number }[];
-  productStats: {
-    product: string;
-    invested: number;
-    sold: number;
-    profit: number;
-  }[];
+  productStats: ProductAnalysis[];
   profitMargin: number;
   totalRevenue: number;
   totalProfit: number;
+  averageInventoryDays: number;
+  categoryPerformance: {
+    category: string;
+    revenue: number;
+    profit: number;
+    margin: number;
+    products: number;
+  }[];
+  topPerformers: ProductAnalysis[];
+  slowMovers: ProductAnalysis[];
+  restockNeeded: ProductAnalysis[];
+  highMarginProducts: ProductAnalysis[];
 }
 
 const COLORS = [
@@ -78,11 +106,15 @@ export default function PurchaseStatsPage() {
   const loadStats = async () => {
     try {
       setLoading(true);
-      const [orders, sales, products] = await Promise.all([
+      const [orders, sales, products, categories] = await Promise.all([
         getPurchaseOrders(getToken),
         getSales(getToken),
         getProducts(getToken),
+        getCategories(getToken),
       ]);
+
+      // Crear mapa de categorías ID -> Nombre
+      const categoriesMap = new Map(categories.map(c => [c.id, c.name]));
 
       // Filter by date range
       const cutoffDate = getCutoffDate(dateRange);
@@ -136,25 +168,44 @@ export default function PurchaseStatsPage() {
         .map((s) => ({ supplier: s.name, total: s.total, orders: s.orders }))
         .sort((a, b) => b.total - a.total);
 
-      // Product profit analysis
-      const productMap = new Map<
-        string,
-        { invested: number; sold: number; revenue: number; name: string }
-      >();
+      // Enhanced product analysis
+      const productMap = new Map<string, ProductAnalysis>();
 
-      // Calculate investment per product
+      // Initialize with current products
+      products.forEach((product) => {
+        // Obtener el nombre de la categoría del mapa, o usar "Sin categoría" si no existe
+        const categoryName = product.category_id
+          ? (categoriesMap.get(product.category_id) || "Sin categoría")
+          : "Sin categoría";
+
+        productMap.set(product.id, {
+          id: product.id,
+          name: product.name,
+          stock: product.stock,
+          minStock: product.min_stock || 0,
+          sold: 0,
+          revenue: 0,
+          invested: 0,
+          profit: 0,
+          profitMargin: 0,
+          rotationDays: 0,
+          category: categoryName,
+          needsRestock: product.stock <= (product.min_stock || 0),
+          isSlowMoving: false,
+          isFastMoving: false,
+        });
+      });
+
+      // Calculate investment per product from orders
       filteredOrders.forEach((order) => {
         order.items.forEach((item) => {
-          const existing = productMap.get(item.product_id) || {
-            invested: 0,
-            sold: 0,
-            revenue: 0,
-            name: item.product_name,
-          };
-          productMap.set(item.product_id, {
-            ...existing,
-            invested: existing.invested + item.subtotal,
-          });
+          const existing = productMap.get(item.product_id);
+          if (existing) {
+            productMap.set(item.product_id, {
+              ...existing,
+              invested: existing.invested + item.subtotal,
+            });
+          }
         });
       });
 
@@ -174,15 +225,49 @@ export default function PurchaseStatsPage() {
         }),
       );
 
+      // Process sales data
+      let totalDays = 0;
+      if (filteredSales.length > 0) {
+        const oldestSale = new Date(
+          Math.min(...filteredSales.map((s) => new Date(s.created_at).getTime()))
+        );
+        const newestSale = new Date(
+          Math.max(...filteredSales.map((s) => new Date(s.created_at).getTime()))
+        );
+        totalDays = Math.max(
+          1,
+          Math.ceil(
+            (newestSale.getTime() - oldestSale.getTime()) / (1000 * 60 * 60 * 24)
+          )
+        );
+      }
+
       allSales.filter(Boolean).forEach((sale: any) => {
         if (sale?.items) {
           sale.items.forEach((item: any) => {
             const existing = productMap.get(item.product_id);
             if (existing) {
+              const newSold = existing.sold + item.quantity;
+              const newRevenue = existing.revenue + item.subtotal;
+              const profit = newRevenue - existing.invested;
+              const profitMargin =
+                existing.invested > 0 ? (profit / existing.invested) * 100 : 0;
+
+              // Calculate rotation days
+              const rotationDays =
+                newSold > 0 && existing.stock > 0
+                  ? (existing.stock / (newSold / Math.max(totalDays, 1)))
+                  : 999;
+
               productMap.set(item.product_id, {
                 ...existing,
-                sold: existing.sold + item.quantity,
-                revenue: existing.revenue + item.subtotal,
+                sold: newSold,
+                revenue: newRevenue,
+                profit,
+                profitMargin,
+                rotationDays,
+                isFastMoving: rotationDays > 0 && rotationDays < 15,
+                isSlowMoving: rotationDays > 60 && existing.stock > existing.minStock,
               });
             }
           });
@@ -190,24 +275,71 @@ export default function PurchaseStatsPage() {
       });
 
       const productStats = Array.from(productMap.values())
-        .map((p) => ({
-          product: p.name,
-          invested: p.invested,
-          sold: p.sold,
-          profit: p.revenue - p.invested,
-        }))
-        .filter((p) => p.sold > 0)
-        .sort((a, b) => b.profit - a.profit)
-        .slice(0, 10);
+        .filter((p) => p.sold > 0 || p.stock > 0)
+        .sort((a, b) => b.profit - a.profit);
 
-      // Calculate totals
-      const totalRevenue = productStats.reduce(
-        (sum, p) => sum + (p.invested + p.profit),
-        0,
-      );
+      // Category performance
+      const categoryMap = new Map<
+        string,
+        { revenue: number; profit: number; products: number }
+      >();
+      productStats.forEach((p) => {
+        const existing = categoryMap.get(p.category) || {
+          revenue: 0,
+          profit: 0,
+          products: 0,
+        };
+        categoryMap.set(p.category, {
+          revenue: existing.revenue + p.revenue,
+          profit: existing.profit + p.profit,
+          products: existing.products + 1,
+        });
+      });
+
+      const categoryPerformance = Array.from(categoryMap.entries())
+        .map(([category, data]) => ({
+          category,
+          revenue: data.revenue,
+          profit: data.profit,
+          margin: data.revenue > 0 ? (data.profit / data.revenue) * 100 : 0,
+          products: data.products,
+        }))
+        .sort((a, b) => b.profit - a.profit);
+
+      // Calculate averages
+      const totalRevenue = productStats.reduce((sum, p) => sum + p.revenue, 0);
       const totalProfit = productStats.reduce((sum, p) => sum + p.profit, 0);
       const profitMargin =
         totalInvestment > 0 ? (totalProfit / totalInvestment) * 100 : 0;
+
+      const validRotationDays = productStats
+        .filter((p) => p.rotationDays > 0 && p.rotationDays < 999)
+        .map((p) => p.rotationDays);
+      const averageInventoryDays =
+        validRotationDays.length > 0
+          ? validRotationDays.reduce((a, b) => a + b, 0) / validRotationDays.length
+          : 0;
+
+      // Top performers and insights
+      const topPerformers = productStats
+        .filter((p) => p.sold > 0)
+        .sort((a, b) => b.sold - a.sold)
+        .slice(0, 10);
+
+      const slowMovers = productStats
+        .filter((p) => p.isSlowMoving)
+        .sort((a, b) => b.rotationDays - a.rotationDays)
+        .slice(0, 10);
+
+      const restockNeeded = productStats
+        .filter((p) => p.needsRestock && p.sold > 0)
+        .sort((a, b) => (a.stock / a.sold) - (b.stock / b.sold))
+        .slice(0, 10);
+
+      const highMarginProducts = productStats
+        .filter((p) => p.sold > 0 && p.profitMargin > 20)
+        .sort((a, b) => b.profitMargin - a.profitMargin)
+        .slice(0, 10);
 
       setStats({
         totalInvestment,
@@ -216,10 +348,16 @@ export default function PurchaseStatsPage() {
         totalProducts,
         monthlyInvestment: monthlyData,
         supplierStats: supplierStats.slice(0, 10),
-        productStats,
+        productStats: productStats.slice(0, 10),
         profitMargin,
         totalRevenue,
         totalProfit,
+        averageInventoryDays,
+        categoryPerformance,
+        topPerformers,
+        slowMovers,
+        restockNeeded,
+        highMarginProducts,
       });
     } catch (error) {
       console.error("Error loading stats:", error);
@@ -248,10 +386,6 @@ export default function PurchaseStatsPage() {
     orders.forEach((order) => {
       const date = new Date(order.order_date);
       const monthKey = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}`;
-      const monthName = date.toLocaleDateString("es-CO", {
-        month: "short",
-        year: "numeric",
-      });
 
       monthMap.set(monthKey, (monthMap.get(monthKey) || 0) + order.total);
     });
@@ -274,7 +408,10 @@ export default function PurchaseStatsPage() {
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
-        <p className="text-gray-500">Cargando estadísticas...</p>
+        <div className="text-center">
+          <RefreshCw className="h-12 w-12 animate-spin text-blue-600 mx-auto mb-4" />
+          <p className="text-gray-500">Analizando tu negocio...</p>
+        </div>
       </div>
     );
   }
@@ -291,29 +428,29 @@ export default function PurchaseStatsPage() {
     investment: {
       title: "Inversión Total",
       description:
-        "Esta métrica muestra el total de dinero invertido en órdenes de compra durante el período seleccionado. Incluye todos los costos de adquisición de productos de tus proveedores.",
+        "Dinero invertido en compras a proveedores. Esta es tu inversión inicial para mantener tu inventario abastecido.",
     },
     profit: {
       title: "Ganancia Total",
       description:
-        "Representa la ganancia neta obtenida de las ventas de productos comprados en el período seleccionado. Se calcula restando la inversión inicial del ingreso total por ventas. El margen de ganancia muestra el porcentaje de retorno sobre tu inversión.",
+        "Ganancia neta después de restar la inversión. El margen muestra qué porcentaje ganas por cada peso invertido. Ideal para tiendas de barrio: 20-40%.",
     },
-    average: {
-      title: "Promedio por Orden",
+    rotation: {
+      title: "Días de Inventario",
       description:
-        "El valor promedio de cada orden de compra realizada. Este indicador te ayuda a entender el tamaño típico de tus pedidos a proveedores y puede ayudarte a negociar mejores precios o planificar tu flujo de caja.",
+        "Promedio de días que tarda en venderse tu inventario. Menos días = mejor rotación y menos dinero inmovilizado. Ideal para tiendas de barrio: 15-30 días.",
     },
     products: {
       title: "Productos Comprados",
       description:
-        "El número total de unidades de productos adquiridos en el período seleccionado. Esta métrica te ayuda a entender el volumen de tu inventario y la rotación de productos.",
+        "Total de unidades adquiridas. Te ayuda a planificar tus compras y negociar mejores precios con tus proveedores.",
     },
   };
 
   const HelpButton = ({ modalKey }: { modalKey: string }) => (
     <button
       onClick={() => setActiveModal(modalKey)}
-      className=" px-2 py-1 rounded  cursor-pointer transition-all hover:scale-105 hover:shadow-lg font-semibold"
+      className="px-2 py-1 rounded cursor-pointer transition-all hover:scale-105 hover:shadow-lg font-semibold"
       style={{ backgroundColor: "#FFE11F", color: "#000" }}
     >
       ¿Qué es esto?
@@ -326,7 +463,7 @@ export default function PurchaseStatsPage() {
 
     return (
       <div
-        className="fixed inset-0 bg-transparent backdrop-blur-sm w-1/2 h-1/2 bg-opacity-50 flex items-center justify-center z-50 left-1/4 top-1/4 rounded-2xl"
+        className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50"
         onClick={() => setActiveModal(null)}
       >
         <div
@@ -335,7 +472,7 @@ export default function PurchaseStatsPage() {
         >
           <button
             onClick={() => setActiveModal(null)}
-            className="absolute top-4 right-4 text-white border rounded-3xl p-2 bg-red-600 cursor-pointer transition-transform duration-200 hover:scale-x-125 hover:scale-y-125"
+            className="absolute top-4 right-4 text-white border rounded-3xl p-2 bg-red-600 cursor-pointer transition-transform duration-200 hover:scale-125"
           >
             <X className="h-5 w-5" />
           </button>
@@ -351,10 +488,9 @@ export default function PurchaseStatsPage() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold">Estadísticas de Compras</h1>
-          <p className="text-gray-500">Análisis de inversión y rentabilidad</p>
+          <h1 className="text-3xl font-bold">Análisis de Tu Tienda</h1>
           <p className="text-gray-500">
-            Conoce qué tan rentable es tu negocio con estas estadísticas
+            Estadísticas pensadas para tiendas de barrio
           </p>
         </div>
         <div className="flex gap-2">
@@ -406,9 +542,9 @@ export default function PurchaseStatsPage() {
               {formatCurrency(stats.totalInvestment)}
             </div>
             <p className="text-xs text-muted-foreground">
-              En {stats.totalOrders} órdenes de compra
+              En {stats.totalOrders} compras
             </p>
-            <div className="mt-3 m-auto text-center">
+            <div className="mt-3 text-center">
               <HelpButton modalKey="investment" />
             </div>
           </CardContent>
@@ -437,19 +573,27 @@ export default function PurchaseStatsPage() {
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">
-              Promedio por Orden
+              Días de Inventario
             </CardTitle>
-            <ShoppingCart className="h-4 w-4 text-muted-foreground" />
+            <Clock className="h-4 w-4 text-blue-600" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">
-              {formatCurrency(stats.averageOrderValue)}
+            <div className="text-2xl font-bold text-blue-600">
+              {stats.averageInventoryDays > 0
+                ? Math.round(stats.averageInventoryDays)
+                : "N/A"}
             </div>
             <p className="text-xs text-muted-foreground">
-              {stats.totalOrders} órdenes totales
+              {stats.averageInventoryDays > 0
+                ? stats.averageInventoryDays < 20
+                  ? "Excelente rotación"
+                  : stats.averageInventoryDays < 40
+                  ? "Buena rotación"
+                  : "Rotación lenta"
+                : "Sin datos suficientes"}
             </p>
             <div className="mt-3">
-              <HelpButton modalKey="average" />
+              <HelpButton modalKey="rotation" />
             </div>
           </CardContent>
         </Card>
@@ -457,19 +601,251 @@ export default function PurchaseStatsPage() {
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">
-              Productos Comprados
+              Productos Activos
             </CardTitle>
             <Package className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{stats.totalProducts}</div>
-            <p className="text-xs text-muted-foreground">Unidades totales</p>
+            <div className="text-2xl font-bold">{stats.productStats.length}</div>
+            <p className="text-xs text-muted-foreground">
+              Con ventas o stock
+            </p>
             <div className="mt-3">
               <HelpButton modalKey="products" />
             </div>
           </CardContent>
         </Card>
       </div>
+
+      {/* Alerts Section - Important for small stores */}
+      {stats.restockNeeded.length > 0 && (
+        <Card className="border-orange-300 bg-orange-50">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2 text-orange-800">
+              <AlertTriangle className="h-5 w-5" />
+              ⚠️ Productos que necesitas reponer
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+              {stats.restockNeeded.slice(0, 6).map((product, index) => (
+                <div
+                  key={index}
+                  className="bg-white p-3 rounded-lg border border-orange-200"
+                >
+                  <div className="flex justify-between items-start mb-2">
+                    <p className="font-semibold text-sm">{product.name}</p>
+                    <span className="text-xs bg-red-100 text-red-700 px-2 py-1 rounded">
+                      ¡Urgente!
+                    </span>
+                  </div>
+                  <div className="space-y-1 text-xs text-gray-600">
+                    <p>
+                      Stock actual: <span className="font-semibold text-red-600">{Math.round(product.stock)}</span>
+                    </p>
+                    <p>
+                      Stock mínimo: <span className="font-semibold">{product.minStock}</span>
+                    </p>
+                    <p>
+                      Vendidos: <span className="font-semibold">{Math.round(product.sold)}</span> unidades
+                    </p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Top Performers - What sells best */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Zap className="h-5 w-5 text-yellow-500" />
+              🔥 Productos más vendidos
+            </CardTitle>
+            <p className="text-sm text-gray-500">
+              Tus campeones de ventas - Mantenlos siempre en stock
+            </p>
+          </CardHeader>
+          <CardContent>
+            {stats.topPerformers.length > 0 ? (
+              <div className="space-y-3">
+                {stats.topPerformers.slice(0, 5).map((product, index) => (
+                  <div
+                    key={index}
+                    className="flex items-center justify-between p-3 bg-gradient-to-r from-green-50 to-white border border-green-200 rounded-lg"
+                  >
+                    <div className="flex items-center gap-3">
+                      <div className="flex items-center justify-center w-8 h-8 rounded-full bg-green-600 text-white font-bold text-sm">
+                        {index + 1}
+                      </div>
+                      <div>
+                        <p className="font-semibold text-sm">{product.name}</p>
+                        <p className="text-xs text-gray-600">
+                          {Math.round(product.sold)} vendidos • Stock: {Math.round(product.stock)}
+                        </p>
+                      </div>
+                    </div>
+                    <div className="text-right">
+                      <p className="font-bold text-green-600">
+                        {formatCurrency(product.revenue)}
+                      </p>
+                      <p className="text-xs text-gray-500">
+                        Ganancia: {formatCurrency(product.profit)}
+                      </p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="text-center py-8 text-gray-400">
+                <Zap className="h-12 w-12 mx-auto mb-2 opacity-20" />
+                <p>Comienza a vender para ver tus campeones</p>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Star className="h-5 w-5 text-yellow-500" />
+              💰 Productos con mejor margen
+            </CardTitle>
+            <p className="text-sm text-gray-500">
+              Donde ganas más - Impulsa estos productos
+            </p>
+          </CardHeader>
+          <CardContent>
+            {stats.highMarginProducts.length > 0 ? (
+              <div className="space-y-3">
+                {stats.highMarginProducts.slice(0, 5).map((product, index) => (
+                  <div
+                    key={index}
+                    className="flex items-center justify-between p-3 bg-gradient-to-r from-purple-50 to-white border border-purple-200 rounded-lg"
+                  >
+                    <div className="flex items-center gap-3">
+                      <div className="flex items-center justify-center w-8 h-8 rounded-full bg-purple-600 text-white font-bold text-sm">
+                        {index + 1}
+                      </div>
+                      <div>
+                        <p className="font-semibold text-sm">{product.name}</p>
+                        <p className="text-xs text-gray-600">
+                          Vendidos: {Math.round(product.sold)}
+                        </p>
+                      </div>
+                    </div>
+                    <div className="text-right">
+                      <p className="font-bold text-purple-600">
+                        {product.profitMargin.toFixed(0)}% margen
+                      </p>
+                      <p className="text-xs text-gray-500">
+                        Ganancia: {formatCurrency(product.profit)}
+                      </p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="text-center py-8 text-gray-400">
+                <Star className="h-12 w-12 mx-auto mb-2 opacity-20" />
+                <p>Necesitas ventas para ver el análisis</p>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Slow movers - What's not selling */}
+      {stats.slowMovers.length > 0 && (
+        <Card className="border-yellow-300 bg-yellow-50">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2 text-yellow-800">
+              <TrendingDown className="h-5 w-5" />
+              🐌 Productos de venta lenta
+            </CardTitle>
+            <p className="text-sm text-gray-600">
+              Considera hacer ofertas o dejar de comprarlos
+            </p>
+          </CardHeader>
+          <CardContent>
+            <div className="overflow-x-auto">
+              <table className="w-full">
+                <thead>
+                  <tr className="border-b">
+                    <th className="text-left py-2 px-2">Producto</th>
+                    <th className="text-right py-2 px-2">Stock</th>
+                    <th className="text-right py-2 px-2">Vendidos</th>
+                    <th className="text-right py-2 px-2">Días para vender</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {stats.slowMovers.slice(0, 5).map((product, index) => (
+                    <tr key={index} className="border-b hover:bg-yellow-100">
+                      <td className="py-2 px-2 font-medium text-sm">
+                        {product.name}
+                      </td>
+                      <td className="py-2 px-2 text-right">{Math.round(product.stock)}</td>
+                      <td className="py-2 px-2 text-right">{Math.round(product.sold)}</td>
+                      <td className="py-2 px-2 text-right font-semibold text-red-600">
+                        {Math.round(product.rotationDays)} días
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Category Performance */}
+      {stats.categoryPerformance.length > 0 && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Target className="h-5 w-5" />
+              Rendimiento por Categoría
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {stats.categoryPerformance.map((cat, index) => (
+                <div
+                  key={index}
+                  className="p-4 bg-gradient-to-br from-blue-50 to-white border border-blue-200 rounded-lg"
+                >
+                  <h4 className="font-bold text-lg mb-2">{cat.category}</h4>
+                  <div className="space-y-1 text-sm">
+                    <div className="flex justify-between">
+                      <span className="text-gray-600">Ventas:</span>
+                      <span className="font-semibold">{formatCurrency(cat.revenue)}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-gray-600">Ganancia:</span>
+                      <span className="font-semibold text-green-600">
+                        {formatCurrency(cat.profit)}
+                      </span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-gray-600">Margen:</span>
+                      <span className="font-semibold text-blue-600">
+                        {cat.margin.toFixed(1)}%
+                      </span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-gray-600">Productos:</span>
+                      <span className="font-semibold">{cat.products}</span>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Charts */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
@@ -505,8 +881,7 @@ export default function PurchaseStatsPage() {
             ) : (
               <div className="flex flex-col items-center justify-center h-[300px] text-gray-400">
                 <BarChart3 className="h-16 w-16 mb-4 opacity-20" />
-                <p className="text-sm font-medium">No hay datos de inversión mensual</p>
-                <p className="text-xs mt-2">Crea órdenes de compra para ver esta gráfica</p>
+                <p className="text-sm font-medium">Sin inversiones aún</p>
               </div>
             )}
           </CardContent>
@@ -547,66 +922,20 @@ export default function PurchaseStatsPage() {
             ) : (
               <div className="flex flex-col items-center justify-center h-[300px] text-gray-400">
                 <PieChartIcon className="h-16 w-16 mb-4 opacity-20" />
-                <p className="text-sm font-medium">No hay datos de proveedores</p>
-                <p className="text-xs mt-2">Registra compras de proveedores para ver esta gráfica</p>
+                <p className="text-sm font-medium">Sin proveedores aún</p>
               </div>
             )}
           </CardContent>
         </Card>
       </div>
 
-      {/* Top Suppliers Table */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Top Proveedores por Inversión</CardTitle>
-        </CardHeader>
-        <CardContent>
-          {stats.supplierStats.length > 0 ? (
-            <div className="overflow-x-auto">
-              <table className="w-full">
-                <thead>
-                  <tr className="border-b">
-                    <th className="text-left py-3 px-4">Proveedor</th>
-                    <th className="text-right py-3 px-4">Órdenes</th>
-                    <th className="text-right py-3 px-4">Total Invertido</th>
-                    <th className="text-right py-3 px-4">Promedio/Orden</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {stats.supplierStats.map((supplier, index) => (
-                    <tr key={index} className="border-b hover:bg-gray-50">
-                      <td className="py-3 px-4 font-medium">
-                        {supplier.supplier}
-                      </td>
-                      <td className="py-3 px-4 text-right">{supplier.orders}</td>
-                      <td className="py-3 px-4 text-right font-semibold">
-                        {formatCurrency(supplier.total)}
-                      </td>
-                      <td className="py-3 px-4 text-right text-gray-600">
-                        {formatCurrency(supplier.total / supplier.orders)}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          ) : (
-            <div className="flex flex-col items-center justify-center py-12 text-gray-400">
-              <ShoppingCart className="h-16 w-16 mb-4 opacity-20" />
-              <p className="text-sm font-medium">No hay datos de proveedores</p>
-              <p className="text-xs mt-2 text-center max-w-md">
-                Comienza registrando órdenes de compra a tus proveedores para ver<br />
-                estadísticas detalladas de inversión
-              </p>
-            </div>
-          )}
-        </CardContent>
-      </Card>
-
       {/* Product Profitability */}
       <Card>
         <CardHeader>
           <CardTitle>Top 10 Productos por Rentabilidad</CardTitle>
+          <p className="text-sm text-gray-500">
+            Los productos que más dinero te generan
+          </p>
         </CardHeader>
         <CardContent>
           {stats.productStats.length > 0 ? (
@@ -615,7 +944,7 @@ export default function PurchaseStatsPage() {
                 <BarChart data={stats.productStats}>
                   <CartesianGrid strokeDasharray="3 3" />
                   <XAxis
-                    dataKey="product"
+                    dataKey="name"
                     angle={-45}
                     textAnchor="end"
                     height={100}
@@ -636,31 +965,23 @@ export default function PurchaseStatsPage() {
                   <thead>
                     <tr className="border-b">
                       <th className="text-left py-3 px-4">Producto</th>
-                      <th className="text-right py-3 px-4">Unidades Vendidas</th>
+                      <th className="text-right py-3 px-4">Vendidos</th>
                       <th className="text-right py-3 px-4">Invertido</th>
                       <th className="text-right py-3 px-4">Ganancia</th>
-                      <th className="text-right py-3 px-4">
-                        <span
-                          className="cursor-help"
-                          title="Retorno de la Inversión"
-                        >
-                          ROI
-                        </span>
-                      </th>
+                      <th className="text-right py-3 px-4">Margen</th>
                     </tr>
                   </thead>
                   <tbody>
                     {stats.productStats.map((product, index) => {
-                      const roi =
-                        product.invested > 0
-                          ? (product.profit / product.invested) * 100
-                          : 0;
+                      const roi = product.profitMargin;
                       return (
                         <tr key={index} className="border-b hover:bg-gray-50">
                           <td className="py-3 px-4 font-medium">
-                            {product.product}
+                            {product.name}
                           </td>
-                          <td className="py-3 px-4 text-right">{product.sold}</td>
+                          <td className="py-3 px-4 text-right">
+                            {Math.round(product.sold)}
+                          </td>
                           <td className="py-3 px-4 text-right text-red-600">
                             {formatCurrency(product.invested)}
                           </td>
@@ -685,10 +1006,9 @@ export default function PurchaseStatsPage() {
           ) : (
             <div className="flex flex-col items-center justify-center py-12 text-gray-400">
               <Package className="h-16 w-16 mb-4 opacity-20" />
-              <p className="text-sm font-medium">No hay datos de rentabilidad de productos</p>
+              <p className="text-sm font-medium">Sin datos de rentabilidad</p>
               <p className="text-xs mt-2 text-center max-w-md">
-                Necesitas tener órdenes de compra y ventas registradas para ver<br />
-                el análisis de rentabilidad por producto
+                Registra compras y ventas para ver el análisis completo
               </p>
             </div>
           )}

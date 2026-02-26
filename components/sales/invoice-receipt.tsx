@@ -115,12 +115,38 @@ export const InvoiceReceipt = forwardRef<HTMLDivElement, InvoiceReceiptProps>(
 
           {/* Items */}
           {saleItems.map((item, index) => {
-            // Si el producto se vende por unidades, convertir la cantidad de paquetes a unidades
+            // Determinar cómo mostrar la cantidad según el contexto
             let displayQuantity = item.quantity;
+            let unitLabel = '';
 
             if (item.product?.sell_by_unit && item.product?.units_per_package) {
-              // Convertir de paquetes a unidades (ej: 0.1666 cubetas × 30 = 5 huevos)
-              displayQuantity = item.quantity * item.product.units_per_package;
+              // Si quantity < 1, probablemente es una venta vieja que guardó en paquetes
+              // Convertir a unidades para mostrar correctamente
+              if (item.quantity < 1) {
+                displayQuantity = item.quantity * item.product.units_per_package;
+                unitLabel = ` ${item.product.unit_name || 'unidad'}${displayQuantity > 1 ? 'es' : ''}`;
+              } else {
+                // Para ventas nuevas, la cantidad ya está en la unidad correcta
+                // Determinar si es paquetes o unidades según el valor
+                const unitsPerPackage = item.product.units_per_package;
+
+                // Si la cantidad es un múltiplo exacto de unitsPerPackage y > unitsPerPackage,
+                // probablemente es venta por paquetes
+                if (item.quantity >= unitsPerPackage && item.quantity % unitsPerPackage === 0) {
+                  const packages = item.quantity / unitsPerPackage;
+                  if (packages >= 1) {
+                    displayQuantity = packages;
+                    unitLabel = ` ${item.product.package_name || 'paquete'}${packages > 1 ? 's' : ''}`;
+                  } else {
+                    displayQuantity = item.quantity;
+                    unitLabel = ` ${item.product.unit_name || 'unidad'}${item.quantity > 1 ? 'es' : ''}`;
+                  }
+                } else {
+                  // Es venta por unidades
+                  displayQuantity = item.quantity;
+                  unitLabel = ` ${item.product.unit_name || 'unidad'}${item.quantity > 1 ? 'es' : ''}`;
+                }
+              }
             }
 
             // Formatear cantidad: mostrar como entero si es entero, o con máximo 2 decimales
@@ -139,7 +165,10 @@ export const InvoiceReceipt = forwardRef<HTMLDivElement, InvoiceReceiptProps>(
                       </span>
                     )}
                   </div>
-                  <div className="w-16 text-center" style={{ color: '#000000' }}>{formattedQuantity}</div>
+                  <div className="w-16 text-center" style={{ color: '#000000' }}>
+                    {formattedQuantity}
+                    {unitLabel && <span className="text-xs block">{unitLabel}</span>}
+                  </div>
                   <div className="w-24 text-right" style={{ color: '#000000' }}>
                     {formatCurrency(item.unit_price)}
                   </div>
