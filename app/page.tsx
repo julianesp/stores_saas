@@ -112,10 +112,14 @@ export default function Home() {
             {/* Video 1 - Punto de Venta */}
             <Card className="bg-gray-800/50 border-gray-600 overflow-hidden">
               <CardHeader className="p-4">
-                <div className="aspect-video bg-gray-700 rounded-lg mb-3 flex items-center justify-center">
-                  <ShoppingCart className="h-12 w-12 text-gray-400" />
-                  {/* Aquí irá tu video */}
-                  {/* <video src="/videos/pos-demo.mp4" controls className="w-full h-full rounded-lg" /> */}
+                <div className="aspect-video bg-gray-700 rounded-lg mb-3 overflow-hidden">
+                  <iframe
+                    className="w-full h-full rounded-lg"
+                    src="https://www.youtube.com/embed/I6qJtQ1t2rQ"
+                    title="Demo: Punto de Venta Rápido - Posib.dev"
+                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                    allowFullScreen
+                  ></iframe>
                 </div>
                 <CardTitle className="text-lg text-white">
                   Punto de Venta Rápido
