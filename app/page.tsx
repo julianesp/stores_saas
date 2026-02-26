@@ -34,13 +34,13 @@ export default function Home() {
   return (
     <div className="min-h-screen bg-linear-to-br from-gray-600 to-gray-200">
       {/* Header */}
-      <header className="border-b bg-gray-700 backdrop-blur-sm sticky top-0 z-50">
+      <header className="border-b  backdrop-blur-sm  top-0 z-50 fixed w-full rounded-e-4xl rounded-s-4xl shadow-2xl ">
         <div className="container mx-auto px-4 py-3 md:py-4 flex items-center justify-between">
           <h1 className="text-xl md:text-2xl font-bold text-white">
             Posib.dev
           </h1>
           <div className="flex gap-2 md:gap-4">
-            <a
+            {/* <Link
               href={landingConfig.contact.calendly.url}
               target="_blank"
               rel="noopener noreferrer"
@@ -53,7 +53,7 @@ export default function Home() {
                 <span className="hidden sm:inline">Agendar Demo</span>
                 <span className="sm:hidden">Demo</span>
               </Button>
-            </a>
+            </Link> */}
             <Link href="/sign-in">
               <Button
                 variant="ghost"
@@ -404,7 +404,7 @@ export default function Home() {
               <ArrowRight className="ml-2 h-4 w-4 md:h-5 md:w-5" />
             </Button>
           </Link>
-          <a
+          {/* <a
             href={landingConfig.contact.calendly.url}
             target="_blank"
             rel="noopener noreferrer"
@@ -417,7 +417,7 @@ export default function Home() {
               <Calendar className="mr-2 h-4 w-4 md:h-5 md:w-5" />
               Agendar Demostración
             </Button>
-          </a>
+          </a> */}
         </div>
       </section>
 
@@ -425,13 +425,13 @@ export default function Home() {
       <footer className="border-t bg-gray-800 py-6 md:py-8">
         <div className="container mx-auto px-4 text-center text-gray-300">
           <p className="text-sm md:text-base">
-            Posib.dev - Sistema POS para tu Negocio
+            posib.dev - Sistema POS para tu Negocio
           </p>
           <p className="text-xs md:text-sm text-gray-400 mt-2">
             Gestión profesional para tu negocio
           </p>
           <div className="mt-4 text-xs text-gray-500">
-            <p>© 2025 Posib.dev - Todos los derechos reservados</p>
+            <p>© 2026 posib.dev - Todos los derechos reservados</p>
           </div>
         </div>
       </footer>

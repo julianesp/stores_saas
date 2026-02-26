@@ -2,6 +2,7 @@
 
 import { MessageCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import Image from "next/image";
 
 export default function WhatsAppButton() {
   const handleWhatsAppClick = () => {
@@ -20,7 +21,13 @@ export default function WhatsAppButton() {
       size="icon"
       aria-label="Contactar por WhatsApp"
     >
-      <MessageCircle className="h-6 w-6 text-white" />
+      {/* <MessageCircle className="h-6 w-6 text-white" /> */}
+      <Image
+        src="https://0dwas2ied3dcs14f.public.blob.vercel-storage.com/redes/social%20%281%29.png"
+        alt="Icono Whatsapp"
+        width={50}
+        height={50}
+      />
     </Button>
   );
 }
