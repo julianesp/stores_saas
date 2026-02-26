@@ -133,25 +133,30 @@ export default function Home() {
             {/* Video 2 - Inventario */}
             <Card className="bg-gray-800/50 border-gray-600 overflow-hidden">
               <CardHeader className="p-4">
-                <div className="aspect-video bg-gray-700 rounded-lg mb-3 flex items-center justify-center">
-                  <Package className="h-12 w-12 text-gray-400" />
-                  {/* <video src="/videos/inventory-demo.mp4" controls className="w-full h-full rounded-lg" /> */}
+                <div className="aspect-video bg-gray-700 rounded-lg mb-3 overflow-hidden">
+                  <iframe
+                    className="w-full h-full rounded-lg"
+                    src="https://youtu.be/b-yYlIAqopM"
+                    title="Demo: Punto de Venta Rápido - Posib.dev"
+                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                    allowFullScreen
+                  ></iframe>
                 </div>
                 <CardTitle className="text-lg text-white">
-                  Control de Inventario
+                  Vende un producto
                 </CardTitle>
                 <CardDescription className="text-gray-300">
-                  Gestiona stock, proveedores y recibe alertas automáticas
+                  Lleva registro de tus ventas
                 </CardDescription>
               </CardHeader>
             </Card>
 
             {/* Video 3 - Tienda Online */}
-            <Card className="bg-gray-800/50 border-gray-600 overflow-hidden">
+            {/* <Card className="bg-gray-800/50 border-gray-600 overflow-hidden">
               <CardHeader className="p-4">
                 <div className="aspect-video bg-gray-700 rounded-lg mb-3 flex items-center justify-center">
                   <Store className="h-12 w-12 text-gray-400" />
-                  {/* <video src="/videos/store-demo.mp4" controls className="w-full h-full rounded-lg" /> */}
+                  
                 </div>
                 <CardTitle className="text-lg text-white">
                   Tienda Online
@@ -160,7 +165,7 @@ export default function Home() {
                   Vende en línea y recibe pedidos desde tu propia tienda web
                 </CardDescription>
               </CardHeader>
-            </Card>
+            </Card> */}
           </div>
         </div>
       </section>
