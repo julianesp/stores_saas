@@ -20,6 +20,9 @@ export interface Env {
 
   // D1 shared database
   DB: D1Database;
+
+  // R2 bucket para almacenar facturas en PDF
+  FACTURAS_BUCKET: R2Bucket;
 }
 
 // Tenant information

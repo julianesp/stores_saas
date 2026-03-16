@@ -716,3 +716,4 @@ export interface UserActivityLog {
   user_agent?: string;
   created_at: string;
 }
+

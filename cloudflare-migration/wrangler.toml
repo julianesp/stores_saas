@@ -31,6 +31,11 @@ binding = "DB"
 database_name = "tienda-pos-shared"
 database_id = "9d71dfad-5c36-4dac-9c4a-b0716ebe3d20"
 
+# R2 bucket para facturas en PDF
+[[r2_buckets]]
+binding = "FACTURAS_BUCKET"
+bucket_name = "posib-facturas"
+
 # CORS configuration
 # [site]
 # bucket = ""

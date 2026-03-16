@@ -14,6 +14,8 @@ import { InvoiceReceipt } from "./invoice-receipt";
 import {
   generateInvoicePDF,
   shareInvoicePDFViaWhatsApp,
+  generateWhatsAppMessage,
+  shareViaWhatsApp,
 } from "@/lib/invoice-helpers";
 import { Sale, SaleItemWithProduct, Customer, UserProfile } from "@/lib/types";
 import { Download, Printer, MessageCircle } from "lucide-react";
@@ -79,33 +81,47 @@ export function InvoiceModal({
     }
   };
 
-  // Compartir PDF por WhatsApp
+  // Enviar factura por WhatsApp con link al PDF en R2
   const handleShareWhatsApp = async () => {
     try {
-      toast.loading("Descargando PDF...");
+      toast.loading("Generando link de factura...");
 
-      const success = await shareInvoicePDFViaWhatsApp(
-        {
-          sale,
-          saleItems,
-          customer,
-          storeInfo,
-          cashierName,
-        },
-        phoneNumber
-      );
+      // 1. Generar PDF como base64
+      const doc = generateInvoicePDF({ sale, saleItems, customer, storeInfo, cashierName });
+      const pdfBase64 = doc.output('datauristring').split(',')[1];
+      const fileName = `Factura-${sale.sale_number}-${Date.now()}.pdf`;
 
+      // 2. Subir PDF a R2 via Worker
+      const uploadRes = await fetch('/api/facturas/upload', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ pdfBase64, fileName }),
+      });
+
+      const uploadData = await uploadRes.json();
       toast.dismiss();
 
-      if (success) {
-        toast.success("PDF descargado. Por favor adjúntalo en WhatsApp");
-      } else {
-        toast.error("Error al procesar la factura");
+      if (!uploadData.success) {
+        toast.error("Error al subir la factura");
+        return;
       }
+
+      // 3. Construir mensaje con link al PDF
+      const storeName = storeInfo.full_name || 'TIENDA POS';
+      const message =
+        `🧾 *Factura de compra - ${storeName}*\n\n` +
+        `Factura #${sale.sale_number}\n` +
+        `Total: *$${sale.total.toLocaleString('es-CO')}*\n\n` +
+        `📄 Descarga tu factura aquí:\n${uploadData.url}\n\n` +
+        `✨ ¡Gracias por tu compra!`;
+
+      // 4. Abrir WhatsApp con el link
+      shareViaWhatsApp(phoneNumber, message);
+      toast.success("WhatsApp abierto con el link de la factura");
     } catch (error) {
       toast.dismiss();
-      console.error("Error sharing via WhatsApp:", error);
-      toast.error("Error al compartir por WhatsApp");
+      console.error("Error compartiendo factura:", error);
+      toast.error("Error al compartir la factura");
     }
   };
 
@@ -164,30 +180,38 @@ export function InvoiceModal({
             </Button> */}
           </div>
 
-          {/* Compartir por WhatsApp */}
-          {/* <div className="space-y-2">
-            <label className="text-sm font-medium text-black">
-              Enviar por WhatsApp
+          {/* Enviar por WhatsApp */}
+          <div className="space-y-2 bg-green-50 border border-green-200 rounded-lg p-3">
+            <label className="text-sm font-semibold text-green-800 flex items-center gap-2">
+              <MessageCircle className="h-4 w-4" />
+              Enviar factura por WhatsApp
             </label>
             <div className="flex gap-2">
               <Input
-                placeholder="Número de teléfono (opcional)"
+                placeholder="Número de celular del cliente"
                 value={phoneNumber}
                 onChange={(e) => setPhoneNumber(e.target.value)}
-                className="flex-1  text-green-600"
+                className="flex-1 text-gray-800"
               />
               <Button
                 onClick={handleShareWhatsApp}
-                className="gap-2 bg-green-600 hover:bg-green-700"
+                className="gap-2 bg-green-600 hover:bg-green-700 text-white"
               >
                 <MessageCircle className="h-4 w-4" />
                 Enviar
               </Button>
             </div>
-            <p className="text-xs text-black">
-              Deja el número en blanco para elegir el contacto en WhatsApp
-            </p>
-          </div> */}
+            {customer?.phone && (
+              <p className="text-xs text-green-700">
+                Número cargado del cliente: <strong>{customer.phone}</strong>
+              </p>
+            )}
+            {!customer?.phone && (
+              <p className="text-xs text-gray-500">
+                Ingresa el número o déjalo en blanco para elegir el contacto en WhatsApp
+              </p>
+            )}
+          </div>
         </div>
 
         {/* Vista previa de la factura (con scroll) */}
