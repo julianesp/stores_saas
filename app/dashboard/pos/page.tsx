@@ -129,7 +129,7 @@ export default function POSPage() {
 
   // Estado para animación del carrito al agregar producto
   const [cartBump, setCartBump] = useState(false);
-  const [floatingItems, setFloatingItems] = useState<{ id: number; x: number; y: number }[]>([]);
+  const [floatingProducts, setFloatingProducts] = useState<Set<string>>(new Set());
   const cartIconRef = useRef<HTMLDivElement>(null);
 
   // COMENTADO: Tour deshabilitado
@@ -516,10 +516,9 @@ export default function POSPage() {
     setCartBump(true);
     setTimeout(() => setCartBump(false), 600);
 
-    // Partícula flotante "+1" desde posición del toque/clic
-    const newItem = { id: Date.now(), x: 50, y: 50 };
-    setFloatingItems((prev) => [...prev, newItem]);
-    setTimeout(() => setFloatingItems((prev) => prev.filter((i) => i.id !== newItem.id)), 900);
+    // Partícula flotante "+1" sobre la card del producto
+    setFloatingProducts((prev) => new Set(prev).add(product.id));
+    setTimeout(() => setFloatingProducts((prev) => { const s = new Set(prev); s.delete(product.id); return s; }), 900);
 
     console.log('➕ Adding to cart...', { finalIsUnitSale });
     setCart((prev) => {
@@ -1499,9 +1498,12 @@ export default function POSPage() {
                     return (
                       <Card
                         key={product.id}
-                        className={`cursor-pointer hover:border-blue-500 transition-colors ${hasOffer ? "border-2 border-blue-400" : ""}`}
+                        className={`cursor-pointer hover:border-blue-500 transition-colors relative overflow-hidden ${hasOffer ? "border-2 border-blue-400" : ""}`}
                         onClick={() => addToCart(product)}
                       >
+                        {floatingProducts.has(product.id) && (
+                          <div className="floating-plus-one-card" aria-hidden="true">+1</div>
+                        )}
                         <CardContent className="p-2 md:p-4">
                           {/* Imagen del producto */}
                           <div className="relative w-full aspect-square mb-2 bg-gray-50 rounded-md overflow-hidden">
@@ -2140,17 +2142,6 @@ export default function POSPage() {
         />
       )}
 
-      {/* Partículas flotantes "+1" al agregar producto */}
-      {floatingItems.map((item) => (
-        <div
-          key={item.id}
-          className="floating-plus-one"
-          style={{ position: "fixed", top: "72px", right: "20px", pointerEvents: "none", zIndex: 9999 }}
-        >
-          +1
-        </div>
-      ))}
-
       <style>{`
         @keyframes cartBump {
           0%   { transform: scale(1); }
@@ -2158,18 +2149,24 @@ export default function POSPage() {
           60%  { transform: scale(1.3) rotate(8deg); }
           100% { transform: scale(1) rotate(0deg); }
         }
-        @keyframes floatUp {
-          0%   { opacity: 1; transform: translateY(0) scale(1); }
-          80%  { opacity: 1; transform: translateY(-60px) scale(1.2); }
-          100% { opacity: 0; transform: translateY(-80px) scale(0.8); }
+        @keyframes floatUpCard {
+          0%   { opacity: 1; transform: translate(-50%, 0) scale(1.1); }
+          70%  { opacity: 1; transform: translate(-50%, -55px) scale(1.3); }
+          100% { opacity: 0; transform: translate(-50%, -75px) scale(0.9); }
         }
-        .floating-plus-one {
-          animation: floatUp 0.9s ease-out forwards;
-          font-size: 1.4rem;
+        .floating-plus-one-card {
+          position: absolute;
+          bottom: 30%;
+          left: 50%;
+          animation: floatUpCard 0.85s ease-out forwards;
+          font-size: 1.6rem;
           font-weight: 900;
           color: #155dfc;
-          text-shadow: 0 2px 8px rgba(21,93,252,0.4);
+          text-shadow: 0 0 12px rgba(21,93,252,0.5), 0 2px 4px rgba(0,0,0,0.15);
+          pointer-events: none;
+          z-index: 50;
           user-select: none;
+          white-space: nowrap;
         }
       `}</style>
     </div>
