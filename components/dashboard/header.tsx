@@ -1,11 +1,17 @@
 'use client';
 
-import { UserButton, useUser } from '@clerk/nextjs';
+import { useUser } from '@clerk/nextjs';
+import dynamic from 'next/dynamic';
 import { Menu } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { RefreshProfileButton } from './refresh-profile-button';
 import { NotificationPanel } from './notification-panel';
 import StoreSwitcher from '@/components/layout/StoreSwitcher';
+
+const UserButtonClient = dynamic(
+  () => import('@clerk/nextjs').then((mod) => ({ default: mod.UserButton })),
+  { ssr: false }
+);
 
 interface HeaderProps {
   onMenuClick?: () => void;
@@ -44,7 +50,7 @@ export function Header({ onMenuClick }: HeaderProps) {
           <RefreshProfileButton />
         </div>
 
-        <UserButton afterSignOutUrl="/" />
+        <UserButtonClient afterSignOutUrl="/" />
       </div>
     </header>
   );

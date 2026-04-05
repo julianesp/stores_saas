@@ -952,14 +952,14 @@ export default function POSPage() {
           title: "🎉 ¡Cliente Alcanzó Recompensa!",
           html: `
             <div class="text-left space-y-3">
-              <div class="bg-yellow-50 border border-yellow-200 rounded-lg p-4 mb-3">
-                <p class="text-lg font-bold text-yellow-800 mb-2">
+              <div class="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-3">
+                <p class="text-lg font-bold text-blue-800 mb-2">
                   🏆 ${selectedCustomer.name}
                 </p>
                 <p class="text-sm text-gray-700 mb-2">
-                  Ahora tiene <strong class="text-yellow-600">${customerNewPoints} puntos acumulados</strong>
+                  Ahora tiene <strong class="text-blue-600">${customerNewPoints} puntos acumulados</strong>
                 </p>
-                <p class="text-sm text-green-700 font-semibold">
+                <p class="text-sm text-blue-700 font-semibold">
                   ✓ Ya puede canjear un descuento del ${REWARD_CONSTANTS.DISCOUNT_PERCENTAGE}% en su próxima compra
                 </p>
               </div>
@@ -994,8 +994,8 @@ export default function POSPage() {
       // Mostrar información de productos con ofertas
       if (itemsWithOffer.length > 0) {
         htmlContent += `
-          <div class="bg-orange-50 border-2 border-orange-300 rounded-lg p-3 mb-3">
-            <p class="text-sm font-bold text-orange-800 mb-2">🏷️ Descuentos Aplicados</p>
+          <div class="bg-blue-50 border-2 border-blue-300 rounded-lg p-3 mb-3">
+            <p class="text-sm font-bold text-blue-800 mb-2">🏷️ Descuentos Aplicados</p>
             <div class="space-y-1">
         `;
         itemsWithOffer.forEach((item) => {
@@ -1005,17 +1005,17 @@ export default function POSPage() {
           htmlContent += `
             <div class="flex justify-between items-center text-xs">
               <span class="text-gray-700">
-                ${item.product.name} <span class="font-semibold text-orange-600">(-${item.discountPercentage}%)</span>
+                ${item.product.name} <span class="font-semibold text-blue-600">(-${item.discountPercentage}%)</span>
               </span>
-              <span class="text-orange-700 font-semibold">-${formatCurrency(itemDiscount)}</span>
+              <span class="text-blue-700 font-semibold">-${formatCurrency(itemDiscount)}</span>
             </div>
           `;
         });
         htmlContent += `
             </div>
-            <div class="mt-2 pt-2 border-t border-orange-200 flex justify-between text-sm font-bold">
-              <span class="text-orange-800">Total Ahorrado:</span>
-              <span class="text-orange-600">${formatCurrency(totalOfferDiscount)}</span>
+            <div class="mt-2 pt-2 border-t border-blue-200 flex justify-between text-sm font-bold">
+              <span class="text-blue-800">Total Ahorrado:</span>
+              <span class="text-blue-600">${formatCurrency(totalOfferDiscount)}</span>
             </div>
           </div>
         `;
@@ -1029,7 +1029,7 @@ export default function POSPage() {
               ? `
             <div class="bg-gray-50 p-2 rounded mb-2 text-sm">
               <p class="text-gray-600">Subtotal: ${formatCurrency(subtotal)}</p>
-              <p class="text-green-600 font-semibold">Descuento (${
+              <p class="text-blue-600 font-semibold">Descuento (${
                 REWARD_CONSTANTS.DISCOUNT_PERCENTAGE
               }%): -${formatCurrency(appliedDiscount)}</p>
               <p class="text-xs text-gray-500 mt-1">Se canjearon ${pointsRedeemed} puntos</p>
@@ -1037,7 +1037,7 @@ export default function POSPage() {
           `
               : ""
           }
-          <p class="text-2xl font-bold text-green-600 mb-3">Total: ${formatCurrency(
+          <p class="text-2xl font-bold text-blue-600 mb-3">Total: ${formatCurrency(
             total,
           )}</p>
           <div class="bg-blue-50 border border-blue-200 rounded-lg p-3 mb-2">
@@ -1051,16 +1051,16 @@ export default function POSPage() {
           if (paymentMethod === "credito") {
             // Para ventas a crédito, mostrar que los puntos se asignarán al pagar
             htmlContent += `
-              <div class="bg-yellow-50 border border-yellow-200 rounded-lg p-3 mb-2">
-                <p class="text-sm font-bold text-yellow-600">⏳ ${pointsEarned} puntos pendientes</p>
+              <div class="bg-blue-50 border border-blue-200 rounded-lg p-3 mb-2">
+                <p class="text-sm font-bold text-blue-600">⏳ ${pointsEarned} puntos pendientes</p>
                 <p class="text-xs text-gray-600 mt-1">Se asignarán cuando se complete el pago</p>
               </div>
             `;
           } else {
             // Para ventas normales, mostrar que los puntos ya se asignaron
             htmlContent += `
-              <div class="bg-yellow-50 border border-yellow-200 rounded-lg p-3 mb-2">
-                <p class="text-lg font-bold text-yellow-600">+${pointsEarned} puntos ganados</p>
+              <div class="bg-blue-50 border border-blue-200 rounded-lg p-3 mb-2">
+                <p class="text-lg font-bold text-blue-600">+${pointsEarned} puntos ganados</p>
               </div>
             `;
 
@@ -1068,8 +1068,8 @@ export default function POSPage() {
             const milestoneMessage = getPointsMilestoneMessage(pointsEarned);
             if (milestoneMessage) {
               htmlContent += `
-                <div class="bg-green-50 border border-green-200 rounded-lg p-3 text-sm">
-                  <p class="text-green-800">${milestoneMessage}</p>
+                <div class="bg-blue-50 border border-blue-200 rounded-lg p-3 text-sm">
+                  <p class="text-blue-800">${milestoneMessage}</p>
                 </div>
               `;
             }
@@ -1081,8 +1081,8 @@ export default function POSPage() {
           const dueDate = new Date();
           dueDate.setDate(dueDate.getDate() + creditDays);
           htmlContent += `
-            <div class="bg-orange-50 border border-orange-200 rounded-lg p-3 mt-2">
-              <p class="text-sm font-semibold text-orange-800">💳 Venta a Crédito (${creditDays} ${creditDays === 1 ? 'día' : 'días'})</p>
+            <div class="bg-blue-50 border border-blue-200 rounded-lg p-3 mt-2">
+              <p class="text-sm font-semibold text-blue-800">💳 Venta a Crédito (${creditDays} ${creditDays === 1 ? 'día' : 'días'})</p>
               <p class="text-xs text-gray-600 mt-1">Fecha de vencimiento: ${dueDate.toLocaleDateString(
                 "es-CO",
               )}</p>
@@ -1092,7 +1092,7 @@ export default function POSPage() {
       } else {
         // Sin cliente seleccionado
         htmlContent += `
-          <p class="text-2xl font-bold text-green-600 mb-3">Total: ${formatCurrency(
+          <p class="text-2xl font-bold text-blue-600 mb-3">Total: ${formatCurrency(
             total,
           )}</p>
         `;
@@ -1220,7 +1220,7 @@ export default function POSPage() {
                   );
                 }
               }}
-              className="block w-full bg-green-600 hover:bg-green-700 text-white font-medium py-3 px-4 rounded-lg transition-colors"
+              className="block w-full bg-blue-600 hover:bg-blue-700 text-white font-medium py-3 px-4 rounded-lg transition-colors"
             >
               <Package className="inline-block h-5 w-5 mr-2 -mt-1" />
               Crear Productos de Ejemplo
@@ -1281,7 +1281,7 @@ export default function POSPage() {
           <Card
             className={`border-2 shadow-lg transition-all duration-300 ${
               scanSuccess
-                ? "border-green-500 bg-green-50"
+                ? "border-blue-500 bg-blue-50"
                 : "border-blue-500 bg-linear-to-r from-blue-50 to-white"
             }`}
           >
@@ -1290,7 +1290,7 @@ export default function POSPage() {
                 <div className="flex items-center gap-3 mb-2">
                   <div
                     className={`p-2 rounded-lg transition-colors ${
-                      scanSuccess ? "bg-green-600" : "bg-blue-600"
+                      scanSuccess ? "bg-blue-600" : "bg-blue-600"
                     }`}
                   >
                     <Scan className="h-6 w-6 text-white" />
@@ -1335,7 +1335,7 @@ export default function POSPage() {
                       type="button"
                       size="lg"
                       onClick={() => setShowCameraScanner(true)}
-                      className="h-20 md:h-24 bg-purple-600 hover:bg-purple-700 transition-colors flex-col gap-2"
+                      className="h-20 md:h-24 bg-blue-600 hover:bg-blue-700 transition-colors flex-col gap-2"
                       title="Escanear con cámara"
                     >
                       <Camera className="h-6 w-6 md:h-8 md:w-8" />
@@ -1363,7 +1363,7 @@ export default function POSPage() {
                         placeholder="Escanea aquí el código de barras..."
                         className={`h-12 md:h-14 text-xs md:text-sm font-mono tracking-wider border-2 focus:ring-2 pl-10 md:pl-12 transition-colors ${
                           scanSuccess
-                            ? "border-green-300 focus:border-green-500 focus:ring-green-200"
+                            ? "border-blue-300 focus:border-blue-500 focus:ring-blue-200"
                             : "border-blue-300 focus:border-blue-500 focus:ring-blue-200"
                         }`}
                         autoComplete="off"
@@ -1372,7 +1372,7 @@ export default function POSPage() {
                         <Scan
                           className={`h-5 w-5 md:h-6 md:w-6 ${
                             scanSuccess
-                              ? "text-green-600"
+                              ? "text-blue-600"
                               : "text-blue-600 animate-pulse"
                           }`}
                         />
@@ -1399,7 +1399,7 @@ export default function POSPage() {
                         size="lg"
                         className={`flex-1 h-11 md:h-14 transition-colors ${
                           scanSuccess
-                            ? "bg-green-600 hover:bg-green-700"
+                            ? "bg-blue-600 hover:bg-blue-700"
                             : "bg-blue-600 hover:bg-blue-700"
                         }`}
                       >
@@ -1411,8 +1411,8 @@ export default function POSPage() {
                       <div
                         className={`h-1.5 w-1.5 rounded-full ${
                           scanSuccess
-                            ? "bg-green-500 animate-ping"
-                            : "bg-green-500"
+                            ? "bg-blue-500 animate-ping"
+                            : "bg-blue-500"
                         }`}
                       ></div>
                       <span>
@@ -1482,14 +1482,14 @@ export default function POSPage() {
                     return (
                       <Card
                         key={product.id}
-                        className={`cursor-pointer hover:border-blue-500 transition-colors ${hasOffer ? "border-2 border-orange-400" : ""}`}
+                        className={`cursor-pointer hover:border-blue-500 transition-colors ${hasOffer ? "border-2 border-blue-400" : ""}`}
                         onClick={() => addToCart(product)}
                       >
                         <CardContent className="p-2 md:p-4">
                           {/* Imagen del producto */}
                           <div className="relative w-full aspect-square mb-2 bg-gray-50 rounded-md overflow-hidden">
                             {hasOffer && (
-                              <div className="absolute top-0 right-0 z-10 bg-orange-600 text-white text-xs font-bold px-2 py-1 rounded-bl-md">
+                              <div className="absolute top-0 right-0 z-10 bg-blue-600 text-white text-xs font-bold px-2 py-1 rounded-bl-md">
                                 -{offer.discount_percentage}%
                               </div>
                             )}
@@ -1517,7 +1517,7 @@ export default function POSPage() {
                                 <p className="text-xs text-gray-400 line-through">
                                   {formatCurrency(originalPrice)}
                                 </p>
-                                <p className="text-sm md:text-lg font-bold text-orange-600">
+                                <p className="text-sm md:text-lg font-bold text-blue-600">
                                   {formatCurrency(discountedPrice)}
                                 </p>
                               </>
@@ -1623,7 +1623,7 @@ export default function POSPage() {
 
                     {/* Opción de canjear puntos */}
                     {canRedeem && (
-                      <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3">
+                      <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
                         <label className="flex items-center gap-2 cursor-pointer">
                           <input
                             type="checkbox"
@@ -1650,15 +1650,15 @@ export default function POSPage() {
                                 setDiscountAmount(0);
                               }
                             }}
-                            className="w-4 h-4 text-yellow-600 rounded focus:ring-yellow-500"
+                            className="w-4 h-4 text-blue-600 rounded focus:ring-blue-500"
                           />
                           <div className="flex-1">
-                            <p className="text-sm font-medium text-yellow-900">
+                            <p className="text-sm font-medium text-blue-900">
                               Canjear {REWARD_CONSTANTS.POINTS_FOR_DISCOUNT}{" "}
                               puntos por {REWARD_CONSTANTS.DISCOUNT_PERCENTAGE}%
                               de descuento
                             </p>
-                            <p className="text-xs text-yellow-700">
+                            <p className="text-xs text-blue-700">
                               {applyDiscount
                                 ? `Descuento: ${formatCurrency(discountAmount)}`
                                 : "Marca para aplicar descuento"}
@@ -1671,23 +1671,23 @@ export default function POSPage() {
                 ) : (
                   <div>
                     {/* Nuevo diseño con cuadro naranja/tomate */}
-                    <div className="bg-gradient-to-br from-orange-100 to-orange-50 border-2 border-orange-400 rounded-lg p-4 relative overflow-hidden">
+                    <div className="bg-gradient-to-br from-blue-100 to-blue-50 border-2 border-blue-400 rounded-lg p-4 relative overflow-hidden">
                       {/* Icono de persona en el fondo */}
                       <div className="absolute right-2 top-1/2 -translate-y-1/2 opacity-10">
-                        <User className="h-20 w-20 text-orange-600" />
+                        <User className="h-20 w-20 text-blue-600" />
                       </div>
 
                       {/* Contenido */}
                       <div className="relative z-10 space-y-3">
                         <div className="flex items-center gap-2 mb-2">
-                          <div className="p-2 bg-orange-600 rounded-full">
+                          <div className="p-2 bg-blue-600 rounded-full">
                             <User className="h-5 w-5 text-white" />
                           </div>
                           <div>
-                            <p className="text-sm font-bold text-orange-900">
+                            <p className="text-sm font-bold text-blue-900">
                               Seleccionar Cliente
                             </p>
-                            <p className="text-xs text-orange-700">Opcional</p>
+                            <p className="text-xs text-blue-700">Opcional</p>
                           </div>
                         </div>
 
@@ -1695,7 +1695,7 @@ export default function POSPage() {
                         <Button
                           variant="outline"
                           size="sm"
-                          className="w-1/2 mx-auto block bg-white hover:bg-orange-50 border-orange-400 text-orange-900 font-semibold"
+                          className="w-1/2 mx-auto block bg-white hover:bg-blue-50 border-blue-400 text-blue-900 font-semibold"
                           onClick={() =>
                             setShowCustomerSearch(!showCustomerSearch)
                           }
@@ -1867,7 +1867,7 @@ export default function POSPage() {
                     return (
                       <div
                         key={`${item.product.id}-${item.isUnitSale ? "unit" : "package"}`}
-                        className={`p-3 md:p-4 border-2 rounded-lg ${item.hasOffer ? "bg-orange-50 border-orange-300" : "border-gray-300"}`}
+                        className={`p-3 md:p-4 border-2 rounded-lg ${item.hasOffer ? "bg-blue-50 border-blue-300" : "border-gray-300"}`}
                       >
                         {/* Primera fila: Nombre, precio y cantidad */}
                         <div className="mb-3">
@@ -1881,7 +1881,7 @@ export default function POSPage() {
                               )}
                             </p>
                             {item.hasOffer && (
-                              <span className="text-sm md:text-base bg-orange-600 text-white px-2 py-1 rounded font-bold">
+                              <span className="text-sm md:text-base bg-blue-600 text-white px-2 py-1 rounded font-bold">
                                 -{item.discountPercentage}%
                               </span>
                             )}
@@ -1893,7 +1893,7 @@ export default function POSPage() {
                               </span>
                             )}
                             <span
-                              className={`font-bold text-lg md:text-xl ${item.hasOffer ? "text-orange-600" : "text-blue-600"}`}
+                              className={`font-bold text-lg md:text-xl ${item.hasOffer ? "text-blue-600" : "text-blue-600"}`}
                             >
                               {formatCurrency(price)}
                             </span>
@@ -1902,7 +1902,7 @@ export default function POSPage() {
                               {item.quantity > 1 ? "s" : ""}
                             </span>
                             <span
-                              className={`ml-auto font-bold text-lg md:text-xl ${item.hasOffer ? "text-orange-600" : "text-blue-600"}`}
+                              className={`ml-auto font-bold text-lg md:text-xl ${item.hasOffer ? "text-blue-600" : "text-blue-600"}`}
                             >
                               = {formatCurrency(price * item.quantity)}
                             </span>
@@ -1915,7 +1915,7 @@ export default function POSPage() {
                             size="sm"
                             variant="outline"
                             onClick={() => updateQuantity(item.product.id, -1, item.isUnitSale)}
-                            className="h-12 w-12 p-0 md:h-14 md:w-14 bg-red-600  text-white border-red-600 rounded-2xl cursor-pointer hover:bg-red-700"
+                            className="h-12 w-12 p-0 md:h-14 md:w-14 bg-blue-600  text-white border-blue-600 rounded-2xl cursor-pointer hover:bg-red-700"
                           >
                             <Minus className="h-6 w-6 md:h-7 md:w-7" />
                           </Button>
@@ -1972,7 +1972,7 @@ export default function POSPage() {
                             size="sm"
                             variant="outline"
                             onClick={() => updateQuantity(item.product.id, 1, item.isUnitSale)}
-                            className="h-12 w-12 p-0 md:h-14 md:w-14 bg-green-600 hover:bg-green-700 text-white border-green-600 rounded-2xl cursor-pointer"
+                            className="h-12 w-12 p-0 md:h-14 md:w-14 bg-blue-600 hover:bg-blue-700 text-white border-blue-600 rounded-2xl cursor-pointer"
                           >
                             <Plus className="h-6 w-6 md:h-7 md:w-7" />
                           </Button>
@@ -1980,9 +1980,9 @@ export default function POSPage() {
                             size="sm"
                             variant="ghost"
                             onClick={() => removeFromCart(item.product.id, item.isUnitSale)}
-                            className="h-12 w-12 p-0 md:h-14 md:w-14 shrink-0 hover:bg-red-50 ml-2"
+                            className="h-12 w-12 p-0 md:h-14 md:w-14 shrink-0 hover:bg-blue-50 ml-2"
                           >
-                            <Trash2 className="h-7 w-7 md:h-8 md:w-8 text-red-600" />
+                            <Trash2 className="h-7 w-7 md:h-8 md:w-8 text-blue-600" />
                           </Button>
                         </div>
                       </div>
@@ -2010,7 +2010,7 @@ export default function POSPage() {
                             )}
                           </span>
                         </div>
-                        <div className="flex justify-between text-sm text-green-600 font-semibold">
+                        <div className="flex justify-between text-sm text-blue-600 font-semibold">
                           <span>
                             Descuento ({REWARD_CONSTANTS.DISCOUNT_PERCENTAGE}%):
                           </span>
