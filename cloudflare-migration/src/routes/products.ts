@@ -127,6 +127,11 @@ app.post('/', async (c) => {
       expiration_date: body.expiration_date || null,
       image_url: body.image_url || null,
       images: body.images ? JSON.stringify(body.images) : null,
+      sell_by_unit: body.sell_by_unit ? 1 : 0,
+      units_per_package: body.units_per_package || 1,
+      unit_name: body.unit_name || 'unidad',
+      package_name: body.package_name || 'paquete',
+      price_per_unit: body.price_per_unit || 0,
     };
 
     await tenantDB.insert('products', productData);
@@ -169,6 +174,10 @@ app.put('/:id', async (c) => {
     const updateData = { ...body };
     if (updateData.images && Array.isArray(updateData.images)) {
       updateData.images = JSON.stringify(updateData.images);
+    }
+    // SQLite no acepta boolean, convertir sell_by_unit a integer
+    if (typeof updateData.sell_by_unit === 'boolean') {
+      updateData.sell_by_unit = updateData.sell_by_unit ? 1 : 0;
     }
 
     // Update product

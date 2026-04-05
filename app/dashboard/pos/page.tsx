@@ -235,7 +235,10 @@ export default function POSPage() {
 
   const fetchProducts = useCallback(async () => {
     try {
-      const data = (await getProducts(getToken)) as Product[];
+      const raw = (await getProducts(getToken)) as Product[];
+
+      // Normalizar sell_by_unit: SQLite devuelve 0/1, necesitamos boolean
+      const data = raw.map((p) => ({ ...p, sell_by_unit: !!p.sell_by_unit }));
 
       // Verificar si hay productos en el sistema (antes de filtrar por stock)
       setHasAnyProducts(data.length > 0);
@@ -494,7 +497,7 @@ export default function POSPage() {
 
     // Si el producto se vende por unidades y no se especificó explícitamente el tipo de venta, abrir modal
     // isUnitSale === undefined significa que se llamó desde la lista de productos
-    if (product.sell_by_unit && isUnitSale === undefined) {
+    if (!!product.sell_by_unit && isUnitSale === undefined) {
       console.log('📱 Opening unit selector modal (isUnitSale not specified)');
       setSelectedProductForUnits(product);
       setShowUnitSelector(true);
@@ -1529,7 +1532,7 @@ export default function POSPage() {
                           </div>
                           <p className="text-xs text-gray-500">
                             Disponible: {
-                              product.sell_by_unit
+                              !!product.sell_by_unit
                                 ? (() => {
                                     // IMPORTANTE: El stock está en PAQUETES para TODOS los productos
                                     const unitsPerPackage = product.units_per_package || 1;

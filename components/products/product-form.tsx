@@ -95,6 +95,8 @@ export function ProductForm({ initialData, productId }: ProductFormProps) {
     defaultValues: initialData
       ? {
           ...initialData,
+          // El stock siempre debe ser entero (puede llegar con decimales si hubo ventas por unidades)
+          stock: Math.round(initialData.stock || 0),
           // Limpiar IDs que sean null, undefined o inválidos
           category_id: (initialData.category_id && !initialData.category_id.includes('null')) ? initialData.category_id : "",
           supplier_id: (initialData.supplier_id && !initialData.supplier_id.includes('null')) ? initialData.supplier_id : "",
@@ -887,7 +889,7 @@ export function ProductForm({ initialData, productId }: ProductFormProps) {
                 <Button
                   type="button"
                   onClick={() => {
-                    const currentValue = watch("stock") || 0;
+                    const currentValue = Math.round(watch("stock") || 0);
                     if (currentValue > 0) {
                       setValue("stock", currentValue - 1);
                     }
@@ -901,9 +903,10 @@ export function ProductForm({ initialData, productId }: ProductFormProps) {
                   id="stock"
                   type="number"
                   inputMode="numeric"
+                  step="1"
                   {...register("stock", {
                     valueAsNumber: true,
-                    setValueAs: (value) => value === "" ? 0 : Number(value)
+                    setValueAs: (value) => value === "" ? 0 : Math.round(Number(value))
                   })}
                   placeholder="0"
                   className="h-14 text-center text-2xl font-bold"
@@ -911,7 +914,7 @@ export function ProductForm({ initialData, productId }: ProductFormProps) {
                 <Button
                   type="button"
                   onClick={() => {
-                    const currentValue = watch("stock") || 0;
+                    const currentValue = Math.round(watch("stock") || 0);
                     setValue("stock", currentValue + 1);
                   }}
                   className="h-14 w-14 shrink-0 bg-green-600 hover:bg-green-700 text-white border-green-600"
