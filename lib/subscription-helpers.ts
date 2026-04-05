@@ -28,7 +28,7 @@ export async function checkSubscriptionStatus(
         // Si no tiene fecha de fin de trial, crear una con 15 días desde medianoche
         const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate());
         const trialEnd = new Date(startOfToday);
-        trialEnd.setDate(trialEnd.getDate() + 15);
+        trialEnd.setDate(trialEnd.getDate() + 30);
 
         await updateUserProfile(userProfile.id, {
           trial_end_date: trialEnd.toISOString()
@@ -37,7 +37,7 @@ export async function checkSubscriptionStatus(
         return {
           canAccess: true,
           status: 'trial',
-          daysLeft: 15,
+          daysLeft: 30,
         };
       }
 
@@ -124,7 +124,7 @@ export async function initializeTrialPeriod(userProfileId: string, getToken: Get
 
     // Agregar 15 días completos desde medianoche
     const trialEnd = new Date(startOfToday);
-    trialEnd.setDate(trialEnd.getDate() + 15);
+    trialEnd.setDate(trialEnd.getDate() + 30);
 
     await updateUserProfile(userProfileId, {
       subscription_status: 'trial',

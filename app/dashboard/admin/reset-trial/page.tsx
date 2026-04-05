@@ -15,7 +15,7 @@ export default function ResetTrialPage() {
   const [targetEmail, setTargetEmail] = useState('');
 
   const handleResetOwnTrial = async () => {
-    if (!confirm('¿Estás seguro de que quieres resetear tu período de prueba a 15 días? Esto reiniciará tu contador.')) {
+    if (!confirm('¿Estás seguro de que quieres resetear tu período de prueba a 30 días? Esto reiniciará tu contador.')) {
       return;
     }
 
@@ -51,7 +51,7 @@ export default function ResetTrialPage() {
       return;
     }
 
-    if (!confirm(`¿Estás seguro de que quieres resetear el período de prueba de ${targetEmail} a 15 días?`)) {
+    if (!confirm(`¿Estás seguro de que quieres resetear el período de prueba de ${targetEmail} a 30 días?`)) {
       return;
     }
 
@@ -80,7 +80,7 @@ export default function ResetTrialPage() {
   };
 
   const handleResetAllTrials = async () => {
-    if (!confirm('⚠️ ADVERTENCIA: Esto reseteará el período de prueba de TODOS los usuarios a 15 días. ¿Estás seguro?')) {
+    if (!confirm('⚠️ ADVERTENCIA: Esto reseteará el período de prueba de TODOS los usuarios a 30 días. ¿Estás seguro?')) {
       return;
     }
 
@@ -130,7 +130,7 @@ export default function ResetTrialPage() {
               <CardTitle>Resetear Mi Período de Prueba</CardTitle>
             </div>
             <CardDescription>
-              Reinicia tu período de prueba a 15 días completos
+              Reinicia tu período de prueba a 30 días completos
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -140,7 +140,7 @@ export default function ResetTrialPage() {
                   <AlertCircle className="h-5 w-5 text-blue-600 mt-0.5 flex-shrink-0" />
                   <div className="text-sm text-blue-800">
                     <p className="font-medium mb-1">Usuario actual: {user?.emailAddresses[0]?.emailAddress}</p>
-                    <p>Al resetear tu trial, tendrás 15 días completos desde hoy para probar el sistema.</p>
+                    <p>Al resetear tu trial, tendrás 30 días completos desde hoy para probar el sistema.</p>
                   </div>
                 </div>
               </div>
@@ -200,7 +200,7 @@ export default function ResetTrialPage() {
               <CardTitle className="text-red-900">Resetear Todos los Trials (Superadmin)</CardTitle>
             </div>
             <CardDescription>
-              Reinicia el período de prueba de TODOS los usuarios a 15 días
+              Reinicia el período de prueba de TODOS los usuarios a 30 días
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -210,7 +210,7 @@ export default function ResetTrialPage() {
                   <AlertCircle className="h-5 w-5 text-red-600 mt-0.5 flex-shrink-0" />
                   <div className="text-sm text-red-800">
                     <p className="font-medium mb-1">⚠️ Acción Masiva - Solo Superadmin</p>
-                    <p>Esta operación reseteará el período de prueba de todos los usuarios que estén en trial a 15 días desde hoy. Los superadmins no se verán afectados.</p>
+                    <p>Esta operación reseteará el período de prueba de todos los usuarios que estén en trial a 30 días desde hoy. Los superadmins no se verán afectados.</p>
                   </div>
                 </div>
               </div>

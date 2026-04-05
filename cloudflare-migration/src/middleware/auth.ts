@@ -269,7 +269,7 @@ export async function authMiddleware(c: Context<{ Bindings: Env }>, next: Next) 
           const profileId = `usr_${Date.now()}_${Math.random().toString(36).substring(7)}`;
           const now = new Date().toISOString();
           const trialEnd = new Date();
-          trialEnd.setDate(trialEnd.getDate() + 15);
+          trialEnd.setDate(trialEnd.getDate() + 30);
 
           await c.env.DB.prepare(
             `INSERT INTO user_profiles (
