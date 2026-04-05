@@ -127,6 +127,11 @@ export default function POSPage() {
   const [selectedProductForUnits, setSelectedProductForUnits] =
     useState<Product | null>(null);
 
+  // Estado para animación del carrito al agregar producto
+  const [cartBump, setCartBump] = useState(false);
+  const [floatingItems, setFloatingItems] = useState<{ id: number; x: number; y: number }[]>([]);
+  const cartIconRef = useRef<HTMLDivElement>(null);
+
   // COMENTADO: Tour deshabilitado
   // const { startTour } = useTour(posTourConfig, true, userId || undefined);
 
@@ -506,6 +511,15 @@ export default function POSPage() {
 
     // Si isUnitSale es undefined pero el producto no se vende por unidades, usar false por defecto
     const finalIsUnitSale = isUnitSale ?? false;
+
+    // Disparar animación del carrito
+    setCartBump(true);
+    setTimeout(() => setCartBump(false), 600);
+
+    // Partícula flotante "+1" desde posición del toque/clic
+    const newItem = { id: Date.now(), x: 50, y: 50 };
+    setFloatingItems((prev) => [...prev, newItem]);
+    setTimeout(() => setFloatingItems((prev) => prev.filter((i) => i.id !== newItem.id)), 900);
 
     console.log('➕ Adding to cart...', { finalIsUnitSale });
     setCart((prev) => {
@@ -1586,7 +1600,14 @@ export default function POSPage() {
           <Card className="lg:sticky lg:top-20">
             <CardHeader className="pb-3">
               <CardTitle className="flex items-center gap-2 text-base md:text-lg">
-                <ShoppingCart className="h-4 w-4 md:h-5 md:w-5" />
+                <div ref={cartIconRef} className="relative">
+                  <ShoppingCart className="h-4 w-4 md:h-5 md:w-5" style={ cartBump ? { animation: "cartBump 0.5s ease forwards", color: "#155dfc" } : {}} />
+                  {cart.length > 0 && (
+                    <span className={`absolute -top-2 -right-2 bg-blue-600 text-white text-[10px] font-bold rounded-full h-4 w-4 flex items-center justify-center ${cartBump ? "animate-ping-once" : ""}`}>
+                      {cart.reduce((sum, i) => sum + i.quantity, 0)}
+                    </span>
+                  )}
+                </div>
                 Carrito ({cart.length})
               </CardTitle>
             </CardHeader>
@@ -2118,6 +2139,39 @@ export default function POSPage() {
           onConfirm={handleUnitSelectorConfirm}
         />
       )}
+
+      {/* Partículas flotantes "+1" al agregar producto */}
+      {floatingItems.map((item) => (
+        <div
+          key={item.id}
+          className="floating-plus-one"
+          style={{ position: "fixed", top: "72px", right: "20px", pointerEvents: "none", zIndex: 9999 }}
+        >
+          +1
+        </div>
+      ))}
+
+      <style>{`
+        @keyframes cartBump {
+          0%   { transform: scale(1); }
+          30%  { transform: scale(1.6) rotate(-12deg); }
+          60%  { transform: scale(1.3) rotate(8deg); }
+          100% { transform: scale(1) rotate(0deg); }
+        }
+        @keyframes floatUp {
+          0%   { opacity: 1; transform: translateY(0) scale(1); }
+          80%  { opacity: 1; transform: translateY(-60px) scale(1.2); }
+          100% { opacity: 0; transform: translateY(-80px) scale(0.8); }
+        }
+        .floating-plus-one {
+          animation: floatUp 0.9s ease-out forwards;
+          font-size: 1.4rem;
+          font-weight: 900;
+          color: #155dfc;
+          text-shadow: 0 2px 8px rgba(21,93,252,0.4);
+          user-select: none;
+        }
+      `}</style>
     </div>
   );
 }
