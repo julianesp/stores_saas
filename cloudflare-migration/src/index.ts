@@ -34,6 +34,7 @@ import teamInvitationsRoutes from './routes/team-invitations';
 import analyticsRoutes from './routes/analytics';
 import userStoresRoutes from './routes/user-stores';
 import facturasRoutes from './routes/facturas';
+import marketTrendsRoutes from './routes/market-trends';
 
 const app = new Hono<{ Bindings: Env }>();
 
@@ -322,6 +323,7 @@ app.route('/api/team-members', teamInvitationsRoutes);
 app.route('/api/analytics', analyticsRoutes);
 app.route('/api/user-stores', userStoresRoutes);
 app.route('/api/facturas', facturasRoutes);
+app.route('/api/market', marketTrendsRoutes);
 
 // 404 handler
 app.notFound((c) => {

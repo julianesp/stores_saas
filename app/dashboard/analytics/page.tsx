@@ -14,6 +14,7 @@ import {
   Sparkles,
   Users,
   ShoppingBag,
+  Globe,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -33,6 +34,7 @@ import { AIInsightsSection } from "@/components/analytics/ai-insights-section";
 import { ProductRecommendationsSection } from "@/components/analytics/product-recommendations-section";
 import { CustomerRFMSection } from "@/components/analytics/customer-rfm-section";
 import AdvancedMetricsDashboard from "@/components/analytics/advanced-metrics-dashboard";
+import { MarketTrendsSection } from "@/components/analytics/market-trends-section";
 
 export default function AnalyticsPage() {
   const { getToken } = useAuth();
@@ -313,6 +315,10 @@ export default function AnalyticsPage() {
             <TabsTrigger value="inventory" className="shrink-0">
               <Package className="h-4 w-4 lg:mr-2" />
               <span className="hidden lg:inline">Inventario</span>
+            </TabsTrigger>
+            <TabsTrigger value="market" className="shrink-0">
+              <Globe className="h-4 w-4 lg:mr-2" />
+              <span className="hidden lg:inline">Mercado</span>
             </TabsTrigger>
           </TabsList>
         </div>
@@ -618,8 +624,14 @@ export default function AnalyticsPage() {
         <TabsContent value="trends" className="space-y-6">
           <ProductRecommendationsSection
             currentInventory={inventoryForRecommendations}
-            storeType="Tienda General"
+            storeType={userProfile?.store_name || "Tienda General"}
+            storeCity={userProfile?.store_city || undefined}
           />
+        </TabsContent>
+
+        {/* Tab: Mercado */}
+        <TabsContent value="market" className="space-y-6">
+          <MarketTrendsSection />
         </TabsContent>
 
         {/* Tab: Inventario */}

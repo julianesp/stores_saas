@@ -11,7 +11,7 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json();
-    const { currentInventory, storeType } = body;
+    const { currentInventory, storeType, storeCity } = body;
 
     if (!currentInventory) {
       return NextResponse.json({ error: 'Inventario requerido' }, { status: 400 });
@@ -20,7 +20,8 @@ export async function POST(request: NextRequest) {
     // Generar recomendaciones de productos con IA
     const recommendations = await generateProductRecommendations(
       currentInventory,
-      storeType || 'Tienda general'
+      storeType || 'Tienda general',
+      storeCity
     );
 
     return NextResponse.json({

@@ -14,11 +14,13 @@ interface ProductRecommendationsSectionProps {
     salesVelocity: number;
   }>;
   storeType?: string;
+  storeCity?: string;
 }
 
 export function ProductRecommendationsSection({
   currentInventory,
   storeType,
+  storeCity,
 }: ProductRecommendationsSectionProps) {
   const [recommendations, setRecommendations] = useState<string>('');
   const [loading, setLoading] = useState(false);
@@ -86,6 +88,7 @@ export function ProductRecommendationsSection({
         body: JSON.stringify({
           currentInventory,
           storeType: storeType || 'Tienda general',
+          storeCity,
         }),
       });
 

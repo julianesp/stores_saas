@@ -140,12 +140,17 @@ IMPORTANTE:
  */
 export async function generateProductRecommendations(
   currentInventory: Array<{ name: string; category: string; stock: number; salesVelocity: number }>,
-  storeType: string
+  storeType: string,
+  storeCity?: string
 ): Promise<string> {
   try {
+    const cityContext = storeCity
+      ? `\n**CIUDAD DE LA TIENDA:** ${storeCity} (ten en cuenta el clima, cultura de consumo y preferencias locales de esta región colombiana para personalizar las recomendaciones)`
+      : '';
+
     const prompt = `Eres un experto en retail y tendencias del mercado colombiano. Analiza el inventario actual de esta tienda y recomienda productos tendencia que complementen su catálogo.
 
-**TIPO DE TIENDA:** ${storeType}
+**TIPO DE TIENDA:** ${storeType}${cityContext}
 
 **INVENTARIO ACTUAL (Muestra):**
 ${currentInventory.slice(0, 10).map((p) => `- ${p.name} (${p.category}): ${p.stock} unidades, velocidad: ${p.salesVelocity}/día`).join('\n')}
