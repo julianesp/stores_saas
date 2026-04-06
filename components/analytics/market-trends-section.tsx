@@ -130,8 +130,8 @@ export function MarketTrendsSection() {
       )}
 
       {data && (
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-          {/* Tendencias por ciudad */}
+        <div className="grid grid-cols-1 gap-4">
+          {/* Tendencias por ciudad — comentado hasta que haya más tiendas en la plataforma
           <Card className="border-blue-200">
             <CardHeader className="pb-3">
               <CardTitle className="text-base flex items-center justify-between">
@@ -168,6 +168,7 @@ export function MarketTrendsSection() {
               )}
             </CardContent>
           </Card>
+          */}
 
           {/* Tendencias nacionales */}
           <Card className="border-indigo-200">
