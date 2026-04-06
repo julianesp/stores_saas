@@ -154,7 +154,7 @@ export function MarketTrendsSection() {
                   <MapPin className="h-8 w-8 mx-auto mb-2 opacity-30" />
                   <p className="text-sm">
                     Configura la ciudad de tu tienda en{' '}
-                    <a href="/dashboard/settings" className="text-blue-500 underline">
+                    <a href="/dashboard/config" className="text-blue-500 underline">
                       Configuración
                     </a>{' '}
                     para ver tendencias locales.
