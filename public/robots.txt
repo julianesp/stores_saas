@@ -6,4 +6,4 @@ Disallow: /sign-in/
 Disallow: /sign-up/
 Allow: /
 
-Sitemap: https://tienda-pos.vercel.app/sitemap.xml
+Sitemap: https://posib.dev/sitemap.xml
