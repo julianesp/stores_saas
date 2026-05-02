@@ -40,23 +40,35 @@ export async function POST(req: NextRequest) {
       profileHeaders['X-Tenant-ID'] = tenantId;
     }
 
-    const userProfileResponse = await fetch(`${apiUrl}/api/user-profiles`, {
-      headers: profileHeaders,
+    // Intentar primero con by-clerk-id (no requiere X-Tenant-ID)
+    let userProfile = null;
+    const byClerkResponse = await fetch(`${apiUrl}/api/user-profiles/by-clerk-id/${userId}`, {
+      headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
     });
 
-    if (!userProfileResponse.ok) {
-      const errText = await userProfileResponse.text();
-      console.error('Error fetching user profile:', errText);
-      return NextResponse.json(
-        { error: 'Perfil de usuario no encontrado' },
-        { status: 404 }
-      );
+    if (byClerkResponse.ok) {
+      const byClerkData = await byClerkResponse.json();
+      userProfile = byClerkData.data || byClerkData;
+    } else {
+      // Fallback: endpoint estándar con tenant
+      const userProfileResponse = await fetch(`${apiUrl}/api/user-profiles`, {
+        headers: profileHeaders,
+      });
+
+      if (!userProfileResponse.ok) {
+        const errText = await userProfileResponse.text();
+        console.error('Error fetching user profile:', errText);
+        return NextResponse.json(
+          { error: 'Perfil de usuario no encontrado' },
+          { status: 404 }
+        );
+      }
+
+      const userProfileData = await userProfileResponse.json();
+      userProfile = userProfileData.data;
     }
 
-    const userProfileData = await userProfileResponse.json();
-    const userProfile = userProfileData.data;
-
-    if (!userProfile) {
+    if (!userProfile || !userProfile.id) {
       return NextResponse.json(
         { error: 'Perfil de usuario no encontrado' },
         { status: 404 }

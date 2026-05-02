@@ -21,6 +21,7 @@ import {
 } from "@/components/ui/card";
 import { getUserProfile } from "@/lib/cloudflare-api";
 import { UserProfile } from "@/lib/types";
+import { useTenant } from "@/lib/tenant-context";
 import { toast } from "sonner";
 import { formatCurrency } from "@/lib/utils";
 import {
@@ -103,13 +104,14 @@ const ADDONS = [
 export default function SubscriptionPageWompi() {
   const { user } = useUser();
   const { getToken } = useAuth();
+  const { tenantReady } = useTenant();
   const [loading, setLoading] = useState(false);
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [selectedItem, setSelectedItem] = useState<string | null>(null);
 
   useEffect(() => {
     async function fetchProfile() {
-      if (getToken) {
+      if (getToken && tenantReady) {
         try {
           const data = await getUserProfile(getToken);
           setProfile(data);
@@ -119,7 +121,7 @@ export default function SubscriptionPageWompi() {
       }
     }
     fetchProfile();
-  }, [getToken]);
+  }, [getToken, tenantReady]);
 
   const handleSubscribe = async (itemId: string) => {
     if (!user) return;
