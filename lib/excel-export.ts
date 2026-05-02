@@ -450,18 +450,18 @@ function addDataToWorksheet(worksheet: ExcelJS.Worksheet, data: any[]) {
     worksheet.addRow(values);
   });
 
-  // Auto-ajustar ancho de columnas
-  if (worksheet.columns) {
-    worksheet.columns.forEach((column) => {
-      if (!column || typeof column.eachCell !== 'function') return;
-      let maxLength = 0;
-      column.eachCell({ includeEmpty: true }, (cell) => {
-        const cellValue = cell.value ? cell.value.toString() : '';
-        maxLength = Math.max(maxLength, cellValue.length);
-      });
-      column.width = Math.min(Math.max(maxLength + 2, 10), 50);
+  // Auto-ajustar ancho de columnas basado en el contenido de las filas
+  const colWidths: number[] = [];
+  worksheet.eachRow((row) => {
+    row.eachCell({ includeEmpty: true }, (cell, colNumber) => {
+      const len = cell.value ? cell.value.toString().length : 0;
+      colWidths[colNumber] = Math.max(colWidths[colNumber] || 0, len);
     });
-  }
+  });
+  colWidths.forEach((width, colNumber) => {
+    const col = worksheet.getColumn(colNumber);
+    col.width = Math.min(Math.max(width + 2, 10), 50);
+  });
 }
 
 function downloadBuffer(buffer: ArrayBuffer, filename: string) {

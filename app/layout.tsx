@@ -4,6 +4,7 @@ import { ClerkProvider } from '@clerk/nextjs';
 import { Toaster } from 'sonner';
 import Script from 'next/script';
 import "./globals.css";
+import { Analytics } from "@vercel/analytics/next"
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -91,6 +92,7 @@ export default function RootLayout({
             strategy="lazyOnload"
           />
           {children}
+          <Analytics />
           <Toaster
             position="top-right"
             richColors
@@ -101,6 +103,7 @@ export default function RootLayout({
               className: 'toast-below-cart',
             }}
           />
+          
         </body>
       </html>
     </ClerkProvider>
