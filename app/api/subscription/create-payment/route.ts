@@ -16,7 +16,7 @@ export async function POST(req: NextRequest) {
     }
 
     // Obtener datos del request
-    const { planId, paymentMethod } = await req.json();
+    const { planId, paymentMethod, tenantId } = await req.json();
 
     // Buscar el plan
     const plan = SUBSCRIPTION_PLANS.find(p => p.id === planId);
@@ -32,15 +32,21 @@ export async function POST(req: NextRequest) {
     const apiUrl = process.env.NEXT_PUBLIC_CLOUDFLARE_API_URL || 'https://tienda-pos-api.julii1295.workers.dev';
     const token = await authResult.getToken();
 
+    const profileHeaders: Record<string, string> = {
+      'Authorization': `Bearer ${token}`,
+      'Content-Type': 'application/json',
+    };
+    if (tenantId) {
+      profileHeaders['X-Tenant-ID'] = tenantId;
+    }
+
     const userProfileResponse = await fetch(`${apiUrl}/api/user-profiles`, {
-      headers: {
-        'Authorization': `Bearer ${token}`,
-        'Content-Type': 'application/json',
-      },
+      headers: profileHeaders,
     });
 
     if (!userProfileResponse.ok) {
-      console.error('Error fetching user profile:', await userProfileResponse.text());
+      const errText = await userProfileResponse.text();
+      console.error('Error fetching user profile:', errText);
       return NextResponse.json(
         { error: 'Perfil de usuario no encontrado' },
         { status: 404 }

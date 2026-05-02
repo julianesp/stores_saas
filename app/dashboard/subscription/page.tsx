@@ -135,7 +135,10 @@ export default function SubscriptionPageWompi() {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${token}`,
         },
-        body: JSON.stringify({ planId: itemId }),
+        body: JSON.stringify({
+          planId: itemId,
+          tenantId: localStorage.getItem('selected_tenant_id'),
+        }),
       });
 
       const data = await response.json();
