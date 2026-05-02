@@ -46,29 +46,39 @@ export async function POST(req: NextRequest) {
       headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
     });
 
+    console.log('[create-payment] by-clerk-id status:', byClerkResponse.status);
+
     if (byClerkResponse.ok) {
       const byClerkData = await byClerkResponse.json();
+      console.log('[create-payment] by-clerk-id data:', JSON.stringify(byClerkData));
       userProfile = byClerkData.data || byClerkData;
     } else {
+      const byClerkErr = await byClerkResponse.text();
+      console.error('[create-payment] by-clerk-id error:', byClerkErr);
+
       // Fallback: endpoint estándar con tenant
       const userProfileResponse = await fetch(`${apiUrl}/api/user-profiles`, {
         headers: profileHeaders,
       });
 
+      console.log('[create-payment] /api/user-profiles status:', userProfileResponse.status);
+
       if (!userProfileResponse.ok) {
         const errText = await userProfileResponse.text();
-        console.error('Error fetching user profile:', errText);
+        console.error('[create-payment] /api/user-profiles error:', errText);
         return NextResponse.json(
-          { error: 'Perfil de usuario no encontrado' },
+          { error: 'Perfil de usuario no encontrado', debug: { byClerkStatus: byClerkResponse.status, byClerkError: byClerkErr } },
           { status: 404 }
         );
       }
 
       const userProfileData = await userProfileResponse.json();
+      console.log('[create-payment] /api/user-profiles data:', JSON.stringify(userProfileData));
       userProfile = userProfileData.data;
     }
 
     if (!userProfile || !userProfile.id) {
+      console.error('[create-payment] userProfile vacío:', JSON.stringify(userProfile));
       return NextResponse.json(
         { error: 'Perfil de usuario no encontrado' },
         { status: 404 }
