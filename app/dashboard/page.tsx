@@ -21,6 +21,7 @@ import {
 import { getUserProfileByClerkId } from "@/lib/cloudflare-subscription-helpers";
 import { getAllUserProfiles } from "@/lib/cloudflare-api";
 import { UserProfile } from "@/lib/types";
+import { useTenant } from "@/lib/tenant-context";
 import { formatCurrency } from "@/lib/utils";
 import { toast } from "sonner";
 import {
@@ -39,6 +40,7 @@ import Link from "next/link";
 export default function DashboardPage() {
   const { user } = useUser();
   const { getToken } = useAuth();
+  const { tenantReady } = useTenant();
   const [isSuperAdmin, setIsSuperAdmin] = useState(false);
   const [loading, setLoading] = useState(true);
   const [saasMetrics, setSaasMetrics] = useState({
@@ -65,7 +67,7 @@ export default function DashboardPage() {
 
   useEffect(() => {
     async function checkUserAndFetchMetrics() {
-      if (user) {
+      if (user && tenantReady) {
         const profile = await getUserProfileByClerkId(getToken);
         const isSuper = profile?.is_superadmin || false;
         setIsSuperAdmin(isSuper);
@@ -131,7 +133,7 @@ export default function DashboardPage() {
       }
     }
     checkUserAndFetchMetrics();
-  }, [user]);
+  }, [user, tenantReady]);
 
   const handleSeedProducts = async () => {
     if (

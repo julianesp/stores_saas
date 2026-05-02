@@ -25,13 +25,18 @@ export async function GET() {
     });
 
     if (!response.ok) {
-      const errorData = await response.json();
-      throw new Error(errorData.error || 'Error al obtener tiendas');
+      const text = await response.text();
+      let errorMsg = 'Error al obtener tiendas';
+      try {
+        const errorData = JSON.parse(text);
+        errorMsg = errorData.error || errorMsg;
+      } catch {}
+      throw new Error(`${errorMsg} (status: ${response.status})`);
     }
 
     const data = await response.json();
 
-    return NextResponse.json(data.data || []);
+    return NextResponse.json(data.data || data || []);
   } catch (error) {
     console.error('Error en GET /api/user-stores:', error);
     return NextResponse.json(

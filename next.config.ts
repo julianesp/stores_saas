@@ -7,7 +7,17 @@ const withPWA = withPWAInit({
 });
 
 const nextConfig: NextConfig = {
-  /* config options here */
+  serverExternalPackages: [
+    'exceljs',
+    'jspdf',
+    'cloudinary',
+    'node-forge',
+    'xml-crypto',
+    'xmldom',
+    '@zxing/library',
+    '@ericblade/quagga2',
+    'quagga',
+  ],
   images: {
     remotePatterns: [
       {

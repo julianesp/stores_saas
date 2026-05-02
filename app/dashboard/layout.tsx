@@ -17,6 +17,7 @@ import {
 } from "@/lib/cloudflare-subscription-helpers";
 import { SubscriptionStatus } from "@/lib/types";
 import { usePageTracking } from "@/lib/hooks/use-analytics";
+import { TenantProvider, useTenant } from "@/lib/tenant-context";
 import styles from "./styles/Layout.module.scss";
 
 // Component to add noindex meta tag
@@ -37,13 +38,14 @@ function NoIndexMeta() {
   return null;
 }
 
-export default function DashboardLayout({
+function DashboardLayoutInner({
   children,
 }: {
   children: React.ReactNode;
 }) {
   const { user } = useUser();
   const { getToken } = useAuth();
+  const { setTenantReady } = useTenant();
   const pathname = usePathname();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   // Control visual para animaciones (open/closing)
@@ -70,7 +72,8 @@ export default function DashboardLayout({
           const userEmail = user.emailAddresses[0]?.emailAddress || "";
           const superAdminEmail = "admin@neurai.dev";
 
-          // PASO 1: Verificar si el usuario es team member PRIMERO
+          // PASO 1: Obtener tiendas accesibles para configurar el tenant_id
+          // Esto debe hacerse ANTES de cualquier otra llamada a la API
           let userIsTeamMember = false;
           let teamMemberStores: any[] = [];
 
@@ -100,12 +103,6 @@ export default function DashboardLayout({
                 // IMPORTANTE: Establecer el tenant_id ANTES de hacer otras llamadas
                 const selectedTenantId = localStorage.getItem("selected_tenant_id");
                 if (!selectedTenantId) {
-                  console.log(
-                    "🏪 Seleccionando tienda del team member:",
-                    teamMemberStores[0].store_name,
-                    "ID:",
-                    teamMemberStores[0].id
-                  );
                   localStorage.setItem(
                     "selected_tenant_id",
                     teamMemberStores[0].id
@@ -118,12 +115,19 @@ export default function DashboardLayout({
                   status: "active",
                 });
 
+                setTenantReady(true);
                 setLoading(false);
                 return; // Terminar aquí para team members
+              } else {
+                // Owner: guardar el tenant_id de la tienda propia si no hay uno
+                const ownerStore = stores.find((s: any) => s.access_type === "owner") || stores[0];
+                if (ownerStore && !localStorage.getItem("selected_tenant_id")) {
+                  localStorage.setItem("selected_tenant_id", ownerStore.id);
+                }
               }
             }
           } catch (error) {
-            console.error("Error verificando team membership:", error);
+            console.error("Error obteniendo tiendas:", error);
           }
 
           // PASO 2: Si NO es team member, continuar con el flujo normal de owner
@@ -160,6 +164,12 @@ export default function DashboardLayout({
           // Verificar si es superadmin — el email del admin SIEMPRE tiene acceso
           // independientemente de lo que diga la BD (protección contra resets)
           const profile = await getUserProfileByClerkId(getToken);
+
+          // Fallback: si user-stores no devolvió tenant, usar el profile.id
+          if (profile?.id && !localStorage.getItem("selected_tenant_id")) {
+            localStorage.setItem("selected_tenant_id", profile.id);
+          }
+
           const isSuperAdminUser =
             profile?.is_superadmin || userEmail === superAdminEmail;
           setIsSuperAdmin(isSuperAdminUser);
@@ -225,8 +235,10 @@ export default function DashboardLayout({
             const info = await checkSubscriptionStatus(getToken);
             setSubscriptionInfo(info);
           }
+          setTenantReady(true);
         } catch (error) {
           console.error("Error checking subscription:", error);
+          setTenantReady(true); // desbloquear aunque haya error
         } finally {
           setLoading(false);
         }
@@ -350,5 +362,17 @@ export default function DashboardLayout({
         </div>
       </div>
     </OfflineProvider>
+  );
+}
+
+export default function DashboardLayout({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
+  return (
+    <TenantProvider>
+      <DashboardLayoutInner>{children}</DashboardLayoutInner>
+    </TenantProvider>
   );
 }

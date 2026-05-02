@@ -19,7 +19,6 @@ const geistMono = Geist_Mono({
 export const metadata: Metadata = {
   title: "posib.dev - Sistema POS",
   description: "Sistema completo de punto de venta y gestión de inventario para tiendas",
-  manifest: "/manifest.json",
   metadataBase: new URL('https://posib.dev'),
   openGraph: {
     type: 'website',

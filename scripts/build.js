@@ -6,8 +6,8 @@
 
 const { spawn } = require('child_process');
 
-// Run next build with webpack (not turbopack) for production
-const build = spawn('next', ['build', '--webpack'], {
+// Run next build with turbopack
+const build = spawn('next', ['build', '--turbopack'], {
   stdio: ['inherit', 'pipe', 'pipe'],
   shell: true
 });

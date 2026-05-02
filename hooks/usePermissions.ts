@@ -39,7 +39,10 @@ export function usePermissions() {
         }
 
         // Si no es team member, verificar si es el dueño de la tienda
-        const profileResponse = await fetch('/api/user/profile');
+        const tenantId = typeof window !== 'undefined' ? localStorage.getItem('selected_tenant_id') : null;
+        const profileResponse = await fetch('/api/user/profile', {
+          headers: tenantId ? { 'X-Tenant-ID': tenantId } : {},
+        });
 
         if (profileResponse.ok) {
           const profile = await profileResponse.json();
