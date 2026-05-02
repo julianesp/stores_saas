@@ -259,7 +259,7 @@ export default function BillingPage() {
                       },
                     };
 
-                    const status = statusConfig[tx.status] || statusConfig.ERROR;
+                    const status = statusConfig[tx.status as keyof typeof statusConfig] || statusConfig.ERROR;
                     const StatusIcon = status.icon;
 
                     return (

@@ -519,7 +519,6 @@ export interface UserProfile {
   subscription_id?: string;
   last_payment_date?: string;
   next_billing_date?: string;
-  wompi_customer_id?: string;
   plan_id?: string;
   has_ai_addon?: boolean;
   auto_reports_enabled?: boolean;
@@ -548,10 +547,11 @@ export interface UserProfile {
   store_min_order?: number;
   store_nequi_number?: string;
 
-  // Configuración de Wompi
-  wompi_public_key?: string;
-  wompi_private_key?: string;
-  wompi_enabled?: boolean;
+  // Configuración de ePayco (tienda online)
+  epayco_public_key?: string;
+  epayco_private_key?: string;
+  epayco_customer_id?: string;
+  epayco_enabled?: boolean;
 
   created_at: string;
   updated_at: string;
@@ -714,12 +714,14 @@ export async function getActiveOffers(getToken: GetTokenFn): Promise<Offer[]> {
 export interface PaymentTransaction {
   id: string;
   user_profile_id: string;
-  wompi_transaction_id: string;
+  epayco_transaction_id?: string;
+  epayco_ref_payco?: string;
   amount: number;
   currency: string;
-  status: 'APPROVED' | 'DECLINED' | 'PENDING' | 'ERROR';
+  status: 'APPROVED' | 'DECLINED' | 'PENDING' | 'ERROR' | 'Aceptada' | 'Rechazada' | 'Pendiente';
   payment_method_type?: string;
   reference?: string;
+  approval_code?: string;
   created_at: string;
 }
 

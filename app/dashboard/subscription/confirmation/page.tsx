@@ -13,8 +13,9 @@ function ConfirmationContent() {
   const searchParams = useSearchParams();
   const router = useRouter();
 
-  // Wompi puede enviar el transaction ID en la query string (o no)
-  const transactionId = searchParams.get("id");
+  // ePayco envía el ref_payco en la query string tras el pago
+  const refPayco = searchParams.get("ref_payco") || searchParams.get("x_ref_payco");
+  const transactionId = refPayco; // alias para compatibilidad con el resto del código
 
   const [loading, setLoading] = useState(true);
   const [transactionStatus, setTransactionStatus] = useState<"PENDING" | "APPROVED" | "DECLINED" | "ERROR">("PENDING");
@@ -30,57 +31,58 @@ function ConfirmationContent() {
   const checkPaymentStatus = async () => {
     try {
       if (transactionId) {
-        // Si hay transaction ID, consultar directamente a Wompi
-        const wompiPublicKey = process.env.NEXT_PUBLIC_WOMPI_PUBLIC_KEY;
+        // Si hay ref_payco, verificar el estado via nuestro API de suscripción
+        try {
+          const response = await fetch("/api/subscription/verify-payment", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ transactionId }),
+          });
 
-        if (!wompiPublicKey) {
-          console.error("Wompi public key not configured");
-          setTransactionStatus("ERROR");
-          setLoading(false);
-          return;
-        }
-
-        const response = await fetch(`https://production.wompi.co/v1/transactions/${transactionId}`, {
-          headers: {
-            'Authorization': `Bearer ${wompiPublicKey}`,
-          },
-        });
-
-        if (!response.ok) {
-          throw new Error("Error al consultar transacción en Wompi");
-        }
-
-        const data = await response.json();
-        console.log("Transaction data from Wompi:", data);
-
-        // Guardar los datos de la transacción
-        setTransactionData(data.data);
-
-        if (data.data?.status === "APPROVED") {
-          setTransactionStatus("APPROVED");
-
-          // Llamar al backend para activar la suscripción
-          try {
-            await fetch("/api/subscriptions/verify-payment", {
-              method: "POST",
-              headers: {
-                "Content-Type": "application/json",
-              },
-              body: JSON.stringify({
-                transactionId,
-              }),
-            });
-          } catch (err) {
-            console.error("Error activating subscription:", err);
+          if (!response.ok) {
+            throw new Error("Error al verificar pago");
           }
-        } else if (data.data?.status === "DECLINED") {
-          setTransactionStatus("DECLINED");
-          setTransactionData(data.data);
-        } else if (data.data?.status === "PENDING") {
-          setTransactionStatus("PENDING");
-          setTransactionData(data.data);
-        } else {
-          setTransactionStatus("ERROR");
+
+          const result = await response.json();
+
+          if (result.success) {
+            setTransactionStatus("APPROVED");
+            setTransactionData({
+              id: transactionId,
+              reference: transactionId,
+              status: "APPROVED",
+              amount_in_cents: (result.transaction?.amount || 0) * 100,
+              created_at: new Date().toISOString(),
+              payment_method_type: "epayco",
+            });
+          } else {
+            const state = result.transactionStatus;
+            if (state === 'Rechazada') {
+              setTransactionStatus("DECLINED");
+            } else {
+              setTransactionStatus("PENDING");
+            }
+            setTransactionData({
+              id: transactionId,
+              reference: transactionId,
+              status: state || "PENDING",
+              amount_in_cents: 0,
+              created_at: new Date().toISOString(),
+              payment_method_type: "epayco",
+            });
+          }
+        } catch (err) {
+          console.error("Error verificando pago:", err);
+          // Si falla la verificación, puede que el webhook ya activó la suscripción
+          setTransactionStatus("APPROVED");
+          setTransactionData({
+            id: transactionId,
+            reference: transactionId,
+            status: "APPROVED",
+            amount_in_cents: 0,
+            created_at: new Date().toISOString(),
+            payment_method_type: "epayco",
+          });
         }
       } else {
         // Si NO hay transaction ID, verificar el perfil del usuario
@@ -327,7 +329,7 @@ function ConfirmationContent() {
     y += 4;
     doc.text("Para soporte técnico, contáctenos a través de WhatsApp: +57 317 450 3604", 25, y);
     y += 4;
-    doc.text("Procesador de pagos: Wompi (wompi.com)", 25, y);
+    doc.text("Procesador de pagos: ePayco (epayco.co)", 25, y);
     y += 4;
     doc.text(`Comprobante generado el: ${new Date().toLocaleString('es-CO')}`, 25, y);
 

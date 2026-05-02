@@ -11,7 +11,7 @@ import {
   calculateDiscountedPrice,
   getStoreShippingZones,
   ShippingZonePublic,
-  createWompiPaymentLink,
+  createEPaycoSession,
 } from "@/lib/storefront-api";
 import { formatCurrency } from "@/lib/utils";
 import {
@@ -77,9 +77,9 @@ export default function CheckoutPage() {
   const [orderTotal, setOrderTotal] = useState(0);
   const [storeWhatsApp, setStoreWhatsApp] = useState("");
   const [storeNequiNumber, setStoreNequiNumber] = useState("");
-  const [wompiEnabled, setWompiEnabled] = useState(false);
-  const [wompiCheckoutUrl, setWompiCheckoutUrl] = useState("");
-  const [creatingPaymentLink, setCreatingPaymentLink] = useState(false);
+  const [epaycoEnabled, setEpaycoEnabled] = useState(false);
+  const [epaycoSessionId, setEpaycoSessionId] = useState("");
+  const [creatingPaymentSession, setCreatingPaymentSession] = useState(false);
 
   useEffect(() => {
     loadConfigAndCart();
@@ -239,28 +239,27 @@ export default function CheckoutPage() {
       setOrderTotal(response.total);
       setStoreWhatsApp(response.store_whatsapp || config?.store_whatsapp || "");
       setStoreNequiNumber(config?.store_nequi_number || "");
-      setWompiEnabled(response.wompi_enabled || false);
+      setEpaycoEnabled(response.epayco_enabled || false);
 
-      // Si Wompi está habilitado, crear payment link
-      if (response.wompi_enabled && response.total >= 2000) {
+      // Si ePayco está habilitado, crear sesión de checkout
+      if (response.epayco_enabled) {
         try {
-          setCreatingPaymentLink(true);
-          const paymentLink = await createWompiPaymentLink(slug, {
+          setCreatingPaymentSession(true);
+          const session = await createEPaycoSession(slug, {
             order_id: response.order_id,
             order_number: response.order_number,
-            amount_in_cents: Math.round(response.total * 100),
+            amount: response.total,
             customer_email: customerEmail.trim() || undefined,
             customer_name: customerName.trim(),
             customer_phone: customerPhone.trim(),
             redirect_url: `${window.location.origin}/store/${slug}/payment-confirmation?order=${response.order_number}`,
           });
-          setWompiCheckoutUrl(paymentLink.checkout_url);
+          setEpaycoSessionId(session.session_id);
         } catch (error: any) {
-          console.error("Error creating Wompi payment link:", error);
-          // No bloqueamos el flujo, solo mostramos warning
+          console.error("Error creating ePayco session:", error);
           toast.warning("No se pudo crear el link de pago automático");
         } finally {
-          setCreatingPaymentLink(false);
+          setCreatingPaymentSession(false);
         }
       }
 
@@ -358,25 +357,17 @@ export default function CheckoutPage() {
 
               <div className="space-y-4">
                 {/* Instrucciones según método de pago */}
-                {wompiEnabled && wompiCheckoutUrl ? (
+                {epaycoEnabled && epaycoSessionId ? (
                   <div className="p-4 bg-yellow-50 border border-yellow-500 rounded-lg">
                     <p className="text-sm text-yellow-900">
-                      ⚠️ <strong>¡IMPORTANTE!</strong> Tu pedido está registrado pero aún NO está pagado. Haz clic en el botón "Pagar con Wompi" abajo para completar tu pago ahora.
+                      ⚠️ <strong>¡IMPORTANTE!</strong> Tu pedido está registrado pero aún NO está pagado. Haz clic en el botón "Pagar" abajo para completar tu pago ahora.
                     </p>
                   </div>
-                ) : wompiEnabled && creatingPaymentLink ? (
+                ) : epaycoEnabled && creatingPaymentSession ? (
                   <div className="p-4 bg-blue-50 rounded-lg">
                     <p className="text-sm text-gray-700">
                       <Loader2 className="inline h-4 w-4 mr-2 animate-spin" />
-                      <strong>Creando link de pago...</strong>
-                    </p>
-                  </div>
-                ) : wompiEnabled && orderTotal < 2000 ? (
-                  <div className="p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
-                    <p className="text-sm text-yellow-800">
-                      ⚠️ <strong>Monto menor al mínimo:</strong> El pago online
-                      con Wompi requiere un mínimo de {formatCurrency(2000)}.
-                      Contacta a la tienda por WhatsApp para coordinar el pago.
+                      <strong>Preparando pasarela de pago...</strong>
                     </p>
                   </div>
                 ) : storeNequiNumber ? (
@@ -423,31 +414,33 @@ export default function CheckoutPage() {
                 )}
 
                 <div className="grid grid-cols-1 gap-3">
-                  {/* Botón de pago con Wompi (prioridad máxima) */}
-                  {wompiEnabled && wompiCheckoutUrl && (
+                  {/* Botón de pago con ePayco (prioridad máxima) */}
+                  {epaycoEnabled && epaycoSessionId && (
                     <Button
                       size="lg"
                       className="w-full text-lg"
-                      style={{ backgroundColor: "#6D28D9" }}
+                      style={{ backgroundColor: "#0a6db5" }}
                       onClick={() => {
-                        window.location.href = wompiCheckoutUrl;
+                        // Abrir ePayco Smart Checkout
+                        if (typeof window !== 'undefined' && (window as any).ePayco) {
+                          (window as any).ePayco.checkout.configure({
+                            sessionId: epaycoSessionId,
+                          }).open();
+                        }
                       }}
                     >
                       <svg
                         className="h-5 w-5 mr-2"
                         viewBox="0 0 24 24"
-                        fill="currentColor"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="2"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
                       >
-                        <path
-                          d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z"
-                          stroke="currentColor"
-                          strokeWidth="2"
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          fill="none"
-                        />
+                        <path d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" />
                       </svg>
-                      Pagar con Wompi (Nequi, PSE, Tarjetas)
+                      Pagar en línea (Tarjeta, PSE, Nequi)
                     </Button>
                   )}
 

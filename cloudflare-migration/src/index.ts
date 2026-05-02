@@ -26,6 +26,7 @@ import adminStatsRoutes from './routes/admin-stats';
 import storefrontRoutes from './routes/storefront';
 import shippingZonesRoutes from './routes/shipping-zones';
 import wompiRoutes from './routes/wompi';
+import epaycoStorefrontRoutes from './routes/epayco-storefront';
 import subscriptionsRoutes from './routes/subscriptions';
 import emailRoutes from './routes/email';
 import statsRoutes from './routes/stats';
@@ -87,6 +88,9 @@ app.post('/api/subscriptions/webhook', subscriptionsRoutes);
 
 // Storefront public API (NO auth required - endpoints públicos para tiendas online)
 app.route('/api/storefront', storefrontRoutes);
+
+// ePayco storefront (NO auth required - pagos públicos para tiendas online)
+app.route('/api/storefront/epayco', epaycoStorefrontRoutes);
 
 // Stats public API (NO auth required - estadísticas públicas)
 app.route('/stats', statsRoutes);

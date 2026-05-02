@@ -22,8 +22,8 @@ export default function PaymentConfirmationPage() {
   const searchParams = useSearchParams();
   const slug = params.slug as string;
 
-  // Wompi envía el transaction ID en la query string
-  const transactionId = searchParams.get("id");
+  // ePayco envía el ref_payco en la query string
+  const refPayco = searchParams.get("ref_payco") || searchParams.get("x_ref_payco");
 
   const [config, setConfig] = useState<StoreConfig | null>(null);
   const [loading, setLoading] = useState(true);
@@ -35,32 +35,31 @@ export default function PaymentConfirmationPage() {
 
   useEffect(() => {
     loadConfigAndTransaction();
-  }, [slug, transactionId]);
+  }, [slug, refPayco]);
 
-  // Timeout para evitar carga infinita - después de 5 segundos, asumir éxito si hay transaction ID
+  // Timeout para evitar carga infinita - después de 5 segundos, asumir éxito si hay ref_payco
   useEffect(() => {
-    if (!transactionId) return;
+    if (!refPayco) return;
 
     const timeout = setTimeout(() => {
       console.warn(
         "Timeout de verificación alcanzado. Asumiendo pago exitoso por seguridad."
       );
       setTransactionStatus("APPROVED");
-      // Crear datos básicos de transacción desde el URL
       setTransactionData({
-        id: transactionId,
-        reference: transactionId,
+        id: refPayco,
+        reference: refPayco,
         status: "APPROVED",
-        amount_in_cents: 0, // Se mostrará sin monto si no se pudo verificar
+        amount_in_cents: 0,
         created_at: new Date().toISOString(),
-        payment_method_type: "wompi",
+        payment_method_type: "epayco",
       });
       setLoading(false);
       toast.success("Pago procesado exitosamente");
-    }, 5000); // 5 segundos (reducido de 10)
+    }, 5000);
 
     return () => clearTimeout(timeout);
-  }, [transactionId]);
+  }, [refPayco]);
 
   const loadConfigAndTransaction = async () => {
     try {
@@ -70,12 +69,9 @@ export default function PaymentConfirmationPage() {
       const configData = await getStoreConfig(slug);
       setConfig(configData);
 
-      // Si hay transaction ID, consultar el estado en Wompi
-      if (transactionId && configData.wompi_public_key) {
-        await checkTransactionStatus(
-          transactionId,
-          configData.wompi_public_key
-        );
+      // Si hay ref_payco, verificar el estado via el Worker
+      if (refPayco) {
+        await checkTransactionStatus(refPayco);
       }
     } catch (error) {
       console.error("Error loading data:", error);
@@ -85,31 +81,22 @@ export default function PaymentConfirmationPage() {
     }
   };
 
-  const checkTransactionStatus = async (txId: string, publicKey: string) => {
+  const checkTransactionStatus = async (refPaycoId: string) => {
     try {
       setVerificationAttempts((prev) => prev + 1);
 
-      console.log(
-        `Verificando transacción ${txId} (intento ${
-          verificationAttempts + 1
-        })...`
-      );
-
-      // Crear un timeout de 5 segundos para la llamada fetch
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), 5000);
 
       try {
-        // Consultar transacción en Wompi con autenticación
+        // Consultar estado de transacción ePayco via el Worker (que tiene las credenciales)
+        const WORKER_URL = process.env.NEXT_PUBLIC_CLOUDFLARE_API_URL || 'https://tienda-pos-api.julii1295.workers.dev';
         const response = await fetch(
-          `https://production.wompi.co/v1/transactions/${txId}`,
+          `${WORKER_URL}/api/storefront/epayco/transaction/${refPaycoId}`,
           {
             method: "GET",
             signal: controller.signal,
-            headers: {
-              'Accept': 'application/json',
-              'Authorization': `Bearer ${publicKey}`,
-            },
+            headers: { 'Accept': 'application/json' },
           }
         );
 
@@ -117,57 +104,55 @@ export default function PaymentConfirmationPage() {
 
         if (response.ok) {
           const data = await response.json();
-          console.log("Respuesta de Wompi:", data);
 
-          if (data.data) {
-            setTransactionData(data.data);
-            setTransactionStatus(data.data.status);
+          if (data.success && data.data) {
+            const tx = data.data;
+            const status = tx.x_transaction_state === 'Aceptada' ? 'APPROVED'
+              : tx.x_transaction_state === 'Rechazada' ? 'DECLINED'
+              : 'PENDING';
+            setTransactionData({
+              id: tx.x_ref_payco || refPaycoId,
+              reference: tx.x_id_invoice || refPaycoId,
+              status,
+              amount_in_cents: parseFloat(tx.x_amount || '0') * 100,
+              created_at: tx.x_transaction_date || new Date().toISOString(),
+              payment_method_type: 'epayco',
+            });
+            setTransactionStatus(status as any);
             setLoading(false);
             return;
           }
         }
 
-        // Si llegamos aquí, la API respondió pero sin datos válidos
         throw new Error(`API response not OK: ${response.status}`);
 
       } catch (fetchError: any) {
         clearTimeout(timeoutId);
 
-        if (fetchError.name === "AbortError") {
-          console.error("Timeout al verificar transacción con Wompi");
-        } else {
-          console.error("Error en fetch de Wompi:", fetchError);
-        }
-
-        // IMPORTANTE: Si Wompi falla, asumimos que el pago fue exitoso
-        // porque el cliente llegó a esta página desde Wompi con un transaction ID válido
-        console.warn("No se pudo verificar con Wompi. Asumiendo pago exitoso por seguridad del cliente.");
-
+        // Si falla la verificación, asumir éxito (el cliente llegó con ref_payco válido)
+        console.warn("No se pudo verificar con ePayco. Asumiendo pago exitoso.");
         setTransactionStatus("APPROVED");
         setTransactionData({
-          id: txId,
-          reference: txId,
+          id: refPaycoId,
+          reference: refPaycoId,
           status: "APPROVED",
           amount_in_cents: 0,
           created_at: new Date().toISOString(),
-          payment_method_type: "wompi",
+          payment_method_type: "epayco",
         });
         setLoading(false);
         toast.success("Pago procesado exitosamente");
       }
     } catch (error) {
-      console.error("Error general al verificar transacción:", error);
-
-      // Fallback final: SIEMPRE asumir éxito si hay transaction ID
-      // Es mejor asumir éxito y que el comerciante verifique, que dejar al cliente sin comprobante
+      console.error("Error al verificar transacción:", error);
       setTransactionStatus("APPROVED");
       setTransactionData({
-        id: txId,
-        reference: txId,
+        id: refPaycoId,
+        reference: refPaycoId,
         status: "APPROVED",
         amount_in_cents: 0,
         created_at: new Date().toISOString(),
-        payment_method_type: "wompi",
+        payment_method_type: "epayco",
       });
       setLoading(false);
       toast.success("Pago procesado exitosamente");
@@ -301,15 +286,11 @@ export default function PaymentConfirmationPage() {
       yPosition += 7;
 
       // Código de aprobación (si existe)
-      if (transactionData.payment_method?.extra?.external_identifier) {
+      if (transactionData.approval_code) {
         doc.setFont("helvetica", "bold");
         doc.text("Código de Aprobación:", 20, yPosition);
         doc.setFont("helvetica", "normal");
-        doc.text(
-          transactionData.payment_method.extra.external_identifier,
-          70,
-          yPosition
-        );
+        doc.text(transactionData.approval_code, 70, yPosition);
         yPosition += 7;
       }
 
@@ -372,7 +353,7 @@ export default function PaymentConfirmationPage() {
       doc.setFontSize(8);
       doc.setFont("helvetica", "normal");
       doc.text(
-        "Procesado por Wompi - Pagos seguros en Colombia",
+        "Procesado por ePayco - Pagos seguros en Colombia",
         pageWidth / 2,
         yPosition,
         { align: "center" }
@@ -422,8 +403,8 @@ export default function PaymentConfirmationPage() {
       transactionData.created_at
     ).toLocaleString("es-CO")}\n`;
 
-    if (transactionData.payment_method?.extra?.external_identifier) {
-      message += `🔑 *Código:* ${transactionData.payment_method.extra.external_identifier}\n`;
+    if (transactionData.approval_code) {
+      message += `🔑 *Código:* ${transactionData.approval_code}\n`;
     }
 
     message += `\n¿Cuándo recibiré mi pedido?`;
@@ -582,14 +563,7 @@ export default function PaymentConfirmationPage() {
                 <p className="text-gray-600 mb-6">
                   Estamos verificando tu transacción
                 </p>
-                <Button
-                  onClick={() =>
-                    checkTransactionStatus(
-                      transactionId!,
-                      config!.wompi_public_key!
-                    )
-                  }
-                >
+                <Button onClick={() => checkTransactionStatus(refPayco!)}>
                   Verificar nuevamente
                 </Button>
               </div>
@@ -625,7 +599,7 @@ export default function PaymentConfirmationPage() {
               </div>
             )}
 
-            {transactionStatus === "ERROR" && !transactionId && (
+            {transactionStatus === "ERROR" && !refPayco && (
               <div className="text-center">
                 <AlertCircle className="h-16 w-16 text-yellow-600 mx-auto mb-4" />
                 <h2 className="text-2xl font-bold mb-2">

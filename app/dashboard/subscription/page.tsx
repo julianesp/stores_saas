@@ -87,7 +87,7 @@ const ADDONS = [
       "Tienda online personalizable",
       "Carrito de compras completo",
       "Pedidos online en tiempo real",
-      "Integración con Wompi (pagos)",
+      "Integración con ePayco (pagos online)",
       "Zonas de envío configurables",
       "Integración con WhatsApp",
       "Sincronización automática de inventario",

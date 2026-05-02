@@ -104,7 +104,7 @@ export async function POST(request: NextRequest) {
         userProfileId: targetProfile.id,
         lastPayment: {
           date: lastPaymentDate.toISOString(),
-          transactionId: lastPayment.wompi_transaction_id,
+          transactionId: lastPayment.epayco_transaction_id || lastPayment.epayco_ref_payco,
           amount: lastPayment.amount,
           currency: lastPayment.currency,
         },

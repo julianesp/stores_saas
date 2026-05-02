@@ -33,9 +33,9 @@ export interface StoreConfig {
   store_pickup_enabled?: number;
   store_min_order?: number;
   store_nequi_number?: string;
-  wompi_public_key?: string;
-  wompi_private_key?: string;
-  wompi_enabled?: number;
+  epayco_public_key?: string;
+  epayco_customer_id?: string;
+  epayco_enabled?: number;
 }
 
 export interface StoreProduct {
@@ -156,13 +156,12 @@ export interface OrderResponse {
   order_number: string;
   total: number;
   store_whatsapp?: string;
-  wompi_enabled?: boolean;
+  epayco_enabled?: boolean;
 }
 
-export interface WompiPaymentLinkResponse {
-  payment_link_id: string;
-  checkout_url: string;
-  expires_at?: string;
+export interface EPaycoSessionResponse {
+  session_id: string;
+  checkout_url?: string;
 }
 
 export async function createOrder(slug: string, orderData: CreateOrderData): Promise<OrderResponse> {
@@ -204,21 +203,21 @@ export async function getStoreShippingZones(slug: string): Promise<ShippingZoneP
 }
 
 /**
- * Create Wompi payment link for an order (public endpoint)
+ * Create ePayco checkout session for an order (public endpoint)
  */
-export async function createWompiPaymentLink(
+export async function createEPaycoSession(
   slug: string,
   orderData: {
     order_id: string;
     order_number: string;
-    amount_in_cents: number;
+    amount: number;
     customer_email?: string;
     customer_name?: string;
     customer_phone?: string;
     redirect_url?: string;
   }
-): Promise<WompiPaymentLinkResponse> {
-  const url = `${WORKER_URL}/api/storefront/wompi/create-payment-link/${slug}`;
+): Promise<EPaycoSessionResponse> {
+  const url = `${WORKER_URL}/api/storefront/epayco/create-session/${slug}`;
 
   const response = await fetch(url, {
     method: 'POST',
@@ -233,13 +232,13 @@ export async function createWompiPaymentLink(
     throw new Error(errorData.error || `Error ${response.status}`);
   }
 
-  const data: APIResponse<WompiPaymentLinkResponse> = await response.json();
+  const data: APIResponse<EPaycoSessionResponse> = await response.json();
 
   if (!data.success) {
-    throw new Error(data.error || 'Failed to create payment link');
+    throw new Error(data.error || 'Failed to create ePayco session');
   }
 
-  return data.data as WompiPaymentLinkResponse;
+  return data.data as EPaycoSessionResponse;
 }
 
 /**

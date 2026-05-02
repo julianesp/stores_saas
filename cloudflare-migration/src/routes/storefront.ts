@@ -258,10 +258,10 @@ app.post('/orders/:slug', async (c) => {
 
     // Verificar que la tienda existe y está activa
     const store = await c.env.DB.prepare(
-      'SELECT id, store_name, store_whatsapp, wompi_enabled FROM user_profiles WHERE store_slug = ? AND store_enabled = 1'
+      'SELECT id, store_name, store_whatsapp, epayco_enabled FROM user_profiles WHERE store_slug = ? AND store_enabled = 1'
     )
       .bind(slug)
-      .first<{ id: string; store_name?: string; store_whatsapp?: string; wompi_enabled: number }>();
+      .first<{ id: string; store_name?: string; store_whatsapp?: string; epayco_enabled: number }>();
 
     if (!store) {
       return c.json<APIResponse>({
@@ -342,7 +342,7 @@ app.post('/orders/:slug', async (c) => {
         order_number: orderNumber,
         total: total,
         store_whatsapp: store.store_whatsapp,
-        wompi_enabled: !!store.wompi_enabled,
+        epayco_enabled: !!store.epayco_enabled,
       },
       message: 'Order created successfully',
     }, 201);

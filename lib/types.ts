@@ -13,10 +13,9 @@ export interface UserProfile {
   subscription_status: 'trial' | 'active' | 'expired' | 'canceled';
   trial_start_date?: string;
   trial_end_date?: string;
-  subscription_id?: string; // ID de la transacción/suscripción en Wompi
+  subscription_id?: string; // ID de la transacción/suscripción en ePayco
   last_payment_date?: string;
   next_billing_date?: string;
-  wompi_customer_id?: string;
   plan_id?: string; // ID del plan de suscripción
 
   // Addons como suscripciones separadas
@@ -54,10 +53,11 @@ export interface UserProfile {
   store_min_order?: number; // Pedido mínimo
   store_nequi_number?: string; // Número de Nequi o cuenta bancaria
 
-  // Configuración de pagos con Wompi
-  wompi_public_key?: string; // Public Key de Wompi del comercio
-  wompi_private_key?: string; // Private Key de Wompi del comercio (sensible)
-  wompi_enabled?: boolean; // Si Wompi está activado como método de pago
+  // Configuración de pagos con ePayco (tienda online)
+  epayco_public_key?: string; // Public Key de ePayco del comercio
+  epayco_private_key?: string; // Private Key de ePayco del comercio (sensible)
+  epayco_customer_id?: string; // p_cust_id_cliente de ePayco
+  epayco_enabled?: boolean; // Si ePayco está activado como método de pago
 
   created_at: string;
   updated_at: string;
@@ -70,7 +70,7 @@ export interface AddonSubscription {
   addon_type: 'ai' | 'store' | 'email';
   status: 'active' | 'expired' | 'canceled';
   price: number; // Precio en COP
-  subscription_id?: string; // ID de la transacción en Wompi
+  subscription_id?: string; // ID de la transacción en ePayco
   started_at: string;
   expires_at: string;
   last_payment_date?: string;
@@ -332,12 +332,14 @@ export interface SubscriptionStatus {
 export interface PaymentTransaction {
   id: string;
   user_profile_id: string;
-  wompi_transaction_id: string;
+  epayco_transaction_id?: string;
+  epayco_ref_payco?: string;
   amount: number;
   currency: string;
-  status: 'APPROVED' | 'DECLINED' | 'PENDING' | 'ERROR';
+  status: 'APPROVED' | 'DECLINED' | 'PENDING' | 'ERROR' | 'Aceptada' | 'Rechazada' | 'Pendiente';
   payment_method_type?: string;
   reference?: string;
+  approval_code?: string;
   created_at: string;
 }
 

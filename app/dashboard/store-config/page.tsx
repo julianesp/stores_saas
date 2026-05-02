@@ -63,10 +63,11 @@ export default function StoreConfigPage() {
   const [storeEmail, setStoreEmail] = useState("");
   const [storeNequiNumber, setStoreNequiNumber] = useState("");
 
-  // Configuración de Wompi (pagos online)
-  const [wompiPublicKey, setWompiPublicKey] = useState("");
-  const [wompiPrivateKey, setWompiPrivateKey] = useState("");
-  const [wompiEnabled, setWompiEnabled] = useState(false);
+  // Configuración de ePayco (pagos online)
+  const [epaycoPublicKey, setEpaycoPublicKey] = useState("");
+  const [epaycoPrivateKey, setEpaycoPrivateKey] = useState("");
+  const [epaycoCustomerId, setEpaycoCustomerId] = useState("");
+  const [epaycoEnabled, setEpaycoEnabled] = useState(false);
 
   // Configuración de entrega
   const [storeShippingEnabled, setStoreShippingEnabled] = useState(false);
@@ -130,9 +131,10 @@ export default function StoreConfigPage() {
       setStorePhone(data.store_phone || "");
       setStoreEmail(data.store_email || "");
       setStoreNequiNumber(data.store_nequi_number || "");
-      setWompiPublicKey(data.wompi_public_key || "");
-      setWompiPrivateKey(data.wompi_private_key || "");
-      setWompiEnabled(data.wompi_enabled || false);
+      setEpaycoPublicKey(data.epayco_public_key || "");
+      setEpaycoPrivateKey(data.epayco_private_key || "");
+      setEpaycoCustomerId(data.epayco_customer_id || "");
+      setEpaycoEnabled(data.epayco_enabled || false);
       setStoreShippingEnabled(data.store_shipping_enabled || false);
       setStorePickupEnabled(data.store_pickup_enabled !== false);
       setStoreMinOrder(data.store_min_order || 0);
@@ -190,9 +192,10 @@ export default function StoreConfigPage() {
           store_phone: storePhone.trim() || undefined,
           store_email: storeEmail.trim() || undefined,
           store_nequi_number: storeNequiNumber.trim() || undefined,
-          wompi_public_key: wompiPublicKey.trim() || undefined,
-          wompi_private_key: wompiPrivateKey.trim() || undefined,
-          wompi_enabled: wompiEnabled,
+          epayco_public_key: epaycoPublicKey.trim() || undefined,
+          epayco_private_key: epaycoPrivateKey.trim() || undefined,
+          epayco_customer_id: epaycoCustomerId.trim() || undefined,
+          epayco_enabled: epaycoEnabled,
           store_shipping_enabled: storeShippingEnabled,
           store_pickup_enabled: storePickupEnabled,
           store_min_order: storeMinOrder,
@@ -526,7 +529,7 @@ export default function StoreConfigPage() {
         </CardContent>
       </Card>
 
-      {/* Configuración de Pagos con Wompi */}
+      {/* Configuración de Pagos con ePayco */}
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
@@ -543,11 +546,11 @@ export default function StoreConfigPage() {
                 d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z"
               />
             </svg>
-            Pagos Online con Wompi
+            Pagos Online con ePayco
           </CardTitle>
           <CardDescription>
-            Acepta pagos con Nequi, PSE, tarjetas y más. Cada tienda debe tener
-            su propia cuenta de Wompi.
+            Acepta pagos con tarjeta, PSE, Nequi y más. Cada tienda debe tener
+            su propia cuenta de ePayco.
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
@@ -557,50 +560,54 @@ export default function StoreConfigPage() {
               📌 ¿Cómo obtener tus credenciales?
             </h4>
             <ol className="text-sm text-blue-800 space-y-1 list-decimal list-inside">
-              <li>
-                Crea una cuenta gratuita en{" "}
-                <a
-                  href="https://comercios.wompi.co/register"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="underline font-medium"
-                >
-                  Wompi
-                </a>
-              </li>
+              <li>Crea una cuenta en ePayco (epayco.co)</li>
               <li>Verifica tu identidad y datos bancarios</li>
               <li>
-                Obtén tus llaves API (Public Key y Private Key) desde el
-                dashboard
+                Obtén tus credenciales desde el dashboard de ePayco:
+                P_CUST_ID_CLIENTE, Public Key y Private Key
               </li>
-              <li>Copia y pega las llaves aquí abajo</li>
+              <li>Copia y pega las credenciales aquí abajo</li>
             </ol>
             <p className="text-xs text-blue-700 mt-2">
               ⚠️ Los pagos irán directamente a tu cuenta bancaria configurada en
-              Wompi
+              ePayco
             </p>
           </div>
 
-          {/* Switch para activar Wompi */}
+          {/* Switch para activar ePayco */}
           <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
             <div>
-              <h4 className="font-medium">Activar Pagos con Wompi</h4>
+              <h4 className="font-medium">Activar Pagos con ePayco</h4>
               <p className="text-sm text-gray-600">
                 Permite a los clientes pagar online
               </p>
             </div>
-            <Switch checked={wompiEnabled} onCheckedChange={setWompiEnabled} />
+            <Switch checked={epaycoEnabled} onCheckedChange={setEpaycoEnabled} />
           </div>
 
           {/* Campos de credenciales */}
           <div className="space-y-4">
             <div className="space-y-2">
-              <Label htmlFor="wompi-public">Public Key (Llave Pública)</Label>
+              <Label htmlFor="epayco-customer-id">P_CUST_ID_CLIENTE</Label>
               <Input
-                id="wompi-public"
-                value={wompiPublicKey}
-                onChange={(e) => setWompiPublicKey(e.target.value)}
-                placeholder="pub_test_xxxxxxxxxxxxx o pub_prod_xxxxxxxxxxxxx"
+                id="epayco-customer-id"
+                value={epaycoCustomerId}
+                onChange={(e) => setEpaycoCustomerId(e.target.value)}
+                placeholder="ID de cliente de ePayco"
+                type="text"
+              />
+              <p className="text-xs text-gray-500">
+                Tu identificador de cliente en ePayco
+              </p>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="epayco-public">Public Key (Llave Pública)</Label>
+              <Input
+                id="epayco-public"
+                value={epaycoPublicKey}
+                onChange={(e) => setEpaycoPublicKey(e.target.value)}
+                placeholder="Public key de ePayco"
                 type="text"
               />
               <p className="text-xs text-gray-500">
@@ -609,12 +616,12 @@ export default function StoreConfigPage() {
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="wompi-private">Private Key (Llave Privada)</Label>
+              <Label htmlFor="epayco-private">Private Key (Llave Privada)</Label>
               <Input
-                id="wompi-private"
-                value={wompiPrivateKey}
-                onChange={(e) => setWompiPrivateKey(e.target.value)}
-                placeholder="prv_test_xxxxxxxxxxxxx o prv_prod_xxxxxxxxxxxxx"
+                id="epayco-private"
+                value={epaycoPrivateKey}
+                onChange={(e) => setEpaycoPrivateKey(e.target.value)}
+                placeholder="Private key de ePayco"
                 type="password"
               />
               <p className="text-xs text-gray-500">
@@ -624,20 +631,20 @@ export default function StoreConfigPage() {
           </div>
 
           {/* Información adicional */}
-          {wompiEnabled && wompiPublicKey && wompiPrivateKey && (
+          {epaycoEnabled && epaycoPublicKey && epaycoPrivateKey && epaycoCustomerId && (
             <div className="p-3 bg-green-50 border border-green-200 rounded-lg">
               <p className="text-sm text-green-800">
-                ✅ Wompi configurado. Los clientes podrán pagar con Nequi, PSE,
-                tarjetas débito/crédito y más.
+                ✅ ePayco configurado. Los clientes podrán pagar con tarjeta, PSE,
+                Nequi y más métodos de pago.
               </p>
             </div>
           )}
 
-          {wompiEnabled && (!wompiPublicKey || !wompiPrivateKey) && (
+          {epaycoEnabled && (!epaycoPublicKey || !epaycoPrivateKey || !epaycoCustomerId) && (
             <div className="p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
               <p className="text-sm text-yellow-800">
-                ⚠️ Para activar Wompi debes ingresar ambas llaves (Public y
-                Private Key)
+                ⚠️ Para activar ePayco debes ingresar todas las credenciales
+                (P_CUST_ID_CLIENTE, Public Key y Private Key)
               </p>
             </div>
           )}

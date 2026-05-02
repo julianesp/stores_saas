@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { auth } from '@clerk/nextjs/server';
 import { getUserProfile, updateUserProfile } from '@/lib/cloudflare-api';
-import { getTransactionStatus } from '@/lib/wompi';
+import { getTransactionStatus } from '@/lib/epayco';
 
 export const runtime = 'nodejs';
 
@@ -41,39 +41,40 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Consultar la transacción en Wompi
+    // Consultar la transacción en ePayco
     console.log(`[activate-addon-manually] Checking transaction: ${transactionId}`);
 
     const transaction = await getTransactionStatus(transactionId);
 
-    if (!transaction.data) {
+    if (!transaction || !transaction.data) {
       return NextResponse.json(
-        { error: 'Transacción no encontrada en Wompi' },
+        { error: 'Transacción no encontrada en ePayco' },
         { status: 404 }
       );
     }
 
+    const txData = transaction.data;
+    const txState = txData.x_transaction_state || txData.estado;
+    const amountCOP = parseFloat(txData.x_amount || txData.valor || '0');
+    const reference = txData.x_id_invoice || txData.referencia || '';
+
     console.log('[activate-addon-manually] Transaction data:', {
-      id: transaction.data.id,
-      status: transaction.data.status,
-      reference: transaction.data.reference,
-      amount_in_cents: transaction.data.amount_in_cents,
+      id: txData.x_ref_payco,
+      status: txState,
+      reference,
+      amount: amountCOP,
     });
 
-    // Verificar que el pago esté aprobado
-    if (transaction.data.status !== 'APPROVED') {
+    // Verificar que el pago esté aprobado (ePayco usa 'Aceptada')
+    if (txState !== 'Aceptada') {
       return NextResponse.json(
         {
-          error: `La transacción no está aprobada. Estado actual: ${transaction.data.status}`,
-          status: transaction.data.status
+          error: `La transacción no está aprobada. Estado actual: ${txState}`,
+          status: txState
         },
         { status: 400 }
       );
     }
-
-    // Extraer información del reference
-    const reference = transaction.data.reference || '';
-    const amountCOP = transaction.data.amount_in_cents / 100;
 
     console.log('[activate-addon-manually] Processing:', {
       reference,
@@ -126,7 +127,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Actualizar también las fechas de pago generales
-    updates.last_payment_date = new Date(transaction.data.created_at || now).toISOString();
+    updates.last_payment_date = new Date(txData.x_transaction_date || now).toISOString();
 
     // Si no tiene next_billing_date, usar la fecha de expiración del addon
     if (!currentUserProfile.next_billing_date) {
@@ -147,7 +148,7 @@ export async function POST(request: NextRequest) {
         userEmail: currentUserProfile.email,
         addonType,
         expiresAt: expiresAt.toISOString(),
-        transactionId: transaction.data.id,
+        transactionId: txData.x_ref_payco || transactionId,
         amount: amountCOP,
         updates,
       },
