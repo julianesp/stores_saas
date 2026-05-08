@@ -9,11 +9,16 @@ const isPublicRoute = createRouteMatcher([
   '/store(.*)',
   '/payment-confirmation(.*)',
   '/api/payments(.*)',
+  '/manifest.webmanifest',
+  '/robots.txt',
+  '/favicon.ico',
+  '/sw.js',
+  '/workbox-(.*)',
 ])
 
 export default clerkMiddleware(async (auth, request) => {
   if (!isPublicRoute(request)) {
-    await auth.protect()
+    await auth.protect({ unauthenticatedUrl: new URL('/sign-in', request.url).toString() })
   }
 })
 

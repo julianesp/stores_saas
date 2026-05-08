@@ -72,6 +72,9 @@ function DashboardLayoutInner({
           const userEmail = user.emailAddresses[0]?.emailAddress || "";
           const superAdminEmail = "admin@neurai.dev";
 
+          // Limpiar tenant guardado para que se recargue con el usuario actual
+          localStorage.removeItem("selected_tenant_id");
+
           // PASO 1: Obtener tiendas accesibles para configurar el tenant_id
           // Esto debe hacerse ANTES de cualquier otra llamada a la API
           let userIsTeamMember = false;

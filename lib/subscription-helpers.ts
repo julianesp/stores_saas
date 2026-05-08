@@ -20,6 +20,14 @@ export async function checkSubscriptionStatus(
       };
     }
 
+    // Super admin siempre tiene acceso completo sin importar fechas
+    if (userProfile.is_superadmin) {
+      return {
+        canAccess: true,
+        status: 'active',
+      };
+    }
+
     const now = new Date();
 
     // Si está en período de prueba
