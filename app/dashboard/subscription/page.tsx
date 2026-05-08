@@ -56,7 +56,7 @@ const ADDONS = [
     type: "ai" as const,
     name: "Análisis con IA",
     icon: Sparkles,
-    price: 4900,
+    price: 5000,
     color: "purple",
     features: [
       "Predicciones de ventas automáticas",
@@ -88,7 +88,7 @@ const ADDONS = [
     type: "email" as const,
     name: "Email Marketing",
     icon: Mail,
-    price: 4900,
+    price: 5000,
     color: "green",
     features: [
       "Carritos abandonados (3 emails automáticos)",
@@ -585,7 +585,7 @@ export default function SubscriptionPageWompi() {
               {activeAddons.ai && (
                 <div className="flex justify-between items-center text-purple-700">
                   <span>+ Análisis IA</span>
-                  <span className="font-bold">{formatCurrency(4900)}</span>
+                  <span className="font-bold">{formatCurrency(5000)}</span>
                 </div>
               )}
               {activeAddons.store && (
@@ -597,7 +597,7 @@ export default function SubscriptionPageWompi() {
               {activeAddons.email && (
                 <div className="flex justify-between items-center text-green-700">
                   <span>+ Email Marketing</span>
-                  <span className="font-bold">{formatCurrency(4900)}</span>
+                  <span className="font-bold">{formatCurrency(5000)}</span>
                 </div>
               )}
               <div className="border-t pt-2 mt-2 flex justify-between items-center text-lg font-bold">
@@ -607,9 +607,9 @@ export default function SubscriptionPageWompi() {
                     (subscriptionStatus?.status === "active"
                       ? BASE_PLAN.price
                       : 0) +
-                      (activeAddons.ai ? 4900 : 0) +
+                      (activeAddons.ai ? 5000 : 0) +
                       (activeAddons.store ? 9900 : 0) +
-                      (activeAddons.email ? 4900 : 0),
+                      (activeAddons.email ? 5000 : 0),
                   )}
                   <span className="text-sm font-normal text-gray-600">
                     /mes

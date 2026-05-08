@@ -31,8 +31,8 @@ const basePlan = {
 const addons = [
   {
     name: "Análisis con IA",
-    price: "$4.900",
-    priceValue: 4900,
+    price: "$5.000",
+    priceValue: 5000,
     icon: Sparkles,
     color: "purple",
     description: "Predicciones y análisis inteligentes",
@@ -64,8 +64,8 @@ const addons = [
   },
   {
     name: "Email Marketing",
-    price: "$4.900",
-    priceValue: 4900,
+    price: "$5.000",
+    priceValue: 5000,
     icon: Mail,
     color: "green",
     description: "Automatiza tu comunicación con clientes",

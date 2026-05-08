@@ -209,7 +209,7 @@ export function TrialUsageModal({
               <div className="grid grid-cols-3 gap-2 text-xs">
                 <div className="p-2 bg-purple-50 rounded border border-purple-200 text-center">
                   <p className="font-semibold text-purple-900">+ IA</p>
-                  <p className="text-purple-700">{formatCurrency(4900)}</p>
+                  <p className="text-purple-700">{formatCurrency(5000)}</p>
                 </div>
                 <div className="p-2 bg-blue-50 rounded border border-blue-200 text-center">
                   <p className="font-semibold text-blue-900">+ Tienda</p>
@@ -217,7 +217,7 @@ export function TrialUsageModal({
                 </div>
                 <div className="p-2 bg-green-50 rounded border border-green-200 text-center">
                   <p className="font-semibold text-green-900">+ Email</p>
-                  <p className="text-green-700">{formatCurrency(4900)}</p>
+                  <p className="text-green-700">{formatCurrency(5000)}</p>
                 </div>
               </div>
             </div>

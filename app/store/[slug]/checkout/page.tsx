@@ -201,6 +201,14 @@ export default function CheckoutPage() {
       return;
     }
 
+    // ePayco exige un monto mínimo de $5.000 COP
+    if (config?.epayco_enabled && total < 5000) {
+      toast.error(
+        "El monto mínimo para pagar con ePayco es de $5.000 COP. Agrega más productos a tu pedido."
+      );
+      return;
+    }
+
     try {
       setSubmitting(true);
 
@@ -793,6 +801,17 @@ export default function CheckoutPage() {
                     </div>
                   )}
 
+                  {config.epayco_enabled && total < 5000 && (
+                    <div className="mt-4 p-3 bg-orange-50 rounded-lg border border-orange-200">
+                      <p className="text-sm font-semibold text-orange-700">
+                        ⚠️ El monto mínimo para pagar con ePayco es de $5.000 COP.
+                      </p>
+                      <p className="text-sm text-orange-600 mt-1">
+                        Faltan {formatCurrency(5000 - total)} para completar el mínimo.
+                      </p>
+                    </div>
+                  )}
+
                   <Button
                     type="submit"
                     size="lg"
@@ -800,7 +819,8 @@ export default function CheckoutPage() {
                     style={{ backgroundColor: primaryColor }}
                     disabled={
                       submitting ||
-                      Boolean(config.store_min_order && config.store_min_order > 0 && total < config.store_min_order)
+                      Boolean(config.store_min_order && config.store_min_order > 0 && total < config.store_min_order) ||
+                      Boolean(config.epayco_enabled && total < 5000)
                     }
                   >
                     {submitting ? (

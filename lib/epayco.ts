@@ -19,7 +19,7 @@ export const SUBSCRIPTION_PLANS = [
   {
     id: 'ai-addon-monthly',
     name: 'Agregar análisis IA',
-    price: 4900,
+    price: 5000,
     isAddon: true,
     features: [
       'Análisis predictivo de ventas',
