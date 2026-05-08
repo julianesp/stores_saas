@@ -54,7 +54,7 @@ export async function POST(req: NextRequest) {
     // Extraer datos adicionales
     const userProfileId = confirmation.x_extra1;
     const planId = confirmation.x_extra2;
-    const hasAIAddon = confirmation.x_extra3 === 'true';
+    const isAddon = confirmation.x_extra3 === 'true';
 
     if (!userProfileId || !planId) {
       console.error('Missing userProfileId or planId in webhook');
@@ -71,6 +71,33 @@ export async function POST(req: NextRequest) {
     const nextBillingDate = new Date(now);
     nextBillingDate.setMonth(nextBillingDate.getMonth() + 1);
 
+    // Si es un addon, no sobreescribir el plan_id existente
+    const isAiAddon = planId === 'ai-addon-monthly';
+    const isEmailAddon = planId === 'email-addon-monthly';
+    const isStoreAddon = planId === 'store-addon-monthly';
+    const isMainPlan = !isAiAddon && !isEmailAddon && !isStoreAddon;
+
+    const updatePayload: Record<string, any> = {
+      subscription_status: 'active',
+      last_payment_date: now.toISOString(),
+      next_billing_date: nextBillingDate.toISOString(),
+      trial_start_date: null,
+      trial_end_date: null,
+    };
+
+    if (isMainPlan) {
+      updatePayload.plan_id = planId;
+    }
+    if (isAiAddon) {
+      updatePayload.has_ai_addon = 1;
+    }
+    if (isEmailAddon) {
+      updatePayload.has_email_addon = 1;
+    }
+    if (isStoreAddon) {
+      updatePayload.has_store_addon = 1;
+    }
+
     // Actualizar el perfil del usuario
     const updateResponse = await fetch(`${apiUrl}/api/user-profiles/${userProfileId}`, {
       method: 'PUT',
@@ -78,15 +105,7 @@ export async function POST(req: NextRequest) {
         'Content-Type': 'application/json',
         'X-Webhook-Secret': process.env.CRON_SECRET || '',
       },
-      body: JSON.stringify({
-        subscription_status: 'active',
-        plan_id: planId,
-        has_ai_addon: hasAIAddon ? 1 : 0,
-        last_payment_date: now.toISOString(),
-        next_billing_date: nextBillingDate.toISOString(),
-        trial_start_date: null,
-        trial_end_date: null,
-      }),
+      body: JSON.stringify(updatePayload),
     });
 
     if (!updateResponse.ok) {

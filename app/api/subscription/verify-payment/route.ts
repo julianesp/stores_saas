@@ -66,10 +66,10 @@ export async function POST(req: NextRequest) {
 
     // Verificar que el monto sea correcto
     const amountCOP = amount;
-    if (amountCOP !== 29900 && amountCOP !== 9900 && amountCOP !== 39800) {
+    if (amountCOP !== 29900 && amountCOP !== 9900 && amountCOP !== 39800 && amountCOP !== 5000 && amountCOP !== 34900 && amountCOP !== 10000) {
       return NextResponse.json({
         success: false,
-        message: `Monto incorrecto: $${amountCOP}. Se esperaba $29,900, $9,900 o $39,800`,
+        message: `Monto incorrecto: $${amountCOP}. Se esperaba $29,900, $9,900, $5,000 u otro monto válido`,
         canActivate: false,
       });
     }
@@ -81,9 +81,22 @@ export async function POST(req: NextRequest) {
     if (amountCOP === 29900) {
       planId = 'basic-monthly';
     } else if (amountCOP === 9900) {
+      // precio anterior del addon IA (compatibilidad)
+      planId = 'ai-addon-monthly';
+      hasAIAddon = true;
+    } else if (amountCOP === 5000) {
+      // addon IA o Email Marketing al precio actual
+      planId = 'ai-addon-monthly';
+      hasAIAddon = true;
+    } else if (amountCOP === 10000) {
+      // ambos addons (IA + Email) al precio actual
       planId = 'ai-addon-monthly';
       hasAIAddon = true;
     } else if (amountCOP === 39800) {
+      planId = 'basic-monthly';
+      hasAIAddon = true;
+    } else if (amountCOP === 34900) {
+      // plan básico + addon al precio actual
       planId = 'basic-monthly';
       hasAIAddon = true;
     }

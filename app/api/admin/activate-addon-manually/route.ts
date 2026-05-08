@@ -86,13 +86,13 @@ export async function POST(request: NextRequest) {
     let updates: any = {};
 
     // Identificar el addon por la referencia o el monto
-    if (reference.includes('addon-ai') || amountCOP === 4900) {
+    if (reference.includes('addon-ai') || amountCOP === 4900 || (amountCOP === 5000 && !reference.includes('addon-email'))) {
       addonType = 'AI';
       updates.has_ai_addon = true;
     } else if (reference.includes('addon-store') || amountCOP === 9900) {
       addonType = 'Store';
       updates.has_store_addon = true;
-    } else if (reference.includes('addon-email') || (amountCOP === 4900 && !reference.includes('addon-ai'))) {
+    } else if (reference.includes('addon-email') || (amountCOP === 5000 && reference.includes('addon-email'))) {
       addonType = 'Email';
       updates.has_email_addon = true;
     } else if (reference.includes('plan-basico') || amountCOP === 24900) {

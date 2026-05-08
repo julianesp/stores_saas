@@ -38,7 +38,7 @@ const PLANS = [
     id: 'addon-ai',
     name: 'Addon: Análisis con IA',
     icon: Sparkles,
-    price: 4900,
+    price: 5000,
     color: 'purple',
     description: 'Predicciones y análisis inteligentes',
   },
@@ -54,7 +54,7 @@ const PLANS = [
     id: 'addon-email',
     name: 'Addon: Email Marketing',
     icon: Mail,
-    price: 4900,
+    price: 5000,
     color: 'green',
     description: 'Campañas y carritos abandonados',
   },
@@ -79,9 +79,7 @@ export default function ActivatePlanManuallyPage() {
       setLoadingUsers(true);
       try {
         const profiles = await getAllUserProfiles(getToken);
-        // Filtrar super admins de la lista
-        const regularUsers = profiles.filter((p: UserProfile) => !p.is_superadmin);
-        setAllUsers(regularUsers);
+        setAllUsers(profiles);
       } catch (error) {
         console.error('Error loading users:', error);
         toast.error('Error al cargar usuarios');
