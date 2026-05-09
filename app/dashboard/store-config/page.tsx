@@ -24,8 +24,11 @@ import {
   Share2,
   MapPin,
   Eye,
-  ExternalLink,
+  Plus,
+  Trash2,
+  ImageIcon,
 } from "lucide-react";
+
 import { ShippingZonesManager } from "@/components/store-config/shipping-zones-manager";
 import {
   hasStorefrontAccess,
@@ -52,6 +55,8 @@ export default function StoreConfigPage() {
   const [storeSecondaryColor, setStoreSecondaryColor] = useState("#10B981");
   const [storeLogoUrl, setStoreLogoUrl] = useState("");
   const [storeBannerUrl, setStoreBannerUrl] = useState("");
+  const [storeBannerImages, setStoreBannerImages] = useState<string[]>([]);
+  const [uploadingCarousel, setUploadingCarousel] = useState(false);
 
   // Redes sociales y contacto
   const [storeWhatsapp, setStoreWhatsapp] = useState("");
@@ -123,6 +128,14 @@ export default function StoreConfigPage() {
       setStoreSecondaryColor(data.store_secondary_color || "#10B981");
       setStoreLogoUrl(data.store_logo_url || "");
       setStoreBannerUrl(data.store_banner_url || "");
+      try {
+        const parsed = data.store_banner_images
+          ? JSON.parse(data.store_banner_images)
+          : [];
+        setStoreBannerImages(Array.isArray(parsed) ? parsed : []);
+      } catch {
+        setStoreBannerImages([]);
+      }
       setStoreWhatsapp(data.store_whatsapp || "");
       setStoreFacebook(data.store_facebook || "");
       setStoreInstagram(data.store_instagram || "");
@@ -147,6 +160,43 @@ export default function StoreConfigPage() {
     }
   };
 
+  const handleCarouselUpload = async (
+    e: React.ChangeEvent<HTMLInputElement>,
+  ) => {
+    const files = Array.from(e.target.files || []);
+    if (files.length === 0) return;
+    if (storeBannerImages.length + files.length > 8) {
+      toast.error("Máximo 8 imágenes en el carrusel");
+      return;
+    }
+    setUploadingCarousel(true);
+    try {
+      const uploaded: string[] = [];
+      for (const file of files) {
+        const formData = new FormData();
+        formData.append("file", file);
+        const res = await fetch("/api/upload-image", {
+          method: "POST",
+          body: formData,
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || "Error al subir imagen");
+        uploaded.push(data.secure_url);
+      }
+      setStoreBannerImages((prev) => [...prev, ...uploaded]);
+      toast.success(`${uploaded.length} imagen(es) agregada(s) al carrusel`);
+    } catch (err: any) {
+      toast.error(err.message || "Error al subir imagen");
+    } finally {
+      setUploadingCarousel(false);
+      e.target.value = "";
+    }
+  };
+
+  const removeCarouselImage = (index: number) => {
+    setStoreBannerImages((prev) => prev.filter((_, i) => i !== index));
+  };
+
   const handleSave = async () => {
     if (!profile) return;
 
@@ -165,7 +215,7 @@ export default function StoreConfigPage() {
       const slugRegex = /^[a-z0-9-]+$/;
       if (!slugRegex.test(storeSlug)) {
         toast.error(
-          "El slug solo puede contener letras minúsculas, números y guiones"
+          "El slug solo puede contener letras minúsculas, números y guiones",
         );
         return;
       }
@@ -184,6 +234,10 @@ export default function StoreConfigPage() {
           store_secondary_color: storeSecondaryColor,
           store_logo_url: storeLogoUrl.trim() || undefined,
           store_banner_url: storeBannerUrl.trim() || undefined,
+          store_banner_images:
+            storeBannerImages.length > 0
+              ? JSON.stringify(storeBannerImages)
+              : undefined,
           store_whatsapp: storeWhatsapp.trim() || undefined,
           store_facebook: storeFacebook.trim() || undefined,
           store_instagram: storeInstagram.trim() || undefined,
@@ -201,7 +255,7 @@ export default function StoreConfigPage() {
           store_min_order: storeMinOrder,
           store_terms: storeTerms.trim() || undefined,
         },
-        getToken
+        getToken,
       );
 
       toast.success("Configuración guardada exitosamente");
@@ -241,22 +295,27 @@ export default function StoreConfigPage() {
 
   return (
     <div className="space-y-6 max-w-4xl">
-      <div className="flex items-center justify-between">
+      <div className="flex items-start justify-between gap-4">
         <div>
           <h1 className="text-3xl font-bold">Tienda Online</h1>
           <p className="text-gray-500">
             Configura tu tienda para vender por internet
           </p>
         </div>
-        {storeEnabled && storeSlug && (
-          <Button
-            variant="outline"
-            onClick={() => window.open(getStoreUrl()!, "_blank")}
-          >
-            <ExternalLink className="h-4 w-4 mr-2" />
-            Ver Tienda
+        <div className="fixed top-[130px] right-6 z-40 flex flex-col items-center gap-2">
+          {storeEnabled && storeSlug && (
+            <Button
+              variant="outline"
+              onClick={() => window.open(getStoreUrl()!, "_blank")}
+            >
+              <Eye className="h-4 w-4 mr-2" />
+              <span className="hidden sm:inline">Vista Previa</span>
+            </Button>
+          )}
+          <Button onClick={handleSave} disabled={saving}>
+            {saving ? "Guardando..." : "Guardar"}
           </Button>
-        )}
+        </div>
       </div>
 
       {/* Estado de la tienda */}
@@ -413,6 +472,77 @@ export default function StoreConfigPage() {
               placeholder="https://..."
               type="url"
             />
+            <p className="text-xs text-gray-500">
+              Se usa como imagen única si no hay imágenes en el carrusel.
+            </p>
+          </div>
+
+          {/* Carrusel de presentación */}
+          <div className="space-y-3">
+            <div className="flex items-center justify-between">
+              <div>
+                <Label className="flex items-center gap-2">
+                  <ImageIcon className="h-4 w-4" />
+                  Carrusel de Presentación
+                </Label>
+                <p className="text-xs text-gray-500 mt-1">
+                  Agrega hasta 8 imágenes que se mostrarán como carrusel en tu
+                  tienda. Se cambian automáticamente cada 5 segundos.
+                </p>
+              </div>
+              <span className="text-xs text-gray-400">
+                {storeBannerImages.length}/8
+              </span>
+            </div>
+
+            {/* Miniaturas actuales */}
+            {storeBannerImages.length > 0 && (
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                {storeBannerImages.map((url, index) => (
+                  <div
+                    key={url}
+                    className="relative group aspect-video rounded-lg overflow-hidden border"
+                  >
+                    <img
+                      src={url}
+                      alt={`Carrusel ${index + 1}`}
+                      className="w-full h-full object-cover"
+                    />
+                    <div className="absolute inset-0 bg-black/0 group-hover:bg-black/40 transition-colors flex items-center justify-center">
+                      <button
+                        type="button"
+                        onClick={() => removeCarouselImage(index)}
+                        className="opacity-0 group-hover:opacity-100 bg-red-500 hover:bg-red-600 text-white rounded-full p-1.5 transition-all"
+                        aria-label="Eliminar imagen"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </button>
+                    </div>
+                    <span className="absolute bottom-1 left-1 bg-black/60 text-white text-xs px-1.5 py-0.5 rounded">
+                      {index + 1}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {/* Botón de upload */}
+            {storeBannerImages.length < 8 && (
+              <label className="flex items-center gap-2 cursor-pointer w-fit">
+                <input
+                  type="file"
+                  accept="image/*"
+                  multiple
+                  className="hidden"
+                  onChange={handleCarouselUpload}
+                  disabled={uploadingCarousel}
+                />
+                <div className="flex items-center gap-2 px-4 py-2 border-2 border-dashed border-gray-300 hover:border-gray-400 rounded-lg text-sm text-gray-600 hover:text-gray-800 transition-colors">
+                  <Plus className="h-4 w-4" />
+                  {uploadingCarousel ? "Subiendo..." : "Agregar imágenes"}
+                </div>
+              </label>
+            )}
           </div>
         </CardContent>
       </Card>
@@ -582,7 +712,10 @@ export default function StoreConfigPage() {
                 Permite a los clientes pagar online
               </p>
             </div>
-            <Switch checked={epaycoEnabled} onCheckedChange={setEpaycoEnabled} />
+            <Switch
+              checked={epaycoEnabled}
+              onCheckedChange={setEpaycoEnabled}
+            />
           </div>
 
           {/* Campos de credenciales */}
@@ -616,7 +749,9 @@ export default function StoreConfigPage() {
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="epayco-private">Private Key (Llave Privada)</Label>
+              <Label htmlFor="epayco-private">
+                Private Key (Llave Privada)
+              </Label>
               <Input
                 id="epayco-private"
                 value={epaycoPrivateKey}
@@ -631,23 +766,27 @@ export default function StoreConfigPage() {
           </div>
 
           {/* Información adicional */}
-          {epaycoEnabled && epaycoPublicKey && epaycoPrivateKey && epaycoCustomerId && (
-            <div className="p-3 bg-green-50 border border-green-200 rounded-lg">
-              <p className="text-sm text-green-800">
-                ✅ ePayco configurado. Los clientes podrán pagar con tarjeta, PSE,
-                Nequi y más métodos de pago.
-              </p>
-            </div>
-          )}
+          {epaycoEnabled &&
+            epaycoPublicKey &&
+            epaycoPrivateKey &&
+            epaycoCustomerId && (
+              <div className="p-3 bg-green-50 border border-green-200 rounded-lg">
+                <p className="text-sm text-green-800">
+                  ✅ ePayco configurado. Los clientes podrán pagar con tarjeta,
+                  PSE, Nequi y más métodos de pago.
+                </p>
+              </div>
+            )}
 
-          {epaycoEnabled && (!epaycoPublicKey || !epaycoPrivateKey || !epaycoCustomerId) && (
-            <div className="p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
-              <p className="text-sm text-yellow-800">
-                ⚠️ Para activar ePayco debes ingresar todas las credenciales
-                (P_CUST_ID_CLIENTE, Public Key y Private Key)
-              </p>
-            </div>
-          )}
+          {epaycoEnabled &&
+            (!epaycoPublicKey || !epaycoPrivateKey || !epaycoCustomerId) && (
+              <div className="p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
+                <p className="text-sm text-yellow-800">
+                  ⚠️ Para activar ePayco debes ingresar todas las credenciales
+                  (P_CUST_ID_CLIENTE, Public Key y Private Key)
+                </p>
+              </div>
+            )}
         </CardContent>
       </Card>
 
@@ -734,24 +873,6 @@ export default function StoreConfigPage() {
 
       {/* Zonas de Envío */}
       <ShippingZonesManager />
-
-      {/* Botones de acción */}
-      <div className="flex gap-3">
-        <Button onClick={handleSave} disabled={saving} size="lg">
-          {saving ? "Guardando..." : "Guardar Configuración"}
-        </Button>
-
-        {storeEnabled && storeSlug && (
-          <Button
-            variant="outline"
-            onClick={() => window.open(getStoreUrl()!, "_blank")}
-            size="lg"
-          >
-            <Eye className="h-4 w-4 mr-2" />
-            Vista Previa
-          </Button>
-        )}
-      </div>
     </div>
   );
 }

@@ -22,20 +22,33 @@ import {
   Award,
   Info,
   MessageCircle,
+  Brain,
+  Eye,
+  EyeOff,
+  ExternalLink,
 } from "lucide-react";
 import { LoyaltySettings, LoyaltyTier } from "@/lib/types";
 import { formatCurrency } from "@/lib/utils";
 import { toast } from "sonner";
 import { AutoReportsConfig } from "@/components/config/auto-reports-config";
 import { landingConfig } from "@/lib/landing-config";
+import { useAuth } from "@clerk/nextjs";
+
+const WORKER_URL = process.env.NEXT_PUBLIC_WORKER_URL || 'https://tienda-pos-api.julii1295.workers.dev';
 
 export default function ConfigPage() {
   const { user } = useUser();
+  const { getToken } = useAuth();
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [settings, setSettings] = useState<LoyaltySettings | null>(null);
   const [enabled, setEnabled] = useState(true);
   const [tiers, setTiers] = useState<LoyaltyTier[]>([]);
+
+  // Estado para la API Key de Gemini
+  const [geminiApiKey, setGeminiApiKey] = useState("");
+  const [showGeminiKey, setShowGeminiKey] = useState(false);
+  const [savingGeminiKey, setSavingGeminiKey] = useState(false);
 
   useEffect(() => {
     loadSettings();
@@ -48,21 +61,57 @@ export default function ConfigPage() {
     try {
       setLoading(true);
 
-      const response = await fetch("/api/loyalty-settings");
+      const [loyaltyRes, token] = await Promise.all([
+        fetch("/api/loyalty-settings"),
+        getToken(),
+      ]);
 
-      if (response.ok) {
-        const data = await response.json();
+      if (loyaltyRes.ok) {
+        const data = await loyaltyRes.json();
         setSettings(data);
         setEnabled(data.enabled);
         setTiers(data.tiers);
       } else {
         toast.error("Error al cargar configuración");
       }
+
+      // Cargar gemini_api_key del perfil
+      if (token) {
+        const profileRes = await fetch(`${WORKER_URL}/api/user-profiles/me`, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        if (profileRes.ok) {
+          const profileData = await profileRes.json();
+          const key = profileData.data?.gemini_api_key || profileData.gemini_api_key || "";
+          setGeminiApiKey(key);
+        }
+      }
     } catch (error) {
       console.error("Error loading settings:", error);
       toast.error("Error al cargar configuración");
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleSaveGeminiKey = async () => {
+    setSavingGeminiKey(true);
+    try {
+      const token = await getToken();
+      const res = await fetch(`${WORKER_URL}/api/user-profiles/me`, {
+        method: "PATCH",
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ gemini_api_key: geminiApiKey.trim() || null }),
+      });
+      if (!res.ok) throw new Error("Error al guardar");
+      toast.success("API Key de Gemini guardada");
+    } catch {
+      toast.error("Error al guardar la API Key");
+    } finally {
+      setSavingGeminiKey(false);
     }
   };
 
@@ -387,6 +436,81 @@ export default function ConfigPage() {
                 <p>No hay niveles configurados</p>
                 <p className="text-sm">Agrega un nivel para comenzar</p>
               </div>
+            )}
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Configuración de IA - API Key de Gemini */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Brain className="h-5 w-5 text-purple-600" />
+            Análisis con IA (Gemini)
+          </CardTitle>
+          <CardDescription>
+            Conecta tu propia cuenta de Google AI para usar el análisis inteligente
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          {/* Guía paso a paso */}
+          <div className="p-4 bg-purple-50 border border-purple-200 rounded-lg space-y-3">
+            <p className="font-semibold text-purple-900 text-sm">¿Cómo obtener tu API Key gratuita?</p>
+            <ol className="text-sm text-purple-800 space-y-2 list-decimal list-inside">
+              <li>
+                Ve a{" "}
+                <a
+                  href="https://aistudio.google.com/app/apikey"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="underline font-medium inline-flex items-center gap-1"
+                >
+                  Google AI Studio <ExternalLink className="h-3 w-3" />
+                </a>{" "}
+                e inicia sesión con tu cuenta de Google
+              </li>
+              <li>Haz clic en <strong>"Create API Key"</strong></li>
+              <li>Selecciona <strong>"Create API key in new project"</strong></li>
+              <li>Copia la clave generada y pégala aquí abajo</li>
+            </ol>
+            <p className="text-xs text-purple-700">
+              El plan gratuito de Gemini incluye suficientes consultas para uso normal. Tu clave es privada y solo se usa para generar tus análisis.
+            </p>
+          </div>
+
+          {/* Campo de la key */}
+          <div className="space-y-2">
+            <label className="text-sm font-medium">Tu API Key de Gemini</label>
+            <div className="flex gap-2">
+              <div className="relative flex-1">
+                <Input
+                  type={showGeminiKey ? "text" : "password"}
+                  value={geminiApiKey}
+                  onChange={(e) => setGeminiApiKey(e.target.value)}
+                  placeholder="AIzaSy..."
+                  className="pr-10 font-mono text-sm"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowGeminiKey((v) => !v)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                >
+                  {showGeminiKey ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                </button>
+              </div>
+              <Button onClick={handleSaveGeminiKey} disabled={savingGeminiKey}>
+                {savingGeminiKey ? "Guardando..." : "Guardar"}
+              </Button>
+            </div>
+            {geminiApiKey && (
+              <p className="text-xs text-green-600 font-medium">
+                ✓ API Key configurada — el análisis IA usará tu cuenta de Google
+              </p>
+            )}
+            {!geminiApiKey && (
+              <p className="text-xs text-gray-500">
+                Sin API Key configurada. Agrega la tuya para activar el análisis con IA.
+              </p>
             )}
           </div>
         </CardContent>

@@ -1,10 +1,15 @@
 // Google Gemini configuration
-const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
+// La key del usuario tiene prioridad; la del sistema es fallback para compatibilidad
+const SYSTEM_GEMINI_API_KEY = process.env.GEMINI_API_KEY;
 // Usar gemini-2.5-flash - versión estable más reciente (Junio 2025)
 const GEMINI_API_URL = 'https://generativelanguage.googleapis.com/v1/models/gemini-2.5-flash:generateContent';
 
-if (!GEMINI_API_KEY) {
-  console.error('⚠️ GEMINI_API_KEY no está configurada. Los insights de IA no funcionarán.');
+function resolveApiKey(userKey?: string): string {
+  const key = userKey?.trim() || SYSTEM_GEMINI_API_KEY;
+  if (!key) {
+    throw new Error('Necesitas configurar tu API Key de Gemini en Configuración → IA para usar esta función.');
+  }
+  return key;
 }
 
 export interface SalesData {
@@ -32,12 +37,10 @@ export interface CustomerData {
 export async function generateBusinessInsights(
   salesData: SalesData,
   customerData: CustomerData,
-  daysAnalyzed: number
+  daysAnalyzed: number,
+  userApiKey?: string
 ): Promise<string> {
-  // Validar que la API key existe
-  if (!GEMINI_API_KEY) {
-    throw new Error('La API key de Gemini no está configurada. Contacta al administrador.');
-  }
+  const apiKey = resolveApiKey(userApiKey);
 
   try {
     const prompt = `Eres un experto consultor de negocios retail en Colombia. Genera un DIAGNÓSTICO EMPRESARIAL PROFESIONAL para el dueño de esta tienda. Usa un tono profesional pero cercano.
@@ -82,7 +85,7 @@ IMPORTANTE:
 - Máximo 300 palabras
 - Usa los emojis indicados en cada sección`;
 
-    const response = await fetch(`${GEMINI_API_URL}?key=${GEMINI_API_KEY}`, {
+    const response = await fetch(`${GEMINI_API_URL}?key=${apiKey}`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -141,8 +144,10 @@ IMPORTANTE:
 export async function generateProductRecommendations(
   currentInventory: Array<{ name: string; category: string; stock: number; salesVelocity: number }>,
   storeType: string,
-  storeCity?: string
+  storeCity?: string,
+  userApiKey?: string
 ): Promise<string> {
+  const apiKey = resolveApiKey(userApiKey);
   try {
     const cityContext = storeCity
       ? `\n**CIUDAD DE LA TIENDA:** ${storeCity} (ten en cuenta el clima, cultura de consumo y preferencias locales de esta región colombiana para personalizar las recomendaciones)`
@@ -199,7 +204,7 @@ IMPORTANTE:
 - Usa lenguaje claro y directo
 - Máximo 350 palabras`;
 
-    const response = await fetch(`${GEMINI_API_URL}?key=${GEMINI_API_KEY}`, {
+    const response = await fetch(`${GEMINI_API_URL}?key=${apiKey}`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -231,8 +236,10 @@ IMPORTANTE:
  * Analiza combos frecuentes de productos (Market Basket Analysis simplificado)
  */
 export async function analyzeFrequentCombos(
-  salesItems: Array<{ productName: string; quantity: number; saleId: string }>
+  salesItems: Array<{ productName: string; quantity: number; saleId: string }>,
+  userApiKey?: string
 ): Promise<string> {
+  const apiKey = resolveApiKey(userApiKey);
   try {
     // Agrupar productos por venta
     const salesMap = new Map<string, string[]>();
@@ -275,7 +282,7 @@ Proporciona:
 
 Formato: Conciso, con emojis. Máximo 250 palabras.`;
 
-    const response = await fetch(`${GEMINI_API_URL}?key=${GEMINI_API_KEY}`, {
+    const response = await fetch(`${GEMINI_API_URL}?key=${apiKey}`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',

@@ -18,6 +18,7 @@ export interface StoreConfig {
   store_description?: string;
   store_logo_url?: string;
   store_banner_url?: string;
+  store_banner_images?: string; // JSON array de URLs para el carrusel
   store_primary_color?: string;
   store_secondary_color?: string;
   store_whatsapp?: string;

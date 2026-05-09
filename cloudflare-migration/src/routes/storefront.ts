@@ -16,6 +16,7 @@ interface StoreConfig {
   store_description?: string;
   store_logo_url?: string;
   store_banner_url?: string;
+  store_banner_images?: string;
   store_primary_color?: string;
   store_secondary_color?: string;
   store_whatsapp?: string;
@@ -42,7 +43,7 @@ app.get('/config/:slug', async (c) => {
     const result = await c.env.DB.prepare(
       `SELECT
         id, store_slug, store_name, store_description,
-        store_logo_url, store_banner_url,
+        store_logo_url, store_banner_url, store_banner_images,
         store_primary_color, store_secondary_color,
         store_whatsapp, store_facebook, store_instagram,
         store_address, store_city, store_phone, store_email,

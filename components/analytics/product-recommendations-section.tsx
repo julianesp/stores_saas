@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { ShoppingBag, Sparkles, RefreshCw, TrendingUp } from 'lucide-react';
+import { ShoppingBag, Sparkles, RefreshCw, TrendingUp, Tag, Lightbulb } from 'lucide-react';
 import { toast } from 'sonner';
 
 interface ProductRecommendationsSectionProps {
@@ -17,63 +17,84 @@ interface ProductRecommendationsSectionProps {
   storeCity?: string;
 }
 
+interface ParsedProduct {
+  name: string;
+  emoji: string;
+  category: string;
+  trend: string;
+  margin: string;
+}
+
+interface ParsedRecommendations {
+  intro: string;
+  products: ParsedProduct[];
+  tip: string;
+}
+
+function parseRecommendations(text: string): ParsedRecommendations {
+  const result: ParsedRecommendations = { intro: '', products: [], tip: '' };
+
+  // Extraer introducción (primer párrafo antes de los productos numerados)
+  const introMatch = text.match(/^([\s\S]*?)(?=\n\d+\.|\n##\s*\d)/);
+  if (introMatch) {
+    result.intro = introMatch[1]
+      .replace(/^##\s*.+\n?/m, '')
+      .replace(/\*\*/g, '')
+      .trim();
+  }
+
+  // Extraer consejo final
+  const tipMatch = text.match(/##\s*💡\s*Consejo[^\n]*\n([\s\S]*?)$/i);
+  if (tipMatch) {
+    result.tip = tipMatch[1].replace(/\*\*/g, '').trim();
+  }
+
+  // Extraer cada producto numerado
+  const productBlocks = text.matchAll(
+    /\d+\.\s+\*\*([^*]+)\*\*\s*([^\n]*)\n([\s\S]*?)(?=\n\d+\.|\n##\s*💡|$)/g
+  );
+
+  for (const match of productBlocks) {
+    const nameLine = match[1].trim();
+    const emojiLine = match[2].trim();
+    const body = match[3];
+
+    const categoryMatch = body.match(/\*\*Categor[íi]a:\*\*\s*([^\n*]+)/i);
+    const trendMatch = body.match(/\*\*Tendencia:\*\*\s*([^\n*]+)/i);
+    const marginMatch = body.match(/\*\*Margen estimado:\*\*\s*([^\n*]+)/i);
+
+    result.products.push({
+      name: nameLine,
+      emoji: emojiLine,
+      category: categoryMatch?.[1].trim() ?? '',
+      trend: trendMatch?.[1].trim() ?? '',
+      margin: marginMatch?.[1].trim() ?? '',
+    });
+  }
+
+  return result;
+}
+
+const MARGIN_COLORS: Record<string, string> = {
+  low: 'bg-yellow-100 text-yellow-800',
+  mid: 'bg-blue-100 text-blue-800',
+  high: 'bg-green-100 text-green-800',
+};
+
+function marginColor(margin: string) {
+  const num = parseInt(margin);
+  if (num >= 35) return MARGIN_COLORS.high;
+  if (num >= 20) return MARGIN_COLORS.mid;
+  return MARGIN_COLORS.low;
+}
+
 export function ProductRecommendationsSection({
   currentInventory,
   storeType,
   storeCity,
 }: ProductRecommendationsSectionProps) {
-  const [recommendations, setRecommendations] = useState<string>('');
+  const [raw, setRaw] = useState<string>('');
   const [loading, setLoading] = useState(false);
-
-  // Función para formatear las recomendaciones con HTML
-  const formatRecommendations = (text: string): string => {
-    let formatted = text;
-
-    // Procesar secciones con títulos ##
-    const sections = formatted.split(/(?=##)/);
-
-    formatted = sections.map(section => {
-      if (!section.trim()) return '';
-
-      // Procesar cada sección
-      let processed = section
-        // Títulos con ##
-        .replace(/##\s+(.+)/g, '<h3 class="section-title">$1</h3>')
-        // Negrita **texto**
-        .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
-        // Items con guión - al inicio de línea
-        .replace(/^-\s+(.+)/gm, '<li>$1</li>')
-        // Items numerados
-        .replace(/^\d+\.\s+(.+)/gm, '<li class="numbered-item">$1</li>');
-
-      // Envolver listas consecutivas
-      processed = processed.replace(/(<li class="numbered-item">.*?<\/li>\s*)+/g, (match) => {
-        return `<ol class="recommendations-list numbered">${match}</ol>`;
-      });
-
-      processed = processed.replace(/(<li>(?!.*class="numbered-item").*?<\/li>\s*)+/g, (match) => {
-        return `<ul class="recommendations-list bulleted">${match}</ul>`;
-      });
-
-      // Limpiar saltos de línea extras
-      processed = processed.replace(/\n{3,}/g, '\n\n');
-
-      // Convertir saltos de línea en párrafos donde sea apropiado
-      processed = processed.split('\n\n').map(para => {
-        if (para.includes('<h3>') || para.includes('<ol>') || para.includes('<ul>')) {
-          return para;
-        }
-        if (para.trim() && !para.includes('<li>')) {
-          return `<p class="recommendation-text">${para.trim()}</p>`;
-        }
-        return para;
-      }).join('');
-
-      return processed;
-    }).join('');
-
-    return formatted;
-  };
 
   const generateRecommendations = async () => {
     try {
@@ -82,9 +103,7 @@ export function ProductRecommendationsSection({
 
       const response = await fetch('/api/ai/product-recommendations', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           currentInventory,
           storeType: storeType || 'Tienda general',
@@ -94,20 +113,20 @@ export function ProductRecommendationsSection({
 
       toast.dismiss();
 
-      if (!response.ok) {
-        throw new Error('Error al generar recomendaciones');
-      }
+      if (!response.ok) throw new Error('Error al generar recomendaciones');
 
       const data = await response.json();
-      setRecommendations(data.recommendations);
+      setRaw(data.recommendations);
       toast.success('Recomendaciones generadas');
-    } catch (error) {
-      console.error('Error generating recommendations:', error);
+    } catch {
+      toast.dismiss();
       toast.error('Error al generar recomendaciones');
     } finally {
       setLoading(false);
     }
   };
+
+  const parsed = raw ? parseRecommendations(raw) : null;
 
   return (
     <Card className="border-2 border-green-200 bg-gradient-to-br from-green-50 to-emerald-50">
@@ -131,79 +150,86 @@ export function ProductRecommendationsSection({
             ) : (
               <>
                 <Sparkles className="h-4 w-4 mr-2" />
-                Ver Tendencias
+                {raw ? 'Actualizar' : 'Ver Tendencias'}
               </>
             )}
           </Button>
         </CardTitle>
       </CardHeader>
+
       <CardContent>
-        {recommendations ? (
-          <div className="bg-white rounded-lg shadow-sm">
-            <div className="p-6">
-              <style jsx>{`
-                .product-trends h3.section-title {
-                  display: flex;
-                  align-items: center;
-                  gap: 0.5rem;
-                  font-size: 1.125rem;
-                  font-weight: 700;
-                  margin-top: 1.5rem;
-                  margin-bottom: 0.75rem;
-                  padding-bottom: 0.5rem;
-                  border-bottom: 2px solid #e5e7eb;
-                  color: #047857;
-                }
-                .product-trends h3.section-title:first-child {
-                  margin-top: 0;
-                }
-                .product-trends .recommendations-list {
-                  margin-left: 1.5rem;
-                  margin-bottom: 1rem;
-                  color: #4b5563;
-                }
-                .product-trends .recommendations-list.numbered {
-                  list-style-type: decimal;
-                }
-                .product-trends .recommendations-list.bulleted {
-                  list-style-type: disc;
-                }
-                .product-trends li {
-                  margin-bottom: 0.75rem;
-                  line-height: 1.6;
-                  padding-left: 0.5rem;
-                }
-                .product-trends strong {
-                  color: #059669;
-                  font-weight: 600;
-                }
-                .product-trends .recommendation-text {
-                  color: #6b7280;
-                  line-height: 1.7;
-                  margin-bottom: 0.75rem;
-                }
-                .product-trends ul li::marker {
-                  color: #10b981;
-                }
-                .product-trends ol li::marker {
-                  color: #10b981;
-                  font-weight: 600;
-                }
-              `}</style>
-              <div
-                className="product-trends text-gray-700"
-                dangerouslySetInnerHTML={{ __html: formatRecommendations(recommendations) }}
-              />
+        {parsed ? (
+          <div className="space-y-4">
+            {/* Introducción */}
+            {parsed.intro && (
+              <p className="text-sm text-gray-600 bg-white rounded-lg px-4 py-3 border border-green-100">
+                {parsed.intro}
+              </p>
+            )}
+
+            {/* Tarjetas de productos */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-3">
+              {parsed.products.map((product, i) => (
+                <div
+                  key={i}
+                  className="bg-white rounded-xl border border-green-100 shadow-sm p-4 flex flex-col gap-2 hover:shadow-md transition-shadow"
+                >
+                  {/* Número + nombre */}
+                  <div className="flex items-start gap-2">
+                    <span className="flex-shrink-0 w-6 h-6 rounded-full bg-green-600 text-white text-xs font-bold flex items-center justify-center mt-0.5">
+                      {i + 1}
+                    </span>
+                    <div>
+                      <p className="font-semibold text-gray-900 text-sm leading-tight">
+                        {product.name} {product.emoji}
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* Categoría */}
+                  {product.category && (
+                    <div className="flex items-center gap-1.5 text-xs text-gray-500">
+                      <Tag className="h-3 w-3" />
+                      {product.category}
+                    </div>
+                  )}
+
+                  {/* Tendencia */}
+                  {product.trend && (
+                    <p className="text-xs text-gray-600 leading-relaxed">
+                      {product.trend}
+                    </p>
+                  )}
+
+                  {/* Margen */}
+                  {product.margin && (
+                    <span className={`self-start text-xs font-semibold px-2 py-0.5 rounded-full ${marginColor(product.margin)}`}>
+                      Margen: {product.margin}
+                    </span>
+                  )}
+                </div>
+              ))}
             </div>
+
+            {/* Consejo final */}
+            {parsed.tip && (
+              <div className="flex gap-3 bg-amber-50 border border-amber-200 rounded-xl p-4">
+                <Lightbulb className="h-5 w-5 text-amber-500 flex-shrink-0 mt-0.5" />
+                <div>
+                  <p className="text-xs font-semibold text-amber-800 mb-1">Consejo de Promoción</p>
+                  <p className="text-sm text-amber-700">{parsed.tip}</p>
+                </div>
+              </div>
+            )}
           </div>
         ) : (
           <div className="text-center py-8">
             <ShoppingBag className="h-16 w-16 mx-auto mb-4 text-green-300" />
-            <p className="text-gray-600 mb-4">
+            <p className="text-gray-600 mb-2">
               Descubre qué productos están en tendencia en Colombia
             </p>
             <p className="text-sm text-gray-500">
-              La IA analizará tu inventario y te recomendará productos populares que complementen tu catálogo
+              La IA analizará tu inventario y recomendará productos populares que complementen tu catálogo
             </p>
           </div>
         )}

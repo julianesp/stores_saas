@@ -37,6 +37,7 @@ export interface UserProfile {
   store_description?: string; // Descripción de la tienda
   store_logo_url?: string; // Logo de la tienda
   store_banner_url?: string; // Banner principal
+  store_banner_images?: string; // JSON array de URLs para el carrusel
   store_primary_color?: string; // Color principal (#hex)
   store_secondary_color?: string; // Color secundario (#hex)
   store_whatsapp?: string; // WhatsApp de contacto
@@ -58,6 +59,9 @@ export interface UserProfile {
   epayco_private_key?: string; // Private Key de ePayco del comercio (sensible)
   epayco_customer_id?: string; // p_cust_id_cliente de ePayco
   epayco_enabled?: boolean; // Si ePayco está activado como método de pago
+
+  // API Key personal de Gemini para el addon de IA
+  gemini_api_key?: string;
 
   created_at: string;
   updated_at: string;

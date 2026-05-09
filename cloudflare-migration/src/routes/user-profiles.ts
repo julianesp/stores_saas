@@ -179,6 +179,7 @@ app.put('/:id', async (c) => {
       'store_description',
       'store_logo_url',
       'store_banner_url',
+      'store_banner_images',
       'store_primary_color',
       'store_secondary_color',
       'store_whatsapp',
@@ -202,6 +203,8 @@ app.put('/:id', async (c) => {
       'auto_reports_enabled',
       'auto_reports_time',
       'auto_reports_email',
+      // API Key personal de Gemini
+      'gemini_api_key',
     ];
 
     const updates: string[] = [];

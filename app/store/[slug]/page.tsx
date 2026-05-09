@@ -35,6 +35,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent } from '@/components/ui/card';
+import { StoreCarousel } from '@/components/store';
 
 export default function StorefrontPage() {
   const params = useParams();
@@ -183,69 +184,64 @@ export default function StorefrontPage() {
         </div>
       </div>
 
-      {/* Hero Section con Banner */}
-      {config.store_banner_url ? (
-        <div className="relative w-full h-64 md:h-96 lg:h-[450px]">
-          <Image
-            src={config.store_banner_url}
-            alt={`Banner de ${config.store_name}`}
-            fill
-            className="object-cover"
-            priority
-          />
+      {/* Hero Section: carrusel si hay imágenes, banner único, o fallback */}
+      {(() => {
+        const carouselImages: string[] = (() => {
+          try {
+            const parsed = config.store_banner_images ? JSON.parse(config.store_banner_images) : [];
+            return Array.isArray(parsed) ? parsed.filter(Boolean) : [];
+          } catch { return []; }
+        })();
+        const allImages = carouselImages.length > 0
+          ? carouselImages
+          : config.store_banner_url
+            ? [config.store_banner_url]
+            : [];
 
-          <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/30 to-transparent">
-            <div className="max-w-7xl mx-auto px-4 h-full flex items-end pb-12 md:pb-16">
-              <div className="text-white animate-fade-in">
-                <h1 className="text-4xl md:text-6xl font-bold mb-3">
-                  {config.store_name}
-                </h1>
-                {config.store_description && (
-                  <p className="text-lg md:text-2xl text-white/90 max-w-2xl mb-6">
-                    {config.store_description}
-                  </p>
-                )}
-                <Button
-                  size="lg"
-                  className="bg-white hover:bg-gray-100 text-gray-900 font-semibold shadow-xl"
-                  onClick={() => document.getElementById('productos')?.scrollIntoView({ behavior: 'smooth' })}
-                >
-                  Ver Productos
-                </Button>
-              </div>
+        if (allImages.length > 0) {
+          return (
+            <StoreCarousel
+              images={allImages}
+              storeName={config.store_name || ''}
+              storeDescription={config.store_description}
+              primaryColor={primaryColor}
+              secondaryColor={secondaryColor}
+              onExploreClick={() => document.getElementById('productos')?.scrollIntoView({ behavior: 'smooth' })}
+            />
+          );
+        }
+
+        return (
+          <div
+            className="relative w-full py-16 md:py-24 overflow-hidden"
+            style={{ background: `linear-gradient(135deg, ${primaryColor}15 0%, ${secondaryColor}15 100%)` }}
+          >
+            <div className="absolute inset-0 opacity-10">
+              <div className="absolute top-10 left-10 w-72 h-72 bg-blue-400 rounded-full blur-3xl"></div>
+              <div className="absolute bottom-10 right-10 w-96 h-96 bg-purple-400 rounded-full blur-3xl"></div>
+            </div>
+
+            <div className="max-w-7xl mx-auto px-4 text-center relative z-10">
+              <h1 className="text-4xl md:text-6xl font-bold mb-4 bg-gradient-to-r from-gray-900 to-gray-700 bg-clip-text text-transparent">
+                {config.store_name}
+              </h1>
+              {config.store_description && (
+                <p className="text-lg md:text-2xl text-gray-700 max-w-2xl mx-auto mb-8">
+                  {config.store_description}
+                </p>
+              )}
+              <Button
+                size="lg"
+                style={{ backgroundColor: primaryColor }}
+                className="text-white hover:opacity-90 font-semibold shadow-xl px-8"
+                onClick={() => document.getElementById('productos')?.scrollIntoView({ behavior: 'smooth' })}
+              >
+                Explorar Productos
+              </Button>
             </div>
           </div>
-        </div>
-      ) : (
-        <div
-          className="relative w-full py-16 md:py-24 overflow-hidden"
-          style={{ background: `linear-gradient(135deg, ${primaryColor}15 0%, ${secondaryColor}15 100%)` }}
-        >
-          <div className="absolute inset-0 opacity-10">
-            <div className="absolute top-10 left-10 w-72 h-72 bg-blue-400 rounded-full blur-3xl"></div>
-            <div className="absolute bottom-10 right-10 w-96 h-96 bg-purple-400 rounded-full blur-3xl"></div>
-          </div>
-
-          <div className="max-w-7xl mx-auto px-4 text-center relative z-10">
-            <h1 className="text-4xl md:text-6xl font-bold mb-4 bg-gradient-to-r from-gray-900 to-gray-700 bg-clip-text text-transparent">
-              {config.store_name}
-            </h1>
-            {config.store_description && (
-              <p className="text-lg md:text-2xl text-gray-700 max-w-2xl mx-auto mb-8">
-                {config.store_description}
-              </p>
-            )}
-            <Button
-              size="lg"
-              style={{ backgroundColor: primaryColor }}
-              className="text-white hover:opacity-90 font-semibold shadow-xl px-8"
-              onClick={() => document.getElementById('productos')?.scrollIntoView({ behavior: 'smooth' })}
-            >
-              Explorar Productos
-            </Button>
-          </div>
-        </div>
-      )}
+        );
+      })()}
 
       {/* Sección de confianza */}
       <div className="bg-white border-y">
