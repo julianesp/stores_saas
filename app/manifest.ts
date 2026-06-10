@@ -12,13 +12,13 @@ export default function manifest(): MetadataRoute.Manifest {
     orientation: 'portrait',
     icons: [
       {
-        src: 'https://0dwas2ied3dcs14f.public.blob.vercel-storage.com/tienda_pos/posib_logo.png',
+        src: 'https://pub-ea40242d92ce470fbb6e43d46f01cefe.r2.dev/images/logo.png',
         sizes: '192x192',
         type: 'image/png',
         purpose: 'any',
       },
       {
-        src: 'https://0dwas2ied3dcs14f.public.blob.vercel-storage.com/tienda_pos/posib_logo.png',
+        src: 'https://pub-ea40242d92ce470fbb6e43d46f01cefe.r2.dev/images/logo.png',
         sizes: '512x512',
         type: 'image/png',
         purpose: 'maskable',

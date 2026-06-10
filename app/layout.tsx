@@ -51,13 +51,13 @@ export const metadata: Metadata = {
   },
   icons: {
     icon: [
-      { url: 'https://0dwas2ied3dcs14f.public.blob.vercel-storage.com/tienda_pos/posib_logo.png', type: 'image/png' },
+      { url: 'https://pub-ea40242d92ce470fbb6e43d46f01cefe.r2.dev/images/logo.png', type: 'image/png' },
       { url: '/favicon.ico', sizes: '32x32' },
       { url: '/icon-192x192.png', sizes: '192x192', type: 'image/png' },
       { url: '/icon-512x512.png', sizes: '512x512', type: 'image/png' },
     ],
     apple: [
-      { url: 'https://0dwas2ied3dcs14f.public.blob.vercel-storage.com/tienda_pos/posib_logo.png', type: 'image/png' },
+      { url: 'https://pub-ea40242d92ce470fbb6e43d46f01cefe.r2.dev/images/logo.png', type: 'image/png' },
     ],
   },
   appleWebApp: {

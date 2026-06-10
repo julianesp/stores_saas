@@ -23,7 +23,7 @@ export default function WhatsAppButton() {
     >
       {/* <MessageCircle className="h-6 w-6 text-white" /> */}
       <Image
-        src="https://0dwas2ied3dcs14f.public.blob.vercel-storage.com/redes/social%20%281%29.png"
+        src="https://pub-c0883d14d3e84a69bf84546fa108aa0b.r2.dev/socialmedia/social%20(1).png"
         alt="Icono Whatsapp"
         width={50}
         height={50}

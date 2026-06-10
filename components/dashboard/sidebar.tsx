@@ -166,24 +166,24 @@ const defaultStoreMenuItems = [
     roles: ["admin"],
     permissions: ["view_offers"] as const,
   },
-  {
-    id: "store-config",
-    title: "Tienda Online",
-    href: "/dashboard/store-config",
-    icon: Store,
-    roles: ["admin"],
-    permissions: ["access_online_store"] as const,
-    requiresAddon: "store" as const,
-  },
-  {
-    id: "web-orders",
-    title: "Pedidos Web",
-    href: "/dashboard/web-orders",
-    icon: ShoppingCart,
-    roles: ["admin"],
-    permissions: ["manage_online_orders"] as const,
-    requiresAddon: "store" as const,
-  },
+  // {
+  //   id: "store-config",
+  //   title: "Tienda Online",
+  //   href: "/dashboard/store-config",
+  //   icon: Store,
+  //   roles: ["admin"],
+  //   permissions: ["access_online_store"] as const,
+  //   requiresAddon: "store" as const,
+  // },
+  // {
+  //   id: "web-orders",
+  //   title: "Pedidos Web",
+  //   href: "/dashboard/web-orders",
+  //   icon: ShoppingCart,
+  //   roles: ["admin"],
+  //   permissions: ["manage_online_orders"] as const,
+  //   requiresAddon: "store" as const,
+  // },
   {
     id: "inventory",
     title: "Inventario",
@@ -492,7 +492,7 @@ export function Sidebar({ isMobile = false, onLinkClick }: SidebarProps) {
               <h1 className="text-xl font-bold">Admin Panel</h1>
             ) : (
               <Image
-                src="https://0dwas2ied3dcs14f.public.blob.vercel-storage.com/tienda_pos/posib_logo.png"
+                src="https://pub-ea40242d92ce470fbb6e43d46f01cefe.r2.dev/images/logo.png"
                 alt="posib.dev"
                 width={120}
                 height={40}
@@ -524,7 +524,7 @@ export function Sidebar({ isMobile = false, onLinkClick }: SidebarProps) {
           <h1 className="text-xl font-bold">Admin Panel</h1>
         ) : (
           <Image
-            src="https://0dwas2ied3dcs14f.public.blob.vercel-storage.com/tienda_pos/posib_logo.png"
+            src="https://pub-ea40242d92ce470fbb6e43d46f01cefe.r2.dev/images/logo.png"
             alt="posib.dev"
             width={120}
             height={40}

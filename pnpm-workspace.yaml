@@ -1,0 +1,8 @@
+allowBuilds:
+  '@clerk/shared': true
+  '@parcel/watcher': true
+  core-js: true
+  esbuild: true
+  sharp: true
+  unrs-resolver: true
+  workerd: true

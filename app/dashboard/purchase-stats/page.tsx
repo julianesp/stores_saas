@@ -865,7 +865,7 @@ export default function PurchaseStatsPage() {
                   <XAxis dataKey="month" />
                   <YAxis />
                   <Tooltip
-                    formatter={(value: number) => formatCurrency(value)}
+                    formatter={(value) => formatCurrency(Number(value))}
                     labelStyle={{ color: "#000" }}
                   />
                   <Legend />
@@ -915,7 +915,7 @@ export default function PurchaseStatsPage() {
                       />
                     ))}
                   </Pie>
-                  <Tooltip formatter={(value: number) => formatCurrency(value)} />
+                  <Tooltip formatter={(value) => formatCurrency(Number(value))} />
                   <Legend />
                 </PieChart>
               </ResponsiveContainer>
@@ -951,7 +951,7 @@ export default function PurchaseStatsPage() {
                   />
                   <YAxis />
                   <Tooltip
-                    formatter={(value: number) => formatCurrency(value)}
+                    formatter={(value) => formatCurrency(Number(value))}
                     labelStyle={{ color: "#000" }}
                   />
                   <Legend />
