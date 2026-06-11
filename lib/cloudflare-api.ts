@@ -521,6 +521,11 @@ export interface UserProfile {
   next_billing_date?: string;
   plan_id?: string;
   has_ai_addon?: boolean;
+  has_store_addon?: boolean;
+  has_email_addon?: boolean;
+  ai_addon_expires_at?: string;
+  store_addon_expires_at?: string;
+  email_addon_expires_at?: string;
   auto_reports_enabled?: boolean;
   auto_reports_time?: string;
   auto_reports_email?: string;
