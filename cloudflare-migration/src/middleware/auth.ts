@@ -224,6 +224,16 @@ export async function authMiddleware(c: Context<{ Bindings: Env }>, next: Next) 
           if (clerkSecretKey) {
             const { fetchClerkUser, getClerkUserEmail } = await import('../utils/clerk-helpers');
             clerkUser = await fetchClerkUser(clerkUserId, clerkSecretKey);
+
+            // Si Clerk no encuentra el usuario, rechazar la petición
+            if (!clerkUser) {
+              return c.json({
+                success: false,
+                error: 'Unauthorized',
+                message: 'User not found in authentication provider'
+              }, 401);
+            }
+
             userEmail = getClerkUserEmail(clerkUser, clerkUserId);
           } else {
             console.warn('CLERK_SECRET_KEY not configured, using placeholder email');
