@@ -17,6 +17,7 @@ import {
   Ban,
   CheckCircle,
   Crown,
+  Trash2,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { getUserProfileByClerkId } from '@/lib/subscription-helpers';
@@ -73,6 +74,40 @@ export default function UsersManagementPage() {
     } catch (error) {
       console.error('Error updating role:', error);
       toast.error('Error al actualizar el rol');
+    }
+  };
+
+  const handleDeleteUser = async (userId: string, userEmail: string) => {
+    const Swal = (await import('sweetalert2')).default;
+    const result = await Swal.fire({
+      title: '¿Eliminar usuario?',
+      html: `Esta acción eliminará permanentemente a <b>${userEmail}</b> y todos sus datos.<br><br>Esta acción <b>no se puede deshacer</b>.`,
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonColor: '#ef4444',
+      cancelButtonColor: '#6b7280',
+      confirmButtonText: 'Sí, eliminar',
+      cancelButtonText: 'Cancelar',
+    });
+
+    if (!result.isConfirmed) return;
+
+    try {
+      const response = await fetch('/api/admin/delete-user', {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userIdToDelete: userId }),
+      });
+
+      if (!response.ok) {
+        const data = await response.json();
+        throw new Error(data.error || 'Error al eliminar usuario');
+      }
+
+      toast.success('Usuario eliminado correctamente');
+      fetchData();
+    } catch (error: any) {
+      toast.error(error.message || 'Error al eliminar usuario');
     }
   };
 
@@ -317,6 +352,16 @@ export default function UsersManagementPage() {
                                 title="Promover a Super Admin"
                               >
                                 <Crown className="h-4 w-4" />
+                              </Button>
+                            )}
+                            {!usr.is_superadmin && usr.id !== currentUserProfile?.id && (
+                              <Button
+                                size="sm"
+                                variant="destructive"
+                                onClick={() => handleDeleteUser(usr.id, usr.email)}
+                                title="Eliminar usuario"
+                              >
+                                <Trash2 className="h-4 w-4" />
                               </Button>
                             )}
                           </div>
