@@ -317,7 +317,7 @@ export async function authMiddleware(c: Context<{ Bindings: Env }>, next: Next) 
     // Check subscription status (skip for superadmin and team members)
     // Team members don't need their own subscription - they use the owner's subscription
     if (userProfile.is_superadmin !== 1 && !isTeamMember) {
-      const userSubscriptionStatus = userProfile.subscription_status || tenant.subscriptionStatus;
+      const userSubscriptionStatus = userProfile.subscription_status;
       if (userSubscriptionStatus === 'expired' || userSubscriptionStatus === 'canceled') {
         return c.json({
           success: false,
