@@ -16,18 +16,20 @@ import {
   Crown,
   Calendar,
   Database,
-  Trash2,
+  Plus,
+  HandCoins,
+  ArrowRight,
 } from "lucide-react";
 import { getUserProfileByClerkId } from "@/lib/cloudflare-subscription-helpers";
 import { getAllUserProfiles } from "@/lib/cloudflare-api";
-import { UserProfile } from "@/lib/types";
+import { getDebtorCustomers } from "@/lib/cloudflare-credit-helpers";
+import { Customer } from "@/lib/types";
 import { useTenant } from "@/lib/tenant-context";
 import { formatCurrency } from "@/lib/utils";
 import { toast } from "sonner";
 import {
   getDashboardMetrics,
   getTopProducts,
-  getInventoryAlerts,
   getExpiringProducts,
   getExpiringProductsList,
   DashboardMetrics,
@@ -62,74 +64,87 @@ export default function DashboardPage() {
   const [topProducts, setTopProducts] = useState<TopProduct[]>([]);
   const [expiringProductsCount, setExpiringProductsCount] = useState(0);
   const [expiringProducts, setExpiringProducts] = useState<Product[]>([]);
+  const [debtors, setDebtors] = useState<Customer[]>([]);
   const [seeding, setSeeding] = useState(false);
-  const [cleaning, setCleaning] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     async function checkUserAndFetchMetrics() {
       if (user && tenantReady) {
-        const profile = await getUserProfileByClerkId(getToken);
-        const isSuper = profile?.is_superadmin || false;
-        setIsSuperAdmin(isSuper);
-        const userProfileId = profile?.id;
+        setError(null);
+        try {
+          const profile = await getUserProfileByClerkId(getToken);
+          const isSuper = profile?.is_superadmin || false;
+          setIsSuperAdmin(isSuper);
 
-        if (isSuper) {
-          // Fetch SaaS metrics for super admin
-          const allProfiles = await getAllUserProfiles(getToken);
-          const stores = allProfiles.filter((p) => !p.is_superadmin);
+          if (isSuper) {
+            // Fetch SaaS metrics for super admin
+            const allProfiles = await getAllUserProfiles(getToken);
+            const stores = allProfiles.filter((p) => !p.is_superadmin);
 
-          const now = new Date();
-          const startOfToday = new Date(
-            now.getFullYear(),
-            now.getMonth(),
-            now.getDate(),
+            const now = new Date();
+            const startOfToday = new Date(
+              now.getFullYear(),
+              now.getMonth(),
+              now.getDate(),
+            );
+
+            const totalStores = stores.length;
+            const activeStores = stores.filter(
+              (s) => s.subscription_status === "active",
+            ).length;
+            const trialStores = stores.filter(
+              (s) => s.subscription_status === "trial",
+            ).length;
+            const monthlyRevenue = activeStores * 50000;
+            const newStoresToday = stores.filter(
+              (s) => new Date(s.created_at) >= startOfToday,
+            ).length;
+            const conversionRate =
+              trialStores > 0
+                ? (activeStores / (activeStores + trialStores)) * 100
+                : 0;
+
+            setSaasMetrics({
+              totalStores,
+              activeStores,
+              trialStores,
+              monthlyRevenue,
+              newStoresToday,
+              conversionRate,
+            });
+          } else {
+            // Fetch store metrics for regular users.
+            // Cada fuente se resuelve por separado para que un fallo aislado
+            // (p. ej. deudores) no tumbe todo el dashboard.
+            const [
+              dashboardMetrics,
+              products,
+              expiringCount,
+              expiringProductsList,
+              debtorCustomers,
+            ] = await Promise.all([
+              getDashboardMetrics(getToken),
+              getTopProducts(4, getToken),
+              getExpiringProducts(getToken),
+              getExpiringProductsList(getToken),
+              getDebtorCustomers(getToken).catch(() => [] as Customer[]),
+            ]);
+
+            setMetrics(dashboardMetrics);
+            setTopProducts(products);
+            setExpiringProductsCount(expiringCount);
+            setExpiringProducts(expiringProductsList.slice(0, 5)); // Primeros 5
+            setDebtors(debtorCustomers);
+          }
+        } catch (err) {
+          console.error("Error cargando el dashboard:", err);
+          setError(
+            "No pudimos cargar los datos de tu tienda. Revisa tu conexión e inténtalo de nuevo.",
           );
-
-          const totalStores = stores.length;
-          const activeStores = stores.filter(
-            (s) => s.subscription_status === "active",
-          ).length;
-          const trialStores = stores.filter(
-            (s) => s.subscription_status === "trial",
-          ).length;
-          const monthlyRevenue = activeStores * 50000;
-          const newStoresToday = stores.filter(
-            (s) => new Date(s.created_at) >= startOfToday,
-          ).length;
-          const conversionRate =
-            trialStores > 0
-              ? (activeStores / (activeStores + trialStores)) * 100
-              : 0;
-
-          setSaasMetrics({
-            totalStores,
-            activeStores,
-            trialStores,
-            monthlyRevenue,
-            newStoresToday,
-            conversionRate,
-          });
-        } else {
-          // Fetch store metrics for regular users
-          const [
-            dashboardMetrics,
-            products,
-            expiringCount,
-            expiringProductsList,
-          ] = await Promise.all([
-            getDashboardMetrics(getToken),
-            getTopProducts(4, getToken),
-            getExpiringProducts(getToken),
-            getExpiringProductsList(getToken),
-          ]);
-
-          setMetrics(dashboardMetrics);
-          setTopProducts(products);
-          setExpiringProductsCount(expiringCount);
-          setExpiringProducts(expiringProductsList.slice(0, 5)); // Primeros 5
+        } finally {
+          setLoading(false);
         }
-
-        setLoading(false);
       }
     }
     checkUserAndFetchMetrics();
@@ -179,64 +194,18 @@ export default function DashboardPage() {
     }
   };
 
-  const handleCleanData = async () => {
-    if (
-      !confirm(
-        "⚠️ ADVERTENCIA: Esto eliminará TODOS tus datos (productos, ventas, clientes, etc.). Esta operación es IRREVERSIBLE. ¿Estás seguro de que quieres continuar?",
-      )
-    ) {
-      return;
-    }
-
-    if (
-      !confirm(
-        "¿Estás completamente seguro? Esta es tu última oportunidad para cancelar.",
-      )
-    ) {
-      return;
-    }
-
-    try {
-      setCleaning(true);
-      const response = await fetch("/api/user/clean-data", {
-        method: "POST",
-      });
-
-      const data = await response.json();
-
-      if (response.ok) {
-        toast.success(
-          `Datos limpiados: ${data.totalDeleted} elementos eliminados`,
-        );
-        // Recargar métricas
-        if (!isSuperAdmin && user) {
-          const [dashboardMetrics, products, expiringCount] = await Promise.all(
-            [
-              getDashboardMetrics(getToken),
-              getTopProducts(4, getToken),
-              getExpiringProducts(getToken),
-            ],
-          );
-
-          setMetrics(dashboardMetrics);
-          setTopProducts(products);
-          setExpiringProductsCount(expiringCount);
-        }
-      } else {
-        toast.error(data.error || "Error al limpiar datos");
-      }
-    } catch (error) {
-      console.error("Error:", error);
-      toast.error("Error al limpiar datos");
-    } finally {
-      setCleaning(false);
-    }
-  };
-
   if (loading) {
+    return <DashboardSkeleton />;
+  }
+
+  if (error) {
     return (
-      <div className="flex items-center justify-center h-64">
-        <p className="text-gray-500">Cargando dashboard...</p>
+      <div className="flex flex-col items-center justify-center h-64 gap-4 text-center">
+        <AlertTriangle className="h-10 w-10 text-red-500" />
+        <p className="text-gray-600 max-w-md">{error}</p>
+        <Button onClick={() => window.location.reload()} variant="outline">
+          Reintentar
+        </Button>
       </div>
     );
   }
@@ -455,34 +424,54 @@ export default function DashboardPage() {
             Resumen general de tu tienda
           </p>
         </div>
-        {!isSuperAdmin && (
-          <div className="flex gap-2">
-            {metrics.totalProducts === 0 && (
-              <Button
-                onClick={handleSeedProducts}
-                disabled={seeding}
-                variant="outline"
-                size="sm"
-                className="gap-2"
-              >
-                <Database className="h-4 w-4" />
-                {seeding ? "Creando..." : "Crear Productos Demo"}
-              </Button>
-            )}
-            {metrics.totalProducts > 0 && (
-              <Button
-                onClick={handleCleanData}
-                disabled={cleaning}
-                variant="destructive"
-                size="sm"
-                className="gap-2"
-              >
-                <Trash2 className="h-4 w-4" />
-                {cleaning ? "Limpiando..." : "Limpiar Todos los Datos"}
-              </Button>
-            )}
-          </div>
+        {metrics.totalProducts === 0 && (
+          <Button
+            onClick={handleSeedProducts}
+            disabled={seeding}
+            variant="outline"
+            size="sm"
+            className="gap-2"
+          >
+            <Database className="h-4 w-4" />
+            {seeding ? "Creando..." : "Crear Productos Demo"}
+          </Button>
         )}
+      </div>
+
+      {/* Accesos rápidos — acciones que el tendero hace a diario */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+        <Link href="/dashboard/pos" className="group">
+          <div className="flex items-center gap-3 p-4 rounded-xl bg-brand text-white shadow-sm hover:bg-brand-hover transition-colors h-full">
+            <ShoppingCart className="h-6 w-6 flex-shrink-0" />
+            <span className="font-semibold text-sm md:text-base">
+              Nueva venta
+            </span>
+          </div>
+        </Link>
+        <Link href="/dashboard/products" className="group">
+          <div className="flex items-center gap-3 p-4 rounded-xl bg-white border-2 border-gray-200 hover:border-brand transition-colors h-full">
+            <Plus className="h-6 w-6 flex-shrink-0 text-brand" />
+            <span className="font-semibold text-sm md:text-base text-gray-800">
+              Agregar producto
+            </span>
+          </div>
+        </Link>
+        <Link href="/dashboard/debtors" className="group">
+          <div className="flex items-center gap-3 p-4 rounded-xl bg-white border-2 border-gray-200 hover:border-brand transition-colors h-full">
+            <HandCoins className="h-6 w-6 flex-shrink-0 text-brand" />
+            <span className="font-semibold text-sm md:text-base text-gray-800">
+              Cobrar fiado
+            </span>
+          </div>
+        </Link>
+        <Link href="/dashboard/sales" className="group">
+          <div className="flex items-center gap-3 p-4 rounded-xl bg-white border-2 border-gray-200 hover:border-brand transition-colors h-full">
+            <Activity className="h-6 w-6 flex-shrink-0 text-brand" />
+            <span className="font-semibold text-sm md:text-base text-gray-800">
+              Ver ventas
+            </span>
+          </div>
+        </Link>
       </div>
 
       {/* Métricas principales */}
@@ -582,6 +571,62 @@ export default function DashboardPage() {
           </CardContent>
         </Card>
       </div>
+
+      {/* Fiado / Deudores — dolor #1 de la tienda de barrio */}
+      {debtors.length > 0 && (
+        <Card className="border-2 border-amber-200">
+          <CardHeader className="pb-3">
+            <div className="flex items-center justify-between gap-2">
+              <div className="flex items-center gap-3">
+                <div className="p-2 bg-amber-100 rounded-lg">
+                  <HandCoins className="h-5 w-5 text-amber-700" />
+                </div>
+                <div>
+                  <CardTitle className="text-base md:text-lg">
+                    Te deben{" "}
+                    {formatCurrency(
+                      debtors.reduce((sum, c) => sum + (c.current_debt || 0), 0),
+                    )}
+                  </CardTitle>
+                  <p className="text-xs md:text-sm text-gray-500">
+                    {debtors.length}{" "}
+                    {debtors.length === 1
+                      ? "cliente con fiado"
+                      : "clientes con fiado"}
+                  </p>
+                </div>
+              </div>
+              <Link href="/dashboard/debtors">
+                <Button variant="outline" size="sm" className="gap-1">
+                  Ver todos
+                  <ArrowRight className="h-4 w-4" />
+                </Button>
+              </Link>
+            </div>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-2">
+              {debtors.slice(0, 3).map((customer) => (
+                <Link
+                  key={customer.id}
+                  href={`/dashboard/customers/${customer.id}`}
+                  className="flex items-center justify-between p-3 rounded-lg bg-amber-50/60 hover:bg-amber-50 transition-colors"
+                >
+                  <div className="flex items-center gap-3 min-w-0">
+                    <Users className="h-4 w-4 text-amber-700 flex-shrink-0" />
+                    <span className="text-sm font-medium text-gray-800 truncate">
+                      {customer.name}
+                    </span>
+                  </div>
+                  <span className="text-sm font-bold text-amber-800 flex-shrink-0">
+                    {formatCurrency(customer.current_debt || 0)}
+                  </span>
+                </Link>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Productos Próximos a Vencer - Alerta Destacada */}
       {expiringProducts.length > 0 && (
@@ -827,7 +872,32 @@ export default function DashboardPage() {
           </CardContent>
         </Card>
       </div>
+    </div>
+  );
+}
 
+/**
+ * Esqueleto de carga del dashboard: imita el layout real (header, accesos
+ * rápidos y grid de métricas) para que la transición no "salte" ni se sienta
+ * como una pantalla congelada.
+ */
+function DashboardSkeleton() {
+  return (
+    <div className="space-y-4 md:space-y-6 animate-pulse">
+      <div className="space-y-2">
+        <div className="h-8 w-48 bg-gray-200 rounded" />
+        <div className="h-4 w-64 bg-gray-100 rounded" />
+      </div>
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+        {Array.from({ length: 4 }).map((_, i) => (
+          <div key={i} className="h-16 bg-gray-100 rounded-xl" />
+        ))}
+      </div>
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 md:gap-4">
+        {Array.from({ length: 6 }).map((_, i) => (
+          <div key={i} className="h-28 bg-gray-100 rounded-xl border" />
+        ))}
+      </div>
     </div>
   );
 }
