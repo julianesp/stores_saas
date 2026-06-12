@@ -1,0 +1,11 @@
+# Estado local y artefactos temporales de Wrangler / Miniflare
+.wrangler/
+
+# Dependencias
+node_modules/
+
+# Variables de entorno
+.dev.vars
+.env
+.env.*
+!.env.example
