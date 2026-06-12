@@ -248,12 +248,12 @@ export default function DebtorDetailPage() {
         <Card>
           <CardHeader>
             <CardTitle className="text-lg flex items-center gap-2">
-              <CreditCard className="h-5 w-5 text-blue-600" />
+              <CreditCard className="h-5 w-5 text-brand" />
               Límite de Crédito
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-3xl font-bold text-blue-600">
+            <div className="text-3xl font-bold text-brand">
               ${creditLimit.toLocaleString('es-CO')}
             </div>
             <Button
@@ -413,7 +413,7 @@ export default function DebtorDetailPage() {
                   {/* Botón de Registrar Pago */}
                   <Button
                     onClick={() => handleSaleClick(sale)}
-                    className="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold"
+                    className="w-full bg-brand hover:bg-brand-hover text-white font-semibold"
                   >
                     <DollarSign className="h-4 w-4 mr-2" />
                     Registrar Pago
@@ -468,7 +468,7 @@ export default function DebtorDetailPage() {
                             {payment.created_at ? format(new Date(payment.created_at), 'PPp', { locale: es }) : 'N/A'}
                           </p>
                         </div>
-                        <span className="text-xs px-2 py-1 bg-blue-100 text-blue-800 rounded">
+                        <span className="text-xs px-2 py-1 bg-brand-light text-brand rounded">
                           {payment.payment_method}
                         </span>
                       </div>

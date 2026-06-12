@@ -421,9 +421,9 @@ export default function DebtorsPage() {
                                 onClick={handleEmailReminder}
                                 disabled={!debtor.email}
                                 title={debtor.email ? 'Enviar recordatorio por Email' : 'No tiene email'}
-                                className="bg-blue-50 hover:bg-blue-100 border-blue-200"
+                                className="bg-brand-light/50 hover:bg-brand-light border-brand/40"
                               >
-                                <Mail className="h-4 w-4 text-blue-600" />
+                                <Mail className="h-4 w-4 text-brand" />
                               </Button>
                             </div>
                           </td>
@@ -514,9 +514,9 @@ export default function DebtorsPage() {
                             size="sm"
                             onClick={handleEmailReminder}
                             disabled={!debtor.email}
-                            className="flex-1 bg-blue-50 hover:bg-blue-100 border-blue-200"
+                            className="flex-1 bg-brand-light/50 hover:bg-brand-light border-brand/40"
                           >
-                            <Mail className="h-4 w-4 mr-1 text-blue-600" />
+                            <Mail className="h-4 w-4 mr-1 text-brand" />
                             Email
                           </Button>
                         </div>

@@ -89,9 +89,9 @@ const getColorClasses = (color: string) => {
         accent: "text-purple-400",
       },
       blue: {
-        border: "border-blue-400",
-        bg: "bg-blue-500/10",
-        accent: "text-blue-400",
+        border: "border-brand/80",
+        bg: "bg-brand/10",
+        accent: "text-brand/80",
       },
       green: {
         border: "border-green-400",

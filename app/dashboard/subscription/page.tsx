@@ -210,10 +210,10 @@ export default function SubscriptionPageWompi() {
         button: "bg-purple-600 hover:bg-purple-700",
       },
       blue: {
-        border: "border-blue-200",
-        bg: "bg-blue-50",
-        text: "text-blue-700",
-        button: "bg-blue-600 hover:bg-blue-700",
+        border: "border-brand/40",
+        bg: "bg-brand-light/50",
+        text: "text-brand",
+        button: "bg-brand hover:bg-brand-hover",
       },
       green: {
         border: "border-green-200",
@@ -259,14 +259,14 @@ export default function SubscriptionPageWompi() {
 
       {/* Estado actual de suscripción */}
       {subscriptionStatus && (
-        <Card className="border-blue-200 bg-blue-50">
+        <Card className="border-brand/40 bg-brand-light/50">
           <CardContent className="pt-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="font-medium text-blue-900">
+                <p className="font-medium text-brand">
                   Estado de tu suscripción
                 </p>
-                <p className="text-sm text-blue-700 mt-1">
+                <p className="text-sm text-brand mt-1">
                   {subscriptionStatus.status === "trial" && (
                     <>
                       Período de prueba - {subscriptionStatus.daysLeft} días
@@ -309,11 +309,11 @@ export default function SubscriptionPageWompi() {
         </CardHeader>
         <CardContent>
           <div className="flex flex-wrap gap-4 items-center justify-center">
-            <div className="flex items-center gap-3 bg-blue-50 border border-blue-200 rounded-lg px-6 py-4">
-              <CreditCard className="h-8 w-8 text-blue-600" />
+            <div className="flex items-center gap-3 bg-brand-light/50 border border-brand/40 rounded-lg px-6 py-4">
+              <CreditCard className="h-8 w-8 text-brand" />
               <div>
-                <p className="font-bold text-lg text-blue-900">Tarjeta crédito / débito</p>
-                <p className="text-sm text-blue-700">Visa, Mastercard, Amex</p>
+                <p className="font-bold text-lg text-brand">Tarjeta crédito / débito</p>
+                <p className="text-sm text-brand">Visa, Mastercard, Amex</p>
               </div>
             </div>
             <div className="flex items-center gap-3 bg-green-50 border border-green-200 rounded-lg px-6 py-4">
@@ -331,8 +331,8 @@ export default function SubscriptionPageWompi() {
               </div>
             </div>
           </div>
-          <div className="mt-4 bg-blue-50 border border-blue-200 rounded-lg p-4">
-            <p className="text-sm text-blue-900 text-center">
+          <div className="mt-4 bg-brand-light/50 border border-brand/40 rounded-lg p-4">
+            <p className="text-sm text-brand text-center">
               🔒 <strong>Pago seguro con ePayco:</strong> Al hacer clic en un plan se abrirá la pasarela de pago donde puedes elegir tu método preferido.
             </p>
           </div>
@@ -589,7 +589,7 @@ export default function SubscriptionPageWompi() {
                 </div>
               )}
               {activeAddons.store && (
-                <div className="flex justify-between items-center text-blue-700">
+                <div className="flex justify-between items-center text-brand">
                   <span>+ Tienda Online</span>
                   <span className="font-bold">{formatCurrency(9900)}</span>
                 </div>

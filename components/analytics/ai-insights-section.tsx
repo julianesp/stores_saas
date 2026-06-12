@@ -164,7 +164,7 @@ export function AIInsightsSection({ salesData, customerData, daysAnalyzed }: AII
                   <div className="bg-white rounded-md p-4 text-sm">
                     <p className="font-semibold text-gray-900 mb-2">📝 Cómo solucionar:</p>
                     <ol className="list-decimal list-inside space-y-1 text-gray-700">
-                      <li>Ve a <a href="https://aistudio.google.com/app/apikey" target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline">Google AI Studio</a></li>
+                      <li>Ve a <a href="https://aistudio.google.com/app/apikey" target="_blank" rel="noopener noreferrer" className="text-brand hover:underline">Google AI Studio</a></li>
                       <li>Genera una nueva API Key</li>
                       <li>Actualiza la variable <code className="bg-gray-100 px-1 rounded">GEMINI_API_KEY</code> en tu archivo <code className="bg-gray-100 px-1 rounded">.env.local</code></li>
                       <li>Reinicia el servidor de desarrollo</li>

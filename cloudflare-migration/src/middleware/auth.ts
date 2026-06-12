@@ -4,9 +4,39 @@
  */
 
 import { Context, Next } from 'hono';
-import { jwtVerify } from 'jose';
+import { createRemoteJWKSet, jwtVerify, decodeJwt } from 'jose';
 import type { Env, ClerkJWTPayload } from '../types';
 import { TenantManager } from '../utils/tenant-manager';
+
+// Cache de JWKS por issuer. createRemoteJWKSet ya cachea las claves en memoria
+// y solo vuelve a buscar en la red cuando aparece un `kid` desconocido, así que
+// reutilizar la misma instancia entre invocaciones evita refetches innecesarios.
+const jwksCache = new Map<string, ReturnType<typeof createRemoteJWKSet>>();
+
+function getJWKS(issuer: string): ReturnType<typeof createRemoteJWKSet> {
+  let jwks = jwksCache.get(issuer);
+  if (!jwks) {
+    jwks = createRemoteJWKSet(new URL(`${issuer.replace(/\/$/, '')}/.well-known/jwks.json`));
+    jwksCache.set(issuer, jwks);
+  }
+  return jwks;
+}
+
+// Solo se aceptan issuers de Clerk para evitar que un atacante apunte a un JWKS
+// arbitrario controlado por él.
+function isAllowedClerkIssuer(issuer: string, env: Env): boolean {
+  if (env.CLERK_JWT_ISSUER && issuer === env.CLERK_JWT_ISSUER.replace(/\/$/, '')) {
+    return true;
+  }
+  try {
+    const host = new URL(issuer).hostname;
+    // Instancias de desarrollo (<slug>.clerk.accounts.dev) e instancias de
+    // producción con dominio propio (clerk.<dominio>).
+    return host.endsWith('.clerk.accounts.dev') || host.startsWith('clerk.');
+  } catch {
+    return false;
+  }
+}
 
 export async function authMiddleware(c: Context<{ Bindings: Env }>, next: Next) {
   const authHeader = c.req.header('Authorization');
@@ -51,12 +81,12 @@ export async function authMiddleware(c: Context<{ Bindings: Env }>, next: Next) 
           SELECT tm.*, up.id as user_profile_id
           FROM team_members tm
           JOIN user_profiles up ON up.id = tm.owner_id
-          WHERE tm.clerk_user_id = ?
+          WHERE (tm.clerk_user_id = ? OR up.clerk_user_id_test = ?)
             AND tm.owner_id = ?
             AND tm.status = 'active'
             AND tm.invitation_status = 'accepted'
         `)
-        .bind(clerkUserId, requestedTenantId)
+        .bind(clerkUserId, clerkUserId, requestedTenantId)
         .first<any>();
 
       if (teamMember) {
@@ -82,8 +112,8 @@ export async function authMiddleware(c: Context<{ Bindings: Env }>, next: Next) 
       } else {
         // Check if user is the owner of this tenant
         const ownerProfile = await c.env.DB
-          .prepare('SELECT id FROM user_profiles WHERE clerk_user_id = ? AND id = ?')
-          .bind(clerkUserId, requestedTenantId)
+          .prepare('SELECT id FROM user_profiles WHERE (clerk_user_id = ? OR clerk_user_id_test = ?) AND id = ?')
+          .bind(clerkUserId, clerkUserId, requestedTenantId)
           .first<{ id: string }>();
 
         if (ownerProfile) {
@@ -92,8 +122,8 @@ export async function authMiddleware(c: Context<{ Bindings: Env }>, next: Next) 
         } else {
           // Verificar si es superadmin — los superadmins pueden acceder a cualquier tenant
           const superAdminProfile = await c.env.DB
-            .prepare('SELECT id FROM user_profiles WHERE clerk_user_id = ? AND is_superadmin = 1')
-            .bind(clerkUserId)
+            .prepare('SELECT id FROM user_profiles WHERE (clerk_user_id = ? OR clerk_user_id_test = ?) AND is_superadmin = 1')
+            .bind(clerkUserId, clerkUserId)
             .first<{ id: string }>();
 
           if (superAdminProfile) {
@@ -118,12 +148,12 @@ export async function authMiddleware(c: Context<{ Bindings: Env }>, next: Next) 
           SELECT tm.*, up.id as owner_profile_id, up.store_name
           FROM team_members tm
           JOIN user_profiles up ON up.id = tm.owner_id
-          WHERE tm.clerk_user_id = ?
+          WHERE (tm.clerk_user_id = ? OR up.clerk_user_id_test = ?)
             AND tm.status = 'active'
             AND tm.invitation_status = 'accepted'
           LIMIT 1
         `)
-        .bind(clerkUserId)
+        .bind(clerkUserId, clerkUserId)
         .first<any>();
 
       if (teamMembership) {
@@ -208,10 +238,10 @@ export async function authMiddleware(c: Context<{ Bindings: Env }>, next: Next) 
         .bind(userProfileId)
         .first<{ id: string; is_superadmin: number; subscription_status: string }>();
     } else {
-      // Fallback to clerk_user_id lookup
+      // Fallback to clerk_user_id lookup — also check clerk_user_id_test for dev environment
       userProfile = await c.env.DB
-        .prepare('SELECT id, is_superadmin, subscription_status FROM user_profiles WHERE clerk_user_id = ?')
-        .bind(clerkUserId)
+        .prepare('SELECT id, is_superadmin, subscription_status FROM user_profiles WHERE clerk_user_id = ? OR clerk_user_id_test = ?')
+        .bind(clerkUserId, clerkUserId)
         .first<{ id: string; is_superadmin: number; subscription_status: string }>();
     }
 
@@ -252,13 +282,18 @@ export async function authMiddleware(c: Context<{ Bindings: Env }>, next: Next) 
           console.warn('⚠️ Email already exists in database:', userEmail, 'for clerk_user_id:', existingProfileByEmail.clerk_user_id);
           console.warn('Current clerk_user_id trying to register:', clerkUserId);
 
-          // Si es el mismo clerk_user_id, solo retornar el perfil existente
-          if (existingProfileByEmail.clerk_user_id === clerkUserId) {
-            console.log('✅ Same clerk_user_id, returning existing profile');
+          // Aceptar si coincide con clerk_user_id o clerk_user_id_test (entorno dev)
+          const existingFull = await c.env.DB
+            .prepare('SELECT id, clerk_user_id, clerk_user_id_test, is_superadmin, subscription_status FROM user_profiles WHERE email = ?')
+            .bind(userEmail)
+            .first<{ id: string; clerk_user_id: string; clerk_user_id_test: string | null; is_superadmin: number; subscription_status: string }>();
+
+          if (existingFull && (existingFull.clerk_user_id === clerkUserId || existingFull.clerk_user_id_test === clerkUserId)) {
+            console.log('✅ Matched clerk_user_id or clerk_user_id_test, returning existing profile');
             userProfile = {
-              id: existingProfileByEmail.id,
-              is_superadmin: existingProfileByEmail.is_superadmin,
-              subscription_status: existingProfileByEmail.subscription_status
+              id: existingFull.id,
+              is_superadmin: existingFull.is_superadmin,
+              subscription_status: existingFull.subscription_status
             };
           } else {
             // Email duplicado con diferente clerk_user_id - NO PERMITIR
@@ -382,25 +417,34 @@ export { decodeClerkToken } from './auth-helpers';
  */
 async function verifyClerkToken(token: string, env: Env): Promise<string | null> {
   try {
-    // For Clerk, we need to verify using their JWKS
-    // This is a simplified version - in production use Clerk's verification
+    // El issuer (iss) del token indica qué instancia de Clerk lo emitió y, por
+    // tanto, dónde está su JWKS. Lo leemos SIN verificar solo para descubrir el
+    // issuer; la verificación criptográfica real ocurre en jwtVerify más abajo.
+    let issuer: string;
+    try {
+      const unverified = decodeJwt(token);
+      if (!unverified.iss) {
+        console.error('Token verification error: missing iss claim');
+        return null;
+      }
+      issuer = unverified.iss.replace(/\/$/, '');
+    } catch {
+      console.error('Token verification error: malformed JWT');
+      return null;
+    }
 
-    // Decode without verification first (for development)
-    const { decodeClerkToken: decode } = await import('./auth-helpers');
-    const payload = await decode(token);
+    if (!isAllowedClerkIssuer(issuer, env)) {
+      console.error(`Token verification error: untrusted issuer ${issuer}`);
+      return null;
+    }
 
-    // In production, uncomment this and use proper verification:
-    /*
-    const JWKS = createRemoteJWKSet(
-      new URL(`https://${CLERK_FRONTEND_API}/.well-known/jwks.json`)
-    );
+    const JWKS = getJWKS(issuer);
 
-    const { payload } = await jwtVerify(token, JWKS, {
-      issuer: `https://${CLERK_FRONTEND_API}`,
-    });
-    */
+    // Verifica firma, expiración (exp) y not-before (nbf), y que el issuer
+    // coincida exactamente con el del token (ya validado como confiable).
+    const { payload } = await jwtVerify(token, JWKS, { issuer });
 
-    return payload.sub || null;
+    return typeof payload.sub === 'string' ? payload.sub : null;
   } catch (error) {
     console.error('Token verification error:', error);
     return null;

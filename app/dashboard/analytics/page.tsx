@@ -149,7 +149,7 @@ export default function AnalyticsPage() {
     return (
       <div className="flex items-center justify-center h-64">
         <div className="text-center">
-          <Brain className="h-12 w-12 mx-auto mb-4 text-blue-600 animate-pulse" />
+          <Brain className="h-12 w-12 mx-auto mb-4 text-brand animate-pulse" />
           <p className="text-gray-500">Analizando datos con IA...</p>
         </div>
       </div>
@@ -331,7 +331,7 @@ export default function AnalyticsPage() {
                     </p>
                     <p className="text-2xl font-bold">{analytics.length}</p>
                   </div>
-                  <Package className="h-8 w-8 text-blue-600 opacity-50" />
+                  <Package className="h-8 w-8 text-brand opacity-50" />
                 </div>
               </CardContent>
             </Card>
@@ -371,11 +371,11 @@ export default function AnalyticsPage() {
                 <div className="flex items-center justify-between">
                   <div>
                     <p className="text-sm text-gray-500">Productos a Pedir</p>
-                    <p className="text-2xl font-bold text-blue-600">
+                    <p className="text-2xl font-bold text-brand">
                       {productsToOrder.length}
                     </p>
                   </div>
-                  <TrendingUp className="h-8 w-8 text-blue-600 opacity-50" />
+                  <TrendingUp className="h-8 w-8 text-brand opacity-50" />
                 </div>
               </CardContent>
             </Card>
@@ -396,7 +396,7 @@ export default function AnalyticsPage() {
                     key={product.product_id}
                     className="flex items-center gap-4 p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition"
                   >
-                    <div className="flex items-center justify-center w-8 h-8 bg-blue-600 text-white rounded-full font-bold text-sm">
+                    <div className="flex items-center justify-center w-8 h-8 bg-brand text-white rounded-full font-bold text-sm">
                       {index + 1}
                     </div>
                     <div className="flex-1 min-w-0">
@@ -476,7 +476,7 @@ export default function AnalyticsPage() {
                         </div>
                         <div>
                           <span className="text-gray-500">Pedir:</span>
-                          <p className="font-bold text-blue-600 text-lg">
+                          <p className="font-bold text-brand text-lg">
                             {product.recommended_order_quantity} unidades
                           </p>
                         </div>
@@ -538,7 +538,7 @@ export default function AnalyticsPage() {
                         </div>
                         <div>
                           <span className="text-gray-500">Pedir:</span>
-                          <p className="font-bold text-blue-600">
+                          <p className="font-bold text-brand">
                             {product.recommended_order_quantity} unidades
                           </p>
                         </div>
@@ -551,14 +551,14 @@ export default function AnalyticsPage() {
           )}
 
           {/* Explicación de la IA */}
-          <Card className="bg-blue-50 border-blue-200">
+          <Card className="bg-brand-light/50 border-brand/40">
             <CardHeader>
-              <CardTitle className="flex items-center gap-2 text-blue-900">
+              <CardTitle className="flex items-center gap-2 text-brand">
                 <Brain className="h-5 w-5" />
                 Cómo Funciona el Análisis de IA
               </CardTitle>
             </CardHeader>
-            <CardContent className="text-sm text-blue-900 space-y-2">
+            <CardContent className="text-sm text-brand space-y-2">
               <p>
                 <strong>🧮 Velocidad de Venta:</strong> Calculamos cuántas
                 unidades se venden por día en promedio, basado en los últimos{" "}
@@ -680,7 +680,7 @@ export default function AnalyticsPage() {
                         </div>
                         <div>
                           <span className="text-gray-500">Pedir:</span>
-                          <p className="font-bold text-blue-600 text-lg">
+                          <p className="font-bold text-brand text-lg">
                             {product.recommended_order_quantity} unidades
                           </p>
                         </div>
@@ -742,7 +742,7 @@ export default function AnalyticsPage() {
                         </div>
                         <div>
                           <span className="text-gray-500">Pedir:</span>
-                          <p className="font-bold text-blue-600">
+                          <p className="font-bold text-brand">
                             {product.recommended_order_quantity} unidades
                           </p>
                         </div>

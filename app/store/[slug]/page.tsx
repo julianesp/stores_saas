@@ -139,7 +139,7 @@ export default function StorefrontPage() {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-50">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-brand mx-auto mb-4"></div>
           <p className="text-black">Cargando tienda...</p>
         </div>
       </div>
@@ -217,7 +217,7 @@ export default function StorefrontPage() {
             style={{ background: `linear-gradient(135deg, ${primaryColor}15 0%, ${secondaryColor}15 100%)` }}
           >
             <div className="absolute inset-0 opacity-10">
-              <div className="absolute top-10 left-10 w-72 h-72 bg-blue-400 rounded-full blur-3xl"></div>
+              <div className="absolute top-10 left-10 w-72 h-72 bg-brand/80 rounded-full blur-3xl"></div>
               <div className="absolute bottom-10 right-10 w-96 h-96 bg-purple-400 rounded-full blur-3xl"></div>
             </div>
 

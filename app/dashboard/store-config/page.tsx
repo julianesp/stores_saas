@@ -339,7 +339,7 @@ export default function StoreConfigPage() {
                   : "Activa tu tienda para que los clientes puedan comprar online"}
               </p>
               {storeEnabled && storeSlug && (
-                <p className="text-sm text-blue-600 mt-2 font-mono">
+                <p className="text-sm text-brand mt-2 font-mono">
                   {getStoreUrl()}
                 </p>
               )}
@@ -685,11 +685,11 @@ export default function StoreConfigPage() {
         </CardHeader>
         <CardContent className="space-y-4">
           {/* Aviso importante */}
-          <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg">
-            <h4 className="font-semibold text-blue-900 mb-2">
+          <div className="p-4 bg-brand-light/50 border border-brand/40 rounded-lg">
+            <h4 className="font-semibold text-brand mb-2">
               📌 ¿Cómo obtener tus credenciales?
             </h4>
-            <ol className="text-sm text-blue-800 space-y-1 list-decimal list-inside">
+            <ol className="text-sm text-brand space-y-1 list-decimal list-inside">
               <li>Crea una cuenta en ePayco (epayco.co)</li>
               <li>Verifica tu identidad y datos bancarios</li>
               <li>
@@ -698,7 +698,7 @@ export default function StoreConfigPage() {
               </li>
               <li>Copia y pega las credenciales aquí abajo</li>
             </ol>
-            <p className="text-xs text-blue-700 mt-2">
+            <p className="text-xs text-brand mt-2">
               ⚠️ Los pagos irán directamente a tu cuenta bancaria configurada en
               ePayco
             </p>
@@ -842,7 +842,7 @@ export default function StoreConfigPage() {
                 pedido en la tienda online.
               </p>
               {storeMinOrder > 0 && (
-                <p className="text-sm font-semibold text-blue-600">
+                <p className="text-sm font-semibold text-brand">
                   ${storeMinOrder.toLocaleString("es-CO")}
                 </p>
               )}

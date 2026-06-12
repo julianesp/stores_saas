@@ -201,7 +201,7 @@ export function BarcodeScannerZXing({ onDetected, onClose }: BarcodeScannerZXing
     return (
       <div className="flex items-center justify-center p-8">
         <div className="text-center">
-          <Camera className="h-12 w-12 mx-auto mb-4 text-blue-600 animate-pulse" />
+          <Camera className="h-12 w-12 mx-auto mb-4 text-brand animate-pulse" />
           <p className="text-gray-500">Verificando permisos...</p>
         </div>
       </div>
@@ -214,8 +214,8 @@ export function BarcodeScannerZXing({ onDetected, onClose }: BarcodeScannerZXing
       <Card>
         <CardContent className="pt-6">
           <div className="text-center space-y-4">
-            <div className="mx-auto w-20 h-20 bg-blue-100 rounded-full flex items-center justify-center">
-              <Camera className="w-10 h-10 text-blue-600" />
+            <div className="mx-auto w-20 h-20 bg-brand-light rounded-full flex items-center justify-center">
+              <Camera className="w-10 h-10 text-brand" />
             </div>
             <div>
               <h3 className="text-lg font-semibold mb-2">Escanear con Cámara</h3>
@@ -270,8 +270,8 @@ export function BarcodeScannerZXing({ onDetected, onClose }: BarcodeScannerZXing
               )}
             </div>
 
-            <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 text-left">
-              <p className="text-xs text-blue-700">
+            <div className="bg-brand-light/50 border border-brand/40 rounded-lg p-3 text-left">
+              <p className="text-xs text-brand">
                 <strong>Importante:</strong> Debes permitir el acceso a la cámara cuando tu navegador lo solicite.
               </p>
             </div>
@@ -333,12 +333,12 @@ export function BarcodeScannerZXing({ onDetected, onClose }: BarcodeScannerZXing
           </div>
 
           {/* Instrucciones mejoradas */}
-          <div className="bg-blue-50 border-t border-blue-200 p-4">
+          <div className="bg-brand-light/50 border-t border-brand/40 p-4">
             <div className="flex items-start gap-3">
-              <Zap className="h-5 w-5 text-blue-600 mt-0.5 flex-shrink-0" />
-              <div className="text-sm text-blue-900">
+              <Zap className="h-5 w-5 text-brand mt-0.5 flex-shrink-0" />
+              <div className="text-sm text-brand">
                 <p className="font-medium mb-1">Instrucciones:</p>
-                <ul className="list-disc list-inside space-y-1 text-xs text-blue-700">
+                <ul className="list-disc list-inside space-y-1 text-xs text-brand">
                   <li>Coloca el código de barras dentro del recuadro verde</li>
                   <li>Mantén el código estable y con buena iluminación</li>
                   <li>La distancia ideal es de 10-20 cm del código</li>

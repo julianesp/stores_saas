@@ -704,8 +704,8 @@ export default function SalesPage() {
             <>
               {/* Botones de eliminación masiva - Sticky */}
               {selectedSales.size > 0 && (
-                <div className="sticky top-0 z-10 bg-blue-50 border border-blue-200 rounded-lg p-3 mb-4 flex flex-col sm:flex-row items-center justify-between gap-3 shadow-md">
-                  <div className="text-sm font-medium text-blue-900">
+                <div className="sticky top-0 z-10 bg-brand-light/50 border border-brand/40 rounded-lg p-3 mb-4 flex flex-col sm:flex-row items-center justify-between gap-3 shadow-md">
+                  <div className="text-sm font-medium text-brand">
                     {selectedSales.size} venta(s) seleccionada(s)
                   </div>
                   <div className="flex gap-2">
@@ -818,7 +818,7 @@ export default function SalesPage() {
                                       {webCustomer.phone}
                                     </p>
                                   )}
-                                  <span className="text-xs bg-blue-100 text-blue-700 px-1 rounded">
+                                  <span className="text-xs bg-brand-light text-brand px-1 rounded">
                                     Web
                                   </span>
                                 </div>
@@ -975,13 +975,13 @@ export default function SalesPage() {
 
                         if (customer || webCustomer) {
                           return (
-                            <div className="mb-3 bg-blue-50 border border-blue-100 rounded p-2">
+                            <div className="mb-3 bg-brand-light/50 border border-brand/30 rounded p-2">
                               <div className="flex justify-between items-start">
                                 <span className="text-xs text-gray-500">
                                   Cliente:
                                 </span>
                                 {sale.sale_number.startsWith("WEB-") && (
-                                  <span className="text-xs bg-blue-600 text-white px-2 py-0.5 rounded">
+                                  <span className="text-xs bg-brand text-white px-2 py-0.5 rounded">
                                     Web
                                   </span>
                                 )}
@@ -1140,7 +1140,7 @@ export default function SalesPage() {
                               Cliente
                             </h3>
                             {selectedSale.sale_number.startsWith("WEB-") && (
-                              <span className="text-xs bg-blue-600 text-white px-2 py-0.5 rounded">
+                              <span className="text-xs bg-brand text-white px-2 py-0.5 rounded">
                                 Venta Web
                               </span>
                             )}
@@ -1159,7 +1159,7 @@ export default function SalesPage() {
                             </p>
                           )}
                           {customer && (
-                            <p className="text-xs text-blue-600 mt-1">
+                            <p className="text-xs text-brand mt-1">
                               {customer.loyalty_points} puntos de lealtad
                             </p>
                           )}
@@ -1271,7 +1271,7 @@ export default function SalesPage() {
                   )}
                   {selectedSale.points_earned &&
                     selectedSale.points_earned > 0 && (
-                      <div className="flex justify-between text-sm text-blue-600">
+                      <div className="flex justify-between text-sm text-brand">
                         <span>Puntos ganados:</span>
                         <span className="font-semibold">
                           +{selectedSale.points_earned} puntos

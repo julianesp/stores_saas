@@ -202,7 +202,7 @@ export function AutoReportsConfig() {
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
-            <FileSpreadsheet className="h-5 w-5 text-blue-600" />
+            <FileSpreadsheet className="h-5 w-5 text-brand" />
             Reportes Automáticos
           </CardTitle>
         </CardHeader>
@@ -216,10 +216,10 @@ export function AutoReportsConfig() {
   // Solicitud inicial de permisos
   if (showPermissionRequest && !config.enabled) {
     return (
-      <Card className="border-2 border-blue-500">
+      <Card className="border-2 border-brand">
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
-            <FileSpreadsheet className="h-5 w-5 text-blue-600" />
+            <FileSpreadsheet className="h-5 w-5 text-brand" />
             Reportes Automáticos de Ventas
           </CardTitle>
           <CardDescription>
@@ -227,11 +227,11 @@ export function AutoReportsConfig() {
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
-          <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-            <h4 className="font-semibold text-blue-900 mb-2">
+          <div className="bg-brand-light/50 border border-brand/40 rounded-lg p-4">
+            <h4 className="font-semibold text-brand mb-2">
               🎯 Características de los Reportes Automáticos:
             </h4>
-            <ul className="space-y-2 text-sm text-blue-800">
+            <ul className="space-y-2 text-sm text-brand">
               <li className="flex items-start gap-2">
                 <CheckCircle2 className="h-4 w-4 mt-0.5 shrink-0" />
                 <span>Generación automática a las 8:00 PM cada día</span>
@@ -266,7 +266,7 @@ export function AutoReportsConfig() {
             <Button
               onClick={handleEnableReports}
               disabled={saving}
-              className="flex-1 bg-blue-600 hover:bg-blue-700"
+              className="flex-1 bg-brand hover:bg-brand-hover"
             >
               {saving ? "Activando..." : "Activar Reportes Automáticos"}
             </Button>
@@ -289,7 +289,7 @@ export function AutoReportsConfig() {
     <Card>
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
-          <FileSpreadsheet className="h-5 w-5 text-blue-600" />
+          <FileSpreadsheet className="h-5 w-5 text-brand" />
           Reportes Automáticos de Ventas
         </CardTitle>
         <CardDescription>
@@ -335,7 +335,7 @@ export function AutoReportsConfig() {
         {config.enabled && (
           <div className="space-y-2">
             <Label htmlFor="report-time" className="flex items-center gap-2">
-              <Clock className="h-4 w-4 text-blue-600" />
+              <Clock className="h-4 w-4 text-brand" />
               Hora de generación
             </Label>
             <div className="flex gap-2">
@@ -364,7 +364,7 @@ export function AutoReportsConfig() {
         {config.enabled && (
           <div className="space-y-2">
             <Label htmlFor="report-email" className="flex items-center gap-2">
-              <Mail className="h-4 w-4 text-blue-600" />
+              <Mail className="h-4 w-4 text-brand" />
               Email para notificaciones (opcional)
             </Label>
             <div className="flex gap-2">

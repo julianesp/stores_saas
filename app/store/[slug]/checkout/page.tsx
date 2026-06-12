@@ -291,7 +291,7 @@ export default function CheckoutPage() {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-50">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-brand mx-auto mb-4"></div>
           <p className="text-black">Cargando checkout...</p>
         </div>
       </div>
@@ -372,7 +372,7 @@ export default function CheckoutPage() {
                     </p>
                   </div>
                 ) : epaycoEnabled && creatingPaymentSession ? (
-                  <div className="p-4 bg-blue-50 rounded-lg">
+                  <div className="p-4 bg-brand-light/50 rounded-lg">
                     <p className="text-sm text-gray-700">
                       <Loader2 className="inline h-4 w-4 mr-2 animate-spin" />
                       <strong>Preparando pasarela de pago...</strong>
@@ -788,7 +788,7 @@ export default function CheckoutPage() {
                   </div>
 
                   {config.store_min_order && config.store_min_order > 0 && (
-                    <div className="mt-4 p-3 bg-blue-50 rounded-lg">
+                    <div className="mt-4 p-3 bg-brand-light/50 rounded-lg">
                       <p className="text-sm text-black">
                         Pedido mínimo: {formatCurrency(config.store_min_order)}
                       </p>

@@ -75,8 +75,8 @@ export function SubscriptionExpiredModal({ reason }: SubscriptionExpiredModalPro
             </Button>
           </div>
 
-          <div className="mt-6 p-4 bg-blue-50 rounded-lg">
-            <p className="text-sm text-blue-800 text-center">
+          <div className="mt-6 p-4 bg-brand-light/50 rounded-lg">
+            <p className="text-sm text-brand text-center">
               💡 <strong>¿Necesitas ayuda?</strong> Contáctanos por email o WhatsApp
             </p>
           </div>

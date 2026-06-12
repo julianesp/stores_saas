@@ -175,10 +175,10 @@ export default function ReportsPage() {
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">Ingresos Mensuales</CardTitle>
-              <DollarSign className="h-4 w-4 text-blue-500" />
+              <DollarSign className="h-4 w-4 text-brand" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold text-blue-600">
+              <div className="text-2xl font-bold text-brand">
                 {formatCurrency(stats.monthlyRevenue)}
               </div>
               <p className="text-xs text-gray-500 mt-1">
@@ -286,7 +286,7 @@ export default function ReportsPage() {
                   <div className="flex justify-between items-center mb-1">
                     <span className="text-sm text-gray-600">Incremento potencial:</span>
                   </div>
-                  <div className="text-xl font-bold text-blue-600">
+                  <div className="text-xl font-bold text-brand">
                     +{formatCurrency(stats.trialStores * 50000)}
                   </div>
                 </div>
@@ -340,7 +340,7 @@ export default function ReportsPage() {
                   <div className="flex justify-between items-center mb-1">
                     <span className="text-sm text-gray-600">Clientes pagando:</span>
                   </div>
-                  <div className="text-xl font-bold text-blue-600">
+                  <div className="text-xl font-bold text-brand">
                     {stats.totalStores > 0
                       ? ((stats.activeStores / stats.totalStores) * 100).toFixed(1)
                       : 0}%
@@ -392,14 +392,14 @@ export default function ReportsPage() {
             )}
 
             {stats.conversionRate < 50 && stats.trialStores > 0 && (
-              <div className="p-4 bg-blue-50 rounded-lg border border-blue-200">
+              <div className="p-4 bg-brand-light/50 rounded-lg border border-brand/40">
                 <div className="flex items-start gap-3">
-                  <TrendingUp className="h-5 w-5 text-blue-600 mt-0.5" />
+                  <TrendingUp className="h-5 w-5 text-brand mt-0.5" />
                   <div>
-                    <p className="font-medium text-blue-900">
+                    <p className="font-medium text-brand">
                       Tasa de conversión baja ({stats.conversionRate.toFixed(1)}%)
                     </p>
-                    <p className="text-sm text-blue-700 mt-1">
+                    <p className="text-sm text-brand mt-1">
                       Considera mejorar el onboarding o agregar más funcionalidades al plan gratuito
                     </p>
                   </div>

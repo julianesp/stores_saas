@@ -10,6 +10,10 @@ export interface Env {
   ENVIRONMENT: string;
   CLERK_SECRET_KEY?: string;
   CLERK_PUBLISHABLE_KEY?: string;
+  // Emisor (issuer) esperado del JWT de Clerk, p. ej.
+  // "https://clerk.posib.dev" (prod) o "https://<slug>.clerk.accounts.dev" (dev).
+  // Se usa para verificar la firma del token contra el JWKS de Clerk.
+  CLERK_JWT_ISSUER?: string;
 
   // Wompi credentials for SaaS subscriptions (Admin account)
   ADMIN_WOMPI_PUBLIC_KEY?: string;

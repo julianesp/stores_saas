@@ -67,7 +67,7 @@ export function NotificationPanel() {
       case 'sale':
         return <TrendingUp className="h-5 w-5 text-green-600" />;
       case 'system':
-        return <AlertCircle className="h-5 w-5 text-blue-600" />;
+        return <AlertCircle className="h-5 w-5 text-brand" />;
       default:
         return <Bell className="h-5 w-5 text-gray-600" />;
     }
@@ -82,7 +82,7 @@ export function NotificationPanel() {
       case 'sale':
         return 'bg-green-50 border-green-200 hover:bg-green-100';
       case 'system':
-        return 'bg-blue-50 border-blue-200 hover:bg-blue-100';
+        return 'bg-brand-light/50 border-brand/40 hover:bg-brand-light';
       default:
         return 'bg-gray-50 border-gray-200 hover:bg-gray-100';
     }
@@ -164,7 +164,7 @@ export function NotificationPanel() {
                           {notification.message}
                         </p>
                         {notification.link && (
-                          <p className="text-xs text-blue-600 mt-2 font-medium">
+                          <p className="text-xs text-brand mt-2 font-medium">
                             Ver detalles →
                           </p>
                         )}

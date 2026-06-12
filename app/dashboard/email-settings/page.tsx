@@ -165,21 +165,21 @@ export default function EmailSettingsPage() {
 
               <div className="bg-white rounded-lg p-6 w-full max-w-md space-y-3">
                 <div className="flex items-start gap-3">
-                  <Mail className="h-5 w-5 text-blue-600 mt-0.5" />
+                  <Mail className="h-5 w-5 text-brand mt-0.5" />
                   <div className="text-left">
                     <p className="font-medium">Emails de Carritos Abandonados</p>
                     <p className="text-sm text-gray-600">Recupera ventas perdidas automáticamente</p>
                   </div>
                 </div>
                 <div className="flex items-start gap-3">
-                  <Package className="h-5 w-5 text-blue-600 mt-0.5" />
+                  <Package className="h-5 w-5 text-brand mt-0.5" />
                   <div className="text-left">
                     <p className="font-medium">Alertas de Stock</p>
                     <p className="text-sm text-gray-600">Notifica a clientes cuando haya disponibilidad</p>
                   </div>
                 </div>
                 <div className="flex items-start gap-3">
-                  <FileText className="h-5 w-5 text-blue-600 mt-0.5" />
+                  <FileText className="h-5 w-5 text-brand mt-0.5" />
                   <div className="text-left">
                     <p className="font-medium">Reportes Automáticos</p>
                     <p className="text-sm text-gray-600">Recibe reportes diarios en tu email</p>
@@ -199,7 +199,7 @@ export default function EmailSettingsPage() {
                 <Button
                   onClick={() => router.push('/dashboard/subscription')}
                   size="lg"
-                  className="w-full sm:w-auto bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700"
+                  className="w-full sm:w-auto bg-gradient-to-r from-brand to-purple-600 hover:from-brand-hover hover:to-purple-700"
                 >
                   Ver Planes Premium
                 </Button>

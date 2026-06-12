@@ -132,14 +132,14 @@ export function MarketTrendsSection() {
       {data && (
         <div className="grid grid-cols-1 gap-4">
           {/* Tendencias por ciudad — comentado hasta que haya más tiendas en la plataforma
-          <Card className="border-blue-200">
+          <Card className="border-brand/40">
             <CardHeader className="pb-3">
               <CardTitle className="text-base flex items-center justify-between">
                 <span className="flex items-center gap-2">
-                  <MapPin className="h-4 w-4 text-blue-600" />
+                  <MapPin className="h-4 w-4 text-brand" />
                   Top en{' '}
                   {data.city ? (
-                    <Badge variant="secondary" className="text-blue-700 bg-blue-100">
+                    <Badge variant="secondary" className="text-brand bg-brand-light">
                       {data.city}
                     </Badge>
                   ) : (
@@ -154,7 +154,7 @@ export function MarketTrendsSection() {
                   <MapPin className="h-8 w-8 mx-auto mb-2 opacity-30" />
                   <p className="text-sm">
                     Configura la ciudad de tu tienda en{' '}
-                    <a href="/dashboard/config" className="text-blue-500 underline">
+                    <a href="/dashboard/config" className="text-brand underline">
                       Configuración
                     </a>{' '}
                     para ver tendencias locales.

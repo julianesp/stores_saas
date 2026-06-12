@@ -72,7 +72,7 @@ export function BarcodeScanner({ onScan, onClose }: BarcodeScannerProps) {
         {/* Header */}
         <div className="flex items-center justify-between mb-4">
           <div className="flex items-center gap-2">
-            <Camera className="h-5 w-5 text-blue-600" />
+            <Camera className="h-5 w-5 text-brand" />
             <h3 className="text-lg font-semibold">Escanear Código de Barras</h3>
           </div>
           <Button

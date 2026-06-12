@@ -64,8 +64,8 @@ export default function FixTrialPage() {
     <div className="min-h-screen flex items-center justify-center bg-gray-50 p-4">
       <Card className="w-full max-w-2xl">
         <CardHeader className="text-center">
-          <div className="mx-auto mb-4 flex h-20 w-20 items-center justify-center rounded-full bg-blue-100">
-            <Clock className="h-10 w-10 text-blue-600" />
+          <div className="mx-auto mb-4 flex h-20 w-20 items-center justify-center rounded-full bg-brand-light">
+            <Clock className="h-10 w-10 text-brand" />
           </div>
           <CardTitle className="text-2xl">Diagnóstico de Período de Prueba</CardTitle>
           <p className="text-sm text-gray-500 mt-2">
@@ -75,11 +75,11 @@ export default function FixTrialPage() {
         <CardContent className="space-y-4">
           {status === 'idle' && (
             <>
-              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-                <p className="text-sm text-blue-900">
+              <div className="bg-brand-light/50 border border-brand/40 rounded-lg p-4">
+                <p className="text-sm text-brand">
                   <strong>¿Qué hace esta herramienta?</strong>
                 </p>
-                <ul className="text-sm text-blue-700 mt-2 list-disc list-inside space-y-1">
+                <ul className="text-sm text-brand mt-2 list-disc list-inside space-y-1">
                   <li>Verifica el estado de tu suscripción</li>
                   <li>Diagnostica problemas con el período de prueba</li>
                   <li>Corrige automáticamente configuraciones incorrectas</li>
@@ -100,7 +100,7 @@ export default function FixTrialPage() {
 
           {status === 'loading' && (
             <div className="text-center py-8">
-              <Loader2 className="h-12 w-12 animate-spin mx-auto text-blue-600" />
+              <Loader2 className="h-12 w-12 animate-spin mx-auto text-brand" />
               <p className="mt-4 text-gray-600">Diagnosticando tu cuenta...</p>
             </div>
           )}
@@ -120,8 +120,8 @@ export default function FixTrialPage() {
                   </>
                 ) : (
                   <>
-                    <CheckCircle className="h-16 w-16 mx-auto text-blue-600" />
-                    <p className="mt-4 text-lg font-semibold text-blue-900">
+                    <CheckCircle className="h-16 w-16 mx-auto text-brand" />
+                    <p className="mt-4 text-lg font-semibold text-brand">
                       Todo está en orden
                     </p>
                     <p className="mt-2 text-sm text-gray-600">

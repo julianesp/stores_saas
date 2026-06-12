@@ -244,10 +244,10 @@ export default function SubscriptionsManagementPage() {
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Ingresos Mensuales</CardTitle>
-            <DollarSign className="h-4 w-4 text-blue-500" />
+            <DollarSign className="h-4 w-4 text-brand" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-blue-600">{formatCurrency(monthlyRevenue)}</div>
+            <div className="text-2xl font-bold text-brand">{formatCurrency(monthlyRevenue)}</div>
             <p className="text-xs text-gray-500">Potencial: {formatCurrency(potentialRevenue)}</p>
           </CardContent>
         </Card>

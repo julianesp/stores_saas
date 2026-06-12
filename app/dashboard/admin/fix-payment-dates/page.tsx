@@ -55,7 +55,7 @@ export default function FixPaymentDatesPage() {
     <div className="space-y-6">
       {/* Header */}
       <div className="flex items-center gap-3">
-        <Calendar className="h-8 w-8 text-blue-600" />
+        <Calendar className="h-8 w-8 text-brand" />
         <div>
           <h1 className="text-3xl font-bold">Corregir Fechas de Pago</h1>
           <p className="text-gray-500">
@@ -86,12 +86,12 @@ export default function FixPaymentDatesPage() {
             </Button>
           </div>
 
-          <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+          <div className="bg-brand-light/50 border border-brand/40 rounded-lg p-4">
             <div className="flex items-start gap-3">
-              <AlertCircle className="h-5 w-5 text-blue-600 mt-0.5" />
-              <div className="text-sm text-blue-900">
+              <AlertCircle className="h-5 w-5 text-brand mt-0.5" />
+              <div className="text-sm text-brand">
                 <p className="font-medium mb-1">¿Qué hace esta herramienta?</p>
-                <ul className="list-disc list-inside space-y-1 text-blue-800">
+                <ul className="list-disc list-inside space-y-1 text-brand">
                   <li>Busca todas las transacciones de pago aprobadas por Wompi</li>
                   <li>Identifica la fecha del último pago REAL</li>
                   <li>Actualiza last_payment_date con la fecha correcta</li>
@@ -170,7 +170,7 @@ export default function FixPaymentDatesPage() {
                 </div>
                 <div className="flex justify-between items-center">
                   <span className="text-gray-600">Próximo cobro:</span>
-                  <span className="font-medium text-blue-600">
+                  <span className="font-medium text-brand">
                     {new Date(result.updated.next_billing_date).toLocaleDateString('es-CO')}
                   </span>
                 </div>

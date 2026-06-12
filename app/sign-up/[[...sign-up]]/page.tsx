@@ -7,7 +7,7 @@ export default function SignUpPage() {
         appearance={{
           elements: {
             formButtonPrimary:
-              'bg-blue-600 hover:bg-blue-700 text-sm normal-case',
+              'bg-brand hover:bg-brand-hover text-sm normal-case',
           },
         }}
       />

@@ -183,7 +183,7 @@ export default function AdvancedMetricsDashboard() {
                   ) : alert.severity === 'warning' ? (
                     <AlertTriangle className="h-5 w-5 text-yellow-500" />
                   ) : (
-                    <Info className="h-5 w-5 text-blue-500" />
+                    <Info className="h-5 w-5 text-brand" />
                   )}
                   <CardTitle className="text-base">{alert.title}</CardTitle>
                 </div>
@@ -302,7 +302,7 @@ export default function AdvancedMetricsDashboard() {
             </div>
             <div className="space-y-2">
               <p className="text-sm font-medium text-muted-foreground">Clientes Recurrentes</p>
-              <p className="text-2xl font-bold text-blue-600">{metrics.returning_customers}</p>
+              <p className="text-2xl font-bold text-brand">{metrics.returning_customers}</p>
             </div>
             <div className="space-y-2">
               <p className="text-sm font-medium text-muted-foreground">Costo de Adquisición (CAC)</p>

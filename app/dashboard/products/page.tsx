@@ -135,11 +135,11 @@ export default function ProductsPage() {
                   <strong>${productName}</strong> tiene <strong>${salesCount}</strong> venta${salesCount > 1 ? 's' : ''} registrada${salesCount > 1 ? 's' : ''} en el historial.
                 </p>
               </div>
-              <div class="bg-blue-50 border border-blue-200 rounded-lg p-3 text-sm">
-                <p class="text-blue-800 mb-2">
+              <div class="bg-brand-light/50 border border-brand/40 rounded-lg p-3 text-sm">
+                <p class="text-brand mb-2">
                   <strong>💡 ¿Por qué no se puede eliminar?</strong>
                 </p>
-                <p class="text-blue-700">
+                <p class="text-brand">
                   Para mantener la integridad del historial de ventas, facturas e inventario,
                   no podemos eliminar productos que ya se han vendido.
                 </p>
@@ -292,7 +292,7 @@ export default function ProductsPage() {
                 onClick={() => setSelectedCategory('all')}
                 className={`px-4 py-2 rounded-full text-sm font-medium transition-colors ${
                   selectedCategory === 'all'
-                    ? 'bg-blue-600 text-white shadow-md'
+                    ? 'bg-brand text-white shadow-md'
                     : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
                 }`}
               >
@@ -306,7 +306,7 @@ export default function ProductsPage() {
                     onClick={() => setSelectedCategory(category.id)}
                     className={`px-4 py-2 rounded-full text-sm font-medium transition-colors ${
                       selectedCategory === category.id
-                        ? 'bg-blue-600 text-white shadow-md'
+                        ? 'bg-brand text-white shadow-md'
                         : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
                     }`}
                   >
@@ -467,7 +467,7 @@ export default function ProductsPage() {
                             </div>
                             <div>
                               <span className="text-gray-500">P. Venta:</span>
-                              <p className="font-medium text-blue-600">{formatCurrency(product.sale_price)}</p>
+                              <p className="font-medium text-brand">{formatCurrency(product.sale_price)}</p>
                             </div>
                           </div>
                           <div className="flex gap-2 mt-3">

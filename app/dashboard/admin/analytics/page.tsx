@@ -112,17 +112,17 @@ export default function AnalyticsPage() {
           </p>
         </div>
 
-        <Card className="border-blue-200 bg-blue-50">
+        <Card className="border-brand/40 bg-brand-light/50">
           <CardContent className="pt-6">
             <div className="text-center py-12">
-              <Activity className="h-16 w-16 text-blue-400 mx-auto mb-4" />
-              <h3 className="text-xl font-bold text-blue-900 mb-2">
+              <Activity className="h-16 w-16 text-brand/80 mx-auto mb-4" />
+              <h3 className="text-xl font-bold text-brand mb-2">
                 Sistema de Analytics Activado
               </h3>
-              <p className="text-blue-700 mb-4">
+              <p className="text-brand mb-4">
                 El sistema está rastreando automáticamente todas las actividades.
               </p>
-              <p className="text-sm text-blue-600 mb-6">
+              <p className="text-sm text-brand mb-6">
                 {stats.message || 'Los datos comenzarán a aparecer cuando los usuarios naveguen por el sistema.'}
               </p>
               <div className="bg-white rounded-lg p-6 max-w-md mx-auto">
@@ -221,7 +221,7 @@ export default function AnalyticsPage() {
                 <p className="text-sm text-gray-600">Usuarios Activos</p>
                 <p className="text-3xl font-bold mt-2">{uniqueUsers}</p>
               </div>
-              <Users className="h-12 w-12 text-blue-600 opacity-20" />
+              <Users className="h-12 w-12 text-brand opacity-20" />
             </div>
           </CardContent>
         </Card>
@@ -266,7 +266,7 @@ export default function AnalyticsPage() {
             {stats?.events_by_type.map((event) => {
               const percentage = totalEvents > 0 ? (event.count / totalEvents) * 100 : 0;
               const colors: Record<string, string> = {
-                page_view: 'bg-blue-500',
+                page_view: 'bg-brand',
                 click: 'bg-green-500',
                 feature_use: 'bg-purple-500',
                 action: 'bg-yellow-500',
@@ -400,7 +400,7 @@ export default function AnalyticsPage() {
                     <td className="p-3 text-sm">
                       <div className="flex gap-1">
                         {user.has_ai_addon ? <span className="text-xs bg-purple-100 text-purple-700 px-2 py-0.5 rounded">IA</span> : null}
-                        {user.has_store_addon ? <span className="text-xs bg-blue-100 text-blue-700 px-2 py-0.5 rounded">Store</span> : null}
+                        {user.has_store_addon ? <span className="text-xs bg-brand-light text-brand px-2 py-0.5 rounded">Store</span> : null}
                         {user.has_email_addon ? <span className="text-xs bg-green-100 text-green-700 px-2 py-0.5 rounded">Email</span> : null}
                       </div>
                     </td>
@@ -437,7 +437,7 @@ export default function AnalyticsPage() {
                     </div>
                     <div className="w-full bg-gray-200 rounded-full h-2">
                       <div
-                        className="h-2 rounded-full bg-blue-500"
+                        className="h-2 rounded-full bg-brand"
                         style={{ width: `${percentage}%` }}
                       />
                     </div>

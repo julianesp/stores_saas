@@ -203,7 +203,7 @@ export function CategoryManagerModal({ isOpen, onClose, onUpdate }: CategoryMana
                     >
                       <div className="flex items-start justify-between mb-2">
                         <div className="flex items-center gap-2 flex-1">
-                          <Tag className="h-5 w-5 text-blue-600 flex-shrink-0" />
+                          <Tag className="h-5 w-5 text-brand flex-shrink-0" />
                           <h3 className="font-semibold">{category.name}</h3>
                         </div>
                         <div className="flex gap-1">
@@ -212,7 +212,7 @@ export function CategoryManagerModal({ isOpen, onClose, onUpdate }: CategoryMana
                             className="p-1 hover:bg-gray-100 rounded"
                             title="Editar"
                           >
-                            <Pencil className="h-4 w-4 text-blue-600" />
+                            <Pencil className="h-4 w-4 text-brand" />
                           </button>
                           <button
                             onClick={() => handleDelete(category.id, category.name)}

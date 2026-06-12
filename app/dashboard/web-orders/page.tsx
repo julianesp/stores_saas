@@ -135,8 +135,8 @@ export default function WebOrdersPage() {
       title: '¿Confirmar pago recibido?',
       html: `
         <p class="text-gray-600 mb-4">Estás a punto de confirmar el pago de:</p>
-        <div class="bg-blue-50 p-4 rounded-lg mb-4">
-          <p class="font-bold text-lg text-blue-900">${formatCurrency(order?.total || 0)}</p>
+        <div class="bg-brand-light/50 p-4 rounded-lg mb-4">
+          <p class="font-bold text-lg text-brand">${formatCurrency(order?.total || 0)}</p>
           <p class="text-sm text-gray-600 mt-1">Pedido: ${order?.sale_number}</p>
         </div>
         <p class="text-sm text-orange-600">⚠️ El inventario se descontará automáticamente</p>
@@ -325,7 +325,7 @@ export default function WebOrdersPage() {
   if (loading) {
     return (
       <div className="flex items-center justify-center h-96">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-brand"></div>
       </div>
     );
   }
@@ -355,7 +355,7 @@ export default function WebOrdersPage() {
                       </p>
                     </div>
                     <div className="text-right">
-                      <p className="text-2xl font-bold text-blue-600">
+                      <p className="text-2xl font-bold text-brand">
                         {formatCurrency(order.total)}
                       </p>
                     </div>
@@ -566,7 +566,7 @@ export default function WebOrdersPage() {
                 </div>
               </div>
 
-              <div className="bg-blue-50 p-4 rounded-lg">
+              <div className="bg-brand-light/50 p-4 rounded-lg">
                 <h4 className="font-semibold mb-2">Resumen del Pedido</h4>
                 <div className="space-y-1 text-sm">
                   <div className="flex justify-between">

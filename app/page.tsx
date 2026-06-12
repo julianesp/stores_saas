@@ -179,9 +179,9 @@ export default function Home() {
           Todo lo que necesitas para administrar tu tienda de manera profesional
         </p>
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6">
-          <Card className="border-2 hover:border-blue-400 transition-all hover:shadow-lg bg-gray-300">
+          <Card className="border-2 hover:border-brand/80 transition-all hover:shadow-lg bg-gray-300">
             <CardHeader className="p-4 md:p-6">
-              <ShoppingCart className="h-8 w-8 md:h-10 md:w-10 text-blue-600 mb-2" />
+              <ShoppingCart className="h-8 w-8 md:h-10 md:w-10 text-brand mb-2" />
               <CardTitle className="text-base md:text-lg">
                 Punto de Venta
               </CardTitle>
@@ -244,7 +244,7 @@ export default function Home() {
           </p>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 md:gap-8">
             <div className="text-center p-4">
-              <div className="bg-gradient-to-br from-blue-500 to-blue-600 rounded-full w-14 h-14 md:w-16 md:h-16 flex items-center justify-center mx-auto mb-3 md:mb-4 shadow-lg">
+              <div className="bg-gradient-to-br from-brand to-brand rounded-full w-14 h-14 md:w-16 md:h-16 flex items-center justify-center mx-auto mb-3 md:mb-4 shadow-lg">
                 <Store className="h-7 w-7 md:h-8 md:w-8 text-white" />
               </div>
               <h4 className="font-semibold text-base md:text-lg mb-2 text-white">
@@ -333,11 +333,11 @@ export default function Home() {
           Ventajas que transformarán tu negocio
         </p>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 max-w-5xl mx-auto">
-          <Card className="bg-gradient-to-br from-blue-600 to-blue-700 border-0 text-white">
+          <Card className="bg-gradient-to-br from-brand to-brand-hover border-0 text-white">
             <CardHeader className="p-6">
               <TrendingUp className="h-10 w-10 mb-3" />
               <CardTitle className="text-xl mb-2">Ahorra Tiempo</CardTitle>
-              <CardDescription className="text-blue-100">
+              <CardDescription className="text-brand/40">
                 Procesa ventas en segundos, genera reportes automáticos y
                 automatiza tareas repetitivas
               </CardDescription>

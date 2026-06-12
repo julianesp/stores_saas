@@ -352,7 +352,7 @@ function ConfirmationContent() {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-50">
         <div className="text-center">
-          <Loader2 className="h-12 w-12 animate-spin text-blue-600 mx-auto mb-4" />
+          <Loader2 className="h-12 w-12 animate-spin text-brand mx-auto mb-4" />
           <p className="text-gray-600">Verificando pago...</p>
         </div>
       </div>
@@ -380,7 +380,7 @@ function ConfirmationContent() {
                 {transactionData && (
                   <div className="bg-gray-50 rounded-lg p-6 mb-6 border border-gray-200">
                     <h3 className="font-semibold text-lg flex items-center gap-2 mb-4 text-gray-900">
-                      <FileText className="h-5 w-5 text-blue-600" />
+                      <FileText className="h-5 w-5 text-brand" />
                       Detalles de la Transacción
                     </h3>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
@@ -434,14 +434,14 @@ function ConfirmationContent() {
                   </div>
                 )}
 
-                <div className="bg-blue-50 rounded-lg p-6 mb-6 border border-blue-200">
-                  <p className="text-sm text-blue-900 mb-3">
+                <div className="bg-brand-light/50 rounded-lg p-6 mb-6 border border-brand/40">
+                  <p className="text-sm text-brand mb-3">
                     ✅ Tu pago ha sido procesado correctamente
                   </p>
-                  <p className="text-sm text-blue-900 mb-3">
+                  <p className="text-sm text-brand mb-3">
                     ✅ Tu suscripción está ahora activa por 30 días
                   </p>
-                  <p className="text-sm text-blue-900">
+                  <p className="text-sm text-brand">
                     ✅ Ya puedes usar todas las funcionalidades del sistema
                   </p>
                 </div>
@@ -469,7 +469,7 @@ function ConfirmationContent() {
                     <Button
                       onClick={generatePDFReceipt}
                       variant="outline"
-                      className="w-full border-blue-300 hover:bg-blue-50"
+                      className="w-full border-brand/60 hover:bg-brand-light/50"
                       size="lg"
                       disabled={!transactionData}
                     >
@@ -505,7 +505,7 @@ function ConfirmationContent() {
 
             {transactionStatus === "PENDING" && (
               <div className="text-center">
-                <Loader2 className="h-16 w-16 animate-spin text-blue-600 mx-auto mb-4" />
+                <Loader2 className="h-16 w-16 animate-spin text-brand mx-auto mb-4" />
                 <h2 className="text-2xl font-bold mb-2">Procesando pago...</h2>
                 <p className="text-gray-600 mb-6">Estamos verificando tu transacción</p>
                 <Button onClick={checkPaymentStatus}>
@@ -527,7 +527,7 @@ function ConfirmationContent() {
                 </p>
                 <div className="space-y-3">
                   <Link href="/dashboard/subscription">
-                    <Button size="lg" className="w-full bg-blue-600">
+                    <Button size="lg" className="w-full bg-brand">
                       Intentar nuevamente
                     </Button>
                   </Link>
@@ -545,7 +545,7 @@ function ConfirmationContent() {
                   No pudimos encontrar los detalles de tu transacción
                 </p>
                 <Link href="/dashboard/subscription">
-                  <Button size="lg" className="w-full bg-blue-600">
+                  <Button size="lg" className="w-full bg-brand">
                     Volver a suscripciones
                   </Button>
                 </Link>
@@ -594,7 +594,7 @@ export default function SubscriptionConfirmationPage() {
       <Suspense fallback={
         <div className="min-h-screen flex items-center justify-center bg-gray-50">
           <div className="text-center">
-            <Loader2 className="h-12 w-12 animate-spin text-blue-600 mx-auto mb-4" />
+            <Loader2 className="h-12 w-12 animate-spin text-brand mx-auto mb-4" />
             <p className="text-gray-600">Cargando...</p>
           </div>
         </div>

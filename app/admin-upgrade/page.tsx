@@ -61,11 +61,11 @@ export default function AdminUpgradePage() {
         <CardContent className="space-y-4">
           {status === 'idle' && (
             <>
-              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-                <p className="text-sm text-blue-900">
+              <div className="bg-brand-light/50 border border-brand/40 rounded-lg p-4">
+                <p className="text-sm text-brand">
                   <strong>¿Qué hace esto?</strong>
                 </p>
-                <p className="text-sm text-blue-700 mt-1">
+                <p className="text-sm text-brand mt-1">
                   Esta página actualizará tu cuenta existente para convertirla en Super Admin,
                   dándote acceso completo al panel de administración del SaaS.
                 </p>
@@ -84,7 +84,7 @@ export default function AdminUpgradePage() {
 
           {status === 'loading' && (
             <div className="text-center py-8">
-              <Loader2 className="h-12 w-12 animate-spin mx-auto text-blue-600" />
+              <Loader2 className="h-12 w-12 animate-spin mx-auto text-brand" />
               <p className="mt-4 text-gray-600">{message}</p>
             </div>
           )}

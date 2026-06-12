@@ -42,7 +42,7 @@ function PaymentResponseContent() {
       <Card className="max-w-md w-full">
         <CardContent className="pt-6 text-center space-y-4">
           <div className="flex justify-center">
-            <Loader2 className="h-12 w-12 animate-spin text-blue-600" />
+            <Loader2 className="h-12 w-12 animate-spin text-brand" />
           </div>
 
           <div>
@@ -61,7 +61,7 @@ export default function PaymentResponsePage() {
   return (
     <Suspense fallback={
       <div className="flex items-center justify-center min-h-[60vh]">
-        <Loader2 className="h-12 w-12 animate-spin text-blue-600" />
+        <Loader2 className="h-12 w-12 animate-spin text-brand" />
       </div>
     }>
       <PaymentResponseContent />

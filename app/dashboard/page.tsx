@@ -266,7 +266,7 @@ export default function DashboardPage() {
               <CardTitle className="text-sm font-medium">
                 Total Tiendas
               </CardTitle>
-              <Store className="h-4 w-4 text-blue-600" />
+              <Store className="h-4 w-4 text-brand" />
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold">
@@ -300,10 +300,10 @@ export default function DashboardPage() {
               <CardTitle className="text-sm font-medium">
                 Ingresos Mensuales
               </CardTitle>
-              <DollarSign className="h-4 w-4 text-blue-600" />
+              <DollarSign className="h-4 w-4 text-brand" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold text-blue-600">
+              <div className="text-2xl font-bold text-brand">
                 {formatCurrency(saasMetrics.monthlyRevenue)}
               </div>
               <p className="text-xs text-gray-500 mt-1">Recurrentes</p>
@@ -366,10 +366,10 @@ export default function DashboardPage() {
               <div className="space-y-2 md:space-y-3">
                 <a
                   href="/dashboard/superadmin"
-                  className="flex items-center justify-between p-2 md:p-3 bg-blue-50 rounded-lg hover:bg-blue-100 transition-colors"
+                  className="flex items-center justify-between p-2 md:p-3 bg-brand-light/50 rounded-lg hover:bg-brand-light transition-colors"
                 >
                   <div className="flex items-center gap-2 md:gap-3">
-                    <Store className="h-4 w-4 md:h-5 md:w-5 text-blue-600 flex-shrink-0" />
+                    <Store className="h-4 w-4 md:h-5 md:w-5 text-brand flex-shrink-0" />
                     <div>
                       <p className="font-medium text-xs md:text-sm">
                         Gestión de Tiendas
@@ -509,7 +509,7 @@ export default function DashboardPage() {
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Órdenes Hoy</CardTitle>
-            <ShoppingCart className="h-4 w-4 text-blue-600" />
+            <ShoppingCart className="h-4 w-4 text-brand" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{metrics.todayOrders}</div>
@@ -773,9 +773,9 @@ export default function DashboardPage() {
                   </Link>
                 </div>
               ) : (
-                <div className="flex items-center justify-between p-2 md:p-3 bg-blue-50 rounded-lg">
+                <div className="flex items-center justify-between p-2 md:p-3 bg-brand-light/50 rounded-lg">
                   <div className="flex items-center gap-2 md:gap-3">
-                    <Package className="h-4 w-4 md:h-5 md:w-5 text-blue-600 flex-shrink-0" />
+                    <Package className="h-4 w-4 md:h-5 md:w-5 text-brand flex-shrink-0" />
                     <div>
                       <p className="font-medium text-xs md:text-sm">
                         Sin productos próximos a vencer

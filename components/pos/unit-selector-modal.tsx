@@ -204,10 +204,10 @@ export function UnitSelectorModal({
           </div>
 
           {/* Resumen */}
-          <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+          <div className="bg-brand-light/50 border border-brand/40 rounded-lg p-4">
             <div className="flex justify-between items-center mb-2">
               <span className="text-sm font-medium">Total:</span>
-              <span className="text-2xl font-bold text-blue-600">
+              <span className="text-2xl font-bold text-brand">
                 {formatCurrency(calculateTotal())}
               </span>
             </div>

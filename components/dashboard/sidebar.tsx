@@ -506,7 +506,7 @@ export function Sidebar({ isMobile = false, onLinkClick }: SidebarProps) {
         {/* Botón de colapsar/expandir - Mejorado para mayor visibilidad */}
         <button
           onClick={toggleCollapse}
-          className="ml-auto p-2 rounded-lg bg-gray-800/50 hover:bg-blue-600 transition-all duration-200 border border-gray-700 hover:border-blue-500 shadow-lg hover:shadow-blue-500/50 group"
+          className="ml-auto p-2 rounded-lg bg-gray-800/50 hover:bg-brand transition-all duration-200 border border-gray-700 hover:border-brand shadow-lg hover:shadow-blue-500/50 group"
           aria-label={isCollapsed ? "Expandir menú" : "Colapsar menú"}
           title={isCollapsed ? "Expandir menú" : "Colapsar menú"}
         >
@@ -588,7 +588,7 @@ export function Sidebar({ isMobile = false, onLinkClick }: SidebarProps) {
                 className={cn(
                   "flex items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium transition-colors relative",
                   isActive
-                    ? "bg-blue-600 text-white"
+                    ? "bg-brand text-white"
                     : "text-gray-300 hover:bg-gray-800 hover:text-white",
                   isCollapsed && "justify-center",
                 )}
@@ -680,7 +680,7 @@ export function Sidebar({ isMobile = false, onLinkClick }: SidebarProps) {
                 className={cn(
                   "flex flex-col items-center justify-center gap-2 rounded-lg p-4 aspect-square text-sm font-medium transition-colors relative",
                   isActive
-                    ? "bg-blue-600 text-white"
+                    ? "bg-brand text-white"
                     : "text-gray-300 hover:bg-gray-800 hover:text-white",
                 )}
               >
@@ -746,7 +746,7 @@ export function Sidebar({ isMobile = false, onLinkClick }: SidebarProps) {
               "flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors relative group",
               pathname === "/dashboard/subscription" ||
                 pathname?.startsWith("/dashboard/subscription/")
-                ? "bg-blue-600 text-white"
+                ? "bg-brand text-white"
                 : "text-gray-300 hover:bg-gray-800 hover:text-white",
               isCollapsed && "justify-center",
             )}
@@ -768,7 +768,7 @@ export function Sidebar({ isMobile = false, onLinkClick }: SidebarProps) {
             "flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors relative group",
             pathname === "/dashboard/config" ||
               pathname?.startsWith("/dashboard/config/")
-              ? "bg-blue-600 text-white"
+              ? "bg-brand text-white"
               : "text-gray-300 hover:bg-gray-800 hover:text-white",
             isCollapsed && "justify-center",
           )}
@@ -788,8 +788,8 @@ export function Sidebar({ isMobile = false, onLinkClick }: SidebarProps) {
         <div
           onMouseDown={handleMouseDown}
           className={cn(
-            "absolute top-0 right-0 w-2 h-full cursor-col-resize bg-gray-800/30 hover:bg-blue-500/50 transition-all duration-200 group border-r-2 border-gray-700/50 hover:border-blue-500 shadow-lg",
-            isResizing && "bg-blue-500 border-blue-500",
+            "absolute top-0 right-0 w-2 h-full cursor-col-resize bg-gray-800/30 hover:bg-brand/50 transition-all duration-200 group border-r-2 border-gray-700/50 hover:border-brand shadow-lg",
+            isResizing && "bg-brand border-brand",
           )}
           title="Arrastrar para redimensionar"
         >
@@ -805,8 +805,8 @@ export function Sidebar({ isMobile = false, onLinkClick }: SidebarProps) {
               className={cn(
                 "w-5 h-5 transition-colors",
                 isResizing
-                  ? "text-blue-400"
-                  : "text-gray-400 group-hover:text-blue-400",
+                  ? "text-brand/80"
+                  : "text-gray-400 group-hover:text-brand/80",
               )}
             />
           </div>
@@ -814,7 +814,7 @@ export function Sidebar({ isMobile = false, onLinkClick }: SidebarProps) {
           {/* Tooltip informativo */}
           <div className="absolute left-full ml-3 top-1/2 -translate-y-1/2 px-3 py-2 bg-gray-900 text-white text-xs rounded-lg opacity-0 group-hover:opacity-100 pointer-events-none whitespace-nowrap z-50 transition-opacity shadow-xl border border-gray-700">
             <div className="flex items-center gap-2">
-              <GripVertical className="w-4 h-4 text-blue-400" />
+              <GripVertical className="w-4 h-4 text-brand/80" />
               <span>Arrastrar para redimensionar</span>
             </div>
             <div className="absolute right-full top-1/2 -translate-y-1/2 mr-1">

@@ -32,8 +32,8 @@ export default function TrustBadges() {
         {/* Stats */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-6 max-w-5xl mx-auto mb-16">
           <div className="text-center">
-            <div className="bg-blue-500/20 rounded-lg p-4 mb-2">
-              <Users className="h-8 w-8 text-blue-400 mx-auto" />
+            <div className="bg-brand/20 rounded-lg p-4 mb-2">
+              <Users className="h-8 w-8 text-brand/80 mx-auto" />
             </div>
             <div className="text-3xl font-bold text-white" id="active-stores">{activeStores}+</div>
             <div className="text-sm text-gray-400">Tiendas Activas</div>
@@ -63,11 +63,11 @@ export default function TrustBadges() {
 
         {/* Mensaje Motivador */}
         <div className="max-w-4xl mx-auto mb-12">
-          <Card className="bg-gradient-to-br from-blue-900/50 to-purple-900/50 border-blue-400/30">
+          <Card className="bg-gradient-to-br from-brand-hover/50 to-purple-900/50 border-brand/80/30">
             <CardContent className="pt-8 pb-8 text-center">
               <div className="flex justify-center mb-4">
-                <div className="bg-blue-500/20 rounded-full p-4">
-                  <TrendingUp className="h-12 w-12 text-blue-400" />
+                <div className="bg-brand/20 rounded-full p-4">
+                  <TrendingUp className="h-12 w-12 text-brand/80" />
                 </div>
               </div>
               <h3 className="text-2xl md:text-3xl font-bold text-white mb-4">
@@ -81,7 +81,7 @@ export default function TrustBadges() {
               </p>
               <div className="grid md:grid-cols-3 gap-6 mt-8">
                 <div className="text-center">
-                  <div className="text-3xl font-bold text-blue-400 mb-2">7 días</div>
+                  <div className="text-3xl font-bold text-brand/80 mb-2">7 días</div>
                   <p className="text-gray-300 text-sm">Prueba gratis sin compromiso</p>
                 </div>
                 <div className="text-center">

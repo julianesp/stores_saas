@@ -243,14 +243,14 @@ export default function CustomerDetailPage() {
         <Card>
           <CardHeader>
             <CardTitle className="text-lg flex items-center gap-2">
-              <ShoppingBag className="h-5 w-5 text-blue-600" />
+              <ShoppingBag className="h-5 w-5 text-brand" />
               Estadísticas
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-2">
             <div>
               <p className="text-sm text-gray-500">Total comprado</p>
-              <p className="text-xl font-bold text-blue-600">{formatCurrency(totalSpent)}</p>
+              <p className="text-xl font-bold text-brand">{formatCurrency(totalSpent)}</p>
             </div>
             <div>
               <p className="text-sm text-gray-500">Número de compras</p>
@@ -283,7 +283,7 @@ export default function CustomerDetailPage() {
                     <div className="flex flex-col md:flex-row md:items-center md:justify-between mb-4 pb-4 border-b">
                       <div className="space-y-1">
                         <div className="flex items-center gap-2">
-                          <span className="font-semibold text-blue-600">
+                          <span className="font-semibold text-brand">
                             {purchase.sale_number}
                           </span>
                           <span className="px-2 py-1 bg-green-100 text-green-800 text-xs font-medium rounded">
@@ -310,7 +310,7 @@ export default function CustomerDetailPage() {
                       <div className="flex flex-col md:flex-row md:items-center gap-3 mt-2 md:mt-0">
                         <div className="text-right">
                           <p className="text-sm text-gray-500">Total</p>
-                          <p className="text-2xl font-bold text-blue-600">
+                          <p className="text-2xl font-bold text-brand">
                             {formatCurrency(purchase.total)}
                           </p>
                           {purchase.points_earned > 0 && (
@@ -349,7 +349,7 @@ export default function CustomerDetailPage() {
                               </p>
                             </div>
                             <div className="text-right">
-                              <p className="font-semibold text-blue-600">
+                              <p className="font-semibold text-brand">
                                 {formatCurrency(item.subtotal)}
                               </p>
                             </div>

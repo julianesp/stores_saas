@@ -77,7 +77,7 @@ export function CustomerRFMSection({ getToken, daysAnalyzed }: CustomerRFMSectio
       <Card>
         <CardContent className="pt-6">
           <div className="flex items-center justify-center py-8">
-            <RefreshCw className="h-8 w-8 animate-spin text-blue-600" />
+            <RefreshCw className="h-8 w-8 animate-spin text-brand" />
           </div>
         </CardContent>
       </Card>
@@ -199,17 +199,17 @@ export function CustomerRFMSection({ getToken, daysAnalyzed }: CustomerRFMSectio
     <div className="space-y-6">
       {/* Overview Cards - Métricas clave explicadas simplemente */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        <Card className="border-blue-200 bg-blue-50">
+        <Card className="border-brand/40 bg-brand-light/50">
           <CardContent className="pt-6">
             <div className="flex items-center justify-between mb-2">
-              <Users className="h-8 w-8 text-blue-600" />
+              <Users className="h-8 w-8 text-brand" />
               <div className="text-right">
-                <p className="text-3xl font-bold text-blue-900">{totalCustomers}</p>
-                <p className="text-xs text-blue-700">últimos {daysAnalyzed} días</p>
+                <p className="text-3xl font-bold text-brand">{totalCustomers}</p>
+                <p className="text-xs text-brand">últimos {daysAnalyzed} días</p>
               </div>
             </div>
-            <p className="text-sm font-semibold text-blue-900">Total de Clientes</p>
-            <p className="text-xs text-blue-700 mt-1">Personas que te compraron</p>
+            <p className="text-sm font-semibold text-brand">Total de Clientes</p>
+            <p className="text-xs text-brand mt-1">Personas que te compraron</p>
           </CardContent>
         </Card>
 
@@ -313,9 +313,9 @@ export function CustomerRFMSection({ getToken, daysAnalyzed }: CustomerRFMSectio
       </Card>
 
       {/* ¿Qué deberías hacer? - Action Card */}
-      <Card className="border-blue-200 bg-blue-50">
+      <Card className="border-brand/40 bg-brand-light/50">
         <CardHeader>
-          <CardTitle className="flex items-center gap-2 text-blue-900">
+          <CardTitle className="flex items-center gap-2 text-brand">
             <Target className="h-5 w-5" />
             ¿Qué deberías hacer HOY? (Recomendaciones)
           </CardTitle>
@@ -323,7 +323,7 @@ export function CustomerRFMSection({ getToken, daysAnalyzed }: CustomerRFMSectio
         <CardContent>
           <div className="space-y-2 text-sm">
             {champions.length > 0 && (
-              <div className="flex items-start gap-2 bg-white rounded p-3 border border-blue-200">
+              <div className="flex items-start gap-2 bg-white rounded p-3 border border-brand/40">
                 <Gift className="h-5 w-5 text-yellow-600 flex-shrink-0 mt-0.5" />
                 <div>
                   <p className="font-semibold">Cuida a tus {champions.length} Champions</p>
@@ -375,7 +375,7 @@ export function CustomerRFMSection({ getToken, daysAnalyzed }: CustomerRFMSectio
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
-            <Users className="h-5 w-5 text-blue-600" />
+            <Users className="h-5 w-5 text-brand" />
             Tus Clientes por Segmento (Explicado Simple)
           </CardTitle>
         </CardHeader>
@@ -452,7 +452,7 @@ export function CustomerRFMSection({ getToken, daysAnalyzed }: CustomerRFMSectio
                   </div>
                   <div className="flex gap-2 text-xs">
                     <span className="bg-green-100 text-green-800 px-2 py-1 rounded">💚 Cliente Valioso</span>
-                    <span className="bg-blue-100 text-blue-800 px-2 py-1 rounded">⚡ Compra Frecuente</span>
+                    <span className="bg-brand-light text-brand px-2 py-1 rounded">⚡ Compra Frecuente</span>
                   </div>
                 </div>
               ))}
@@ -521,15 +521,15 @@ export function CustomerRFMSection({ getToken, daysAnalyzed }: CustomerRFMSectio
       )}
 
       {/* Explicación Simple RFM */}
-      <Card className="bg-gradient-to-r from-blue-50 to-purple-50 border-blue-200">
+      <Card className="bg-gradient-to-r from-brand-light/50 to-purple-50 border-brand/40">
         <CardHeader>
-          <CardTitle className="flex items-center gap-2 text-blue-900">
+          <CardTitle className="flex items-center gap-2 text-brand">
             <Sparkles className="h-5 w-5" />
             ¿Cómo funciona esto? (Explicado para humanos normales)
           </CardTitle>
         </CardHeader>
         <CardContent className="text-sm text-gray-800 space-y-3">
-          <div className="bg-white rounded-lg p-3 border border-blue-200">
+          <div className="bg-white rounded-lg p-3 border border-brand/40">
             <p className="font-semibold mb-2">🤔 ¿Qué es RFM?</p>
             <p>
               RFM significa <strong>Recency</strong> (¿cuándo compró?), <strong>Frequency</strong> (¿cuántas veces?) y{' '}
@@ -540,7 +540,7 @@ export function CustomerRFMSection({ getToken, daysAnalyzed }: CustomerRFMSectio
           <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
             <div className="bg-white rounded-lg p-3 border border-gray-200">
               <div className="flex items-center gap-2 mb-2">
-                <Clock className="h-4 w-4 text-blue-600" />
+                <Clock className="h-4 w-4 text-brand" />
                 <p className="font-semibold">Recency (Reciente)</p>
               </div>
               <p className="text-xs text-gray-700">

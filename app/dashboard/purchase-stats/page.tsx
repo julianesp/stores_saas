@@ -409,7 +409,7 @@ export default function PurchaseStatsPage() {
     return (
       <div className="flex items-center justify-center h-64">
         <div className="text-center">
-          <RefreshCw className="h-12 w-12 animate-spin text-blue-600 mx-auto mb-4" />
+          <RefreshCw className="h-12 w-12 animate-spin text-brand mx-auto mb-4" />
           <p className="text-gray-500">Analizando tu negocio...</p>
         </div>
       </div>
@@ -575,10 +575,10 @@ export default function PurchaseStatsPage() {
             <CardTitle className="text-sm font-medium">
               Días de Inventario
             </CardTitle>
-            <Clock className="h-4 w-4 text-blue-600" />
+            <Clock className="h-4 w-4 text-brand" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-blue-600">
+            <div className="text-2xl font-bold text-brand">
               {stats.averageInventoryDays > 0
                 ? Math.round(stats.averageInventoryDays)
                 : "N/A"}
@@ -815,7 +815,7 @@ export default function PurchaseStatsPage() {
               {stats.categoryPerformance.map((cat, index) => (
                 <div
                   key={index}
-                  className="p-4 bg-gradient-to-br from-blue-50 to-white border border-blue-200 rounded-lg"
+                  className="p-4 bg-gradient-to-br from-brand-light/50 to-white border border-brand/40 rounded-lg"
                 >
                   <h4 className="font-bold text-lg mb-2">{cat.category}</h4>
                   <div className="space-y-1 text-sm">
@@ -831,7 +831,7 @@ export default function PurchaseStatsPage() {
                     </div>
                     <div className="flex justify-between">
                       <span className="text-gray-600">Margen:</span>
-                      <span className="font-semibold text-blue-600">
+                      <span className="font-semibold text-brand">
                         {cat.margin.toFixed(1)}%
                       </span>
                     </div>

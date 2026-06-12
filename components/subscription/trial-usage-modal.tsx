@@ -172,11 +172,11 @@ export function TrialUsageModal({
 
           {/* Beneficios incluidos */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            <div className="flex items-start gap-3 p-3 bg-blue-50 rounded-lg border border-blue-200">
-              <TrendingUp className="h-5 w-5 text-blue-600 mt-0.5 flex-shrink-0" />
+            <div className="flex items-start gap-3 p-3 bg-brand-light/50 rounded-lg border border-brand/40">
+              <TrendingUp className="h-5 w-5 text-brand mt-0.5 flex-shrink-0" />
               <div>
-                <p className="font-medium text-blue-900 text-sm">Sistema Completo</p>
-                <p className="text-xs text-blue-700">POS, inventario, reportes</p>
+                <p className="font-medium text-brand text-sm">Sistema Completo</p>
+                <p className="text-xs text-brand">POS, inventario, reportes</p>
               </div>
             </div>
             <div className="flex items-start gap-3 p-3 bg-purple-50 rounded-lg border border-purple-200">
@@ -211,9 +211,9 @@ export function TrialUsageModal({
                   <p className="font-semibold text-purple-900">+ IA</p>
                   <p className="text-purple-700">{formatCurrency(5000)}</p>
                 </div>
-                <div className="p-2 bg-blue-50 rounded border border-blue-200 text-center">
-                  <p className="font-semibold text-blue-900">+ Tienda</p>
-                  <p className="text-blue-700">{formatCurrency(9900)}</p>
+                <div className="p-2 bg-brand-light/50 rounded border border-brand/40 text-center">
+                  <p className="font-semibold text-brand">+ Tienda</p>
+                  <p className="text-brand">{formatCurrency(9900)}</p>
                 </div>
                 <div className="p-2 bg-green-50 rounded border border-green-200 text-center">
                   <p className="font-semibold text-green-900">+ Email</p>

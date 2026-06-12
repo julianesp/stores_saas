@@ -331,9 +331,9 @@ export function ImageUploader({
                 Para usar la cámara, debes dar permiso en tu navegador.
               </p>
 
-              <div class="bg-blue-50 border-l-4 border-blue-500 p-3 mb-3">
-                <p class="text-sm font-semibold text-blue-800 mb-2">📱 Cómo dar permisos:</p>
-                <ol class="text-xs text-blue-700 space-y-2 list-decimal list-inside">
+              <div class="bg-brand-light/50 border-l-4 border-brand p-3 mb-3">
+                <p class="text-sm font-semibold text-brand mb-2">📱 Cómo dar permisos:</p>
+                <ol class="text-xs text-brand space-y-2 list-decimal list-inside">
                   <li>Toca el <strong>ícono del candado 🔒</strong> o la <strong>i de información ℹ️</strong> en la barra de direcciones</li>
                   <li>Busca la opción <strong>"Cámara"</strong> o <strong>"Camera"</strong></li>
                   <li>Selecciona <strong>"Permitir"</strong> o <strong>"Allow"</strong></li>
@@ -584,7 +584,7 @@ export function ImageUploader({
             <CardContent className="p-2">
               <div className="aspect-square flex items-center justify-center bg-gray-50 rounded-md">
                 {loadingIndex === images.length + index ? (
-                  <Loader2 className="h-8 w-8 text-blue-600 animate-spin" />
+                  <Loader2 className="h-8 w-8 text-brand animate-spin" />
                 ) : (
                   <ImageIcon className="h-8 w-8 text-gray-300" />
                 )}
@@ -614,11 +614,11 @@ export function ImageUploader({
           />
 
           {/* Mensaje informativo */}
-          <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
-            <p className="text-xs text-blue-800 font-medium mb-1">
+          <div className="bg-brand-light/50 border border-brand/40 rounded-lg p-3">
+            <p className="text-xs text-brand font-medium mb-1">
               💡 Consejos para las imágenes:
             </p>
-            <ul className="text-xs text-blue-700 space-y-1 list-disc list-inside">
+            <ul className="text-xs text-brand space-y-1 list-disc list-inside">
               <li>La primera imagen será la principal (se muestra en la tienda online)</li>
               <li>Puedes cambiar la imagen principal haciendo clic en la estrella</li>
               <li>Agrega hasta {maxImages} imágenes para mostrar diferentes ángulos</li>
@@ -643,7 +643,7 @@ export function ImageUploader({
             {/* Botón de galería */}
             <label
               htmlFor="image-upload"
-              className={`inline-flex flex-col items-center justify-center gap-1 rounded-md border border-gray-300 bg-blue-600 text-white px-4 py-3 text-sm font-medium transition-colors hover:bg-blue-700 ${
+              className={`inline-flex flex-col items-center justify-center gap-1 rounded-md border border-gray-300 bg-brand text-white px-4 py-3 text-sm font-medium transition-colors hover:bg-brand-hover ${
                 uploading ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'
               }`}
             >

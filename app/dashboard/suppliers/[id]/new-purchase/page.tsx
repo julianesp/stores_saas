@@ -607,7 +607,7 @@ export default function NewPurchaseOrderPage() {
                       </div>
                     </div>
 
-                    <div className="mt-2 text-xs text-blue-600">
+                    <div className="mt-2 text-xs text-brand">
                       Precio sugerido de venta (30% margen):{" "}
                       {formatCurrency(item.suggested_price)}
                     </div>
@@ -620,7 +620,7 @@ export default function NewPurchaseOrderPage() {
                     <span className="text-lg font-semibold">
                       Total de la Orden:
                     </span>
-                    <span className="text-2xl font-bold text-blue-600">
+                    <span className="text-2xl font-bold text-brand">
                       {formatCurrency(calculateTotal())}
                     </span>
                   </div>

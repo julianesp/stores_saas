@@ -85,11 +85,11 @@ function FailedContent() {
           )}
 
           {/* Información adicional */}
-          <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-            <p className="text-sm text-blue-900 font-medium mb-2">
+          <div className="bg-brand-light/50 border border-brand/40 rounded-lg p-4">
+            <p className="text-sm text-brand font-medium mb-2">
               ¿Por qué falló mi pago?
             </p>
-            <ul className="text-sm text-blue-800 space-y-1 ml-4 list-disc">
+            <ul className="text-sm text-brand space-y-1 ml-4 list-disc">
               <li>Fondos insuficientes en tu cuenta</li>
               <li>Datos de tarjeta incorrectos</li>
               <li>Límite de transacciones excedido</li>
@@ -136,7 +136,7 @@ function FailedContent() {
           <div className="text-center pt-4 border-t">
             <p className="text-sm text-gray-600">
               ¿Necesitas ayuda? Contáctanos a{' '}
-              <a href="mailto:soporte@tienda-pos.com" className="text-blue-600 hover:underline">
+              <a href="mailto:soporte@tienda-pos.com" className="text-brand hover:underline">
                 soporte@tienda-pos.com
               </a>
             </p>

@@ -189,7 +189,7 @@ export default function ActivatePlanManuallyPage() {
     const colors: Record<string, { bg: string; text: string; border: string }> = {
       gray: { bg: 'bg-gray-50', text: 'text-gray-700', border: 'border-gray-200' },
       purple: { bg: 'bg-purple-50', text: 'text-purple-700', border: 'border-purple-200' },
-      blue: { bg: 'bg-blue-50', text: 'text-blue-700', border: 'border-blue-200' },
+      blue: { bg: 'bg-brand-light/50', text: 'text-brand', border: 'border-brand/40' },
       green: { bg: 'bg-green-50', text: 'text-green-700', border: 'border-green-200' },
     };
     return colors[color] || colors.gray;
@@ -357,7 +357,7 @@ export default function ActivatePlanManuallyPage() {
 
       {/* Información del Usuario */}
       {userProfile && userStatus && (
-        <Card className="border-blue-200 bg-blue-50">
+        <Card className="border-brand/40 bg-brand-light/50">
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <User className="h-5 w-5" />
@@ -404,7 +404,7 @@ export default function ActivatePlanManuallyPage() {
                   </span>
                 )}
                 {userProfile.has_store_addon && (
-                  <span className="bg-blue-100 text-blue-800 px-3 py-1 rounded-full text-sm font-medium">
+                  <span className="bg-brand-light text-brand px-3 py-1 rounded-full text-sm font-medium">
                     ✓ Tienda
                   </span>
                 )}

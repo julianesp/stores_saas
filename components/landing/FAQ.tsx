@@ -111,8 +111,8 @@ export default function FAQ() {
       <div className="container mx-auto px-4">
         <div className="text-center mb-12">
           <div className="flex justify-center mb-4">
-            <div className="bg-blue-500/20 rounded-full p-3">
-              <HelpCircle className="h-10 w-10 text-blue-400" />
+            <div className="bg-brand/20 rounded-full p-3">
+              <HelpCircle className="h-10 w-10 text-brand/80" />
             </div>
           </div>
           <h2 className="text-3xl md:text-4xl font-bold text-white mb-4">
@@ -127,7 +127,7 @@ export default function FAQ() {
           {faqs.map((category, categoryIndex) => (
             <div key={categoryIndex}>
               <h3 className="text-2xl font-bold text-white mb-4 flex items-center gap-2">
-                <span className="w-1 h-8 bg-blue-500 rounded"></span>
+                <span className="w-1 h-8 bg-brand rounded"></span>
                 {category.category}
               </h3>
               <div className="space-y-3">
@@ -142,7 +142,7 @@ export default function FAQ() {
                     >
                       <button
                         onClick={() => toggleItem(id)}
-                        className="w-full text-left p-4 focus:outline-none focus:ring-2 focus:ring-blue-500 rounded-lg"
+                        className="w-full text-left p-4 focus:outline-none focus:ring-2 focus:ring-brand rounded-lg"
                       >
                         <div className="flex items-start justify-between gap-4">
                           <h4 className="text-lg font-semibold text-white pr-8">

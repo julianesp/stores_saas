@@ -146,10 +146,10 @@ export default function QuickAddProductPage() {
           </Card>
 
           {/* Información */}
-          <Card className="bg-blue-50 border-blue-200">
+          <Card className="bg-brand-light/50 border-brand/40">
             <CardContent className="pt-6">
-              <h3 className="font-semibold text-sm mb-2 text-blue-900">💡 Flujo Recomendado</h3>
-              <ol className="text-sm text-blue-800 space-y-2 list-decimal list-inside">
+              <h3 className="font-semibold text-sm mb-2 text-brand">💡 Flujo Recomendado</h3>
+              <ol className="text-sm text-brand space-y-2 list-decimal list-inside">
                 <li>Escanea todos los productos que quieras agregar</li>
                 <li>Se crearán automáticamente con el código de barras</li>
                 <li>Luego, completa los detalles de cada uno (precio, nombre, etc.)</li>

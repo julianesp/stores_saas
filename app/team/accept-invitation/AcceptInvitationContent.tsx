@@ -232,7 +232,7 @@ export default function AcceptInvitationContent() {
                     <p className="text-sm font-medium text-muted-foreground">
                       Rol asignado
                     </p>
-                    <Badge className="mt-1 bg-blue-100 text-blue-800 border-blue-200">
+                    <Badge className="mt-1 bg-brand-light text-brand border-brand/40">
                       {getRoleName(invitation.role)}
                     </Badge>
                   </div>

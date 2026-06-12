@@ -174,7 +174,7 @@ export default function UsersManagementPage() {
     <div className="space-y-6">
       {/* Header */}
       <div className="flex items-center gap-3">
-        <Users className="h-8 w-8 text-blue-600" />
+        <Users className="h-8 w-8 text-brand" />
         <div>
           <h1 className="text-3xl font-bold">Gestión de Usuarios</h1>
           <p className="text-gray-500">Administra todos los usuarios del sistema</p>
@@ -208,10 +208,10 @@ export default function UsersManagementPage() {
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Admins de Tienda</CardTitle>
-            <Shield className="h-4 w-4 text-blue-500" />
+            <Shield className="h-4 w-4 text-brand" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-blue-600">{admins}</div>
+            <div className="text-2xl font-bold text-brand">{admins}</div>
             <p className="text-xs text-gray-500">Propietarios de tienda</p>
           </CardContent>
         </Card>
@@ -271,7 +271,7 @@ export default function UsersManagementPage() {
                   {filteredUsers.map((usr) => {
                     const createdDate = new Date(usr.created_at).toLocaleDateString('es-CO');
                     const roleConfig = {
-                      admin: { label: 'Admin Tienda', color: 'bg-blue-100 text-blue-800' },
+                      admin: { label: 'Admin Tienda', color: 'bg-brand-light text-brand' },
                       cajero: { label: 'Cajero', color: 'bg-green-100 text-green-800' },
                       cliente: { label: 'Cliente', color: 'bg-gray-100 text-gray-800' },
                     };

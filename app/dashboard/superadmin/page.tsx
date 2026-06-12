@@ -440,7 +440,7 @@ export default function SuperAdminPage() {
     <div className="space-y-6">
       {/* Header */}
       <div className="flex items-center gap-3">
-        <Shield className="h-8 w-8 text-blue-600" />
+        <Shield className="h-8 w-8 text-brand" />
         <div>
           <h1 className="text-3xl font-bold">Dashboard del SaaS</h1>
           <p className="text-black">Vista general del negocio multi-tenant</p>
@@ -461,12 +461,12 @@ export default function SuperAdminPage() {
         >
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Total Tiendas</CardTitle>
-            <Store className="h-4 w-4 text-blue-500" />
+            <Store className="h-4 w-4 text-brand" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{totalStores}</div>
             <p className="text-xs text-black mt-1">Registradas en el sistema</p>
-            <div className="flex items-center mt-2 text-xs text-blue-600 group-hover:text-blue-700">
+            <div className="flex items-center mt-2 text-xs text-brand group-hover:text-brand">
               <span>Ver todas</span>
               <ArrowUpRight className="h-3 w-3 ml-1" />
             </div>
@@ -510,10 +510,10 @@ export default function SuperAdminPage() {
             <CardTitle className="text-sm font-medium">
               Ingresos Mensuales
             </CardTitle>
-            <DollarSign className="h-4 w-4 text-blue-500" />
+            <DollarSign className="h-4 w-4 text-brand" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-blue-600">
+            <div className="text-2xl font-bold text-brand">
               {formatCurrency(totalRevenue)}
             </div>
             <p className="text-xs text-black mt-1">Recurrentes</p>
@@ -591,15 +591,15 @@ export default function SuperAdminPage() {
             <CardTitle className="text-sm font-medium">
               Ventas Totales
             </CardTitle>
-            <ShoppingCart className="h-4 w-4 text-blue-500" />
+            <ShoppingCart className="h-4 w-4 text-brand" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-blue-600">
+            <div className="text-2xl font-bold text-brand">
               {totalSalesAllStores}
             </div>
             <p className="text-xs text-black mt-1">Todas las tiendas</p>
             <div className="flex items-center mt-2 text-xs text-gray-600">
-              <span className="text-blue-600">
+              <span className="text-brand">
                 {formatCurrency(totalRevenueAllStores)}
               </span>
             </div>
@@ -664,15 +664,15 @@ export default function SuperAdminPage() {
         <Card className="hover:shadow-lg transition-shadow">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Nuevas Hoy</CardTitle>
-            <Calendar className="h-4 w-4 text-blue-500" />
+            <Calendar className="h-4 w-4 text-brand" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-blue-600">
+            <div className="text-2xl font-bold text-brand">
               {newStoresToday}
             </div>
             <p className="text-xs text-black mt-1">Registros hoy</p>
             <div className="flex items-center mt-2 text-xs text-gray-600">
-              <span className="text-blue-600">Activo</span>
+              <span className="text-brand">Activo</span>
             </div>
           </CardContent>
         </Card>
@@ -903,7 +903,7 @@ export default function SuperAdminPage() {
                                 <>
                                   <div className="flex items-center gap-1">
                                     <span className="text-gray-400 text-xs">Vence:</span>
-                                    <span className="text-blue-700 font-medium text-xs">
+                                    <span className="text-brand font-medium text-xs">
                                       {new Date(store.next_billing_date).toLocaleDateString("es-CO", {
                                         day: "2-digit",
                                         month: "short",
@@ -922,7 +922,7 @@ export default function SuperAdminPage() {
                                         ? "text-red-600 bg-red-50"
                                         : daysLeft <= 7
                                         ? "text-yellow-700 bg-yellow-50"
-                                        : "text-blue-700 bg-blue-50";
+                                        : "text-brand bg-brand-light/50";
                                     return (
                                       <div className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-bold ${color}`}>
                                         {daysLeft > 0
@@ -974,7 +974,7 @@ export default function SuperAdminPage() {
                                   ? "text-red-600"
                                   : daysRemainingActive <= 7
                                     ? "text-yellow-600"
-                                    : "text-blue-600"
+                                    : "text-brand"
                               }`}
                             >
                               {daysRemainingActive} días
@@ -988,7 +988,7 @@ export default function SuperAdminPage() {
                             <span
                               className={
                                 stats.stats.productsCount > 0
-                                  ? "font-medium text-blue-600"
+                                  ? "font-medium text-brand"
                                   : "text-gray-400"
                               }
                             >
@@ -1164,7 +1164,7 @@ export default function SuperAdminPage() {
               </p>
             </div>
             {extendTrialDialog.store && (
-              <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 space-y-1">
+              <div className="bg-brand-light/50 border border-brand/40 rounded-lg p-3 space-y-1">
                 <div className="text-sm">
                   <span className="font-medium text-gray-500">
                     Estado actual:

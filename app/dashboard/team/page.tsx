@@ -91,7 +91,7 @@ export default function TeamManagementPage() {
   const getRoleBadge = (role: string) => {
     const colors = {
       admin: "bg-purple-100 text-purple-800 border-purple-200",
-      cajero: "bg-blue-100 text-blue-800 border-blue-200",
+      cajero: "bg-brand-light text-brand border-brand/40",
       custom: "bg-orange-100 text-orange-800 border-orange-200",
     };
     const roleDefinition = ROLE_DEFINITIONS.find((r) => r.role === role);

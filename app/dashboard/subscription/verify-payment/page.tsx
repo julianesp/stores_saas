@@ -150,9 +150,9 @@ export default function VerifyPaymentPage() {
         </CardContent>
       </Card>
 
-      <Card className="max-w-2xl bg-blue-50 border-blue-200">
+      <Card className="max-w-2xl bg-brand-light/50 border-brand/40">
         <CardContent className="pt-6">
-          <p className="text-sm text-blue-900">
+          <p className="text-sm text-brand">
             💡 <strong>Nota:</strong> Esta verificación manual es temporal. Una vez tengas un dominio
             o uses ngrok, los pagos se activarán automáticamente.
           </p>

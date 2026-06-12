@@ -126,7 +126,7 @@ export default function ResetTrialPage() {
         <Card>
           <CardHeader>
             <div className="flex items-center gap-2">
-              <User className="h-5 w-5 text-blue-600" />
+              <User className="h-5 w-5 text-brand" />
               <CardTitle>Resetear Mi Período de Prueba</CardTitle>
             </div>
             <CardDescription>
@@ -135,10 +135,10 @@ export default function ResetTrialPage() {
           </CardHeader>
           <CardContent>
             <div className="space-y-4">
-              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+              <div className="bg-brand-light/50 border border-brand/40 rounded-lg p-4">
                 <div className="flex items-start gap-3">
-                  <AlertCircle className="h-5 w-5 text-blue-600 mt-0.5 flex-shrink-0" />
-                  <div className="text-sm text-blue-800">
+                  <AlertCircle className="h-5 w-5 text-brand mt-0.5 flex-shrink-0" />
+                  <div className="text-sm text-brand">
                     <p className="font-medium mb-1">Usuario actual: {user?.emailAddresses[0]?.emailAddress}</p>
                     <p>Al resetear tu trial, tendrás 30 días completos desde hoy para probar el sistema.</p>
                   </div>

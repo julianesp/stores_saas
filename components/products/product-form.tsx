@@ -478,7 +478,7 @@ export function ProductForm({ initialData, productId }: ProductFormProps) {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="space-y-2">
               <Label htmlFor="barcode" className="flex items-center gap-2">
-                <Scan className="h-4 w-4 text-blue-600" />
+                <Scan className="h-4 w-4 text-brand" />
                 Código de Barras
               </Label>
               <div className="flex flex-col gap-2">
@@ -493,13 +493,13 @@ export function ProductForm({ initialData, productId }: ProductFormProps) {
                     onBlur={handleBarcodeBlur}
                   />
                   {/* <div className="absolute right-2 top-1/2 transform -translate-y-1/2 pointer-events-none">
-                    <Scan className="h-5 w-5 text-blue-600" />
+                    <Scan className="h-5 w-5 text-brand" />
                   </div> */}
                 </div>
                 <Button
                   type="button"
                   onClick={() => setShowScannerOptions(true)}
-                  className="shrink-0 bg-blue-600 hover:bg-blue-700 flex-col md:flex-row gap-1 md:gap-2 h-auto py-2 px-3"
+                  className="shrink-0 bg-brand hover:bg-brand-hover flex-col md:flex-row gap-1 md:gap-2 h-auto py-2 px-3"
                   size="default"
                   title="Toque aquí para escanear código de barras"
                 >
@@ -509,12 +509,12 @@ export function ProductForm({ initialData, productId }: ProductFormProps) {
                   </span>
                 </Button>
               </div>
-              <div className="bg-blue-50 border border-blue-200 rounded-lg p-2 mt-2">
-                <p className="text-xs text-blue-800 font-medium flex items-center gap-1">
+              <div className="bg-brand-light/50 border border-brand/40 rounded-lg p-2 mt-2">
+                <p className="text-xs text-brand font-medium flex items-center gap-1">
                   <Scan className="h-3 w-3" />
                   💡 Toca el botón "Escanear Código" para usar tu lector USB o cámara
                 </p>
-                <p className="text-xs text-blue-600 mt-1">
+                <p className="text-xs text-brand mt-1">
                   Es más rápido y evita errores al registrar productos
                 </p>
               </div>
@@ -576,9 +576,9 @@ export function ProductForm({ initialData, productId }: ProductFormProps) {
                   </Button>
                 </div>
               ) : (
-                <div className="space-y-2 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                <div className="space-y-2 p-3 bg-brand-light/50 border border-brand/40 rounded-lg">
                   <div className="flex items-center justify-between mb-2">
-                    <span className="text-sm font-medium text-blue-900">
+                    <span className="text-sm font-medium text-brand">
                       Nueva Categoría
                     </span>
                     <Button
@@ -762,10 +762,10 @@ export function ProductForm({ initialData, productId }: ProductFormProps) {
           </div>
 
           {/* Sección de Venta por Unidades */}
-          <Card className="border-blue-200 bg-blue-50/30">
+          <Card className="border-brand/40 bg-brand-light/50/30">
             <CardHeader>
               <CardTitle className="text-lg flex items-center gap-2">
-                <Package className="h-5 w-5 text-blue-600" />
+                <Package className="h-5 w-5 text-brand" />
                 Venta por Unidades (Opcional)
               </CardTitle>
               <p className="text-sm text-gray-600">
@@ -864,14 +864,14 @@ export function ProductForm({ initialData, productId }: ProductFormProps) {
 
                   {/* Vista previa del cálculo */}
                   {watch("units_per_package") && watch("sale_price") && (
-                    <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg">
-                      <p className="text-sm font-medium text-blue-900 mb-1">
+                    <div className="p-3 bg-brand-light/50 border border-brand/40 rounded-lg">
+                      <p className="text-sm font-medium text-brand mb-1">
                         Vista Previa:
                       </p>
-                      <p className="text-sm text-blue-800">
+                      <p className="text-sm text-brand">
                         • Paquete completo ({watch("units_per_package")} {watch("unit_name") || "unidades"}): ${watch("sale_price")?.toLocaleString()}
                       </p>
-                      <p className="text-sm text-blue-800">
+                      <p className="text-sm text-brand">
                         • Precio por {watch("unit_name") || "unidad"} suelta:{" "}
                         ${(watch("price_per_unit") || (watch("sale_price") || 0) / (watch("units_per_package") || 1)).toLocaleString()}
                       </p>
@@ -894,10 +894,10 @@ export function ProductForm({ initialData, productId }: ProductFormProps) {
                       setValue("stock", currentValue - 1);
                     }
                   }}
-                  className="h-14 w-14 shrink-0 bg-red-600 hover:bg-red-700 text-white border-red-600"
+                  className="h-14 w-14 shrink-0 bg-brand hover:bg-brand-hover text-white border-brand text-2xl font-bold"
                   size="lg"
                 >
-                  <Minus className="h-6 w-6 text-white stroke-2" />
+                  <span className="text-2xl font-bold leading-none">−</span>
                 </Button>
                 <Input
                   id="stock"
@@ -917,10 +917,10 @@ export function ProductForm({ initialData, productId }: ProductFormProps) {
                     const currentValue = Math.round(watch("stock") || 0);
                     setValue("stock", currentValue + 1);
                   }}
-                  className="h-14 w-14 shrink-0 bg-green-600 hover:bg-green-700 text-white border-green-600"
+                  className="h-14 w-14 shrink-0 bg-brand hover:bg-brand-hover text-white border-brand"
                   size="lg"
                 >
-                  <Plus className="h-6 w-6 text-white stroke-2" />
+                  <span className="text-2xl font-bold leading-none">+</span>
                 </Button>
               </div>
               {errors.stock && (
@@ -1033,7 +1033,7 @@ export function ProductForm({ initialData, productId }: ProductFormProps) {
             <CardHeader>
               <div className="flex items-center justify-between">
                 <CardTitle className="flex items-center gap-2">
-                  <Scan className="h-5 w-5 text-blue-600" />
+                  <Scan className="h-5 w-5 text-brand" />
                   Método de Escaneo
                 </CardTitle>
                 <Button
@@ -1064,7 +1064,7 @@ export function ProductForm({ initialData, productId }: ProductFormProps) {
                       barcodeInputRef.current?.select();
                     }, 100);
                   }}
-                  className="w-full h-20 bg-blue-600 hover:bg-blue-700 flex items-center justify-start gap-4 px-6"
+                  className="w-full h-20 bg-brand hover:bg-brand-hover flex items-center justify-start gap-4 px-6"
                 >
                   <Scan className="h-8 w-8" />
                   <div className="text-left">
@@ -1102,7 +1102,7 @@ export function ProductForm({ initialData, productId }: ProductFormProps) {
       {showScanner && (
         <div className="fixed inset-0 bg-black bg-opacity-75 z-50 flex items-center justify-center p-4">
           <div className="bg-white rounded-lg max-w-2xl w-full overflow-hidden">
-            <div className="bg-blue-600 text-white p-4 flex items-center justify-between">
+            <div className="bg-brand text-white p-4 flex items-center justify-between">
               <div className="flex items-center gap-2">
                 <Camera className="h-6 w-6" />
                 <h2 className="text-xl font-bold">Escanear Código de Barras</h2>
@@ -1112,17 +1112,17 @@ export function ProductForm({ initialData, productId }: ProductFormProps) {
                 variant="ghost"
                 size="sm"
                 onClick={stopScanner}
-                className="text-white hover:bg-blue-700"
+                className="text-white hover:bg-brand-hover"
               >
                 <X className="h-6 w-6" />
               </Button>
             </div>
             <div className="p-4">
-              <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 mb-4">
-                <p className="text-sm text-blue-800 text-center font-medium">
+              <div className="bg-brand-light/50 border border-brand/40 rounded-lg p-3 mb-4">
+                <p className="text-sm text-brand text-center font-medium">
                   📱 Apunta la cámara hacia el código de barras
                 </p>
-                <p className="text-xs text-blue-600 text-center mt-1">
+                <p className="text-xs text-brand text-center mt-1">
                   El código se detectará automáticamente
                 </p>
               </div>

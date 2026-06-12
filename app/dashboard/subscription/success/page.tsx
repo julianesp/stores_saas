@@ -103,7 +103,7 @@ Nombre:             ${receiptData.merchant}
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-green-50 to-blue-50 flex items-center justify-center p-4">
+    <div className="min-h-screen bg-gradient-to-br from-green-50 to-brand-light/50 flex items-center justify-center p-4">
       <Card className="max-w-2xl w-full shadow-xl border-2 border-green-200">
         <CardHeader className="bg-gradient-to-r from-green-500 to-green-600 text-white rounded-t-lg">
           <div className="flex items-center justify-center mb-4">
@@ -169,8 +169,8 @@ Nombre:             ${receiptData.merchant}
           </div>
 
           {/* Mensaje de confirmación */}
-          <div className="p-4 bg-blue-50 rounded-lg border border-blue-200">
-            <p className="text-sm text-blue-900 text-center font-medium">
+          <div className="p-4 bg-brand-light/50 rounded-lg border border-brand/40">
+            <p className="text-sm text-brand text-center font-medium">
               ✉️ Recibirás un email de confirmación con los detalles de tu suscripción
             </p>
           </div>

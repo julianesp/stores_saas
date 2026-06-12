@@ -12,6 +12,9 @@ app.get('/', async (c) => {
   try {
     const tenant: Tenant = c.get('tenant');
     const clerkUserId: string = c.get('clerkUserId');
+    // El middleware de auth ya resolvió el perfil del owner (incluyendo el caso
+    // dev donde el id vive en clerk_user_id_test) y lo dejó aquí.
+    const resolvedProfileId: string | undefined = c.get('userProfileId');
 
     console.log('🔍 [GET /api/user-profiles] clerk_user_id:', clerkUserId);
 
@@ -36,12 +39,18 @@ app.get('/', async (c) => {
       }, 404);
     }
 
-    // Obtener el perfil del usuario actual (owner)
-    const result = await c.env.DB.prepare(
-      'SELECT * FROM user_profiles WHERE clerk_user_id = ?'
-    )
-      .bind(clerkUserId)
-      .first<UserProfile>();
+    // Obtener el perfil del usuario actual (owner).
+    // Preferimos el id ya resuelto por el middleware; si no está, caemos al
+    // lookup por clerk_user_id OR clerk_user_id_test para cubrir el entorno dev.
+    const result = resolvedProfileId
+      ? await c.env.DB.prepare('SELECT * FROM user_profiles WHERE id = ?')
+          .bind(resolvedProfileId)
+          .first<UserProfile>()
+      : await c.env.DB.prepare(
+          'SELECT * FROM user_profiles WHERE clerk_user_id = ? OR clerk_user_id_test = ?'
+        )
+          .bind(clerkUserId, clerkUserId)
+          .first<UserProfile>();
 
     console.log('📦 [GET /api/user-profiles] Perfil encontrado:', !!result);
 

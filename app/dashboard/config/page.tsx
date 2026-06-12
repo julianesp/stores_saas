@@ -223,7 +223,7 @@ export default function ConfigPage() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
-          <Settings className="h-8 w-8 text-blue-600" />
+          <Settings className="h-8 w-8 text-brand" />
           <div>
             <h1 className="text-3xl font-bold">Configuración</h1>
             <p className="text-gray-500">
@@ -238,16 +238,16 @@ export default function ConfigPage() {
       </div>
 
       {/* Buzón de Sugerencias */}
-      <Card className="border-blue-200 bg-blue-50">
+      <Card className="border-brand/40 bg-brand-light/50">
         <CardContent className="pt-6">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
-              <MessageCircle className="h-6 w-6 text-blue-600" />
+              <MessageCircle className="h-6 w-6 text-brand" />
               <div>
-                <h3 className="font-semibold text-blue-900">
+                <h3 className="font-semibold text-brand">
                   💡 ¿Tienes ideas para mejorar?
                 </h3>
-                <p className="text-sm text-blue-700">
+                <p className="text-sm text-brand">
                   Tus sugerencias son valiosas para nosotros. Envía tus comentarios directamente al desarrollador.
                 </p>
               </div>
@@ -264,7 +264,7 @@ export default function ConfigPage() {
                   "_blank"
                 );
               }}
-              className="bg-blue-600 hover:bg-blue-700 text-white"
+              className="bg-brand hover:bg-brand-hover text-white"
             >
               <MessageCircle className="h-4 w-4 mr-2" />
               Enviar al Desarrollador
@@ -417,8 +417,8 @@ export default function ConfigPage() {
                   </Button>
                 </div>
 
-                <div className="mt-3 p-3 bg-blue-50 rounded text-sm">
-                  <p className="text-blue-900">
+                <div className="mt-3 p-3 bg-brand-light/50 rounded text-sm">
+                  <p className="text-brand">
                     <strong>Vista previa:</strong> Compras entre{" "}
                     {formatCurrency(tier.min_amount)} y{" "}
                     {tier.max_amount === Infinity
@@ -539,10 +539,10 @@ export default function ConfigPage() {
       </Card>
 
       {/* Contadora - Reportes DIAN */}
-      <Card className="border-blue-200 bg-blue-50/30">
+      <Card className="border-brand/40 bg-brand-light/50/30">
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
-            <MessageCircle className="h-5 w-5 text-blue-600" />
+            <MessageCircle className="h-5 w-5 text-brand" />
             Reportes DIAN
           </CardTitle>
           <CardDescription>
@@ -550,12 +550,12 @@ export default function ConfigPage() {
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+          <div className="bg-brand-light/50 border border-brand/40 rounded-lg p-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
             <div className="flex gap-3">
-              <Info className="h-5 w-5 text-blue-600 flex-shrink-0 mt-0.5" />
+              <Info className="h-5 w-5 text-brand flex-shrink-0 mt-0.5" />
               <div>
-                <p className="font-semibold text-blue-900">Contadora disponible</p>
-                <p className="text-sm text-blue-800 mt-1">
+                <p className="font-semibold text-brand">Contadora disponible</p>
+                <p className="text-sm text-brand mt-1">
                   Nuestra contadora te puede ayudar con tus declaraciones y reportes ante la DIAN de forma rápida y confiable.
                 </p>
               </div>
@@ -564,7 +564,7 @@ export default function ConfigPage() {
               href="https://wa.me/573152523498?text=Hola,%20necesito%20ayuda%20con%20reportes%20a%20la%20DIAN"
               target="_blank"
               rel="noopener noreferrer"
-              className="shrink-0 inline-flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white font-semibold text-sm px-4 py-2 rounded-lg transition-colors"
+              className="shrink-0 inline-flex items-center gap-2 bg-brand hover:bg-brand-hover text-white font-semibold text-sm px-4 py-2 rounded-lg transition-colors"
             >
               <MessageCircle className="h-4 w-4" />
               Escríbeme

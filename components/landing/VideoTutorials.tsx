@@ -90,13 +90,13 @@ export default function VideoTutorials() {
 
         {/* Suggestion Form */}
         <div className="max-w-2xl mx-auto">
-          <Card className="bg-gradient-to-br from-blue-900 to-blue-800 border-blue-400">
+          <Card className="bg-gradient-to-br from-brand-hover to-brand-hover border-brand/80">
             <CardHeader>
               <div className="flex items-center gap-3">
-                <MessageSquare className="h-8 w-8 text-blue-300" />
+                <MessageSquare className="h-8 w-8 text-brand/70" />
                 <div>
                   <CardTitle className="text-white">¿Tienes dudas sobre algún tema?</CardTitle>
-                  <p className="text-blue-200 text-sm mt-1">
+                  <p className="text-brand/60 text-sm mt-1">
                     Cuéntanos qué te gustaría aprender y crearemos un video tutorial para ti
                   </p>
                 </div>
@@ -109,13 +109,13 @@ export default function VideoTutorials() {
                     value={topic}
                     onChange={(e) => setTopic(e.target.value)}
                     placeholder="Ejemplo: ¿Cómo configuro los métodos de pago en la tienda online?"
-                    className="w-full px-4 py-3 rounded-lg bg-white/10 border border-blue-300 text-white placeholder-blue-300/70 focus:outline-none focus:ring-2 focus:ring-blue-400 min-h-[100px] resize-y"
+                    className="w-full px-4 py-3 rounded-lg bg-white/10 border border-brand/60 text-white placeholder-blue-300/70 focus:outline-none focus:ring-2 focus:ring-brand/80 min-h-[100px] resize-y"
                     required
                   />
                 </div>
                 <Button
                   type="submit"
-                  className="w-full bg-yellow-400 text-blue-900 hover:bg-yellow-500 font-semibold"
+                  className="w-full bg-yellow-400 text-brand hover:bg-yellow-500 font-semibold"
                   disabled={submitted}
                 >
                   {submitted ? (
@@ -130,7 +130,7 @@ export default function VideoTutorials() {
                   )}
                 </Button>
               </form>
-              <p className="text-blue-200 text-xs mt-3 text-center">
+              <p className="text-brand/60 text-xs mt-3 text-center">
                 Revisamos todas las sugerencias y priorizamos los temas más solicitados
               </p>
             </CardContent>

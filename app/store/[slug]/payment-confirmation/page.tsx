@@ -417,7 +417,7 @@ export default function PaymentConfirmationPage() {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-50">
         <div className="text-center">
-          <Loader2 className="h-12 w-12 animate-spin text-blue-600 mx-auto mb-4" />
+          <Loader2 className="h-12 w-12 animate-spin text-brand mx-auto mb-4" />
           <p className="text-gray-600">Verificando pago...</p>
         </div>
       </div>
@@ -543,7 +543,7 @@ export default function PaymentConfirmationPage() {
                   </Link>
                 </div>
 
-                <div className="mt-6 p-4 bg-blue-50 rounded-lg text-sm text-gray-700">
+                <div className="mt-6 p-4 bg-brand-light/50 rounded-lg text-sm text-gray-700">
                   <p className="font-semibold mb-2">✅ ¿Qué sigue?</p>
                   <ul className="space-y-1 list-disc list-inside text-sm">
                     <li>
@@ -558,7 +558,7 @@ export default function PaymentConfirmationPage() {
 
             {transactionStatus === "PENDING" && (
               <div className="text-center">
-                <Loader2 className="h-16 w-16 animate-spin text-blue-600 mx-auto mb-4" />
+                <Loader2 className="h-16 w-16 animate-spin text-brand mx-auto mb-4" />
                 <h2 className="text-2xl font-bold mb-2">Procesando pago...</h2>
                 <p className="text-gray-600 mb-6">
                   Estamos verificando tu transacción
