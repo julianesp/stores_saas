@@ -56,7 +56,8 @@ export function setSelectedTenantId(tenantId: string | null) {
 async function fetchAPI<T = any>(
   endpoint: string,
   getToken: GetTokenFn,
-  options: RequestInit = {}
+  options: RequestInit = {},
+  skipTenant = false
 ): Promise<T> {
   try {
     // Obtener token JWT de Clerk
@@ -71,10 +72,12 @@ async function fetchAPI<T = any>(
     headers.set('Authorization', `Bearer ${token}`);
     headers.set('Content-Type', 'application/json');
 
-    // Agregar tenant ID si está seleccionado
-    const tenantId = getSelectedTenantId();
-    if (tenantId) {
-      headers.set('X-Tenant-ID', tenantId);
+    // Agregar tenant ID si está seleccionado (omitir en operaciones globales de superadmin)
+    if (!skipTenant) {
+      const tenantId = getSelectedTenantId();
+      if (tenantId) {
+        headers.set('X-Tenant-ID', tenantId);
+      }
     }
 
     // Realizar petición
@@ -601,7 +604,7 @@ export async function getUserProfile(getToken: GetTokenFn): Promise<UserProfile>
 }
 
 export async function getAllUserProfiles(getToken: GetTokenFn): Promise<UserProfile[]> {
-  return fetchAPI<UserProfile[]>('/api/user-profiles/all', getToken);
+  return fetchAPI<UserProfile[]>('/api/user-profiles/all', getToken, {}, true);
 }
 
 export async function createUserProfile(data: Partial<UserProfile>, getToken: GetTokenFn): Promise<UserProfile> {

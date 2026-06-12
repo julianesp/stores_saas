@@ -228,10 +228,12 @@ export async function authMiddleware(c: Context<{ Bindings: Env }>, next: Next) 
 
             // Si el email sigue siendo placeholder, el usuario no existe en Clerk — rechazar
             if (userEmail.includes('@placeholder.com')) {
+              console.error(`[auth] fetchClerkUser returned null for clerkUserId=${clerkUserId}. CLERK_SECRET_KEY prefix=${c.env.CLERK_SECRET_KEY?.substring(0, 12)}...`);
               return c.json({
                 success: false,
                 error: 'Unauthorized',
-                message: 'User not found in authentication provider'
+                message: 'User not found in authentication provider',
+                debug_clerk_user_id: clerkUserId,
               }, 401);
             }
           } else {

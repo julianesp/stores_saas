@@ -36,7 +36,8 @@ export async function fetchClerkUser(
     });
 
     if (!response.ok) {
-      console.error(`Failed to fetch Clerk user: ${response.status} ${response.statusText}`);
+      const body = await response.text();
+      console.error(`Failed to fetch Clerk user: ${response.status} ${response.statusText} | body: ${body} | userId: ${clerkUserId} | keyPrefix: ${clerkSecretKey?.substring(0, 12)}...`);
       return null;
     }
 
