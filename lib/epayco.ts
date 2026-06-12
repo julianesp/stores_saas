@@ -123,7 +123,7 @@ export async function createEPaycoCheckout(
   const referenceCode = `SUB-${userProfileId}-${Date.now()}`;
 
   // URL de confirmación y respuesta
-  const baseUrl = process.env.NEXT_PUBLIC_APP_URL || process.env.NEXT_PUBLIC_URL || 'https://tienda-pos.vercel.app';
+  const baseUrl = process.env.NEXT_PUBLIC_APP_URL || process.env.NEXT_PUBLIC_URL || 'https://posib.dev';
 
   console.log('🔍 ePayco Debug:', {
     NEXT_PUBLIC_APP_URL: process.env.NEXT_PUBLIC_APP_URL,
@@ -141,22 +141,14 @@ export async function createEPaycoCheckout(
     const privateKey = EPAYCO_CONFIG.privateKey?.trim().replace(/\n/g, ''); // La PRIVATE_KEY
 
     console.log('🔐 Iniciando autenticación con ePayco Apify...');
-    console.log('🔍 Debug - Public Key exists:', !!publicKey);
-    console.log('🔍 Debug - Private Key exists:', !!privateKey);
-    console.log('🔍 Debug - Public Key value:', publicKey);
-    console.log('🔍 Debug - Private Key value:', privateKey);
-    console.log('🔍 Debug - Public Key length:', publicKey?.length);
-    console.log('🔍 Debug - Private Key length:', privateKey?.length);
-    console.log('🔍 Debug - Public Key has newline:', publicKey?.includes('\n'));
-    console.log('🔍 Debug - Private Key has newline:', privateKey?.includes('\n'));
+    // No registramos los valores de las llaves: quedarían en los logs de Vercel.
+    console.log('🔍 Debug - Public Key exists:', !!publicKey, 'len:', publicKey?.length);
+    console.log('🔍 Debug - Private Key exists:', !!privateKey, 'len:', privateKey?.length);
 
     if (!publicKey || !privateKey) {
       console.error('❌ Faltan credenciales de ePayco');
       throw new Error('Credenciales de ePayco no configuradas correctamente');
     }
-
-    console.log('🔍 Debug - Public Key:', publicKey.substring(0, 10) + '...');
-    console.log('🔍 Debug - Private Key:', privateKey.substring(0, 10) + '...');
 
     const authString = Buffer.from(`${publicKey}:${privateKey}`).toString('base64');
 
@@ -193,13 +185,23 @@ export async function createEPaycoCheckout(
     // Paso 2: Crear sesión de checkout
     console.log('📝 Creando sesión de checkout...');
 
+    // ePayco Smart Checkout v2 espera los montos como string y el desglose de
+    // impuestos explícito. Si falta tax/tax_base o el amount va como número,
+    // el checkout abre pero deja el botón "Pagar" inhabilitado.
+    const amountStr = String(plan.price);
+
     const sessionPayload = {
       // Información básica de la transacción (snake_case según documentación oficial)
       checkout_version: "2",
       name: `Suscripción ${plan.name} - Tienda POS`,
       description: `Suscripción ${plan.name}`,
       currency: "COP",
-      amount: plan.price,
+      amount: amountStr,
+
+      // Desglose de impuestos (productos sin IVA → tax 0, base = monto total)
+      tax: "0",
+      tax_base: amountStr,
+      tax_ico: "0",
 
       // Configuración regional
       lang: "ES",

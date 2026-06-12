@@ -7,7 +7,6 @@ import {
   Loader2,
   CreditCard,
   Sparkles,
-  Store,
   Mail,
   AlertCircle,
 } from "lucide-react";
@@ -64,23 +63,6 @@ const ADDONS = [
       "Recomendaciones de inventario inteligentes",
       "Insights y alertas automáticas",
       "Detección de anomalías en ventas",
-    ],
-  },
-  {
-    id: "store-addon-monthly",
-    type: "store" as const,
-    name: "Tienda Online",
-    icon: Store,
-    price: 9900,
-    color: "blue",
-    features: [
-      "Tienda online personalizable",
-      "Carrito de compras completo",
-      "Pedidos online en tiempo real",
-      "Integración con ePayco (pagos online)",
-      "Zonas de envío configurables",
-      "Integración con WhatsApp",
-      "Sincronización automática de inventario",
     ],
   },
   {
@@ -418,7 +400,6 @@ export default function SubscriptionPageWompi() {
                   // Obtener fecha de vencimiento según el tipo de addon
                   let expiresAt: string | null | undefined = null;
                   if (addon.type === 'ai') expiresAt = profile?.ai_addon_expires_at;
-                  else if (addon.type === 'store') expiresAt = profile?.store_addon_expires_at;
                   else if (addon.type === 'email') expiresAt = profile?.email_addon_expires_at;
 
                   // Calcular días restantes
@@ -470,7 +451,6 @@ export default function SubscriptionPageWompi() {
                   {isActive && subscriptionStatus?.status === "active" && (() => {
                     let expiresAt: string | null | undefined = null;
                     if (addon.type === 'ai') expiresAt = profile?.ai_addon_expires_at;
-                    else if (addon.type === 'store') expiresAt = profile?.store_addon_expires_at;
                     else if (addon.type === 'email') expiresAt = profile?.email_addon_expires_at;
 
                     if (!expiresAt) return null;
