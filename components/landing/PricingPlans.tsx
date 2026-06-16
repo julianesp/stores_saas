@@ -44,24 +44,24 @@ const addons = [
       "Detección de anomalías en ventas",
     ],
   },
-  {
-    name: "Tienda Online",
-    price: "$9.900",
-    priceValue: 9900,
-    icon: Store,
-    color: "blue",
-    description: "Vende en línea 24/7",
-    features: [
-      "Tienda online personalizable",
-      "Carrito de compras completo",
-      "Pedidos online en tiempo real",
-      "Integración con Wompi (pagos)",
-      "Zonas de envío configurables",
-      "Integración con WhatsApp",
-      "Sincronización automática de inventario",
-    ],
-    popular: true,
-  },
+  // {
+  //   name: "Tienda Online",
+  //   price: "$9.900",
+  //   priceValue: 9900,
+  //   icon: Store,
+  //   color: "blue",
+  //   description: "Vende en línea 24/7",
+  //   features: [
+  //     "Tienda online personalizable",
+  //     "Carrito de compras completo",
+  //     "Pedidos online en tiempo real",
+  //     "Integración con Wompi (pagos)",
+  //     "Zonas de envío configurables",
+  //     "Integración con WhatsApp",
+  //     "Sincronización automática de inventario",
+  //   ],
+  //   popular: true,
+  // },
   {
     name: "Email Marketing",
     price: "$5.000",
@@ -180,14 +180,6 @@ export default function PricingPlans() {
                   key={addon.name}
                   className="relative border-2 border-yellow-400 bg-gray-800 hover:shadow-2xl transition-shadow"
                 >
-                  {addon.popular && (
-                    <div className="absolute -top-3 left-1/2 transform -translate-x-1/2 z-10">
-                      <span className="bg-gradient-to-r from-yellow-400 to-orange-400 text-gray-900 text-xs font-bold px-3 py-1 rounded-full flex items-center gap-1 shadow-lg">
-                        <Sparkles className="h-3 w-3" /> Más Popular
-                      </span>
-                    </div>
-                  )}
-
                   <CardHeader className="text-center pb-3 pt-6">
                     <div
                       className={`w-14 h-14 mx-auto mb-3 rounded-full ${colors.bg} flex items-center justify-center border-2 ${colors.border}`}
