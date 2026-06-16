@@ -19,6 +19,39 @@ import { CategoryManagerModal } from '@/components/products/category-manager-mod
 // import { useTour } from '@/hooks/useTour';
 // import { productsTourConfig } from '@/lib/tour-configs';
 
+// La API devuelve `images` como un string JSON (ej: '["https://..."]').
+// Esta función lo convierte en un array real de URLs, soportando también
+// el caso de un array ya parseado o una URL suelta.
+function normalizeImages(
+  images?: string | string[],
+  fallbackUrl?: string
+): string[] | undefined {
+  if (Array.isArray(images)) {
+    return images.length > 0 ? images : undefined;
+  }
+
+  if (typeof images === 'string' && images.trim()) {
+    const trimmed = images.trim();
+    // Intentar parsear si parece un array JSON
+    if (trimmed.startsWith('[')) {
+      try {
+        const parsed = JSON.parse(trimmed);
+        if (Array.isArray(parsed)) {
+          const urls = parsed.filter(
+            (url): url is string => typeof url === 'string' && url.trim().length > 0
+          );
+          return urls.length > 0 ? urls : undefined;
+        }
+      } catch {
+        // Si falla el parseo, lo tratamos como una URL suelta abajo
+      }
+    }
+    return [trimmed];
+  }
+
+  return fallbackUrl ? [fallbackUrl] : undefined;
+}
+
 export default function ProductsPage() {
   const { getToken, userId } = useAuth();
   const [products, setProducts] = useState<ProductWithRelations[]>([]);
@@ -55,14 +88,9 @@ export default function ProductsPage() {
       // Combinar los datos
       const productsWithRelations: ProductWithRelations[] = productsData.map(product => ({
         ...product,
-        // Asegurar que images sea un array
-        images: Array.isArray(product.images)
-          ? product.images
-          : product.images
-            ? [product.images]
-            : product.image_url
-              ? [product.image_url]
-              : undefined,
+        // Asegurar que images sea un array. La API devuelve images como string
+        // JSON (ej: '["https://..."]'), así que hay que parsearlo.
+        images: normalizeImages(product.images, product.image_url),
         category: product.category_id ? categoriesMap.get(product.category_id) : undefined,
         supplier: product.supplier_id ? suppliersMap.get(product.supplier_id) : undefined,
       }));

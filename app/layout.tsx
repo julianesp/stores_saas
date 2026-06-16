@@ -29,8 +29,8 @@ export const metadata: Metadata = {
     siteName: 'posib.dev',
     images: [
       {
-        url: '/og-image.png',
-        secureUrl: 'https://posib.dev/og-image.png',
+        url: 'https://pub-ea40242d92ce470fbb6e43d46f01cefe.r2.dev/images/logo.png',
+        secureUrl: 'https://pub-ea40242d92ce470fbb6e43d46f01cefe.r2.dev/images/logo.png',
         width: 1200,
         height: 630,
         alt: 'posib.dev - Sistema POS',
@@ -44,7 +44,7 @@ export const metadata: Metadata = {
     description: 'Sistema completo de punto de venta y gestión de inventario para tiendas',
     images: [
       {
-        url: 'https://posib.dev/og-image.png',
+        url: 'https://pub-ea40242d92ce470fbb6e43d46f01cefe.r2.dev/images/logo.png',
         alt: 'posib.dev - Sistema POS',
       }
     ],
