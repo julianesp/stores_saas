@@ -39,37 +39,6 @@ export default function Home() {
           <h1 className="text-xl md:text-2xl font-bold text-white">
             Posib.dev
           </h1>
-          <div className="flex gap-2 md:gap-4">
-            {/* <Link
-              href={landingConfig.contact.calendly.url}
-              target="_blank"
-              rel="noopener noreferrer"
-            >
-              <Button
-                variant="outline"
-                className="text-sm md:text-base px-3 md:px-4 bg-yellow-400 text-gray-900 hover:bg-yellow-500 border-yellow-400"
-              >
-                <Calendar className="h-4 w-4 mr-2" />
-                <span className="hidden sm:inline">Agendar Demo</span>
-                <span className="sm:hidden">Demo</span>
-              </Button>
-            </Link> */}
-            <Link href="/sign-in">
-              <Button
-                variant="ghost"
-                className="text-sm md:text-base px-3 md:px-4 bg-gray-800 cursor-pointer text-white hover:bg-white hover:text-gray-800 transition-colors hover:border hover:border-black"
-              >
-                <span className="hidden sm:inline ">Iniciar Sesión</span>
-                <span className="sm:hidden">Entrar</span>
-              </Button>
-            </Link>
-            <Link href="/sign-up">
-              <Button className="text-sm md:text-base px-3 md:px-4">
-                <span className="hidden sm:inline">Registrarse</span>
-                <span className="sm:hidden">Registro</span>
-              </Button>
-            </Link>
-          </div>
         </div>
       </header>
 
@@ -77,7 +46,7 @@ export default function Home() {
       <WhatsAppButton />
 
       {/* Hero Section */}
-      <section className="container mx-auto px-4 py-12 md:py-20 text-center">
+      <section className="container mx-auto px-4 pt-28 md:pt-36 pb-12 md:pb-20 text-center">
         <h2 className="text-3xl sm:text-4xl md:text-5xl font-bold text-white mb-4 md:mb-6">
           Gestión Completa para tu Tienda
         </h2>
@@ -87,13 +56,21 @@ export default function Home() {
           negocio.
         </p>
         <div className="flex flex-col sm:flex-row gap-3 md:gap-4 justify-center max-w-md sm:max-w-none mx-auto">
+          <Link href="/sign-in" className="w-full sm:w-auto">
+            <Button
+              size="lg"
+              variant="ghost"
+              className="text-base md:text-lg w-full sm:w-auto bg-gray-800 cursor-pointer text-white hover:bg-white hover:text-gray-800 transition-colors hover:border hover:border-black"
+            >
+              Entrar
+            </Button>
+          </Link>
           <Link href="/sign-up" className="w-full sm:w-auto">
             <Button
               size="lg"
               className="text-base md:text-lg w-full sm:w-auto cursor-pointer"
             >
-              Comenzar Ahora{" "}
-              <ArrowRight className="ml-2 h-4 w-4 md:h-5 md:w-5" />
+              Registro <ArrowRight className="ml-2 h-4 w-4 md:h-5 md:w-5" />
             </Button>
           </Link>
         </div>
