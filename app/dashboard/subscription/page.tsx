@@ -568,12 +568,6 @@ export default function SubscriptionPageWompi() {
                   <span className="font-bold">{formatCurrency(5000)}</span>
                 </div>
               )}
-              {activeAddons.store && (
-                <div className="flex justify-between items-center text-brand">
-                  <span>+ Tienda Online</span>
-                  <span className="font-bold">{formatCurrency(9900)}</span>
-                </div>
-              )}
               {activeAddons.email && (
                 <div className="flex justify-between items-center text-green-700">
                   <span>+ Email Marketing</span>
@@ -588,7 +582,6 @@ export default function SubscriptionPageWompi() {
                       ? BASE_PLAN.price
                       : 0) +
                       (activeAddons.ai ? 5000 : 0) +
-                      (activeAddons.store ? 9900 : 0) +
                       (activeAddons.email ? 5000 : 0),
                   )}
                   <span className="text-sm font-normal text-gray-600">
