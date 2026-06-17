@@ -1,4 +1,5 @@
 import Link from "next/link";
+import Image from "next/image";
 import {
   ShoppingCart,
   Package,
@@ -71,6 +72,76 @@ export default function Home() {
               className="text-base md:text-lg w-full sm:w-auto h-20 sm:h-auto py-4 cursor-pointer"
             >
               Registro <ArrowRight className="ml-2 h-4 w-4 md:h-5 md:w-5" />
+            </Button>
+          </Link>
+        </div>
+      </section>
+
+      {/* Del caos al control - Storytelling con imágenes */}
+      <section className="container mx-auto px-4 py-12 md:py-20">
+        <div className="text-center mb-10 md:mb-14">
+          <h3 className="text-2xl sm:text-3xl md:text-4xl font-bold text-white mb-3">
+            De las montañas de papeles a tener el control
+          </h3>
+          <p className="text-base md:text-lg text-white/90 max-w-2xl mx-auto">
+            Mira cómo posib.dev transforma el día a día de tu negocio. ¿Te
+            identificas con alguna de estas escenas?
+          </p>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-8 md:gap-10 max-w-5xl mx-auto">
+          {/* Imagen 1 - El caos */}
+          <div className="group flex flex-col items-center text-center">
+            <div className="relative w-full max-w-sm aspect-[3/5] overflow-hidden rounded-2xl shadow-2xl ring-1 ring-white/10 transition-transform duration-300 group-hover:scale-[1.02]">
+              <Image
+                src="https://pub-ea40242d92ce470fbb6e43d46f01cefe.r2.dev/images/homepage_1.jpg"
+                alt="Tendero abrumado entre montañas de ventas y recibos en papel"
+                fill
+                sizes="(max-width: 768px) 100vw, 400px"
+                className="object-cover"
+              />
+            </div>
+            <h4 className="mt-5 text-xl md:text-2xl font-bold text-white">
+              ¿Tus cuentas viven en papeles y cuadernos?
+            </h4>
+            <p className="mt-2 text-sm md:text-base text-white/85 max-w-sm">
+              Olvídate de buscar entre recibos y libretas. Registra cada venta
+              en segundos y ten todo ordenado en un solo lugar.{" "}
+              <span className="font-semibold text-white">
+                Descubre lo fácil que es.
+              </span>
+            </p>
+          </div>
+
+          {/* Imagen 2 - El control con IA */}
+          <div className="group flex flex-col items-center text-center">
+            <div className="relative w-full max-w-sm aspect-[3/5] overflow-hidden rounded-2xl shadow-2xl ring-1 ring-white/10 transition-transform duration-300 group-hover:scale-[1.02]">
+              <Image
+                src="https://pub-ea40242d92ce470fbb6e43d46f01cefe.r2.dev/images/homepage_2.jpg"
+                alt="Panel de inteligencia artificial mostrando productos y tendencias de la tienda"
+                fill
+                sizes="(max-width: 768px) 100vw, 400px"
+                className="object-cover"
+              />
+            </div>
+            <h4 className="mt-5 text-xl md:text-2xl font-bold text-white">
+              Conoce tu tienda y vende lo que tus clientes buscan
+            </h4>
+            <p className="mt-2 text-sm md:text-base text-white/85 max-w-sm">
+              La inteligencia artificial te muestra qué se vende más, qué
+              reponer y cómo crecer.{" "}
+              <span className="font-semibold text-white">
+                Mira cómo funciona en tu negocio.
+              </span>
+            </p>
+          </div>
+        </div>
+
+        <div className="text-center mt-10 md:mt-12">
+          <Link href="/sign-up" className="inline-block">
+            <Button size="lg" className="text-base md:text-lg cursor-pointer">
+              Quiero verlo en mi tienda{" "}
+              <ArrowRight className="ml-2 h-4 w-4 md:h-5 md:w-5" />
             </Button>
           </Link>
         </div>
