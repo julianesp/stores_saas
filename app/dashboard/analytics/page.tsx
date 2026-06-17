@@ -33,7 +33,19 @@ import Link from "next/link";
 import { AIInsightsSection } from "@/components/analytics/ai-insights-section";
 import { ProductRecommendationsSection } from "@/components/analytics/product-recommendations-section";
 import { CustomerRFMSection } from "@/components/analytics/customer-rfm-section";
-import AdvancedMetricsDashboard from "@/components/analytics/advanced-metrics-dashboard";
+import dynamic from "next/dynamic";
+
+// Carga diferida: las gráficas (recharts, ~376KB) solo se descargan al ver
+// esta sección, no en el bundle inicial del dashboard.
+const AdvancedMetricsDashboard = dynamic(
+  () => import("@/components/analytics/advanced-metrics-dashboard"),
+  {
+    ssr: false,
+    loading: () => (
+      <div className="py-12 text-center text-gray-500">Cargando métricas…</div>
+    ),
+  },
+);
 
 export default function AnalyticsPage() {
   const { getToken } = useAuth();

@@ -1,4 +1,4 @@
-import jsPDF from 'jspdf';
+import type jsPDF from 'jspdf';
 import { Sale, SaleItemWithProduct, Customer, UserProfile } from '@/lib/types';
 import { formatCurrency } from '@/lib/utils';
 import { format } from 'date-fns';
@@ -15,8 +15,11 @@ interface InvoiceData {
 /**
  * Genera un PDF de la factura
  */
-export function generateInvoicePDF(data: InvoiceData): jsPDF {
+export async function generateInvoicePDF(data: InvoiceData): Promise<jsPDF> {
   const { sale, saleItems, customer, storeInfo, cashierName } = data;
+
+  // Carga diferida de jspdf (~400KB): solo al generar una factura.
+  const jsPDF = (await import('jspdf')).default;
 
   // Crear documento PDF (tamaño carta)
   const doc = new jsPDF({
@@ -429,7 +432,7 @@ export function shareViaFacebook(message: string) {
 export async function shareInvoicePDFViaWhatsApp(data: InvoiceData, phoneNumber: string | undefined): Promise<boolean> {
   try {
     // Generar el PDF
-    const doc = generateInvoicePDF(data);
+    const doc = await generateInvoicePDF(data);
 
     // Descargar el PDF localmente
     doc.save(`Factura-${data.sale.sale_number}.pdf`);

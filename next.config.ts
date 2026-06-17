@@ -16,8 +16,6 @@ const nextConfig: NextConfig = {
     'xml-crypto',
     'xmldom',
     '@zxing/library',
-    '@ericblade/quagga2',
-    'quagga',
   ],
   images: {
     // Las imágenes ya vienen optimizadas desde CDNs (Cloudinary, R2), así que

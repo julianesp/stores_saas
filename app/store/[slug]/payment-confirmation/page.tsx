@@ -15,7 +15,6 @@ import { Card, CardContent } from "@/components/ui/card";
 import { getStoreConfig, StoreConfig } from "@/lib/storefront-api";
 import { formatCurrency } from "@/lib/utils";
 import { toast } from "sonner";
-import jsPDF from "jspdf";
 
 export default function PaymentConfirmationPage() {
   const params = useParams();
@@ -159,11 +158,12 @@ export default function PaymentConfirmationPage() {
     }
   };
 
-  const downloadReceipt = () => {
+  const downloadReceipt = async () => {
     if (!transactionData) return;
 
     try {
-      // Crear documento PDF
+      // Crear documento PDF (jspdf cargado de forma diferida)
+      const jsPDF = (await import("jspdf")).default;
       const doc = new jsPDF();
 
       const pageWidth = doc.internal.pageSize.getWidth();

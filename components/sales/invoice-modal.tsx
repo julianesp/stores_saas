@@ -63,9 +63,9 @@ export function InvoiceModal({
   });
 
   // Generar y descargar PDF
-  const handleDownloadPDF = () => {
+  const handleDownloadPDF = async () => {
     try {
-      const doc = generateInvoicePDF({
+      const doc = await generateInvoicePDF({
         sale,
         saleItems,
         customer,
@@ -87,7 +87,7 @@ export function InvoiceModal({
       toast.loading("Generando link de factura...");
 
       // 1. Generar PDF como base64
-      const doc = generateInvoicePDF({ sale, saleItems, customer, storeInfo, cashierName });
+      const doc = await generateInvoicePDF({ sale, saleItems, customer, storeInfo, cashierName });
       const pdfBase64 = doc.output('datauristring').split(',')[1];
       const fileName = `Factura-${sale.sale_number}-${Date.now()}.pdf`;
 

@@ -7,7 +7,6 @@ import { CheckCircle2, Loader2, AlertCircle, Download, Printer, FileText } from 
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { toast } from "sonner";
-import jsPDF from "jspdf";
 
 function ConfirmationContent() {
   const searchParams = useSearchParams();
@@ -111,12 +110,14 @@ function ConfirmationContent() {
     }
   };
 
-  const generatePDFReceipt = () => {
+  const generatePDFReceipt = async () => {
     if (!transactionData) {
       toast.error("No hay datos de transacción disponibles");
       return;
     }
 
+    // Carga diferida de jspdf (~400KB): solo al descargar el recibo.
+    const jsPDF = (await import("jspdf")).default;
     const doc = new jsPDF();
 
     // Configuración de colores

@@ -1,8 +1,13 @@
-import ExcelJS from 'exceljs';
+import type ExcelJS from 'exceljs';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { SaleWithRelations, Sale } from './types';
 import { ProductAnalytics } from './analytics-helpers';
+
+// Carga diferida de exceljs (~1MB): solo se descarga cuando el usuario exporta.
+async function loadExcelJS() {
+  return (await import('exceljs')).default;
+}
 
 /**
  * Exporta las ventas a un archivo Excel con múltiples hojas
@@ -172,6 +177,7 @@ export async function exportSalesToExcel(sales: SaleWithRelations[], filename?: 
   }));
 
   // Crear libro de Excel con múltiples hojas
+  const ExcelJS = await loadExcelJS();
   const workbook = new ExcelJS.Workbook();
 
   // Hoja 1: Resumen de Ventas
@@ -276,6 +282,7 @@ export async function exportSalesForPredictions(sales: SaleWithRelations[], file
     });
   });
 
+  const ExcelJS = await loadExcelJS();
   const workbook = new ExcelJS.Workbook();
   const ws = workbook.addWorksheet('Datos para Predicciones');
   addDataToWorksheet(ws, mlData);
@@ -395,6 +402,7 @@ export async function exportAnalyticsToExcel(analytics: ProductAnalytics[], file
   ];
 
   // Crear libro de Excel
+  const ExcelJS = await loadExcelJS();
   const workbook = new ExcelJS.Workbook();
 
   // Agregar hojas

@@ -12,7 +12,6 @@ import { getDebtorCustomers } from '@/lib/cloudflare-credit-helpers';
 import { getSales } from '@/lib/cloudflare-api';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
-import ExcelJS from 'exceljs';
 import { toast } from 'sonner';
 
 export default function DebtorsPage() {
@@ -108,7 +107,8 @@ export default function DebtorsPage() {
         });
       });
 
-      // Crear workbook con ExcelJS
+      // Crear workbook con ExcelJS (carga diferida: solo al exportar)
+      const ExcelJS = (await import('exceljs')).default;
       const workbook = new ExcelJS.Workbook();
 
       // Hoja 1: Detalle completo de deudas
