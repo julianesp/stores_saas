@@ -55,20 +55,20 @@ export default function Home() {
           online. Todo lo que necesitas para administrar y hacer crecer tu
           negocio.
         </p>
-        <div className="flex flex-col sm:flex-row gap-3 md:gap-4 justify-center max-w-md sm:max-w-none mx-auto">
-          <Link href="/sign-in" className="w-full sm:w-auto">
+        <div className="flex flex-row gap-3 md:gap-4 justify-center max-w-md sm:max-w-none mx-auto">
+          <Link href="/sign-in" className="flex-1 sm:flex-none">
             <Button
               size="lg"
               variant="ghost"
-              className="text-base md:text-lg w-full sm:w-auto bg-gray-800 cursor-pointer text-white hover:bg-white hover:text-gray-800 transition-colors hover:border hover:border-black"
+              className="text-base md:text-lg w-full sm:w-auto h-20 sm:h-auto py-4 bg-gray-800 cursor-pointer text-white hover:bg-white hover:text-gray-800 transition-colors hover:border hover:border-black"
             >
               Entrar
             </Button>
           </Link>
-          <Link href="/sign-up" className="w-full sm:w-auto">
+          <Link href="/sign-up" className="flex-1 sm:flex-none">
             <Button
               size="lg"
-              className="text-base md:text-lg w-full sm:w-auto cursor-pointer"
+              className="text-base md:text-lg w-full sm:w-auto h-20 sm:h-auto py-4 cursor-pointer"
             >
               Registro <ArrowRight className="ml-2 h-4 w-4 md:h-5 md:w-5" />
             </Button>

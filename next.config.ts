@@ -20,6 +20,9 @@ const nextConfig: NextConfig = {
     'quagga',
   ],
   images: {
+    // Las imágenes ya vienen optimizadas desde CDNs (Cloudinary, R2), así que
+    // evitamos el optimizador de Next (/_next/image), que devolvía 402 en prod.
+    unoptimized: true,
     remotePatterns: [
       {
         protocol: 'https',
