@@ -410,6 +410,16 @@ export default function Home() {
           <div className="mt-4 text-xs text-gray-500">
             <p>© 2026 posib.dev - Todos los derechos reservados</p>
           </div>
+          <div className="mt-4 flex justify-center">
+            <a
+              href="https://www.neurai.dev/"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-1 rounded-full border border-gray-600 bg-gray-700/50 px-3 py-1 text-xs text-gray-300 transition-colors hover:bg-gray-700 hover:text-white"
+            >
+              Hecho por neurai.dev
+            </a>
+          </div>
         </div>
       </footer>
 

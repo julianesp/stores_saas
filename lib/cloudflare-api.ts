@@ -33,7 +33,7 @@ interface APIResponse<T = any> {
 /**
  * Get the selected tenant ID from localStorage
  */
-function getSelectedTenantId(): string | null {
+export function getSelectedTenantId(): string | null {
   if (typeof window === 'undefined') return null;
   return localStorage.getItem('selected_tenant_id');
 }

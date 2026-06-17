@@ -31,6 +31,7 @@ import {
   createSale,
   getUserProfile,
   getActiveOffers,
+  getSelectedTenantId,
   Offer,
 } from "@/lib/cloudflare-api";
 import {
@@ -60,6 +61,11 @@ import { InvoiceModal } from "@/components/sales/invoice-modal";
 import { UnitSelectorModal } from "@/components/pos/unit-selector-modal";
 import Link from "next/link";
 import { normalizeBarcode, barcodeEquals } from "@/lib/barcode-utils";
+import {
+  cacheCollection,
+  readCachedCollection,
+  queueSale,
+} from "@/lib/offline-store";
 // COMENTADO: Tour deshabilitado
 // import { useTour } from '@/hooks/useTour';
 // import { posTourConfig } from '@/lib/tour-configs';
@@ -245,6 +251,9 @@ export default function POSPage() {
       // Normalizar sell_by_unit: SQLite devuelve 0/1, necesitamos boolean
       const data = raw.map((p) => ({ ...p, sell_by_unit: !!p.sell_by_unit }));
 
+      // Guardar en caché para poder consultar productos sin conexión.
+      cacheCollection("products", data);
+
       // Verificar si hay productos en el sistema (antes de filtrar por stock)
       setHasAnyProducts(data.length > 0);
 
@@ -255,6 +264,15 @@ export default function POSPage() {
       setProducts(productsInStock);
     } catch (error) {
       console.error("Error fetching products:", error);
+      // Sin conexión: leer el último catálogo cacheado.
+      const cached = await readCachedCollection<Product>("products");
+      if (cached.length > 0) {
+        const data = cached.map((p) => ({ ...p, sell_by_unit: !!p.sell_by_unit }));
+        setHasAnyProducts(data.length > 0);
+        const productsInStock = data.filter((p) => p.stock > 0);
+        productsInStock.sort((a, b) => a.name.localeCompare(b.name));
+        setProducts(productsInStock);
+      }
     }
   }, [getToken]);
 
@@ -262,9 +280,12 @@ export default function POSPage() {
     try {
       const data = (await getCustomers(getToken)) as Customer[];
       data.sort((a, b) => a.name.localeCompare(b.name));
+      cacheCollection("customers", data);
       setCustomers(data);
     } catch (error) {
       console.error("Error fetching customers:", error);
+      const cached = await readCachedCollection<Customer>("customers");
+      if (cached.length > 0) setCustomers(cached);
     }
   }, [getToken]);
 
@@ -272,9 +293,12 @@ export default function POSPage() {
     try {
       const data = (await getCategories(getToken)) as Category[];
       data.sort((a, b) => a.name.localeCompare(b.name));
+      cacheCollection("categories", data);
       setCategories(data);
     } catch (error) {
       console.error("Error fetching categories:", error);
+      const cached = await readCachedCollection<Category>("categories");
+      if (cached.length > 0) setCategories(cached);
     }
   }, [getToken]);
 
@@ -676,12 +700,119 @@ export default function POSPage() {
     return subtotal - discountAmount;
   };
 
+  // Procesa una venta cuando NO hay conexión: la encola en IndexedDB para
+  // sincronizarla luego y descuenta el stock localmente.
+  const processSaleOffline = async () => {
+    if (paymentMethod === "credito") {
+      Swal.warning(
+        "Crédito no disponible sin conexión",
+        "Las ventas a crédito requieren internet. Usa efectivo, tarjeta o transferencia.",
+      );
+      return;
+    }
+
+    setProcessing(true);
+    try {
+      const subtotal = cart.reduce((sum, item) => {
+        const price = item.effectivePrice || item.product.sale_price;
+        return sum + price * item.quantity;
+      }, 0);
+      const total = subtotal;
+
+      const itemsPayload = cart.map((cartItem) => {
+        const price = cartItem.effectivePrice || cartItem.product.sale_price;
+        return {
+          product_id: cartItem.product.id,
+          quantity: cartItem.quantity,
+          unit_price: price,
+          discount: 0,
+          subtotal: price * cartItem.quantity,
+        };
+      });
+
+      const localId = `offline-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+
+      const payload = {
+        customer_id: selectedCustomer?.id ?? undefined,
+        subtotal,
+        tax: 0,
+        discount: 0,
+        total,
+        payment_method: paymentMethod,
+        status: "completada" as const,
+        points_earned: 0,
+        items: itemsPayload,
+      };
+
+      await queueSale({
+        localId,
+        payload,
+        tenantId: getSelectedTenantId(),
+        createdAt: Date.now(),
+      });
+
+      // Descontar stock localmente y refrescar la caché de productos.
+      const cached = await readCachedCollection<Product>("products");
+      if (cached.length > 0) {
+        const updated = cached.map((p) => {
+          const cartItem = cart.find((c) => c.product.id === p.id);
+          if (!cartItem) return p;
+          const unitsPerPackage = cartItem.product.units_per_package || 1;
+          const packagesSold = cartItem.isUnitSale
+            ? cartItem.quantity / unitsPerPackage
+            : cartItem.quantity;
+          return { ...p, stock: p.stock - packagesSold };
+        });
+        await cacheCollection("products", updated);
+      }
+
+      await Swal.custom({
+        title: "Venta guardada sin conexión",
+        html: `
+          <p class="text-lg mb-2">Total: ${formatCurrency(total)}</p>
+          <div class="bg-yellow-50 border border-yellow-200 rounded-lg p-3 text-sm text-yellow-800">
+            📴 Esta venta se guardó localmente y se sincronizará automáticamente
+            cuando recuperes la conexión a internet.
+          </div>
+        `,
+        icon: "success",
+        confirmButtonText: "Aceptar",
+      });
+
+      // Limpiar el carrito y estados.
+      setCart([]);
+      setSelectedCustomer(null);
+      setCanRedeem(false);
+      setApplyDiscount(false);
+      setDiscountAmount(0);
+      fetchProducts(); // Recargar desde caché (ya con stock descontado)
+      barcodeRef.current?.focus();
+    } catch (error) {
+      console.error("Error processing offline sale:", error);
+      Swal.error(
+        "No se pudo guardar la venta offline",
+        error instanceof Error ? error.message : "Error desconocido",
+      );
+    } finally {
+      setProcessing(false);
+    }
+  };
+
   const processSale = async () => {
     if (cart.length === 0) {
       Swal.warning(
         "El carrito está vacío",
         "Agrega productos antes de procesar la venta",
       );
+      return;
+    }
+
+    // ── Venta sin conexión ───────────────────────────────────────────────
+    // Si no hay internet, encolamos la venta localmente y descontamos el
+    // stock en la caché. Las ventas a crédito y los puntos requieren
+    // validación del servidor, así que no se permiten offline.
+    if (typeof navigator !== "undefined" && !navigator.onLine) {
+      await processSaleOffline();
       return;
     }
 
