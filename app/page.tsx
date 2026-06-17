@@ -240,9 +240,9 @@ export default function Home() {
             </CardHeader>
           </Card>
 
-          <Card className="border-2 hover:border-green-400 transition-all hover:shadow-lg bg-gray-300">
+          <Card className="border-2 hover:border-brand/80 transition-all hover:shadow-lg bg-gray-300">
             <CardHeader className="p-4 md:p-6">
-              <Package className="h-8 w-8 md:h-10 md:w-10 text-green-600 mb-2" />
+              <Package className="h-8 w-8 md:h-10 md:w-10 text-brand mb-2" />
               <CardTitle className="text-base md:text-lg">
                 Control de Inventario
               </CardTitle>
@@ -253,9 +253,9 @@ export default function Home() {
             </CardHeader>
           </Card>
 
-          <Card className="border-2 hover:border-purple-400 transition-all hover:shadow-lg bg-gray-300">
+          <Card className="border-2 hover:border-brand/80 transition-all hover:shadow-lg bg-gray-300">
             <CardHeader className="p-4 md:p-6">
-              <BarChart3 className="h-8 w-8 md:h-10 md:w-10 text-purple-600 mb-2" />
+              <BarChart3 className="h-8 w-8 md:h-10 md:w-10 text-brand mb-2" />
               <CardTitle className="text-base md:text-lg">
                 Reportes y Analytics
               </CardTitle>
@@ -266,9 +266,9 @@ export default function Home() {
             </CardHeader>
           </Card>
 
-          <Card className="border-2 hover:border-orange-400 transition-all hover:shadow-lg bg-gray-300">
+          <Card className="border-2 hover:border-brand/80 transition-all hover:shadow-lg bg-gray-300">
             <CardHeader className="p-4 md:p-6">
-              <Users className="h-8 w-8 md:h-10 md:w-10 text-orange-600 mb-2" />
+              <Users className="h-8 w-8 md:h-10 md:w-10 text-brand mb-2" />
               <CardTitle className="text-base md:text-lg">
                 Gestión de Clientes
               </CardTitle>
@@ -292,7 +292,7 @@ export default function Home() {
           </p>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 md:gap-8">
             <div className="text-center p-4">
-              <div className="bg-gradient-to-br from-brand to-brand rounded-full w-14 h-14 md:w-16 md:h-16 flex items-center justify-center mx-auto mb-3 md:mb-4 shadow-lg">
+              <div className="bg-gradient-to-br from-brand to-brand-hover rounded-full w-14 h-14 md:w-16 md:h-16 flex items-center justify-center mx-auto mb-3 md:mb-4 shadow-lg">
                 <Store className="h-7 w-7 md:h-8 md:w-8 text-white" />
               </div>
               <h4 className="font-semibold text-base md:text-lg mb-2 text-white">
@@ -305,7 +305,7 @@ export default function Home() {
             </div>
 
             <div className="text-center p-4">
-              <div className="bg-gradient-to-br from-pink-500 to-pink-600 rounded-full w-14 h-14 md:w-16 md:h-16 flex items-center justify-center mx-auto mb-3 md:mb-4 shadow-lg">
+              <div className="bg-gradient-to-br from-brand to-brand-hover rounded-full w-14 h-14 md:w-16 md:h-16 flex items-center justify-center mx-auto mb-3 md:mb-4 shadow-lg">
                 <Gift className="h-7 w-7 md:h-8 md:w-8 text-white" />
               </div>
               <h4 className="font-semibold text-base md:text-lg mb-2 text-white">
@@ -318,7 +318,7 @@ export default function Home() {
             </div>
 
             <div className="text-center p-4">
-              <div className="bg-gradient-to-br from-amber-500 to-amber-600 rounded-full w-14 h-14 md:w-16 md:h-16 flex items-center justify-center mx-auto mb-3 md:mb-4 shadow-lg">
+              <div className="bg-gradient-to-br from-brand to-brand-hover rounded-full w-14 h-14 md:w-16 md:h-16 flex items-center justify-center mx-auto mb-3 md:mb-4 shadow-lg">
                 <Bell className="h-7 w-7 md:h-8 md:w-8 text-white" />
               </div>
               <h4 className="font-semibold text-base md:text-lg mb-2 text-white">
@@ -331,7 +331,7 @@ export default function Home() {
             </div>
 
             <div className="text-center p-4">
-              <div className="bg-gradient-to-br from-purple-500 to-purple-600 rounded-full w-14 h-14 md:w-16 md:h-16 flex items-center justify-center mx-auto mb-3 md:mb-4 shadow-lg">
+              <div className="bg-gradient-to-br from-brand to-brand-hover rounded-full w-14 h-14 md:w-16 md:h-16 flex items-center justify-center mx-auto mb-3 md:mb-4 shadow-lg">
                 <Users className="h-7 w-7 md:h-8 md:w-8 text-white" />
               </div>
               <h4 className="font-semibold text-base md:text-lg mb-2 text-white">
@@ -344,7 +344,7 @@ export default function Home() {
             </div>
 
             <div className="text-center p-4">
-              <div className="bg-gradient-to-br from-emerald-500 to-emerald-600 rounded-full w-14 h-14 md:w-16 md:h-16 flex items-center justify-center mx-auto mb-3 md:mb-4 shadow-lg">
+              <div className="bg-gradient-to-br from-brand to-brand-hover rounded-full w-14 h-14 md:w-16 md:h-16 flex items-center justify-center mx-auto mb-3 md:mb-4 shadow-lg">
                 <CreditCard className="h-7 w-7 md:h-8 md:w-8 text-white" />
               </div>
               <h4 className="font-semibold text-base md:text-lg mb-2 text-white">
@@ -357,7 +357,7 @@ export default function Home() {
             </div>
 
             <div className="text-center p-4">
-              <div className="bg-gradient-to-br from-cyan-500 to-cyan-600 rounded-full w-14 h-14 md:w-16 md:h-16 flex items-center justify-center mx-auto mb-3 md:mb-4 shadow-lg">
+              <div className="bg-gradient-to-br from-brand to-brand-hover rounded-full w-14 h-14 md:w-16 md:h-16 flex items-center justify-center mx-auto mb-3 md:mb-4 shadow-lg">
                 <Smartphone className="h-7 w-7 md:h-8 md:w-8 text-white" />
               </div>
               <h4 className="font-semibold text-base md:text-lg mb-2 text-white">
@@ -385,29 +385,29 @@ export default function Home() {
             <CardHeader className="p-6">
               <TrendingUp className="h-10 w-10 mb-3" />
               <CardTitle className="text-xl mb-2">Ahorra Tiempo</CardTitle>
-              <CardDescription className="text-brand/40">
+              <CardDescription className="text-white/80">
                 Procesa ventas en segundos, genera reportes automáticos y
                 automatiza tareas repetitivas
               </CardDescription>
             </CardHeader>
           </Card>
 
-          <Card className="bg-gradient-to-br from-green-600 to-green-700 border-0 text-white">
+          <Card className="bg-gradient-to-br from-brand to-brand-hover border-0 text-white">
             <CardHeader className="p-6">
               <Package className="h-10 w-10 mb-3" />
               <CardTitle className="text-xl mb-2">Control Total</CardTitle>
-              <CardDescription className="text-green-100">
+              <CardDescription className="text-white/80">
                 Sabe exactamente qué tienes en stock, qué debes comprar y qué
                 productos te generan más ganancia
               </CardDescription>
             </CardHeader>
           </Card>
 
-          <Card className="bg-gradient-to-br from-purple-600 to-purple-700 border-0 text-white">
+          <Card className="bg-gradient-to-br from-brand to-brand-hover border-0 text-white">
             <CardHeader className="p-6">
               <Store className="h-10 w-10 mb-3" />
               <CardTitle className="text-xl mb-2">Vende Más</CardTitle>
-              <CardDescription className="text-purple-100">
+              <CardDescription className="text-white/80">
                 Con tu tienda online activa 24/7, llegas a más clientes y
                 aumentas tus ventas sin límites
               </CardDescription>
