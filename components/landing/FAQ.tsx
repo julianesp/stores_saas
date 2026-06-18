@@ -105,7 +105,8 @@ export default function FAQ() {
                   return (
                     <Card
                       key={id}
-                      className="bg-gray-800/50 border-gray-700 hover:border-gray-600 transition-colors"
+                      data-open={isOpen ? "true" : "false"}
+                      className="faq-item bg-gray-800/50 border-gray-700 hover:border-gray-600 transition-colors"
                     >
                       <button
                         onClick={() => toggleItem(id)}
@@ -115,19 +116,22 @@ export default function FAQ() {
                           <h4 className="text-lg font-semibold text-white pr-8">
                             {faq.question}
                           </h4>
-                          <ChevronDown
-                            className={`h-5 w-5 text-gray-400 flex-shrink-0 transition-transform ${
-                              isOpen ? "transform rotate-180" : ""
-                            }`}
-                          />
+                          <ChevronDown className="faq-chevron h-5 w-5 text-gray-400 flex-shrink-0 transition-transform" />
                         </div>
-                        {isOpen && (
-                          <CardContent className="pt-4 pb-2 px-0">
-                            <p className="text-gray-300 leading-relaxed">
-                              {faq.answer}
-                            </p>
-                          </CardContent>
-                        )}
+                        {/*
+                          La respuesta se renderiza siempre para poder animarla.
+                          Se despliega cuando data-open="true" (clic) y, en
+                          computadores con cursor (>=1024px), también al hover.
+                        */}
+                        <div className="faq-answer grid grid-rows-[0fr] opacity-0 transition-all duration-300 ease-out">
+                          <div className="overflow-hidden">
+                            <CardContent className="pt-4 pb-2 px-0">
+                              <p className="text-gray-300 leading-relaxed">
+                                {faq.answer}
+                              </p>
+                            </CardContent>
+                          </div>
+                        </div>
                       </button>
                     </Card>
                   );

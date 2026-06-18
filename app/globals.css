@@ -1,5 +1,35 @@
 @import "tailwindcss";
 
+/*
+ * Preguntas Frecuentes (FAQ):
+ * La respuesta se despliega cuando el item está marcado con data-open="true"
+ * (al hacer clic, en cualquier dispositivo).
+ */
+.faq-item[data-open="true"] .faq-answer {
+  grid-template-rows: 1fr;
+  opacity: 1;
+}
+
+.faq-item[data-open="true"] .faq-chevron {
+  transform: rotate(180deg);
+}
+
+/*
+ * En computadores (cursor real y pantalla >= 1024px), la respuesta también
+ * se despliega al pasar el mouse, aunque no se haya hecho clic. En móviles y
+ * tablets táctiles esto no aplica: ahí se mantiene el comportamiento por clic.
+ */
+@media (hover: hover) and (min-width: 1024px) {
+  .faq-item:hover .faq-answer {
+    grid-template-rows: 1fr;
+    opacity: 1;
+  }
+
+  .faq-item:hover .faq-chevron {
+    transform: rotate(180deg);
+  }
+}
+
 :root {
   --background: #ffffff;
   --foreground: #171717;
