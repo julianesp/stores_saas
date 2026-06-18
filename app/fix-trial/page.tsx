@@ -83,7 +83,7 @@ export default function FixTrialPage() {
                   <li>Verifica el estado de tu suscripción</li>
                   <li>Diagnostica problemas con el período de prueba</li>
                   <li>Corrige automáticamente configuraciones incorrectas</li>
-                  <li>Te otorga 30 días de prueba si es necesario</li>
+                  <li>Te otorga 15 días de prueba si es necesario</li>
                 </ul>
               </div>
 

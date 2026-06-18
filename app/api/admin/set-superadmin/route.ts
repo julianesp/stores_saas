@@ -72,10 +72,10 @@ export async function POST(request: NextRequest) {
       message: `Usuario ${email} promovido a Super Admin correctamente`,
     });
 
-  } catch (error: any) {
+  } catch (error) {
     console.error('[set-superadmin] Error:', error);
     return NextResponse.json(
-      { error: error.message || 'Error al promover usuario a Super Admin' },
+      { error: error instanceof Error ? error.message : 'Error al promover usuario a Super Admin' },
       { status: 500 }
     );
   }

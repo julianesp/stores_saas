@@ -39,7 +39,7 @@ export async function getMarketTrends(getToken: GetTokenFn): Promise<MarketTrend
 
   if (!response.ok) {
     const error = await response.json().catch(() => ({}));
-    throw new Error((error as any).error || `Error ${response.status}`);
+    throw new Error((error as { error?: string }).error || `Error ${response.status}`);
   }
 
   const result = await response.json() as { success: boolean; data: MarketTrendsData; error?: string };

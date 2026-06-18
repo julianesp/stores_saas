@@ -16,10 +16,13 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { createSupplier, updateSupplier } from "@/lib/cloudflare-api";
+import { Supplier } from "@/lib/types";
 import { toast } from "sonner";
 
+type SupplierFormValues = Partial<Supplier>;
+
 interface SupplierFormProps {
-  initialData?: any;
+  initialData?: SupplierFormValues;
   supplierId?: string;
 }
 
@@ -27,7 +30,7 @@ export function SupplierForm({ initialData, supplierId }: SupplierFormProps) {
   const router = useRouter();
   const { getToken } = useAuth();
   const [loading, setLoading] = useState(false);
-  const { register, handleSubmit, watch, setValue } = useForm({
+  const { register, handleSubmit, watch, setValue } = useForm<SupplierFormValues>({
     defaultValues: initialData || {
       payment_type: "contado",
       status: "activo",
@@ -42,7 +45,7 @@ export function SupplierForm({ initialData, supplierId }: SupplierFormProps) {
 
   const paymentType = watch("payment_type");
 
-  const onSubmit = async (data: any) => {
+  const onSubmit = async (data: SupplierFormValues) => {
     setLoading(true);
     try {
       // Convertir valores numéricos
@@ -53,7 +56,7 @@ export function SupplierForm({ initialData, supplierId }: SupplierFormProps) {
         default_discount: Number(data.default_discount) || 0,
         delivery_days: Number(data.delivery_days) || 0,
         minimum_order: Number(data.minimum_order) || 0,
-        rating: data.rating ? Number(data.rating) : null,
+        rating: data.rating ? Number(data.rating) : undefined,
       };
 
       if (supplierId) {
@@ -65,9 +68,9 @@ export function SupplierForm({ initialData, supplierId }: SupplierFormProps) {
       }
       router.push("/dashboard/suppliers");
       router.refresh();
-    } catch (error: any) {
+    } catch (error) {
       console.error("Error saving supplier:", error);
-      toast.error(error.message || "Error al guardar proveedor");
+      toast.error(error instanceof Error ? error.message : "Error al guardar proveedor");
     } finally {
       setLoading(false);
     }

@@ -199,10 +199,10 @@ export default function POSPage() {
 
       // Actualizar lista de clientes
       await fetchCustomers();
-    } catch (error: any) {
+    } catch (error) {
       console.error("Error creating customer:", error);
       // Mostrar el mensaje de error específico del backend
-      const errorMessage = error?.message || "Por favor verifica los datos ingresados";
+      const errorMessage = error instanceof Error ? error.message : "Por favor verifica los datos ingresados";
       Swal.error("Error al crear cliente", errorMessage);
     }
   };

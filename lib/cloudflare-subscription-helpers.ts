@@ -34,7 +34,7 @@ export async function checkSubscriptionStatus(
         // Si no tiene fecha de fin de trial, crear una con 15 días desde medianoche
         const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate());
         const trialEnd = new Date(startOfToday);
-        trialEnd.setDate(trialEnd.getDate() + 30);
+        trialEnd.setDate(trialEnd.getDate() + 15);
 
         await updateUserProfile(userProfile.id, {
           trial_end_date: trialEnd.toISOString()
@@ -43,7 +43,7 @@ export async function checkSubscriptionStatus(
         return {
           canAccess: true,
           status: 'trial',
-          daysLeft: 30,
+          daysLeft: 15,
         };
       }
 
@@ -270,7 +270,7 @@ export async function initializeTrialPeriod(userProfileId: string, getToken: Get
 
     // Agregar 15 días completos desde medianoche
     const trialEnd = new Date(startOfToday);
-    trialEnd.setDate(trialEnd.getDate() + 30);
+    trialEnd.setDate(trialEnd.getDate() + 15);
 
     await updateUserProfile(userProfileId, {
       subscription_status: 'trial',
@@ -302,7 +302,7 @@ export async function activateSubscription(
     const nextBilling = new Date(paymentDate);
     nextBilling.setMonth(nextBilling.getMonth() + 1); // Próximo mes
 
-    const updates: any = {
+    const updates: Record<string, unknown> = {
       subscription_status: 'active',
       subscription_id: transactionId,
       last_payment_date: paymentDate.toISOString(),
@@ -322,7 +322,7 @@ export async function activateSubscription(
       updates.email_addon_expires_at = nextBilling.toISOString();
     }
 
-    await updateUserProfile(userProfileId, updates, getToken);
+    await updateUserProfile(userProfileId, updates as Partial<UserProfile>, getToken);
 
     return {
       success: true,
@@ -348,7 +348,7 @@ export async function activateAddon(
     const expiresAt = new Date(paymentDate);
     expiresAt.setMonth(expiresAt.getMonth() + 1); // Expira en un mes
 
-    const updates: any = {};
+    const updates: Record<string, unknown> = {};
 
     // Activar el addon correspondiente
     if (addonType === 'ai') {
@@ -362,7 +362,7 @@ export async function activateAddon(
       updates.email_addon_expires_at = expiresAt.toISOString();
     }
 
-    await updateUserProfile(userProfileId, updates, getToken);
+    await updateUserProfile(userProfileId, updates as Partial<UserProfile>, getToken);
 
     return {
       success: true,

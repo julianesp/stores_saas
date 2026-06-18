@@ -71,7 +71,7 @@ export function BarcodeScannerZXing({ onDetected, onClose }: BarcodeScannerZXing
       setIsScanning(true);
 
       return true;
-    } catch (err: any) {
+    } catch (err) {
       console.error('Error al inicializar escáner:', err);
       handleCameraError(err);
       return false;
@@ -79,13 +79,14 @@ export function BarcodeScannerZXing({ onDetected, onClose }: BarcodeScannerZXing
   };
 
   // Manejar errores de cámara
-  const handleCameraError = (err: any) => {
-    if (err.name === 'NotAllowedError' || err.name === 'PermissionDeniedError') {
+  const handleCameraError = (err: unknown) => {
+    const errName = err instanceof Error ? err.name : '';
+    if (errName === 'NotAllowedError' || errName === 'PermissionDeniedError') {
       setPermissionState('denied');
       setError('Permisos de cámara denegados. Por favor, permite el acceso a la cámara en la configuración de tu navegador.');
-    } else if (err.name === 'NotFoundError' || err.name === 'DevicesNotFoundError') {
+    } else if (errName === 'NotFoundError' || errName === 'DevicesNotFoundError') {
       setError('No se encontró ninguna cámara en este dispositivo.');
-    } else if (err.name === 'NotReadableError' || err.name === 'TrackStartError') {
+    } else if (errName === 'NotReadableError' || errName === 'TrackStartError') {
       setError('La cámara está siendo usada por otra aplicación. Cierra otras apps que usen la cámara.');
     } else {
       setError('No se pudo acceder a la cámara. Verifica los permisos e intenta nuevamente.');

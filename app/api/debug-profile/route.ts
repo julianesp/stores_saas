@@ -27,7 +27,7 @@ export async function GET() {
       byClerkId: { status: r1.status, body: d1 },
       userProfiles: { status: r2.status, body: d2 },
     });
-  } catch (e: any) {
-    return NextResponse.json({ error: e.message }, { status: 500 });
+  } catch (e) {
+    return NextResponse.json({ error: e instanceof Error ? e.message : 'Error desconocido' }, { status: 500 });
   }
 }

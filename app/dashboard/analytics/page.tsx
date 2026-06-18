@@ -244,7 +244,7 @@ export default function AnalyticsPage() {
                   <p className="text-sm text-gray-500">
                     {isActive
                       ? "Actualiza al Plan Premium para usar Análisis IA"
-                      : "✨ GRATIS durante los 30 días de prueba"}
+                      : "✨ GRATIS durante los 15 días de prueba"}
                   </p>
                 </div>
 

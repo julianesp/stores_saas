@@ -63,7 +63,7 @@ export function hasStorefrontAccess(userProfile: UserProfile | null): {
     return {
       hasAccess: true,
       reason: 'trial',
-      message: 'Acceso incluido en tu prueba gratuita de 30 días',
+      message: 'Acceso incluido en tu prueba gratuita de 15 días',
     };
   }
 
@@ -95,7 +95,7 @@ export function getStorefrontBlockMessage(reason?: string): {
         title: '🏪 Tienda Online - Plan Premium',
         html: `
           <p class="text-lg mb-4">
-            La <strong>Tienda Online</strong> y el <strong>Análisis con IA</strong> solo están disponibles con el <strong>Plan Premium</strong> y durante los <strong>30 días de prueba gratuita</strong>.
+            La <strong>Tienda Online</strong> y el <strong>Análisis con IA</strong> solo están disponibles con el <strong>Plan Premium</strong> y durante los <strong>15 días de prueba gratuita</strong>.
           </p>
           <p class="text-gray-600">
             Con el Plan Premium obtienes:
@@ -133,7 +133,7 @@ export function getStorefrontBlockMessage(reason?: string): {
         title: '🏪 Tienda Online + IA - Premium',
         html: `
           <p class="text-lg mb-4">
-            El acceso a la <strong>Tienda Online</strong> y <strong>Análisis con IA</strong> solo está disponible con el <strong>Plan Premium</strong> y durante los <strong>30 días de prueba gratuita</strong>.
+            El acceso a la <strong>Tienda Online</strong> y <strong>Análisis con IA</strong> solo está disponible con el <strong>Plan Premium</strong> y durante los <strong>15 días de prueba gratuita</strong>.
           </p>
           <p class="text-gray-600">
             Adquiere el Plan Premium para acceder a todas estas funcionalidades.

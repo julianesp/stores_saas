@@ -63,11 +63,11 @@ export async function POST(request: NextRequest) {
       message: 'Perfil actualizado correctamente',
     });
 
-  } catch (error: any) {
+  } catch (error) {
     console.error('[update-user-profile] Error updating user profile:', error);
     console.error('[update-user-profile] Error stack:', error instanceof Error ? error.stack : 'No stack');
     return NextResponse.json(
-      { success: false, error: error.message || 'Error al actualizar perfil de usuario' },
+      { success: false, error: error instanceof Error ? error.message : 'Error al actualizar perfil de usuario' },
       { status: 500 }
     );
   }

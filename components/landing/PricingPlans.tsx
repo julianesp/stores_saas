@@ -118,9 +118,9 @@ export default function PricingPlans() {
 
         {/* Plan Base */}
         <div className="max-w-2xl mx-auto mb-12">
-          <Card className="border-4 border-yellow-400 shadow-2xl bg-gray-800">
+          <Card className="border-4 border-brand shadow-2xl bg-gray-800">
             <div className="absolute -top-4 left-1/2 transform -translate-x-1/2">
-              <span className="bg-yellow-400 text-gray-900 text-sm font-bold px-4 py-1 rounded-full">
+              <span className="bg-brand text-white text-sm font-bold px-4 py-1 rounded-full">
                 Plan Base Requerido
               </span>
             </div>
@@ -151,7 +151,7 @@ export default function PricingPlans() {
               </ul>
 
               <Link href="/sign-up" className="block">
-                <Button className="w-full bg-yellow-400 text-gray-900 hover:bg-yellow-500 text-lg py-6 cursor-pointer">
+                <Button className="w-full bg-brand text-white hover:bg-brand-hover text-lg py-6 cursor-pointer">
                   Comenzar con Plan Básico
                 </Button>
               </Link>
@@ -178,7 +178,7 @@ export default function PricingPlans() {
               return (
                 <Card
                   key={addon.name}
-                  className="relative border-2 border-yellow-400 bg-gray-800 hover:shadow-2xl transition-shadow"
+                  className="relative border-2 border-brand bg-gray-800 hover:shadow-2xl transition-shadow"
                 >
                   <CardHeader className="text-center pb-3 pt-6">
                     <div
@@ -190,7 +190,7 @@ export default function PricingPlans() {
                       {addon.name}
                     </CardTitle>
                     <div className="flex items-center justify-center gap-1 mb-2">
-                      <Plus className="h-4 w-4 text-yellow-400" />
+                      <Plus className="h-4 w-4 text-brand" />
                       <span className="text-3xl font-bold text-white">
                         {addon.price}
                       </span>
@@ -205,7 +205,7 @@ export default function PricingPlans() {
                     <ul className="space-y-2 mb-6 min-h-[140px]">
                       {addon.features.slice(0, 4).map((feature, index) => (
                         <li key={index} className="flex items-start gap-2">
-                          <Check className="h-4 w-4 text-yellow-300 mt-0.5" />
+                          <Check className="h-4 w-4 text-brand mt-0.5" />
                           <span className="text-white text-[16px] leading-tight">
                             {feature}
                           </span>
@@ -214,7 +214,7 @@ export default function PricingPlans() {
                     </ul>
 
                     <Link href="/sign-up" className="block">
-                      <Button className="w-full bg-yellow-400 text-black hover:bg-yellow-500 font-semibold cursor-pointer">
+                      <Button className="w-full bg-brand text-white hover:bg-brand-hover font-semibold cursor-pointer">
                         Agregar Complemento
                       </Button>
                     </Link>
@@ -227,7 +227,7 @@ export default function PricingPlans() {
 
         <div className="mt-12 text-center">
           <p className="text-white/70 text-sm">
-            ✨ <strong>30 días de prueba gratis</strong> con acceso completo a
+            ✨ <strong>15 días de prueba gratis</strong> con acceso completo a
             todos los complementos. Sin tarjeta de crédito.
           </p>
           <p className="text-white/60 text-xs mt-2">

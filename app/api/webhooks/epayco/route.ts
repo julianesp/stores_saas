@@ -77,7 +77,7 @@ export async function POST(req: NextRequest) {
     const isStoreAddon = planId === 'store-addon-monthly';
     const isMainPlan = !isAiAddon && !isEmailAddon && !isStoreAddon;
 
-    const updatePayload: Record<string, any> = {
+    const updatePayload: Record<string, unknown> = {
       subscription_status: 'active',
       last_payment_date: now.toISOString(),
       next_billing_date: nextBillingDate.toISOString(),

@@ -177,9 +177,9 @@ export default function ActivatePlanManuallyPage() {
       if (updatedUser) {
         setUserProfile(updatedUser);
       }
-    } catch (error: any) {
+    } catch (error) {
       console.error('Error activating plan:', error);
-      toast.error(error.message || 'Error al activar plan');
+      toast.error(error instanceof Error ? error.message : 'Error al activar plan');
     } finally {
       setActivating(false);
     }

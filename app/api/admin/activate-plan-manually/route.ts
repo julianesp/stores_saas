@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { auth } from '@clerk/nextjs/server';
 import { getUserProfile, updateUserProfile, getAllUserProfiles } from '@/lib/cloudflare-api';
+import type { UserProfile } from '@/lib/types';
 
 export const runtime = 'nodejs';
 
@@ -43,7 +44,7 @@ export async function POST(request: NextRequest) {
     // Buscar el usuario por email
     const allProfiles = await getAllUserProfiles(getToken);
     const targetProfile = allProfiles.find(
-      (p: any) => p.email.toLowerCase() === userEmail.toLowerCase()
+      (p: UserProfile) => p.email.toLowerCase() === userEmail.toLowerCase()
     );
 
     if (!targetProfile) {
@@ -60,7 +61,7 @@ export async function POST(request: NextRequest) {
     const expiresAt = new Date(now);
     expiresAt.setDate(expiresAt.getDate() + 30); // 30 días de servicio
 
-    let updates: any = {
+    const updates: Record<string, unknown> = {
       last_payment_date: now.toISOString(),
     };
 
@@ -101,7 +102,7 @@ export async function POST(request: NextRequest) {
     console.log('[activate-plan-manually] Updates to apply:', updates);
 
     // Actualizar el perfil del usuario
-    await updateUserProfile(targetProfile.id, updates, getToken);
+    await updateUserProfile(targetProfile.id, updates as Partial<UserProfile>, getToken);
 
     console.log(`✅ Plan ${planType} activated for user: ${userEmail}`);
 
@@ -128,10 +129,10 @@ export async function POST(request: NextRequest) {
       },
     });
 
-  } catch (error: any) {
+  } catch (error) {
     console.error('[activate-plan-manually] Error:', error);
     return NextResponse.json(
-      { error: error.message || 'Error al activar plan manualmente' },
+      { error: error instanceof Error ? error.message : 'Error al activar plan manualmente' },
       { status: 500 }
     );
   }

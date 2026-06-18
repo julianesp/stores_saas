@@ -16,6 +16,18 @@ import { getStoreConfig, StoreConfig } from "@/lib/storefront-api";
 import { formatCurrency } from "@/lib/utils";
 import { toast } from "sonner";
 
+type TransactionStatus = "PENDING" | "APPROVED" | "DECLINED" | "ERROR";
+
+interface TransactionData {
+  id: string;
+  reference: string;
+  status: string;
+  amount_in_cents: number;
+  created_at: string;
+  payment_method_type?: string;
+  approval_code?: string;
+}
+
 export default function PaymentConfirmationPage() {
   const params = useParams();
   const searchParams = useSearchParams();
@@ -26,10 +38,8 @@ export default function PaymentConfirmationPage() {
 
   const [config, setConfig] = useState<StoreConfig | null>(null);
   const [loading, setLoading] = useState(true);
-  const [transactionStatus, setTransactionStatus] = useState<
-    "PENDING" | "APPROVED" | "DECLINED" | "ERROR"
-  >("PENDING");
-  const [transactionData, setTransactionData] = useState<any>(null);
+  const [transactionStatus, setTransactionStatus] = useState<TransactionStatus>("PENDING");
+  const [transactionData, setTransactionData] = useState<TransactionData | null>(null);
   const [verificationAttempts, setVerificationAttempts] = useState(0);
 
   useEffect(() => {
@@ -117,7 +127,7 @@ export default function PaymentConfirmationPage() {
               created_at: tx.x_transaction_date || new Date().toISOString(),
               payment_method_type: 'epayco',
             });
-            setTransactionStatus(status as any);
+            setTransactionStatus(status);
             setLoading(false);
             return;
           }
@@ -125,7 +135,7 @@ export default function PaymentConfirmationPage() {
 
         throw new Error(`API response not OK: ${response.status}`);
 
-      } catch (fetchError: any) {
+      } catch {
         clearTimeout(timeoutId);
 
         // Si falla la verificación, asumir éxito (el cliente llegó con ref_payco válido)

@@ -58,7 +58,7 @@ export function ShippingZonesManager() {
       setLoading(true);
       const data = await getShippingZones(getToken);
       setZones(data);
-    } catch (error: any) {
+    } catch (error) {
       console.error('Error loading shipping zones:', error);
       toast.error('Error al cargar zonas de envío');
     } finally {
@@ -124,9 +124,9 @@ export function ShippingZonesManager() {
 
       setShowDialog(false);
       loadZones();
-    } catch (error: any) {
+    } catch (error) {
       console.error('Error saving shipping zone:', error);
-      toast.error(error.message || 'Error al guardar zona de envío');
+      toast.error(error instanceof Error ? error.message : 'Error al guardar zona de envío');
     } finally {
       setSaving(false);
     }
@@ -141,9 +141,9 @@ export function ShippingZonesManager() {
       await deleteShippingZone(zone.id, getToken);
       toast.success('Zona de envío eliminada');
       loadZones();
-    } catch (error: any) {
+    } catch (error) {
       console.error('Error deleting shipping zone:', error);
-      toast.error(error.message || 'Error al eliminar zona de envío');
+      toast.error(error instanceof Error ? error.message : 'Error al eliminar zona de envío');
     }
   };
 

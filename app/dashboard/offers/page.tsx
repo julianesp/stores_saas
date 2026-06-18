@@ -77,9 +77,9 @@ export default function OffersPage() {
 
       toast.success('Oferta creada correctamente');
       fetchProducts();
-    } catch (error: any) {
+    } catch (error) {
       console.error('Error creating offer:', error);
-      toast.error(error.message || 'Error al crear oferta');
+      toast.error(error instanceof Error ? error.message : 'Error al crear oferta');
     }
   };
 

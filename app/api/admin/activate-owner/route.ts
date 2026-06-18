@@ -56,10 +56,10 @@ export async function POST(request: NextRequest) {
       expires_at: expiresAt,
     });
 
-  } catch (error: any) {
+  } catch (error) {
     console.error('[activate-owner] Error:', error);
     return NextResponse.json(
-      { error: error.message || 'Error al activar cuenta' },
+      { error: error instanceof Error ? error.message : 'Error al activar cuenta' },
       { status: 500 }
     );
   }

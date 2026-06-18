@@ -201,9 +201,9 @@ export default function SuperAdminPage() {
         } correctamente`,
       );
       fetchData();
-    } catch (error: any) {
+    } catch (error) {
       console.error("Error updating store status:", error);
-      toast.error(error.message || "Error al actualizar estado de la tienda");
+      toast.error(error instanceof Error ? error.message : "Error al actualizar estado de la tienda");
     }
   };
 

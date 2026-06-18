@@ -20,6 +20,11 @@ import { usePageTracking } from "@/lib/hooks/use-analytics";
 import { TenantProvider, useTenant } from "@/lib/tenant-context";
 import styles from "./styles/Layout.module.scss";
 
+interface UserStore {
+  id: string;
+  access_type?: string;
+}
+
 // Component to add noindex meta tag
 function NoIndexMeta() {
   useEffect(() => {
@@ -78,7 +83,7 @@ function DashboardLayoutInner({
           // PASO 1: Obtener tiendas accesibles para configurar el tenant_id
           // Esto debe hacerse ANTES de cualquier otra llamada a la API
           let userIsTeamMember = false;
-          let teamMemberStores: any[] = [];
+          let teamMemberStores: UserStore[] = [];
 
           try {
             const storesResponse = await fetch(
@@ -96,7 +101,7 @@ function DashboardLayoutInner({
 
               // Verificar si tiene acceso como team member a alguna tienda
               teamMemberStores = stores.filter(
-                (store: any) => store.access_type === "team_member"
+                (store: UserStore) => store.access_type === "team_member"
               );
 
               if (teamMemberStores.length > 0) {
@@ -123,7 +128,7 @@ function DashboardLayoutInner({
                 return; // Terminar aquí para team members
               } else {
                 // Owner: guardar el tenant_id de la tienda propia si no hay uno
-                const ownerStore = stores.find((s: any) => s.access_type === "owner") || stores[0];
+                const ownerStore = stores.find((s: UserStore) => s.access_type === "owner") || stores[0];
                 if (ownerStore && !localStorage.getItem("selected_tenant_id")) {
                   localStorage.setItem("selected_tenant_id", ownerStore.id);
                 }

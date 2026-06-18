@@ -6,8 +6,8 @@ import { Switch } from '@/components/ui/switch';
 import { Bell, ShoppingBag, Package as PackageIcon, Users, TrendingUp } from 'lucide-react';
 
 interface EventNotificationsProps {
-  settings: any;
-  onUpdate: (settings: any) => void;
+  settings: Record<string, unknown>;
+  onUpdate: (settings: Record<string, unknown>) => void;
 }
 
 const notifications = [
@@ -71,7 +71,8 @@ export function EventNotifications({ settings, onUpdate }: EventNotificationsPro
         {notifications.map((notification) => {
           const Icon = notification.icon;
           const isEnabled =
-            settings[`notify_${notification.id}`] ?? notification.defaultEnabled;
+            (settings[`notify_${notification.id}`] as boolean | undefined) ??
+            notification.defaultEnabled;
 
           return (
             <div

@@ -7,12 +7,14 @@ import { DollarSign, Users, Eye, Search, Filter, CreditCard, FileSpreadsheet, Do
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
-import { Customer } from '@/lib/types';
+import { Customer, Sale, SaleItemWithProduct } from '@/lib/types';
 import { getDebtorCustomers } from '@/lib/cloudflare-credit-helpers';
 import { getSales } from '@/lib/cloudflare-api';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { toast } from 'sonner';
+
+type SaleWithItems = Sale & { items?: SaleItemWithProduct[] };
 
 export default function DebtorsPage() {
   const { getToken } = useAuth();
@@ -64,25 +66,25 @@ export default function DebtorsPage() {
       toast.loading('Generando archivo Excel...', { id: 'exporting' });
 
       // Obtener todas las ventas a crédito
-      const allSales = await getSales(getToken) as any[];
+      const allSales = (await getSales(getToken)) as SaleWithItems[];
 
       // Filtrar solo ventas a crédito con saldo pendiente
-      const creditSales = allSales.filter((sale: any) =>
+      const creditSales = allSales.filter((sale) =>
         sale.payment_method === 'credito' &&
         sale.payment_status !== 'pagado' &&
         sale.customer_id
       );
 
       // Crear array para las filas del Excel
-      const excelData: any[] = [];
+      const excelData: Record<string, unknown>[] = [];
 
       // Agregar hoja de resumen de deudores
       debtors.forEach((debtor) => {
-        const debtorSales = creditSales.filter((sale: any) => sale.customer_id === debtor.id);
+        const debtorSales = creditSales.filter((sale) => sale.customer_id === debtor.id);
 
-        debtorSales.forEach((sale: any) => {
+        debtorSales.forEach((sale) => {
           // Para cada venta, agregar los productos
-          (sale.items || []).forEach((item: any) => {
+          (sale.items || []).forEach((item) => {
             excelData.push({
               'Cliente': debtor.name,
               'Teléfono': debtor.phone || 'N/A',
@@ -161,9 +163,9 @@ export default function DebtorsPage() {
 
       // Hoja 2: Resumen por cliente
       const summaryData = debtors.map(debtor => {
-        const debtorSales = creditSales.filter((sale: any) => sale.customer_id === debtor.id);
+        const debtorSales = creditSales.filter((sale) => sale.customer_id === debtor.id);
         const totalVentas = debtorSales.length;
-        const totalProductos = debtorSales.reduce((sum: number, sale: any) =>
+        const totalProductos = debtorSales.reduce((sum, sale) =>
           sum + (sale.items?.length || 0), 0
         );
 
@@ -206,7 +208,7 @@ export default function DebtorsPage() {
 
         // Agregar datos
         summaryData.forEach(item => {
-          const values = summaryHeaders.map(header => (item as any)[header]);
+          const values = summaryHeaders.map(header => (item as Record<string, unknown>)[header]);
           wsSummary.addRow(values);
         });
 

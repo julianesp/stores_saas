@@ -71,9 +71,9 @@ export default function StorefrontPage() {
       setConfig(configData);
       setProducts(productsData);
       setCategories(categoriesData);
-    } catch (err: any) {
+    } catch (err) {
       console.error('Error loading store:', err);
-      setError(err.message || 'Error al cargar la tienda');
+      setError(err instanceof Error ? err.message : 'Error al cargar la tienda');
     } finally {
       setLoading(false);
     }
@@ -84,7 +84,7 @@ export default function StorefrontPage() {
       const productsData = await getStoreProducts(slug, categoryId || undefined);
       setProducts(productsData);
       setSelectedCategory(categoryId);
-    } catch (err: any) {
+    } catch (err) {
       console.error('Error loading products:', err);
     }
   };

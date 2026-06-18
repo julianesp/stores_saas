@@ -28,6 +28,14 @@ import {
   hasStoreAccess,
   hasEmailMarketingAccess,
 } from "@/lib/cloudflare-subscription-helpers";
+
+interface EpaycoWindow {
+  ePayco?: {
+    checkout: {
+      configure: (options: { sessionId: string }) => { open: () => void };
+    };
+  };
+}
 import Link from "next/link";
 import Image from "next/image";
 
@@ -133,8 +141,9 @@ export default function SubscriptionPageWompi() {
       }
 
       // Abrir ePayco Smart Checkout
-      if (typeof window !== 'undefined' && (window as any).ePayco) {
-        (window as any).ePayco.checkout.configure({ sessionId: data.sessionId }).open();
+      const epaycoWindow = window as unknown as EpaycoWindow;
+      if (typeof window !== 'undefined' && epaycoWindow.ePayco) {
+        epaycoWindow.ePayco.checkout.configure({ sessionId: data.sessionId }).open();
       } else {
         toast.error('No se pudo cargar la pasarela de pago. Recarga la página e intenta de nuevo.');
       }

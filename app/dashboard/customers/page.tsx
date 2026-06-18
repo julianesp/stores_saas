@@ -3,11 +3,13 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '@clerk/nextjs';
 import Link from 'next/link';
-import { Plus, Users, Eye } from 'lucide-react';
+import { Plus, Users, Eye, Download } from 'lucide-react';
+import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { getCustomers } from '@/lib/cloudflare-api';
 import { Customer } from '@/lib/types';
+import { exportCustomersToExcel, exportCustomersToCSV } from '@/lib/excel-export';
 
 export default function CustomersPage() {
   const { getToken } = useAuth();
@@ -28,6 +30,29 @@ export default function CustomersPage() {
     fetchCustomers();
   }, []);
 
+  const handleExportExcel = async () => {
+    if (customers.length === 0) {
+      toast.error('No hay clientes para exportar');
+      return;
+    }
+    try {
+      await exportCustomersToExcel(customers);
+      toast.success(`Exportados ${customers.length} clientes a Excel`);
+    } catch (error) {
+      console.error('Error exporting customers:', error);
+      toast.error('Error al exportar clientes');
+    }
+  };
+
+  const handleExportCSV = () => {
+    if (customers.length === 0) {
+      toast.error('No hay clientes para exportar');
+      return;
+    }
+    exportCustomersToCSV(customers);
+    toast.success(`Exportados ${customers.length} clientes a CSV`);
+  };
+
   return (
     <div className="space-y-4 md:space-y-6">
       <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4">
@@ -35,9 +60,17 @@ export default function CustomersPage() {
           <h1 className="text-2xl md:text-3xl font-bold">Clientes</h1>
           <p className="text-gray-500 text-sm md:text-base">Gestiona tu base de clientes</p>
         </div>
-        <Link href="/dashboard/customers/new" className="w-full sm:w-auto">
-          <Button className="w-full sm:w-auto"><Plus className="mr-2 h-4 w-4" />Nuevo Cliente</Button>
-        </Link>
+        <div className="flex flex-wrap gap-2 w-full sm:w-auto">
+          <Button variant="outline" onClick={handleExportExcel} className="flex-1 sm:flex-none" title="Exportar clientes a Excel">
+            <Download className="mr-2 h-4 w-4" />Excel
+          </Button>
+          <Button variant="outline" onClick={handleExportCSV} className="flex-1 sm:flex-none" title="Exportar clientes a CSV">
+            <Download className="mr-2 h-4 w-4" />CSV
+          </Button>
+          <Link href="/dashboard/customers/new" className="flex-1 sm:flex-none">
+            <Button className="w-full"><Plus className="mr-2 h-4 w-4" />Nuevo Cliente</Button>
+          </Link>
+        </div>
       </div>
 
       <Card>

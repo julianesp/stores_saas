@@ -123,7 +123,7 @@ export async function POST(req: NextRequest) {
     // Crear nuevo perfil
     const now = new Date();
     const trialEnd = new Date();
-    trialEnd.setDate(trialEnd.getDate() + 30); // 30 días de prueba
+    trialEnd.setDate(trialEnd.getDate() + 15); // 15 días de prueba
 
     const newProfile = await createUserProfile({
       clerk_user_id: userId,

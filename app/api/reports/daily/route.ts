@@ -50,7 +50,18 @@ export async function GET(request: NextRequest) {
     const customersMap = new Map(allCustomers.map((c) => [c.id, c]));
 
     // Procesar ventas con sus items
-    const salesData: any[] = [];
+    interface SaleRow {
+      fecha_compra: string;
+      numero_venta: string;
+      producto: string;
+      cantidad: number;
+      valor_unitario: number;
+      valor_total: number;
+      cliente: string;
+      telefono: string;
+      metodo_pago: string;
+    }
+    const salesData: SaleRow[] = [];
 
     for (const sale of salesOfDay) {
       // Las ventas ya vienen con items desde la API de Cloudflare
@@ -82,7 +93,7 @@ export async function GET(request: NextRequest) {
     }
 
     // Formatear datos para Excel
-    const excelData = salesData.map((sale: any) => ({
+    const excelData = salesData.map((sale) => ({
       'Fecha de Compra': new Date(sale.fecha_compra).toLocaleString('es-CO', {
         timeZone: 'America/Bogota',
         year: 'numeric',
@@ -126,7 +137,7 @@ export async function GET(request: NextRequest) {
 
       // Agregar datos
       excelData.forEach(item => {
-        const values = headers.map(header => (item as any)[header]);
+        const values = headers.map(header => (item as Record<string, string | number>)[header]);
         worksheet.addRow(values);
       });
 

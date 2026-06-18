@@ -118,10 +118,10 @@ export async function POST(request: NextRequest) {
       },
     });
 
-  } catch (error: any) {
+  } catch (error) {
     console.error('[fix-payment-dates] Error:', error);
     return NextResponse.json(
-      { error: error.message || 'Error al corregir fechas de pago' },
+      { error: error instanceof Error ? error.message : 'Error al corregir fechas de pago' },
       { status: 500 }
     );
   }

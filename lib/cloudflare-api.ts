@@ -23,7 +23,7 @@ export type GetTokenFn = () => Promise<string | null>;
 /**
  * Response estándar de la API
  */
-interface APIResponse<T = any> {
+interface APIResponse<T = unknown> {
   success: boolean;
   data?: T;
   error?: string;
@@ -53,7 +53,7 @@ export function setSelectedTenantId(tenantId: string | null) {
 /**
  * Realizar petición HTTP a la API
  */
-async function fetchAPI<T = any>(
+async function fetchAPI<T = unknown>(
   endpoint: string,
   getToken: GetTokenFn,
   options: RequestInit = {},

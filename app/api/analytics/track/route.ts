@@ -8,7 +8,7 @@ interface TrackEventBody {
   eventName: string;
   pagePath?: string;
   pageTitle?: string;
-  metadata?: Record<string, any>;
+  metadata?: Record<string, unknown>;
   sessionId?: string;
   durationMs?: number;
 }
@@ -119,7 +119,7 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({ success: true });
 
-  } catch (error: any) {
+  } catch (error) {
     console.error('[analytics/track] Error:', error);
     // Silent fail - no queremos que errores de analytics rompan la UX
     return NextResponse.json({ success: true });

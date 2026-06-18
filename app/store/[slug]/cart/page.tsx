@@ -64,7 +64,7 @@ export default function CartPage() {
           setCart([]);
         }
       }
-    } catch (err: any) {
+    } catch (err) {
       console.error("Error loading cart:", err);
       toast.error("Error al cargar el carrito");
     } finally {

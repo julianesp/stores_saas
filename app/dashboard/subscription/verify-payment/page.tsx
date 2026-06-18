@@ -8,11 +8,23 @@ import { Input } from '@/components/ui/input';
 import { CheckCircle, Loader2, AlertCircle } from 'lucide-react';
 import { toast } from 'sonner';
 
+interface VerifyResult {
+  type: 'success' | 'error';
+  data: {
+    message: string;
+    subscription?: {
+      planId: string;
+      status: string;
+      hasAIAddon?: boolean;
+    };
+  };
+}
+
 export default function VerifyPaymentPage() {
   const router = useRouter();
   const [transactionId, setTransactionId] = useState('');
   const [loading, setLoading] = useState(false);
-  const [result, setResult] = useState<any>(null);
+  const [result, setResult] = useState<VerifyResult | null>(null);
 
   const handleVerify = async () => {
     if (!transactionId.trim()) {

@@ -1,4 +1,4 @@
-import Swal from 'sweetalert2';
+import Swal, { type SweetAlertOptions } from 'sweetalert2';
 
 /**
  * Configuración personalizada de SweetAlert2 para el sistema POS
@@ -203,7 +203,7 @@ export const showInput = async (
 /**
  * Modal con HTML personalizado
  */
-export const showCustom = (config: any) => {
+export const showCustom = (config: SweetAlertOptions) => {
   return Swal.fire({
     ...defaultConfig,
     ...config,

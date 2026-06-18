@@ -48,10 +48,10 @@ export async function GET(request: NextRequest) {
 
     const data = await response.json();
     return NextResponse.json(data.data || data);
-  } catch (error: any) {
+  } catch (error) {
     console.error('Error getting user profile:', error);
     return NextResponse.json(
-      { error: error.message || 'Error al obtener el perfil' },
+      { error: error instanceof Error ? error.message : 'Error al obtener el perfil' },
       { status: 500 }
     );
   }

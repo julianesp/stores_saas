@@ -122,7 +122,7 @@ export function useTeamManagement() {
       const data = await response.json();
 
       // Parsear permissions si vienen como string JSON
-      const parsedData = data.map((member: any) => ({
+      const parsedData = data.map((member: TeamMember & { permissions: string | Permission[] }) => ({
         ...member,
         permissions: typeof member.permissions === 'string'
           ? JSON.parse(member.permissions)

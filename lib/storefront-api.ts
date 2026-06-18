@@ -4,7 +4,7 @@
 
 const WORKER_URL = process.env.NEXT_PUBLIC_WORKER_URL || 'https://tienda-pos-api.julii1295.workers.dev';
 
-interface APIResponse<T = any> {
+interface APIResponse<T = unknown> {
   success: boolean;
   data?: T;
   error?: string;
@@ -248,7 +248,7 @@ export async function createEPaycoSession(
 export async function getOrderByNumber(
   slug: string,
   orderNumber: string
-): Promise<any> {
+): Promise<unknown> {
   const url = `${WORKER_URL}/api/storefront/orders/${slug}/${orderNumber}`;
 
   const response = await fetch(url, {
@@ -263,7 +263,7 @@ export async function getOrderByNumber(
     throw new Error(errorData.error || `Error ${response.status}`);
   }
 
-  const data: APIResponse<any> = await response.json();
+  const data: APIResponse<unknown> = await response.json();
 
   if (!data.success) {
     throw new Error(data.error || 'Failed to get order');

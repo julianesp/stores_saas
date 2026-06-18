@@ -48,7 +48,7 @@ export default function SuppliersPage() {
   };
 
   const getStatusBadge = (status: string) => {
-    const variants: Record<string, any> = {
+    const variants: Record<string, 'default' | 'secondary' | 'destructive' | 'outline'> = {
       activo: 'default',
       inactivo: 'secondary',
       suspendido: 'destructive',

@@ -185,8 +185,8 @@ export default function StoreConfigPage() {
       }
       setStoreBannerImages((prev) => [...prev, ...uploaded]);
       toast.success(`${uploaded.length} imagen(es) agregada(s) al carrusel`);
-    } catch (err: any) {
-      toast.error(err.message || "Error al subir imagen");
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Error al subir imagen");
     } finally {
       setUploadingCarousel(false);
       e.target.value = "";
@@ -260,9 +260,9 @@ export default function StoreConfigPage() {
 
       toast.success("Configuración guardada exitosamente");
       loadProfile(); // Recargar para obtener datos actualizados
-    } catch (error: any) {
+    } catch (error) {
       console.error("Error saving config:", error);
-      toast.error(error.message || "Error al guardar configuración");
+      toast.error(error instanceof Error ? error.message : "Error al guardar configuración");
     } finally {
       setSaving(false);
     }

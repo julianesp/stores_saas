@@ -72,9 +72,9 @@ export default function AnalyticsPage() {
       } else {
         toast.info('El sistema comenzará a recolectar datos automáticamente');
       }
-    } catch (error: any) {
+    } catch (error) {
       console.error('Error loading analytics:', error);
-      toast.error(error.message || 'Error al cargar estadísticas');
+      toast.error(error instanceof Error ? error.message : 'Error al cargar estadísticas');
     } finally {
       setLoading(false);
     }

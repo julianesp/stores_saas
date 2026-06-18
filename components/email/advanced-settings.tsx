@@ -7,9 +7,21 @@ import { Switch } from '@/components/ui/switch';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Settings, Calendar, Package as PackageIcon, Clock } from 'lucide-react';
 
+// Configuración avanzada de emails. El índice de firma mantiene compatibilidad
+// con el estado `Record<string, unknown>` del contenedor padre.
+export interface EmailSettings extends Record<string, unknown> {
+  report_days?: string[];
+  stock_threshold?: number;
+  cart_email_1_hours?: number;
+  cart_email_2_hours?: number;
+  cart_email_3_hours?: number;
+  cc_emails?: string;
+  bcc_emails?: string;
+}
+
 interface AdvancedSettingsProps {
-  settings: any;
-  onUpdate: (settings: any) => void;
+  settings: EmailSettings;
+  onUpdate: (settings: EmailSettings) => void;
 }
 
 export function AdvancedSettings({ settings, onUpdate }: AdvancedSettingsProps) {

@@ -176,7 +176,7 @@ export default function EditPermissionsDialog({
                 <Label htmlFor="status">Estado</Label>
                 <Select
                   value={status}
-                  onValueChange={(value: any) => setStatus(value)}
+                  onValueChange={(value) => setStatus(value as "active" | "inactive" | "suspended")}
                 >
                   <SelectTrigger>
                     <SelectValue />

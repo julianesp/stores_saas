@@ -50,7 +50,7 @@ export function StoreNavbar({ config }: StoreNavbarProps) {
       const savedCart = localStorage.getItem(cartKey);
       const cart = savedCart ? JSON.parse(savedCart) : [];
       const totalItems = cart.reduce(
-        (sum: number, item: any) => sum + item.quantity,
+        (sum: number, item: { quantity: number }) => sum + item.quantity,
         0
       );
       setCartCount(totalItems);

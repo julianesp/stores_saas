@@ -3,6 +3,10 @@
  * Métricas avanzadas: ROI, Margen, LTV, CAC, Segmentación, etc.
  */
 
+import { Sale, SaleItemWithProduct, Customer, Product } from './types';
+
+type SaleWithFetchedItems = Sale & { items: SaleItemWithProduct[] };
+
 export interface AdvancedMetrics {
   // Métricas de rentabilidad
   total_revenue: number;
@@ -82,7 +86,7 @@ export interface ProactiveAlert {
   title: string;
   message: string;
   severity: 'info' | 'warning' | 'critical';
-  data: any;
+  data: Record<string, unknown>;
   created_at: string;
 }
 
@@ -104,16 +108,16 @@ export async function calculateAdvancedMetrics(
       }
     );
     const salesData = await salesRes.json();
-    const sales = salesData.data || [];
+    const sales: Sale[] = salesData.data || [];
 
     // Obtener items de ventas para calcular costos
-    const salesWithItems = await Promise.all(
-      sales.map(async (sale: any) => {
+    const salesWithItems: SaleWithFetchedItems[] = await Promise.all(
+      sales.map(async (sale) => {
         const itemsRes = await fetch(`${apiUrl}/api/sales/${sale.id}/items`, {
           headers: { Authorization: `Bearer ${token}` },
         });
         const itemsData = await itemsRes.json();
-        return { ...sale, items: itemsData.data || [] };
+        return { ...sale, items: (itemsData.data || []) as SaleItemWithProduct[] };
       })
     );
 
@@ -127,7 +131,7 @@ export async function calculateAdvancedMetrics(
       if (sale.status === 'completada') {
         totalRevenue += sale.total;
 
-        sale.items.forEach((item: any) => {
+        sale.items.forEach((item) => {
           const costPrice = item.product?.cost_price || 0;
           totalCost += costPrice * item.quantity;
           totalProductsSold += item.quantity;
@@ -145,13 +149,13 @@ export async function calculateAdvancedMetrics(
       headers: { Authorization: `Bearer ${token}` },
     });
     const customersData = await customersRes.json();
-    const customers = customersData.data || [];
+    const customers: Customer[] = customersData.data || [];
 
     const uniqueCustomerIds = new Set(
-      sales.filter((s: any) => s.customer_id).map((s: any) => s.customer_id)
+      sales.filter((s) => s.customer_id).map((s) => s.customer_id)
     );
 
-    const completedSales = sales.filter((s: any) => s.status === 'completada');
+    const completedSales = sales.filter((s) => s.status === 'completada');
     const averageOrderValue =
       completedSales.length > 0 ? totalRevenue / completedSales.length : 0;
 
@@ -161,7 +165,7 @@ export async function calculateAdvancedMetrics(
 
     // CAC simplificado (asume costo fijo de marketing)
     const estimatedMarketingCost = totalRevenue * 0.05; // 5% del revenue
-    const newCustomers = customers.filter((c: any) => {
+    const newCustomers = customers.filter((c) => {
       const createdAt = new Date(c.created_at);
       return createdAt >= new Date(startDate) && createdAt <= new Date(endDate);
     }).length;
@@ -173,7 +177,7 @@ export async function calculateAdvancedMetrics(
     const productProfits = new Map<string, { name: string; profit: number; revenue: number }>();
 
     salesWithItems.forEach((sale) => {
-      sale.items.forEach((item: any) => {
+      sale.items.forEach((item) => {
         const productId = item.product_id;
         const productName = item.product?.name || 'Producto desconocido';
         const costPrice = item.product?.cost_price || 0;
@@ -194,7 +198,7 @@ export async function calculateAdvancedMetrics(
       });
     });
 
-    let bestProduct = null;
+    let bestProduct: AdvancedMetrics['best_profit_margin_product'] = null;
     let bestMargin = 0;
 
     productProfits.forEach((data) => {
@@ -336,17 +340,17 @@ export async function generateProactiveAlerts(
       }
     );
     const salesData = await salesRes.json();
-    const sales = salesData.data || [];
+    const sales: Sale[] = salesData.data || [];
 
     // Alerta: Día excepcional de ventas
     const today = new Date().toISOString().split('T')[0];
-    const todaySales = sales.filter((s: any) => s.created_at.startsWith(today));
-    const todayRevenue = todaySales.reduce((sum: number, s: any) => sum + s.total, 0);
+    const todaySales = sales.filter((s) => s.created_at.startsWith(today));
+    const todayRevenue = todaySales.reduce((sum, s) => sum + s.total, 0);
 
     const otherDaysRevenue =
       sales
-        .filter((s: any) => !s.created_at.startsWith(today))
-        .reduce((sum: number, s: any) => sum + s.total, 0) / 6;
+        .filter((s) => !s.created_at.startsWith(today))
+        .reduce((sum, s) => sum + s.total, 0) / 6;
 
     if (todayRevenue > otherDaysRevenue * 1.5) {
       alerts.push({
@@ -365,11 +369,11 @@ export async function generateProactiveAlerts(
       headers: { Authorization: `Bearer ${token}` },
     });
     const productsData = await productsRes.json();
-    const products = productsData.data || [];
+    const products: Product[] = productsData.data || [];
 
     // Alerta: Stock bajo crítico
     const lowStockProducts = products.filter(
-      (p: any) => p.stock <= p.min_stock && p.stock > 0
+      (p) => p.stock <= p.min_stock && p.stock > 0
     );
 
     if (lowStockProducts.length > 0) {

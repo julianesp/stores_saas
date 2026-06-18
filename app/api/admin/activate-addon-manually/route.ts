@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { auth } from '@clerk/nextjs/server';
 import { getUserProfile, updateUserProfile } from '@/lib/cloudflare-api';
 import { getTransactionStatus } from '@/lib/epayco';
+import type { UserProfile } from '@/lib/types';
 
 export const runtime = 'nodejs';
 
@@ -83,7 +84,7 @@ export async function POST(request: NextRequest) {
 
     // Determinar qué addon activar basado en el monto y la referencia
     let addonType = '';
-    let updates: any = {};
+    const updates: Record<string, unknown> = {};
 
     // Identificar el addon por la referencia o el monto
     if (reference.includes('addon-ai') || amountCOP === 4900 || (amountCOP === 5000 && !reference.includes('addon-email'))) {
@@ -137,7 +138,7 @@ export async function POST(request: NextRequest) {
     console.log('[activate-addon-manually] Updating user profile with:', updates);
 
     // Actualizar el perfil del usuario
-    await updateUserProfile(currentUserProfile.id, updates, getToken);
+    await updateUserProfile(currentUserProfile.id, updates as Partial<UserProfile>, getToken);
 
     console.log(`✅ Addon ${addonType} activated for user: ${currentUserProfile.email}`);
 
@@ -154,10 +155,10 @@ export async function POST(request: NextRequest) {
       },
     });
 
-  } catch (error: any) {
+  } catch (error) {
     console.error('[activate-addon-manually] Error:', error);
     return NextResponse.json(
-      { error: error.message || 'Error al activar addon manualmente' },
+      { error: error instanceof Error ? error.message : 'Error al activar addon manualmente' },
       { status: 500 }
     );
   }

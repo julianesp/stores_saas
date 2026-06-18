@@ -440,7 +440,7 @@ export default function Home() {
           ¿Listo para Empezar?
         </h3>
         <p className="text-base sm:text-lg md:text-xl text-white mb-6 md:mb-8 px-2">
-          Prueba gratis por 7 días. No requiere tarjeta de crédito.
+          Prueba gratis por 15 días. No requiere tarjeta de crédito.
         </p>
         <div className="flex flex-col sm:flex-row gap-3 md:gap-4 justify-center max-w-md sm:max-w-none mx-auto">
           <Link href="/sign-up" className="inline-block">

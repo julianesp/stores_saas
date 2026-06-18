@@ -18,8 +18,16 @@ import {
   updateProduct,
   createCategory,
   createSupplier,
+  type Product as ApiProduct,
 } from "@/lib/cloudflare-api";
-import { Category, Supplier } from "@/lib/types";
+import { Category, Supplier, Product } from "@/lib/types";
+
+// Payload que envía el formulario: usa el modelo de dominio (`images` como
+// array, `main_image_index`); se serializa al modelo de la API al guardar.
+type ProductPayload = Partial<Product> & {
+  images?: string[];
+  main_image_index?: number;
+};
 import { toast } from "sonner";
 import { Scan, Camera, X, Plus, Minus, Package } from "lucide-react";
 import { ImageUploader } from './image-uploader';
@@ -55,7 +63,7 @@ const productSchema = z.object({
 type ProductFormData = z.infer<typeof productSchema>;
 
 interface ProductFormProps {
-  initialData?: any;
+  initialData?: Partial<Product>;
   productId?: string;
 }
 
@@ -362,7 +370,7 @@ export function ProductForm({ initialData, productId }: ProductFormProps) {
     }
 
     try {
-      const supplierData: any = {
+      const supplierData: Partial<Supplier> = {
         name: newSupplierData.name.trim(),
         phone: newSupplierData.phone.trim() || undefined,
         email: newSupplierData.email.trim() || undefined,
@@ -387,7 +395,7 @@ export function ProductForm({ initialData, productId }: ProductFormProps) {
     console.log('🔍 productId:', productId);
     setLoading(true);
     try {
-      const productData: any = {
+      const productData: ProductPayload = {
         ...data,
         images: productImages, // Incluir imágenes
         main_image_index: mainImageIndex, // Incluir índice de imagen principal
@@ -399,7 +407,7 @@ export function ProductForm({ initialData, productId }: ProductFormProps) {
       // 🔧 NORMALIZAR código de barras antes de guardar
       if (productData.barcode) {
         const normalizedBarcode = normalizeBarcode(productData.barcode);
-        productData.barcode = normalizedBarcode;
+        productData.barcode = normalizedBarcode ?? undefined;
         console.log('🔧 Código de barras normalizado:', {
           original: data.barcode,
           normalizado: normalizedBarcode
@@ -445,21 +453,21 @@ export function ProductForm({ initialData, productId }: ProductFormProps) {
 
       if (productId) {
         console.log('🔄 Calling updateProduct with:', { productId, productData });
-        await updateProduct(productId, productData, getToken);
+        await updateProduct(productId, productData as Partial<ApiProduct>, getToken);
         console.log('✅ Product updated successfully');
         toast.success("Producto actualizado correctamente");
       } else {
         console.log('➕ Calling createProduct with:', { productData });
-        await createProduct(productData, getToken);
+        await createProduct(productData as Partial<ApiProduct>, getToken);
         console.log('✅ Product created successfully');
         toast.success("Producto creado correctamente");
       }
 
       router.push("/dashboard/products");
       router.refresh();
-    } catch (error: any) {
+    } catch (error) {
       console.error("Error saving product:", error);
-      toast.error(error.message || "Error al guardar producto");
+      toast.error(error instanceof Error ? error.message : "Error al guardar producto");
     } finally {
       setLoading(false);
     }

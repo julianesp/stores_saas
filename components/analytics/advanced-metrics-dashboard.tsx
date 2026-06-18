@@ -197,7 +197,7 @@ export default function AdvancedMetricsDashboard() {
       )}
 
       {/* Tabs para períodos */}
-      <Tabs value={period} onValueChange={(v) => setPeriod(v as any)}>
+      <Tabs value={period} onValueChange={(v) => setPeriod(v as 'week' | 'month' | 'year')}>
         <TabsList>
           <TabsTrigger value="week">Última Semana</TabsTrigger>
           <TabsTrigger value="month">Este Mes</TabsTrigger>

@@ -8,11 +8,29 @@ import { Button } from '@/components/ui/button';
 import { Calendar, DollarSign, AlertCircle, CheckCircle, Search } from 'lucide-react';
 import { toast } from 'sonner';
 
+interface FixDatesResult {
+  email: string;
+  userProfileId: string;
+  lastPayment: {
+    date: string;
+    amount: number;
+    currency: string;
+    transactionId: string;
+  };
+  updated: {
+    last_payment_date: string;
+    next_billing_date: string;
+    subscription_status: string;
+  };
+  totalApprovedPayments: number;
+  allTransactions: number;
+}
+
 export default function FixPaymentDatesPage() {
   const { getToken } = useAuth();
   const [email, setEmail] = useState('');
   const [loading, setLoading] = useState(false);
-  const [result, setResult] = useState<any>(null);
+  const [result, setResult] = useState<FixDatesResult | null>(null);
 
   const handleFixDates = async () => {
     if (!email) {
@@ -43,9 +61,9 @@ export default function FixPaymentDatesPage() {
       setResult(data.data);
       toast.success(data.message);
 
-    } catch (error: any) {
+    } catch (error) {
       console.error('Error fixing payment dates:', error);
-      toast.error(error.message || 'Error al corregir fechas de pago');
+      toast.error(error instanceof Error ? error.message : 'Error al corregir fechas de pago');
     } finally {
       setLoading(false);
     }

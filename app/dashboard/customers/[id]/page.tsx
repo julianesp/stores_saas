@@ -58,7 +58,7 @@ export default function CustomerDetailPage() {
       ]);
 
       setCustomer(customerData as Customer);
-      setPurchaseHistory(history as any);
+      setPurchaseHistory(history as CustomerPurchaseHistory[]);
       setStoreInfo(profile);
     } catch (error) {
       console.error('Error loading customer data:', error);

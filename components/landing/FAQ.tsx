@@ -1,97 +1,63 @@
-'use client';
+"use client";
 
-import { useState } from 'react';
-import { ChevronDown, HelpCircle } from 'lucide-react';
-import { Card, CardContent } from '@/components/ui/card';
+import { useState } from "react";
+import { ChevronDown, HelpCircle } from "lucide-react";
+import { Card, CardContent } from "@/components/ui/card";
 
 const faqs = [
   {
-    category: 'General',
+    category: "General",
     questions: [
       {
-        question: '¿Qué es Posib.dev?',
+        question: "¿Qué es Posib.dev?",
         answer:
-          'Posib.dev es un sistema POS (Punto de Venta) completo diseñado para pequeños y medianos negocios en Colombia. Te permite gestionar ventas, inventario, clientes, proveedores y más, todo desde una plataforma fácil de usar.',
+          "Posib.dev es un sistema POS (Punto de Venta) completo diseñado para pequeños y medianos negocios en Colombia. Te permite gestionar ventas, inventario, clientes, proveedores y más, todo desde una plataforma fácil de usar.",
       },
       {
-        question: '¿Necesito experiencia técnica para usar el sistema?',
+        question: "¿Necesito experiencia técnica para usar el sistema?",
         answer:
-          'No, nuestro sistema está diseñado para ser intuitivo y fácil de usar. Si sabes usar WhatsApp, puedes usar nuestro POS.',
-      },
-      {
-        question: '¿Funciona sin internet?',
-        answer:
-          '¡Sí! El sistema funciona completamente offline. Puedes registrar ventas, consultar productos y gestionar clientes sin conexión a internet. Todas las operaciones se guardan localmente y se sincronizan automáticamente cuando recuperas la conexión. Esta es una de nuestras ventajas competitivas más importantes.',
-      },
-      {
-        question: '¿Qué ventajas tiene el modo offline?',
-        answer:
-          'El modo offline te permite: 1) Seguir vendiendo aunque se caiga el internet, 2) No depender de la velocidad de tu conexión, 3) Trabajar en zonas con mala señal, 4) Mayor velocidad en el POS al no esperar respuestas del servidor. El sistema detecta automáticamente cuando pierdes conexión y te avisa cuándo se recupera.',
+          "No, nuestro sistema está diseñado para ser intuitivo y fácil de usar. Si sabes usar WhatsApp, puedes usar nuestro POS.",
       },
     ],
   },
   {
-    category: 'Planes y Precios',
+    category: "Planes y Precios",
     questions: [
       {
-        question: '¿Puedo probar el sistema antes de pagar?',
+        question: "¿Puedo probar el sistema antes de pagar?",
         answer:
-          'Sí, todos los planes incluyen 7 días de prueba gratis con acceso completo a todas las funcionalidades. No se requiere tarjeta de crédito para iniciar la prueba.',
+          "Sí, todos los planes incluyen 15 días de prueba gratis con acceso completo a todas las funcionalidades. No se requiere tarjeta de crédito para iniciar la prueba.",
       },
       {
-        question: '¿Qué plan me conviene?',
+        question: "¿Qué plan me conviene?",
         answer:
-          'El plan Básico ($24.900/mes) es ideal si estás empezando y solo necesitas el POS e inventario básico. El Profesional ($49.900/mes) incluye tienda online y más productos. El Premium ($79.900/mes) agrega IA y email marketing. Y el plan Empresa es personalizado para grandes operaciones.',
+          "El plan Básico ($24.900/mes) es ideal si estás empezando y solo necesitas el POS e inventario básico y también puedes adquirir el Análisis con IA para saber cómo va tu negocio o el Email Marketing para mantener a tus clientes informados de nuevos pedidos o descuentos exclusivos para ellos",
       },
       {
-        question: '¿Puedo cambiar de plan después?',
+        question: "¿Puedo cambiar de plan después?",
         answer:
-          'Sí, puedes actualizar o cambiar tu plan en cualquier momento desde el panel de suscripciones. Los cambios se aplican de inmediato y el cobro se ajusta proporcionalmente.',
+          "Sí, puedes actualizar o cambiar tu plan en cualquier momento desde el panel de suscripciones. Los cambios se aplican de inmediato y el cobro se ajusta proporcionalmente.",
       },
       {
-        question: '¿Hay costos ocultos?',
+        question: "¿Hay costos ocultos?",
         answer:
-          'No, el precio que ves es el precio que pagas. No hay cargos ocultos, ni tarifas de instalación. Solo pagas tu plan mensual y listo.',
+          "No, el precio que ves es el precio que pagas. No hay cargos ocultos, ni tarifas de instalación. Solo pagas tu plan mensual y listo.",
       },
     ],
   },
+
   {
-    category: 'Tienda Online',
+    category: "Soporte y Seguridad",
     questions: [
       {
-        question: '¿Qué incluye la tienda online?',
-        answer:
-          'La tienda online (disponible desde el plan Profesional) incluye un sitio web completo donde tus clientes pueden ver productos, agregar al carrito y hacer pedidos. Se sincroniza automáticamente con tu inventario.',
+        question: "¿Qué tipo de soporte ofrecen?",
+        answer: "Todos los planes incluyen soporte por email y chat en vivo.",
       },
+      
       {
-        question: '¿Puedo personalizar mi tienda online?',
+        question: "¿Puedo exportar mis datos si decido cambiar de sistema?",
         answer:
-          'Sí, puedes personalizar colores, logo, información de contacto y horarios de atención. En el plan Empresa ofrecemos personalización avanzada.',
-      },
-      {
-        question: '¿Cómo funcionan los pagos en línea?',
-        answer:
-          'Integramos con pasarelas de pago colombianas como Wompi, Nequi y ePayco. Los clientes pueden pagar con tarjeta de crédito, débito, PSE o Nequi directamente desde tu tienda.',
-      },
-    ],
-  },
-  {
-    category: 'Soporte y Seguridad',
-    questions: [
-      {
-        question: '¿Qué tipo de soporte ofrecen?',
-        answer:
-          'Todos los planes incluyen soporte por email y chat en vivo. Los planes Premium y Empresa incluyen soporte prioritario. También tenemos videotutoriales y documentación completa.',
-      },
-      {
-        question: '¿Mis datos están seguros?',
-        answer:
-          'Sí, usamos encriptación de nivel bancario y almacenamos tus datos en servidores seguros con respaldos automáticos diarios. Cumplimos con todas las regulaciones de protección de datos.',
-      },
-      {
-        question: '¿Puedo exportar mis datos si decido cambiar de sistema?',
-        answer:
-          'Sí, puedes exportar todos tus datos (productos, clientes, ventas, etc.) en cualquier momento en formato Excel o CSV.',
+          "Sí, puedes exportar tus productos, clientes y ventas en cualquier momento en formato Excel o CSV, directamente desde cada sección del panel.",
       },
     ],
   },
@@ -102,7 +68,7 @@ export default function FAQ() {
 
   const toggleItem = (id: string) => {
     setOpenItems((prev) =>
-      prev.includes(id) ? prev.filter((item) => item !== id) : [...prev, id]
+      prev.includes(id) ? prev.filter((item) => item !== id) : [...prev, id],
     );
   };
 
@@ -119,7 +85,8 @@ export default function FAQ() {
             Preguntas Frecuentes
           </h2>
           <p className="text-lg text-white/80 max-w-2xl mx-auto">
-            Encuentra respuestas a las preguntas más comunes sobre nuestro sistema POS
+            Encuentra respuestas a las preguntas más comunes sobre nuestro
+            sistema POS
           </p>
         </div>
 
@@ -150,7 +117,7 @@ export default function FAQ() {
                           </h4>
                           <ChevronDown
                             className={`h-5 w-5 text-gray-400 flex-shrink-0 transition-transform ${
-                              isOpen ? 'transform rotate-180' : ''
+                              isOpen ? "transform rotate-180" : ""
                             }`}
                           />
                         </div>

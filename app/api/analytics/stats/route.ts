@@ -84,11 +84,12 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json(stats);
 
-  } catch (error: any) {
+  } catch (error) {
     console.error('[analytics/stats] Error:', error);
 
     // Si es un error de "no hay datos", devolver estructura vacía
-    if (error.message?.includes('no such table') || error.message?.includes('no rows')) {
+    const errorMessage = error instanceof Error ? error.message : '';
+    if (errorMessage.includes('no such table') || errorMessage.includes('no rows')) {
       return NextResponse.json({
         period_days: 7,
         events_by_type: [],
@@ -103,7 +104,7 @@ export async function GET(request: NextRequest) {
     }
 
     return NextResponse.json(
-      { error: error.message || 'Error al obtener estadísticas' },
+      { error: errorMessage || 'Error al obtener estadísticas' },
       { status: 500 }
     );
   }

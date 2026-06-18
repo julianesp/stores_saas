@@ -3,7 +3,8 @@
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
-import { Plus, Search, Edit, Trash2, Package, Tag, Camera, AlertTriangle } from 'lucide-react';
+import { Plus, Search, Edit, Trash2, Package, Tag, Camera, AlertTriangle, Download } from 'lucide-react';
+import { toast } from 'sonner';
 // import { HelpCircle } from 'lucide-react'; // COMENTADO: Tour deshabilitado
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -15,6 +16,7 @@ import { formatCurrency } from '@/lib/utils';
 import Swal from '@/lib/sweetalert';
 import SwalOriginal from 'sweetalert2';
 import { CategoryManagerModal } from '@/components/products/category-manager-modal';
+import { exportProductsToExcel, exportProductsToCSV } from '@/lib/excel-export';
 // COMENTADO: Tour deshabilitado
 // import { useTour } from '@/hooks/useTour';
 // import { productsTourConfig } from '@/lib/tour-configs';
@@ -138,6 +140,29 @@ export default function ProductsPage() {
     }
   };
 
+  const handleExportExcel = async () => {
+    if (products.length === 0) {
+      toast.error('No hay productos para exportar');
+      return;
+    }
+    try {
+      await exportProductsToExcel(products);
+      toast.success(`Exportados ${products.length} productos a Excel`);
+    } catch (error) {
+      console.error('Error exporting products:', error);
+      toast.error('Error al exportar productos');
+    }
+  };
+
+  const handleExportCSV = () => {
+    if (products.length === 0) {
+      toast.error('No hay productos para exportar');
+      return;
+    }
+    exportProductsToCSV(products);
+    toast.success(`Exportados ${products.length} productos a CSV`);
+  };
+
   const deleteProduct = async (id: string) => {
     const product = products.find(p => p.id === id);
     const productName = product?.name || 'este producto';
@@ -211,12 +236,12 @@ export default function ProductsPage() {
       Swal.closeLoading();
       Swal.success('Producto eliminado correctamente');
       fetchProducts();
-    } catch (error: any) {
+    } catch (error) {
       console.error('Error deleting product:', error);
       Swal.closeLoading();
       Swal.error(
         'No se pudo eliminar el producto',
-        error?.message || 'Intenta de nuevo'
+        error instanceof Error ? error.message : 'Intenta de nuevo'
       );
     }
   };
@@ -247,6 +272,16 @@ export default function ProductsPage() {
           <p className="text-gray-500 text-sm md:text-base">Gestiona el inventario de productos</p>
         </div>
         <div className="flex flex-wrap gap-2">
+          <Button variant="outline" onClick={handleExportExcel} className="flex-1 sm:flex-none" title="Exportar productos a Excel">
+            <Download className="mr-2 h-4 w-4" />
+            <span className="hidden sm:inline">Excel</span>
+            <span className="sm:hidden">Excel</span>
+          </Button>
+          <Button variant="outline" onClick={handleExportCSV} className="flex-1 sm:flex-none" title="Exportar productos a CSV">
+            <Download className="mr-2 h-4 w-4" />
+            <span className="hidden sm:inline">CSV</span>
+            <span className="sm:hidden">CSV</span>
+          </Button>
           <Button variant="outline" onClick={() => setShowCategoryModal(true)} className="flex-1 sm:flex-none">
             <Tag className="mr-2 h-4 w-4" />
             <span className="hidden sm:inline">Categorías</span>

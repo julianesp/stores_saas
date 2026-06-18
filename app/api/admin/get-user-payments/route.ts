@@ -61,10 +61,10 @@ export async function GET(request: NextRequest) {
       },
     });
 
-  } catch (error: any) {
+  } catch (error) {
     console.error('[get-user-payments] Error:', error);
     return NextResponse.json(
-      { error: error.message || 'Error al obtener pagos del usuario' },
+      { error: error instanceof Error ? error.message : 'Error al obtener pagos del usuario' },
       { status: 500 }
     );
   }

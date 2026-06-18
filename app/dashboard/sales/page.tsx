@@ -31,15 +31,15 @@ import {
   Sale,
   Customer,
   UserProfile,
-  SaleItem,
   Product,
   SaleItemWithProduct,
 } from "@/lib/types";
-import { formatCurrency } from "@/lib/utils";
+import { formatCurrency, toJsDate } from "@/lib/utils";
 import { toast } from "sonner";
 
 import {
   exportSalesToExcel,
+  exportSalesToCSV,
   exportSalesByDateRange,
   exportSalesForPredictions,
 } from "@/lib/excel-export";
@@ -88,35 +88,29 @@ export default function SalesPage() {
 
   const fetchSales = async () => {
     try {
-      // Obtener todas las ventas
-      let salesData = (await getSales(getToken)) as Sale[];
+      // Obtener todas las ventas (la API las devuelve con sus items incluidos)
+      let salesData = (await getSales(getToken)) as SaleWithRelations[];
 
       // Aplicar filtros de fecha
       if (filter === "today") {
         const today = new Date();
         today.setHours(0, 0, 0, 0);
         salesData = salesData.filter((sale) => {
-          const saleDate = (sale.created_at as any)?.toDate
-            ? (sale.created_at as any).toDate()
-            : new Date(sale.created_at);
+          const saleDate = toJsDate(sale.created_at);
           return saleDate >= today;
         });
       } else if (filter === "week") {
         const weekAgo = new Date();
         weekAgo.setDate(weekAgo.getDate() - 7);
         salesData = salesData.filter((sale) => {
-          const saleDate = (sale.created_at as any)?.toDate
-            ? (sale.created_at as any).toDate()
-            : new Date(sale.created_at);
+          const saleDate = toJsDate(sale.created_at);
           return saleDate >= weekAgo;
         });
       } else if (filter === "month") {
         const monthAgo = new Date();
         monthAgo.setMonth(monthAgo.getMonth() - 1);
         salesData = salesData.filter((sale) => {
-          const saleDate = (sale.created_at as any)?.toDate
-            ? (sale.created_at as any).toDate()
-            : new Date(sale.created_at);
+          const saleDate = toJsDate(sale.created_at);
           return saleDate >= monthAgo;
         });
       }
@@ -135,11 +129,10 @@ export default function SalesPage() {
 
       // Combinar los datos - la API ya devuelve items con cada venta
       const salesWithRelations: SaleWithRelations[] = salesData.map((sale) => {
-        // Agregar información del producto a cada item
-        // La API de Cloudflare devuelve items con cada venta
-        const saleWithItems = sale as any;
-        const itemsWithProducts = (saleWithItems.items || []).map(
-          (item: SaleItem) => ({
+        // Agregar información del producto a cada item.
+        // La API de Cloudflare devuelve items con cada venta.
+        const itemsWithProducts: SaleItemWithProduct[] = (sale.items || []).map(
+          (item) => ({
             ...item,
             product: productsMap.get(item.product_id),
           })
@@ -151,18 +144,14 @@ export default function SalesPage() {
             ? customersMap.get(sale.customer_id)
             : undefined,
           cashier: userProfilesMap.get(sale.cashier_id),
-          items: itemsWithProducts as any,
+          items: itemsWithProducts,
         };
       });
 
       // Ordenar por fecha de creación descendente
       salesWithRelations.sort((a, b) => {
-        const dateA = (a.created_at as any)?.toDate
-          ? (a.created_at as any).toDate()
-          : new Date(a.created_at);
-        const dateB = (b.created_at as any)?.toDate
-          ? (b.created_at as any).toDate()
-          : new Date(b.created_at);
+        const dateA = toJsDate(a.created_at);
+        const dateB = toJsDate(b.created_at);
         return dateB.getTime() - dateA.getTime();
       });
 
@@ -204,6 +193,15 @@ export default function SalesPage() {
     toast.success(`Exportadas ${sales.length} ventas a Excel`);
   };
 
+  const handleExportCSV = () => {
+    if (sales.length === 0) {
+      toast.error("No hay ventas para exportar");
+      return;
+    }
+    exportSalesToCSV(sales);
+    toast.success(`Exportadas ${sales.length} ventas a CSV`);
+  };
+
   const handleExportForPredictions = () => {
     if (sales.length === 0) {
       toast.error("No hay ventas para exportar");
@@ -229,9 +227,7 @@ export default function SalesPage() {
     }
 
     const filteredSales = sales.filter((sale) => {
-      const saleDate = (sale.created_at as any)?.toDate
-        ? (sale.created_at as any).toDate()
-        : new Date(sale.created_at);
+      const saleDate = toJsDate(sale.created_at);
       return saleDate >= startDate && saleDate <= endDate;
     });
 
@@ -308,11 +304,11 @@ export default function SalesPage() {
 
       // Recargar la lista de ventas
       await fetchSales();
-    } catch (error: any) {
+    } catch (error) {
       console.error("Error eliminando venta:", error);
       Swal.error(
         "Error al eliminar",
-        error.message || "No se pudo eliminar la venta"
+        error instanceof Error ? error.message : "No se pudo eliminar la venta"
       );
     }
   };
@@ -418,11 +414,11 @@ export default function SalesPage() {
 
       setSelectedSales(new Set());
       await fetchSales();
-    } catch (error: any) {
+    } catch (error) {
       console.error("Error eliminando ventas:", error);
       Swal.error(
         "Error al eliminar",
-        error.message || "No se pudieron eliminar las ventas"
+        error instanceof Error ? error.message : "No se pudieron eliminar las ventas"
       );
     }
   };
@@ -536,11 +532,11 @@ export default function SalesPage() {
 
       setSelectedSales(new Set());
       await fetchSales();
-    } catch (error: any) {
+    } catch (error) {
       console.error("Error eliminando ventas:", error);
       Swal.error(
         "Error al eliminar",
-        error.message || "No se pudieron eliminar las ventas"
+        error instanceof Error ? error.message : "No se pudieron eliminar las ventas"
       );
     }
   };
@@ -565,6 +561,16 @@ export default function SalesPage() {
           >
             <FileSpreadsheet className="mr-2 h-4 w-4" />
             Exportar a Excel
+          </Button>
+
+          <Button
+            variant="outline"
+            onClick={handleExportCSV}
+            disabled={sales.length === 0}
+            className="text-sm"
+          >
+            <FileSpreadsheet className="mr-2 h-4 w-4" />
+            Exportar a CSV
           </Button>
 
           {/* <Button
@@ -784,9 +790,7 @@ export default function SalesPage() {
                         </td>
                         <td className="py-3 px-4 text-sm">
                           {format(
-                            (sale.created_at as any)?.toDate
-                              ? (sale.created_at as any).toDate()
-                              : new Date(sale.created_at),
+                            toJsDate(sale.created_at),
                             "dd MMM yyyy HH:mm",
                             { locale: es }
                           )}
@@ -930,9 +934,7 @@ export default function SalesPage() {
                             </p>
                           <p className="text-xs text-gray-500">
                             {format(
-                              (sale.created_at as any)?.toDate
-                                ? (sale.created_at as any).toDate()
-                                : new Date(sale.created_at),
+                              toJsDate(sale.created_at),
                               "dd MMM yyyy HH:mm",
                               { locale: es }
                             )}
@@ -1113,9 +1115,7 @@ export default function SalesPage() {
                     </h3>
                     <p className="text-sm">
                       {format(
-                        (selectedSale.created_at as any)?.toDate
-                          ? (selectedSale.created_at as any).toDate()
-                          : new Date(selectedSale.created_at),
+                        toJsDate(selectedSale.created_at),
                         "dd 'de' MMMM 'de' yyyy, HH:mm",
                         { locale: es }
                       )}
@@ -1218,7 +1218,7 @@ export default function SalesPage() {
                     </thead>
                     <tbody>
                       {selectedSale.items && selectedSale.items.length > 0 ? (
-                        selectedSale.items.map((item: any) => (
+                        selectedSale.items.map((item: SaleItemWithProduct) => (
                           <tr key={item.id} className="border-t">
                             <td className="py-3 px-4">
                               <p className="font-medium text-sm">

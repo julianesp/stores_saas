@@ -48,9 +48,9 @@ export default function NewCustomerPage() {
       toast.success('Cliente creado correctamente');
       router.push('/dashboard/customers');
       router.refresh();
-    } catch (error: any) {
+    } catch (error) {
       console.error('Error saving customer:', error);
-      toast.error(error.message || 'Error al guardar cliente');
+      toast.error(error instanceof Error ? error.message : 'Error al guardar cliente');
     } finally {
       setLoading(false);
     }

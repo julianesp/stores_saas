@@ -57,11 +57,11 @@ export async function POST(request: NextRequest) {
       public_id: result.public_id,
     });
 
-  } catch (error: any) {
-    console.error('❌ Error:', error.message);
-    console.error('Stack:', error.stack);
+  } catch (error) {
+    console.error('❌ Error:', error instanceof Error ? error.message : error);
+    console.error('Stack:', error instanceof Error ? error.stack : undefined);
     return NextResponse.json(
-      { error: error.message || 'Error al subir imagen' },
+      { error: error instanceof Error ? error.message : 'Error al subir imagen' },
       { status: 500 }
     );
   }
@@ -84,8 +84,8 @@ export async function DELETE(request: NextRequest) {
     const result = await cloudinary.uploader.destroy(publicId);
     return NextResponse.json({ success: true, result });
 
-  } catch (error: any) {
+  } catch (error) {
     console.error('Error deleting:', error);
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    return NextResponse.json({ error: error instanceof Error ? error.message : 'Error desconocido' }, { status: 500 });
   }
 }

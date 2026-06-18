@@ -67,9 +67,9 @@ export function CategoryManagerModal({ isOpen, onClose, onUpdate }: CategoryMana
       setEditingCategory(null);
       fetchCategories();
       onUpdate?.();
-    } catch (error: any) {
+    } catch (error) {
       console.error('Error saving category:', error);
-      toast.error(error.message || 'Error al guardar categoría');
+      toast.error(error instanceof Error ? error.message : 'Error al guardar categoría');
     } finally {
       setLoading(false);
     }
@@ -94,9 +94,9 @@ export function CategoryManagerModal({ isOpen, onClose, onUpdate }: CategoryMana
       toast.success('Categoría eliminada correctamente');
       fetchCategories();
       onUpdate?.();
-    } catch (error: any) {
+    } catch (error) {
       console.error('Error deleting category:', error);
-      toast.error(error.message || 'Error al eliminar categoría');
+      toast.error(error instanceof Error ? error.message : 'Error al eliminar categoría');
     }
   };
 

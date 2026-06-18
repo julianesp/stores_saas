@@ -81,9 +81,9 @@ export function MarketTrendsSection() {
       setData(result);
       toast.dismiss();
       toast.success('Tendencias actualizadas');
-    } catch (error: any) {
+    } catch (error) {
       toast.dismiss();
-      toast.error(error.message || 'Error al cargar tendencias');
+      toast.error(error instanceof Error ? error.message : 'Error al cargar tendencias');
     } finally {
       setLoading(false);
     }

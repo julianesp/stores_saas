@@ -1,8 +1,16 @@
 import type ExcelJS from 'exceljs';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
-import { SaleWithRelations, Sale } from './types';
+import { SaleWithRelations, ProductWithRelations, Customer, SaleItem } from './types';
 import { ProductAnalytics } from './analytics-helpers';
+import { toJsDate, type LegacyTimestamp } from './utils';
+
+// Fila genérica lista para exportar: claves = encabezados, valores = celdas.
+type ExportRow = Record<string, string | number | boolean | null | undefined>;
+
+// Ítem de venta con su producto y relaciones (categoría, proveedor) tal como
+// llega desde la API al exportar; el producto incluye su categoría anidada.
+type SaleItemExport = SaleItem & { product?: ProductWithRelations };
 
 // Carga diferida de exceljs (~1MB): solo se descarga cuando el usuario exporta.
 async function loadExcelJS() {
@@ -13,41 +21,51 @@ async function loadExcelJS() {
  * Exporta las ventas a un archivo Excel con múltiples hojas
  * Incluye datos necesarios para análisis y predicciones
  */
+/**
+ * Convierte una venta a una fila plana de resumen lista para exportar.
+ */
+function saleToSummaryRow(sale: SaleWithRelations) {
+  const saleDate = toJsDate(sale.created_at);
+
+  return {
+    'Número de Venta': sale.sale_number,
+    'Fecha': format(saleDate, 'yyyy-MM-dd', { locale: es }),
+    'Hora': format(saleDate, 'HH:mm:ss', { locale: es }),
+    'Día de la Semana': format(saleDate, 'EEEE', { locale: es }),
+    'Día del Mes': format(saleDate, 'd', { locale: es }),
+    'Mes': format(saleDate, 'MMMM', { locale: es }),
+    'Año': format(saleDate, 'yyyy', { locale: es }),
+    'Cajero': sale.cashier?.full_name || 'N/A',
+    'Cliente': sale.customer?.name || 'Cliente General',
+    'Método de Pago': sale.payment_method,
+    'Cantidad de Items': sale.items?.length || 0,
+    'Subtotal': sale.subtotal,
+    'Descuento': sale.discount,
+    'Impuesto': sale.tax,
+    'Total': sale.total,
+    'Estado': sale.status,
+  };
+}
+
+/**
+ * Exporta el resumen de ventas a CSV.
+ */
+export function exportSalesToCSV(sales: SaleWithRelations[], filename?: string) {
+  const rows = sales.map(saleToSummaryRow);
+  const defaultFilename = `ventas_${format(new Date(), 'yyyy-MM-dd_HHmmss')}.csv`;
+  downloadCSV(rows, filename || defaultFilename);
+}
+
 export async function exportSalesToExcel(sales: SaleWithRelations[], filename?: string) {
   // Preparar datos para la hoja de resumen de ventas
-  const salesSummary = sales.map(sale => {
-    const saleDate = (sale.created_at as any)?.toDate
-      ? (sale.created_at as any).toDate()
-      : new Date(sale.created_at);
-
-    return {
-      'Número de Venta': sale.sale_number,
-      'Fecha': format(saleDate, 'yyyy-MM-dd', { locale: es }),
-      'Hora': format(saleDate, 'HH:mm:ss', { locale: es }),
-      'Día de la Semana': format(saleDate, 'EEEE', { locale: es }),
-      'Día del Mes': format(saleDate, 'd', { locale: es }),
-      'Mes': format(saleDate, 'MMMM', { locale: es }),
-      'Año': format(saleDate, 'yyyy', { locale: es }),
-      'Cajero': sale.cashier?.full_name || 'N/A',
-      'Cliente': sale.customer?.name || 'Cliente General',
-      'Método de Pago': sale.payment_method,
-      'Cantidad de Items': sale.items?.length || 0,
-      'Subtotal': sale.subtotal,
-      'Descuento': sale.discount,
-      'Impuesto': sale.tax,
-      'Total': sale.total,
-      'Estado': sale.status,
-    };
-  });
+  const salesSummary = sales.map(saleToSummaryRow);
 
   // Preparar datos detallados por producto vendido
-  const salesDetails: any[] = [];
+  const salesDetails: ExportRow[] = [];
   sales.forEach(sale => {
-    const saleDate = (sale.created_at as any)?.toDate
-      ? (sale.created_at as any).toDate()
-      : new Date(sale.created_at);
+    const saleDate = toJsDate(sale.created_at);
 
-    sale.items?.forEach((item: any) => {
+    sale.items?.forEach((item: SaleItemExport) => {
       salesDetails.push({
         'Número de Venta': sale.sale_number,
         'Fecha': format(saleDate, 'yyyy-MM-dd', { locale: es }),
@@ -78,7 +96,7 @@ export async function exportSalesToExcel(sales: SaleWithRelations[], filename?: 
   }>();
 
   sales.forEach(sale => {
-    sale.items?.forEach((item: any) => {
+    sale.items?.forEach((item: SaleItemExport) => {
       const productId = item.product?.id || 'unknown';
       const existing = productStats.get(productId);
 
@@ -121,13 +139,11 @@ export async function exportSalesToExcel(sales: SaleWithRelations[], filename?: 
   }>();
 
   sales.forEach(sale => {
-    const saleDate = (sale.created_at as any)?.toDate
-      ? (sale.created_at as any).toDate()
-      : new Date(sale.created_at);
+    const saleDate = toJsDate(sale.created_at);
     const dateKey = format(saleDate, 'yyyy-MM-dd', { locale: es });
 
     const existing = dailyStats.get(dateKey);
-    const itemsCount = sale.items?.reduce((sum: number, item: any) => sum + item.quantity, 0) || 0;
+    const itemsCount = sale.items?.reduce((sum: number, item: SaleItemExport) => sum + item.quantity, 0) || 0;
 
     if (existing) {
       existing.salesCount += 1;
@@ -219,9 +235,7 @@ export async function exportSalesByDateRange(
   filename?: string
 ) {
   const filteredSales = sales.filter(sale => {
-    const saleDate = (sale.created_at as any)?.toDate
-      ? (sale.created_at as any).toDate()
-      : new Date(sale.created_at);
+    const saleDate = toJsDate(sale.created_at);
     return saleDate >= startDate && saleDate <= endDate;
   });
 
@@ -234,14 +248,12 @@ export async function exportSalesByDateRange(
  * Formato específico para análisis de series de tiempo
  */
 export async function exportSalesForPredictions(sales: SaleWithRelations[], filename?: string) {
-  const mlData: any[] = [];
+  const mlData: ExportRow[] = [];
 
   sales.forEach(sale => {
-    const saleDate = (sale.created_at as any)?.toDate
-      ? (sale.created_at as any).toDate()
-      : new Date(sale.created_at);
+    const saleDate = toJsDate(sale.created_at);
 
-    sale.items?.forEach((item: any) => {
+    sale.items?.forEach((item: SaleItemExport) => {
       mlData.push({
         // Características temporales
         'fecha': format(saleDate, 'yyyy-MM-dd', { locale: es }),
@@ -431,7 +443,103 @@ export async function exportAnalyticsToExcel(analytics: ProductAnalytics[], file
 }
 
 // Helper functions
-function addDataToWorksheet(worksheet: ExcelJS.Worksheet, data: any[]) {
+/**
+ * Convierte un producto a una fila plana lista para exportar.
+ */
+function productToRow(product: ProductWithRelations) {
+  return {
+    'Nombre': product.name,
+    'Código de Barras': product.barcode || '',
+    'Descripción': product.description || '',
+    'Categoría': product.category?.name || 'Sin categoría',
+    'Proveedor': product.supplier?.name || '',
+    'Precio de Costo': product.cost_price,
+    'Precio de Venta': product.sale_price,
+    'Stock': product.stock,
+    'Stock Mínimo': product.min_stock,
+    'Fecha de Vencimiento': product.expiration_date
+      ? format(new Date(product.expiration_date), 'yyyy-MM-dd')
+      : '',
+    'Venta por Unidad': product.sell_by_unit ? 'Sí' : 'No',
+    'Unidades por Paquete': product.units_per_package ?? '',
+    'Precio por Unidad': product.price_per_unit ?? '',
+    'Fecha de Creación': product.created_at
+      ? format(new Date(product.created_at), 'yyyy-MM-dd HH:mm')
+      : '',
+  };
+}
+
+/**
+ * Convierte un cliente a una fila plana lista para exportar.
+ */
+function customerToRow(customer: Customer) {
+  return {
+    'Nombre': customer.name,
+    'Email': customer.email || '',
+    'Teléfono': customer.phone || '',
+    'Documento': customer.id_number || '',
+    'Dirección': customer.address || '',
+    'Ciudad': customer.city || '',
+    'Puntos de Lealtad': customer.loyalty_points ?? 0,
+    'Límite de Crédito': customer.credit_limit ?? 0,
+    'Deuda Actual': customer.current_debt ?? 0,
+    'Fecha de Registro': customer.created_at
+      ? format(new Date(customer.created_at), 'yyyy-MM-dd HH:mm')
+      : '',
+  };
+}
+
+/**
+ * Exporta el catálogo completo de productos a Excel.
+ */
+export async function exportProductsToExcel(products: ProductWithRelations[], filename?: string) {
+  const rows = products.map(productToRow);
+
+  const ExcelJS = await loadExcelJS();
+  const workbook = new ExcelJS.Workbook();
+  const ws = workbook.addWorksheet('Productos');
+  addDataToWorksheet(ws, rows);
+
+  const defaultFilename = `productos_${format(new Date(), 'yyyy-MM-dd_HHmmss')}.xlsx`;
+  const buffer = await workbook.xlsx.writeBuffer();
+  downloadBuffer(buffer, filename || defaultFilename);
+}
+
+/**
+ * Exporta el catálogo completo de productos a CSV.
+ */
+export function exportProductsToCSV(products: ProductWithRelations[], filename?: string) {
+  const rows = products.map(productToRow);
+  const defaultFilename = `productos_${format(new Date(), 'yyyy-MM-dd_HHmmss')}.csv`;
+  downloadCSV(rows, filename || defaultFilename);
+}
+
+/**
+ * Exporta toda la base de clientes a Excel.
+ */
+export async function exportCustomersToExcel(customers: Customer[], filename?: string) {
+  const rows = customers.map(customerToRow);
+
+  const ExcelJS = await loadExcelJS();
+  const workbook = new ExcelJS.Workbook();
+  const ws = workbook.addWorksheet('Clientes');
+  addDataToWorksheet(ws, rows);
+
+  const defaultFilename = `clientes_${format(new Date(), 'yyyy-MM-dd_HHmmss')}.xlsx`;
+  const buffer = await workbook.xlsx.writeBuffer();
+  downloadBuffer(buffer, filename || defaultFilename);
+}
+
+/**
+ * Exporta toda la base de clientes a CSV.
+ */
+export function exportCustomersToCSV(customers: Customer[], filename?: string) {
+  const rows = customers.map(customerToRow);
+  const defaultFilename = `clientes_${format(new Date(), 'yyyy-MM-dd_HHmmss')}.csv`;
+  downloadCSV(rows, filename || defaultFilename);
+}
+
+function addDataToWorksheet(worksheet: ExcelJS.Worksheet, data: ExportRow[]) {
   if (data.length === 0) return;
 
   // Obtener los headers de las claves del primer objeto
@@ -474,6 +582,44 @@ function addDataToWorksheet(worksheet: ExcelJS.Worksheet, data: any[]) {
 
 function downloadBuffer(buffer: ArrayBuffer, filename: string) {
   const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+  const url = window.URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = filename;
+  link.click();
+  window.URL.revokeObjectURL(url);
+}
+
+/**
+ * Escapa un valor para CSV: envuelve en comillas y duplica las comillas internas
+ * cuando el valor contiene comas, comillas o saltos de línea.
+ */
+function escapeCSVValue(value: unknown): string {
+  if (value === null || value === undefined) return '';
+  const str = String(value);
+  if (/[",\n\r]/.test(str)) {
+    return `"${str.replace(/"/g, '""')}"`;
+  }
+  return str;
+}
+
+/**
+ * Genera y descarga un archivo CSV a partir de un array de objetos planos.
+ * Usa los keys del primer objeto como encabezados y antepone un BOM UTF-8
+ * para que Excel reconozca correctamente los acentos.
+ */
+function downloadCSV(data: ExportRow[], filename: string) {
+  if (data.length === 0) return;
+
+  const headers = Object.keys(data[0]);
+  const lines = [
+    headers.map(escapeCSVValue).join(','),
+    ...data.map(row => headers.map(header => escapeCSVValue(row[header])).join(',')),
+  ];
+
+  // BOM UTF-8 para que Excel interprete bien los caracteres especiales.
+  const csv = '﻿' + lines.join('\r\n');
+  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
   const url = window.URL.createObjectURL(blob);
   const link = document.createElement('a');
   link.href = url;

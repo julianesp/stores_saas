@@ -4,7 +4,7 @@
 
 const WORKER_URL = process.env.NEXT_PUBLIC_WORKER_URL || 'https://tienda-pos-api.julii1295.workers.dev';
 
-interface APIResponse<T = any> {
+interface APIResponse<T = unknown> {
   success: boolean;
   data?: T;
   error?: string;

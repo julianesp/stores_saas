@@ -106,8 +106,8 @@ export default function UsersManagementPage() {
 
       toast.success('Usuario eliminado correctamente');
       fetchData();
-    } catch (error: any) {
-      toast.error(error.message || 'Error al eliminar usuario');
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Error al eliminar usuario');
     }
   };
 

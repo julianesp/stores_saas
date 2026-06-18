@@ -3,8 +3,10 @@
  * Análisis inteligente de ventas usando la API de Cloudflare
  */
 
-import { Sale, Product } from './types';
+import { Sale, SaleItem } from './types';
 import { getProducts, getSales, type GetTokenFn } from './cloudflare-api';
+
+type SaleWithItems = Sale & { items?: SaleItem[] };
 
 export interface ProductAnalytics {
   product_id: string;
@@ -34,7 +36,7 @@ export async function analyzeProductSales(
 ): Promise<ProductAnalytics[]> {
   try {
     // Obtener todas las ventas
-    const allSales = await getSales(getToken);
+    const allSales = (await getSales(getToken)) as SaleWithItems[];
     const cutoffDate = new Date();
     cutoffDate.setDate(cutoffDate.getDate() - daysToAnalyze);
 
@@ -50,9 +52,9 @@ export async function analyzeProductSales(
 
     // Agrupar ventas por producto
     const productSalesMap = new Map<string, {
-      sales: Sale[];
-      last_7_days: Sale[];
-      last_30_days: Sale[];
+      sales: SaleWithItems[];
+      last_7_days: SaleWithItems[];
+      last_30_days: SaleWithItems[];
     }>();
 
     const now = new Date();
@@ -80,11 +82,11 @@ export async function analyzeProductSales(
         const data = productSalesMap.get(item.product_id)!;
 
         // Crear una venta "virtual" para este item (para facilitar el cálculo)
-        const itemSale = {
+        const itemSale: SaleWithItems = {
           ...sale,
           items: [item], // Solo este item
           total: item.subtotal,
-        } as any;
+        };
 
         data.sales.push(itemSale);
 
@@ -106,11 +108,11 @@ export async function analyzeProductSales(
 
       // Calcular totales
       const totalQuantitySold = data.sales.reduce((sum, sale) => {
-        return sum + ((sale as any).items?.[0]?.quantity || 0);
+        return sum + (sale.items?.[0]?.quantity || 0);
       }, 0);
 
       const totalRevenue = data.sales.reduce((sum, sale) => {
-        return sum + ((sale as any).items?.[0]?.subtotal || 0);
+        return sum + (sale.items?.[0]?.subtotal || 0);
       }, 0);
 
       const salesCount = data.sales.length;
@@ -153,11 +155,11 @@ export async function analyzeProductSales(
 
       // Ventas de los últimos períodos
       const last7DaysSales = data.last_7_days.reduce((sum, sale) => {
-        return sum + ((sale as any).items?.[0]?.quantity || 0);
+        return sum + (sale.items?.[0]?.quantity || 0);
       }, 0);
 
       const last30DaysSales = data.last_30_days.reduce((sum, sale) => {
-        return sum + ((sale as any).items?.[0]?.quantity || 0);
+        return sum + (sale.items?.[0]?.quantity || 0);
       }, 0);
 
       analytics.push({

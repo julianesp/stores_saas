@@ -90,21 +90,21 @@ export default function SubscriptionsManagementPage() {
   };
 
   const handleExtendTrial = async (profileId: string, email: string) => {
-    if (!confirm(`¿Extender el período de prueba de ${email} por 30 días más?`)) {
+    if (!confirm(`¿Extender el período de prueba de ${email} por 15 días más?`)) {
       return;
     }
 
     try {
       const now = new Date();
       const trialEnd = new Date();
-      trialEnd.setDate(trialEnd.getDate() + 30);
+      trialEnd.setDate(trialEnd.getDate() + 15);
 
       await updateUserProfile(profileId, {
         subscription_status: 'trial',
         trial_end_date: trialEnd.toISOString(),
       }, getToken);
 
-      toast.success('Período de prueba extendido por 30 días');
+      toast.success('Período de prueba extendido por 15 días');
       fetchData();
     } catch (error) {
       console.error('Error extending trial:', error);
@@ -353,7 +353,7 @@ export default function SubscriptionsManagementPage() {
                                 size="sm"
                                 variant="outline"
                                 onClick={() => handleExtendTrial(sub.id, sub.email)}
-                                title="Extender prueba 30 días"
+                                title="Extender prueba 15 días"
                               >
                                 <Clock className="h-4 w-4 mr-1" />
                                 Extender

@@ -164,9 +164,9 @@ export function ImageUploader({
 
           console.log('✅ Imagen subida exitosamente:', data.secure_url);
           return data.secure_url;
-        } catch (error: any) {
+        } catch (error) {
           console.error('❌ Error procesando imagen:', error);
-          toast.error(error.message || `Error al procesar ${file.name}`);
+          toast.error(error instanceof Error ? error.message : `Error al procesar ${file.name}`);
           return null;
         }
       });
@@ -312,15 +312,16 @@ export function ImageUploader({
         // Esperar a que el video esté listo
         await waitForVideo;
       }
-    } catch (error: any) {
+    } catch (error) {
       console.error('Error accessing camera:', error);
       setShowCamera(false);
       setCameraReady(false);
 
       // Mensajes de error más específicos y amigables
       let errorMessage = 'No se pudo acceder a la cámara.';
+      const errorName = error instanceof Error ? error.name : '';
 
-      if (error.name === 'NotAllowedError' || error.name === 'PermissionDeniedError') {
+      if (errorName === 'NotAllowedError' || errorName === 'PermissionDeniedError') {
         // Mostrar un modal con instrucciones detalladas
         Swal.fire({
           icon: 'warning',
@@ -361,13 +362,13 @@ export function ImageUploader({
           }
         });
         return;
-      } else if (error.name === 'NotFoundError' || error.name === 'DevicesNotFoundError') {
+      } else if (errorName === 'NotFoundError' || errorName === 'DevicesNotFoundError') {
         errorMessage = '📷 No se encontró ninguna cámara en tu dispositivo. Usa la opción de Galería.';
-      } else if (error.name === 'NotReadableError' || error.name === 'TrackStartError') {
+      } else if (errorName === 'NotReadableError' || errorName === 'TrackStartError') {
         errorMessage = '⚠️ La cámara está siendo usada por otra aplicación. Cierra otras aplicaciones y intenta de nuevo.';
-      } else if (error.name === 'OverconstrainedError' || error.name === 'ConstraintNotSatisfiedError') {
+      } else if (errorName === 'OverconstrainedError' || errorName === 'ConstraintNotSatisfiedError') {
         errorMessage = '⚠️ No se pudo configurar la cámara con los ajustes solicitados. Intenta de nuevo.';
-      } else if (error.name === 'SecurityError') {
+      } else if (errorName === 'SecurityError') {
         errorMessage = '🔒 Acceso a la cámara bloqueado por seguridad. Asegúrate de estar usando HTTPS y verifica los permisos.';
       }
 
@@ -469,16 +470,16 @@ export function ImageUploader({
           onChange(newImages);
 
           toast.success('Foto agregada correctamente');
-        } catch (error: any) {
+        } catch (error) {
           console.error('Error uploading photo:', error);
-          toast.error(error.message || 'Error al subir foto. Intenta de nuevo.');
+          toast.error(error instanceof Error ? error.message : 'Error al subir foto. Intenta de nuevo.');
         } finally {
           setUploading(false);
         }
       }, 'image/jpeg', 0.9);
-    } catch (error: any) {
+    } catch (error) {
       console.error('Error in capturePhoto:', error);
-      toast.error('Error al capturar foto: ' + (error.message || 'Error desconocido'));
+      toast.error('Error al capturar foto: ' + (error instanceof Error ? error.message : 'Error desconocido'));
     }
   };
 

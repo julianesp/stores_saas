@@ -1,5 +1,7 @@
-import { LoyaltySettings, LoyaltyTier } from './types';
+import { LoyaltySettings, LoyaltyTier, Sale, SaleItem } from './types';
 import type { GetTokenFn } from './cloudflare-api';
+
+type SaleWithItems = Sale & { items?: SaleItem[] };
 
 /**
  * Niveles de puntos por defecto
@@ -112,7 +114,7 @@ export async function addPointsToCustomer(
   try {
     const { getCustomerById, updateCustomer } = await import('./cloudflare-api');
 
-    const customer = await getCustomerById(customerId, getToken) as any;
+    const customer = await getCustomerById(customerId, getToken);
     if (!customer) {
       throw new Error('Cliente no encontrado');
     }
@@ -137,19 +139,19 @@ export async function getCustomerPurchaseHistory(customerId: string, getToken: G
     const { getSales, getProducts } = await import('./cloudflare-api');
 
     // Obtener todas las ventas (que ya incluyen los items)
-    const allSales = await getSales(getToken) as any[];
+    const allSales = (await getSales(getToken)) as SaleWithItems[];
 
     // Filtrar solo las ventas de este cliente
-    const customerSales = allSales.filter((sale: any) => sale.customer_id === customerId);
+    const customerSales = allSales.filter((sale) => sale.customer_id === customerId);
 
     // Obtener todos los productos para hacer lookup más rápido
-    const allProducts = await getProducts(getToken) as any[];
+    const allProducts = await getProducts(getToken);
     const productsMap = new Map(allProducts.map(p => [p.id, p]));
 
     // Mapear las ventas con la información de productos
-    const salesWithDetails = customerSales.map((sale: any) => {
+    const salesWithDetails = customerSales.map((sale) => {
       // Para cada item de la venta, agregar la información del producto
-      const itemsWithProducts = (sale.items || []).map((item: any) => ({
+      const itemsWithProducts = (sale.items || []).map((item) => ({
         ...item,
         product: productsMap.get(item.product_id),
       }));
@@ -182,7 +184,7 @@ export async function canRedeemDiscount(customerId: string, getToken: GetTokenFn
   try {
     const { getCustomerById } = await import('./cloudflare-api');
 
-    const customer = await getCustomerById(customerId, getToken) as any;
+    const customer = await getCustomerById(customerId, getToken);
     if (!customer) return false;
 
     const currentPoints = customer.loyalty_points || 0;
@@ -204,7 +206,7 @@ export async function redeemPointsForDiscount(
   try {
     const { getCustomerById, updateCustomer } = await import('./cloudflare-api');
 
-    const customer = await getCustomerById(customerId, getToken) as any;
+    const customer = await getCustomerById(customerId, getToken);
     if (!customer) {
       throw new Error('Cliente no encontrado');
     }

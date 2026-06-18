@@ -76,14 +76,14 @@ export async function POST(request: Request) {
         });
 
         console.log(`✅ Actualizado: ${product.name} - ${product.barcode} → ${normalized}`);
-      } catch (error: any) {
+      } catch (error) {
         errors++;
         results.push({
           id: product.id,
           name: product.name,
           barcode: product.barcode,
           status: 'error',
-          error: error.message
+          error: error instanceof Error ? error.message : 'Error desconocido'
         });
         console.error(`❌ Error actualizando ${product.name}:`, error);
       }
@@ -105,12 +105,12 @@ export async function POST(request: Request) {
       },
       results
     });
-  } catch (error: any) {
+  } catch (error) {
     console.error('Error en normalización:', error);
     return NextResponse.json(
       {
         success: false,
-        error: error.message || 'Error al normalizar códigos de barras'
+        error: error instanceof Error ? error.message : 'Error al normalizar códigos de barras'
       },
       { status: 500 }
     );

@@ -28,7 +28,7 @@ export default function EmailSettingsPage() {
   const [saving, setSaving] = useState(false);
   const [sendingTest, setSendingTest] = useState(false);
   const [preferences, setPreferences] = useState<EmailPreferences | null>(null);
-  const [advancedSettings, setAdvancedSettings] = useState<any>({});
+  const [advancedSettings, setAdvancedSettings] = useState<Record<string, unknown>>({});
   const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
   const [hasAccess, setHasAccess] = useState(false);
 

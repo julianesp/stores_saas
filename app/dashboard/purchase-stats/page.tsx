@@ -37,7 +37,7 @@ import {
 } from "recharts";
 import { formatCurrency } from "@/lib/utils";
 import { getPurchaseOrders, getSales, getProducts, getCategories } from "@/lib/cloudflare-api";
-import type { PurchaseOrderWithItems, Sale, Product, Category } from "@/lib/types";
+import type { PurchaseOrderWithItems, Sale, SaleItem, SaleWithRelations, Product, Category } from "@/lib/types";
 
 interface ProductAnalysis {
   id: string;
@@ -242,9 +242,9 @@ export default function PurchaseStatsPage() {
         );
       }
 
-      allSales.filter(Boolean).forEach((sale: any) => {
+      allSales.filter(Boolean).forEach((sale: SaleWithRelations) => {
         if (sale?.items) {
-          sale.items.forEach((item: any) => {
+          sale.items.forEach((item: SaleItem) => {
             const existing = productMap.get(item.product_id);
             if (existing) {
               const newSold = existing.sold + item.quantity;

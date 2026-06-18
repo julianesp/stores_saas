@@ -8,6 +8,16 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { toast } from "sonner";
 
+interface TransactionData {
+  id?: string | null;
+  reference?: string | null;
+  status?: string;
+  amount_in_cents: number;
+  created_at?: string | number;
+  payment_method_type?: string;
+  payment_method?: { type?: string };
+}
+
 function ConfirmationContent() {
   const searchParams = useSearchParams();
   const router = useRouter();
@@ -18,7 +28,7 @@ function ConfirmationContent() {
 
   const [loading, setLoading] = useState(true);
   const [transactionStatus, setTransactionStatus] = useState<"PENDING" | "APPROVED" | "DECLINED" | "ERROR">("PENDING");
-  const [transactionData, setTransactionData] = useState<any>(null);
+  const [transactionData, setTransactionData] = useState<TransactionData | null>(null);
 
   useEffect(() => {
     // Siempre verificar el estado, con o sin transaction ID

@@ -20,7 +20,7 @@ const trackEvent = async (eventData: {
   eventName: string;
   pagePath?: string;
   pageTitle?: string;
-  metadata?: Record<string, any>;
+  metadata?: Record<string, unknown>;
   durationMs?: number;
 }) => {
   try {
@@ -95,7 +95,7 @@ export function useAnalytics() {
   const pathname = usePathname();
   const { isLoaded, user } = useUser();
 
-  const trackClick = (elementName: string, metadata?: Record<string, any>) => {
+  const trackClick = (elementName: string, metadata?: Record<string, unknown>) => {
     if (!isLoaded || !user) return;
 
     trackEvent({
@@ -107,7 +107,7 @@ export function useAnalytics() {
     });
   };
 
-  const trackFeatureUse = (featureName: string, metadata?: Record<string, any>) => {
+  const trackFeatureUse = (featureName: string, metadata?: Record<string, unknown>) => {
     if (!isLoaded || !user) return;
 
     trackEvent({
@@ -119,7 +119,7 @@ export function useAnalytics() {
     });
   };
 
-  const trackAction = (actionName: string, metadata?: Record<string, any>) => {
+  const trackAction = (actionName: string, metadata?: Record<string, unknown>) => {
     if (!isLoaded || !user) return;
 
     trackEvent({
@@ -131,7 +131,7 @@ export function useAnalytics() {
     });
   };
 
-  const trackError = (errorName: string, metadata?: Record<string, any>) => {
+  const trackError = (errorName: string, metadata?: Record<string, unknown>) => {
     if (!isLoaded || !user) return;
 
     trackEvent({
@@ -155,12 +155,12 @@ export function useAnalytics() {
  * HOC para rastrear clicks en componentes
  * Ejemplo: <Button onClick={withAnalytics(() => console.log('click'), 'Save Product')}>
  */
-export function withAnalytics<T extends (...args: any[]) => any>(
+export function withAnalytics<T extends (...args: unknown[]) => unknown>(
   callback: T,
   eventName: string,
-  metadata?: Record<string, any>
+  metadata?: Record<string, unknown>
 ): T {
-  return ((...args: any[]) => {
+  return ((...args: unknown[]) => {
     trackEvent({
       eventType: 'click',
       eventName: `Click: ${eventName}`,

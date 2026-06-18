@@ -158,7 +158,7 @@ export default function WebOrdersPage() {
         payment_status: 'pagado',
         amount_paid: order?.total || 0,
         amount_pending: 0,
-      } as any, getToken);
+      } as Partial<Sale>, getToken);
 
       await Swal.fire({
         title: '¡Pago confirmado!',
@@ -169,11 +169,11 @@ export default function WebOrdersPage() {
       });
 
       loadOrders();
-    } catch (error: any) {
+    } catch (error) {
       console.error('Error confirming payment:', error);
       await Swal.fire({
         title: 'Error',
-        text: error.message || 'Error al confirmar pago',
+        text: error instanceof Error ? error.message : 'Error al confirmar pago',
         icon: 'error',
         confirmButtonColor: '#dc2626',
       });
@@ -208,7 +208,7 @@ export default function WebOrdersPage() {
       await updateSale(orderId, {
         status: 'cancelada',
         payment_status: 'pendiente', // Mantener como pendiente ya que no se pagó
-      } as any, getToken);
+      } as Partial<Sale>, getToken);
 
       await Swal.fire({
         title: 'Pedido rechazado',
@@ -219,11 +219,11 @@ export default function WebOrdersPage() {
       });
 
       loadOrders();
-    } catch (error: any) {
+    } catch (error) {
       console.error('Error rejecting order:', error);
       await Swal.fire({
         title: 'Error',
-        text: error.message || 'Error al rechazar pedido',
+        text: error instanceof Error ? error.message : 'Error al rechazar pedido',
         icon: 'error',
         confirmButtonColor: '#dc2626',
       });
@@ -266,11 +266,11 @@ export default function WebOrdersPage() {
       });
 
       loadOrders();
-    } catch (error: any) {
+    } catch (error) {
       console.error('Error deleting order:', error);
       await Swal.fire({
         title: 'Error',
-        text: error.message || 'Error al eliminar pedido',
+        text: error instanceof Error ? error.message : 'Error al eliminar pedido',
         icon: 'error',
         confirmButtonColor: '#dc2626',
       });
@@ -296,7 +296,15 @@ export default function WebOrdersPage() {
   };
 
   const extractCustomerInfo = (notes: string) => {
-    const info: any = {};
+    const info: {
+      name?: string;
+      phone?: string;
+      email?: string;
+      delivery?: string;
+      address?: string;
+      shippingCost?: string;
+      customerNotes?: string;
+    } = {};
 
     const nameMatch = notes.match(/Cliente: (.+)/);
     if (nameMatch) info.name = nameMatch[1].trim();

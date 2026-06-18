@@ -49,6 +49,14 @@ interface CartItem {
   discount_percentage?: number;
 }
 
+interface EPaycoCheckout {
+  checkout: {
+    configure: (options: { sessionId: string }) => { open: () => void };
+  };
+}
+
+type WindowWithEPayco = Window & { ePayco?: EPaycoCheckout };
+
 export default function CheckoutPage() {
   const params = useParams();
   const router = useRouter();
@@ -126,7 +134,7 @@ export default function CheckoutPage() {
       } else {
         router.push(`/store/${slug}/cart`);
       }
-    } catch (err: any) {
+    } catch (err) {
       console.error("Error loading checkout:", err);
       toast.error("Error al cargar el checkout");
     } finally {
@@ -263,7 +271,7 @@ export default function CheckoutPage() {
             redirect_url: `${window.location.origin}/store/${slug}/payment-confirmation?order=${response.order_number}`,
           });
           setEpaycoSessionId(session.session_id);
-        } catch (error: any) {
+        } catch (error) {
           console.error("Error creating ePayco session:", error);
           toast.warning("No se pudo crear el link de pago automático");
         } finally {
@@ -279,9 +287,9 @@ export default function CheckoutPage() {
       setOrderCompleted(true);
 
       toast.success("¡Pedido realizado con éxito!");
-    } catch (err: any) {
+    } catch (err) {
       console.error("Error creating order:", err);
-      toast.error(err.message || "Error al crear el pedido");
+      toast.error(err instanceof Error ? err.message : "Error al crear el pedido");
     } finally {
       setSubmitting(false);
     }
@@ -430,8 +438,11 @@ export default function CheckoutPage() {
                       style={{ backgroundColor: "#0a6db5" }}
                       onClick={() => {
                         // Abrir ePayco Smart Checkout
-                        if (typeof window !== 'undefined' && (window as any).ePayco) {
-                          (window as any).ePayco.checkout.configure({
+                        const ePayco = typeof window !== 'undefined'
+                          ? (window as WindowWithEPayco).ePayco
+                          : undefined;
+                        if (ePayco) {
+                          ePayco.checkout.configure({
                             sessionId: epaycoSessionId,
                           }).open();
                         }

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { auth } from '@clerk/nextjs/server';
 import { getUserProfile, updateUserProfile, getAllUserProfiles } from '@/lib/cloudflare-api';
+import type { UserProfile } from '@/lib/types';
 
 export const runtime = 'nodejs';
 
@@ -37,7 +38,7 @@ export async function POST(request: NextRequest) {
     // Buscar el usuario por email
     const allProfiles = await getAllUserProfiles(getToken);
     const demoProfile = allProfiles.find(
-      (p: any) => p.email.toLowerCase() === DEMO_EMAIL.toLowerCase()
+      (p: UserProfile) => p.email.toLowerCase() === DEMO_EMAIL.toLowerCase()
     );
 
     if (!demoProfile) {
@@ -54,7 +55,7 @@ export async function POST(request: NextRequest) {
     const expiresAt = farFutureDate.toISOString();
 
     // Preparar las actualizaciones - TODOS los addons con acceso permanente
-    const updates: any = {
+    const updates: Record<string, unknown> = {
       subscription_status: 'active',
       has_ai_addon: true,
       has_store_addon: true,
@@ -75,7 +76,7 @@ export async function POST(request: NextRequest) {
     });
 
     // Actualizar el perfil del usuario
-    await updateUserProfile(demoProfile.id, updates, getToken);
+    await updateUserProfile(demoProfile.id, updates as Partial<UserProfile>, getToken);
 
     console.log(`✅ Cuenta demo activada con acceso completo y permanente`);
 
@@ -98,10 +99,10 @@ export async function POST(request: NextRequest) {
       },
     });
 
-  } catch (error: any) {
+  } catch (error) {
     console.error('[activate-demo-account] Error:', error);
     return NextResponse.json(
-      { error: error.message || 'Error al activar cuenta demo' },
+      { error: error instanceof Error ? error.message : 'Error al activar cuenta demo' },
       { status: 500 }
     );
   }

@@ -18,7 +18,7 @@ export async function POST(request: NextRequest) {
 
     const data = await response.json();
     return NextResponse.json(data, { status: response.status });
-  } catch (error: any) {
-    return NextResponse.json({ success: false, error: error.message }, { status: 500 });
+  } catch (error) {
+    return NextResponse.json({ success: false, error: error instanceof Error ? error.message : 'Error desconocido' }, { status: 500 });
   }
 }

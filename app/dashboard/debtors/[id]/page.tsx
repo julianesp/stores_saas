@@ -15,7 +15,7 @@ import {
   registerCreditPayment,
   updateCustomerCreditLimit,
 } from '@/lib/cloudflare-credit-helpers';
-import { Customer, SaleWithRelations, UserProfile } from '@/lib/types';
+import { Customer, SaleItemWithProduct, SaleWithRelations, UserProfile } from '@/lib/types';
 import type { CreditPaymentData } from '@/lib/cloudflare-api';
 import { formatCurrency } from '@/lib/utils';
 import {
@@ -388,7 +388,7 @@ export default function DebtorDetailPage() {
                     <div className="mb-3 border-t pt-3">
                       <p className="text-xs font-semibold text-gray-600 mb-2">Productos:</p>
                       <div className="space-y-1.5">
-                        {sale.items.map((item: any, idx: number) => (
+                        {(sale.items as SaleItemWithProduct[]).map((item, idx) => (
                           <div
                             key={idx}
                             className="flex justify-between items-center text-sm bg-gray-50 rounded px-2 py-1.5"
@@ -498,7 +498,7 @@ export default function DebtorDetailPage() {
                   <select
                     id="payment_method"
                     value={paymentMethod}
-                    onChange={(e) => setPaymentMethod(e.target.value as any)}
+                    onChange={(e) => setPaymentMethod(e.target.value as 'efectivo' | 'tarjeta' | 'transferencia')}
                     className="w-full p-2 border rounded-md"
                   >
                     <option value="efectivo">Efectivo</option>
