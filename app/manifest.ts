@@ -2,13 +2,13 @@ import type { MetadataRoute } from 'next';
 
 export default function manifest(): MetadataRoute.Manifest {
   return {
-    name: 'posib.dev - Sistema POS',
+    name: 'posib.dev - Sistema POS para tiendas en Colombia',
     short_name: 'posib.dev',
-    description: 'Sistema completo de punto de venta y gestión de inventario',
+    description: 'Sistema POS de punto de venta, inventario y facturación para tiendas y negocios en Colombia',
     start_url: '/',
     display: 'standalone',
     background_color: '#ffffff',
-    theme_color: '#2563eb',
+    theme_color: '#007C80',
     orientation: 'portrait',
     icons: [
       {
