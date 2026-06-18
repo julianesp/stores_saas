@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@clerk/nextjs';
-import { Bell, Package, Award, TrendingUp, AlertCircle, X } from 'lucide-react';
+import { Bell, Package, Award, TrendingUp, AlertCircle, Calendar, DollarSign, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Notification } from '@/lib/types';
 import { getAllNotifications } from '@/lib/notification-helpers';
@@ -62,6 +62,10 @@ export function NotificationPanel() {
     switch (type) {
       case 'stock':
         return <Package className="h-5 w-5 text-orange-600" />;
+      case 'expiration':
+        return <Calendar className="h-5 w-5 text-red-600" />;
+      case 'debt':
+        return <DollarSign className="h-5 w-5 text-amber-600" />;
       case 'loyalty':
         return <Award className="h-5 w-5 text-yellow-600" />;
       case 'sale':
@@ -77,6 +81,10 @@ export function NotificationPanel() {
     switch (type) {
       case 'stock':
         return 'bg-orange-50 border-orange-200 hover:bg-orange-100';
+      case 'expiration':
+        return 'bg-red-50 border-red-200 hover:bg-red-100';
+      case 'debt':
+        return 'bg-amber-50 border-amber-200 hover:bg-amber-100';
       case 'loyalty':
         return 'bg-yellow-50 border-yellow-200 hover:bg-yellow-100';
       case 'sale':

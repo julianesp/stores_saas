@@ -273,7 +273,6 @@ export default function UsersManagementPage() {
                     const roleConfig = {
                       admin: { label: 'Admin Tienda', color: 'bg-brand-light text-brand' },
                       cajero: { label: 'Cajero', color: 'bg-green-100 text-green-800' },
-                      cliente: { label: 'Cliente', color: 'bg-gray-100 text-gray-800' },
                     };
 
                     const statusConfig = {
@@ -333,7 +332,7 @@ export default function UsersManagementPage() {
                         </td>
                         <td className="p-4">
                           <div className="flex gap-2 justify-end">
-                            {!usr.is_superadmin && usr.role !== 'cliente' && (
+                            {!usr.is_superadmin && (
                               <Button
                                 size="sm"
                                 variant="outline"

@@ -34,6 +34,7 @@ export const InvoiceReceipt = forwardRef<HTMLDivElement, InvoiceReceiptProps>(
     // Método de pago en español
     const paymentMethodLabels: Record<string, string> = {
       efectivo: 'Efectivo',
+      nequi: 'Nequi',
       tarjeta: 'Tarjeta',
       transferencia: 'Transferencia',
       credito: 'Crédito',

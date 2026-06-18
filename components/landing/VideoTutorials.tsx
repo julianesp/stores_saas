@@ -37,9 +37,9 @@ export default function VideoTutorials() {
       icon: '📦',
     },
     {
-      title: 'Tienda Online',
-      description: 'Configura y personaliza tu tienda web',
-      icon: '🌐',
+      title: 'Gestión de Clientes',
+      description: 'Registra clientes, ventas a crédito y puntos de lealtad',
+      icon: '👥',
     },
     {
       title: 'Reportes y Analytics',
@@ -108,7 +108,7 @@ export default function VideoTutorials() {
                   <textarea
                     value={topic}
                     onChange={(e) => setTopic(e.target.value)}
-                    placeholder="Ejemplo: ¿Cómo configuro los métodos de pago en la tienda online?"
+                    placeholder="Ejemplo: ¿Cómo registro una venta a crédito a un cliente?"
                     className="w-full px-4 py-3 rounded-lg bg-white/10 border border-brand/60 text-white placeholder-blue-300/70 focus:outline-none focus:ring-2 focus:ring-brand/80 min-h-[100px] resize-y"
                     required
                   />

@@ -70,9 +70,7 @@ const addons = [
     color: "green",
     description: "Automatiza tu comunicación con clientes",
     features: [
-      "Carritos abandonados (3 emails automáticos)",
       "Reportes diarios por email",
-      "Alertas de stock para clientes",
       "Campañas personalizadas",
       "Segmentación de clientes",
       "Analytics de emails enviados",

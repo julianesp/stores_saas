@@ -41,6 +41,7 @@ export const TicketReceipt = forwardRef<HTMLDivElement, TicketReceiptProps>((pro
 
   const paymentMethodNames: Record<string, string> = {
     efectivo: 'Efectivo',
+    nequi: 'Nequi',
     tarjeta: 'Tarjeta',
     transferencia: 'Transferencia',
   };

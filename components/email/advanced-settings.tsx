@@ -4,17 +4,13 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { Switch } from '@/components/ui/switch';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Settings, Calendar, Package as PackageIcon, Clock } from 'lucide-react';
+import { Settings, Calendar, Package as PackageIcon } from 'lucide-react';
 
 // Configuración avanzada de emails. El índice de firma mantiene compatibilidad
 // con el estado `Record<string, unknown>` del contenedor padre.
 export interface EmailSettings extends Record<string, unknown> {
   report_days?: string[];
   stock_threshold?: number;
-  cart_email_1_hours?: number;
-  cart_email_2_hours?: number;
-  cart_email_3_hours?: number;
   cc_emails?: string;
   bcc_emails?: string;
 }
@@ -114,70 +110,6 @@ export function AdvancedSettings({ settings, onUpdate }: AdvancedSettingsProps) 
             <p className="text-xs text-muted-foreground">
               Enviar alerta cuando el stock sea menor o igual a este número
             </p>
-          </div>
-
-          {/* Tiempos de carritos abandonados */}
-          <div className="space-y-3">
-            <div className="flex items-center gap-2">
-              <Clock className="h-4 w-4 text-muted-foreground" />
-              <Label>Tiempos para emails de carritos abandonados</Label>
-            </div>
-            <div className="grid gap-4 md:grid-cols-3">
-              <div className="space-y-2">
-                <Label htmlFor="cart-time-1" className="text-sm">
-                  Primer email (horas)
-                </Label>
-                <Input
-                  id="cart-time-1"
-                  type="number"
-                  inputMode="numeric"
-                  min="1"
-                  value={settings.cart_email_1_hours || 1}
-                  onChange={(e) =>
-                    onUpdate({
-                      ...settings,
-                      cart_email_1_hours: parseInt(e.target.value),
-                    })
-                  }
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="cart-time-2" className="text-sm">
-                  Segundo email (horas)
-                </Label>
-                <Input
-                  id="cart-time-2"
-                  type="number"
-                  inputMode="numeric"
-                  min="1"
-                  value={settings.cart_email_2_hours || 24}
-                  onChange={(e) =>
-                    onUpdate({
-                      ...settings,
-                      cart_email_2_hours: parseInt(e.target.value),
-                    })
-                  }
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="cart-time-3" className="text-sm">
-                  Tercer email (horas)
-                </Label>
-                <Input
-                  id="cart-time-3"
-                  type="number"
-                  inputMode="numeric"
-                  min="1"
-                  value={settings.cart_email_3_hours || 72}
-                  onChange={(e) =>
-                    onUpdate({
-                      ...settings,
-                      cart_email_3_hours: parseInt(e.target.value),
-                    })
-                  }
-                />
-              </div>
-            </div>
           </div>
 
           {/* CC/BCC para reportes */}

@@ -1,6 +1,8 @@
 import { Notification } from './types';
 import type { GetTokenFn } from './cloudflare-api';
 import { getProducts, getCustomers } from './cloudflare-api';
+import { getExpiringProductsList } from './dashboard-helpers';
+import { getDebtorCustomers } from './cloudflare-credit-helpers';
 import { REWARD_CONSTANTS } from './loyalty-helpers';
 import { checkSubscriptionStatus } from './subscription-helpers';
 
@@ -28,6 +30,54 @@ async function getLowStockNotifications(getToken: GetTokenFn): Promise<Notificat
     }];
   } catch (error) {
     console.error('Error getting low stock notifications:', error);
+    return [];
+  }
+}
+
+/**
+ * Obtiene productos próximos a vencer (dentro de 30 días)
+ */
+async function getExpirationNotifications(getToken: GetTokenFn): Promise<Notification[]> {
+  try {
+    const expiringProducts = await getExpiringProductsList(getToken);
+
+    if (expiringProducts.length === 0) return [];
+
+    return [{
+      id: 'expiring-products',
+      type: 'expiration',
+      title: 'Productos por Vencer',
+      message: `${expiringProducts.length} producto${expiringProducts.length > 1 ? 's' : ''} próximo${expiringProducts.length > 1 ? 's' : ''} a vencer`,
+      link: '/dashboard/products',
+      count: expiringProducts.length,
+      timestamp: new Date(),
+    }];
+  } catch (error) {
+    console.error('Error getting expiration notifications:', error);
+    return [];
+  }
+}
+
+/**
+ * Obtiene clientes con cuentas por cobrar (deuda pendiente)
+ */
+async function getDebtNotifications(getToken: GetTokenFn): Promise<Notification[]> {
+  try {
+    const debtors = await getDebtorCustomers(getToken);
+
+    if (debtors.length === 0) return [];
+
+    return [{
+      id: 'pending-debts',
+      type: 'debt',
+      title: 'Cuentas por Cobrar',
+      message: `${debtors.length} cliente${debtors.length > 1 ? 's' : ''} con deuda pendiente`,
+      link: '/dashboard/debtors',
+      count: debtors.length,
+      timestamp: new Date(),
+    }];
+  } catch (error) {
+    console.error('Error getting debt notifications:', error);
     return [];
   }
 }
@@ -108,13 +158,15 @@ async function getSubscriptionNotifications(getToken: GetTokenFn): Promise<Notif
  */
 export async function getAllNotifications(getToken: GetTokenFn): Promise<Notification[]> {
   try {
-    const [stockNotifs, loyaltyNotifs, subNotifs] = await Promise.all([
+    const [stockNotifs, expirationNotifs, debtNotifs, loyaltyNotifs, subNotifs] = await Promise.all([
       getLowStockNotifications(getToken),
+      getExpirationNotifications(getToken),
+      getDebtNotifications(getToken),
       getLoyaltyNotifications(getToken),
       getSubscriptionNotifications(getToken),
     ]);
 
-    return [...stockNotifs, ...loyaltyNotifs, ...subNotifs];
+    return [...stockNotifs, ...expirationNotifs, ...debtNotifs, ...loyaltyNotifs, ...subNotifs];
   } catch (error) {
     console.error('Error getting notifications:', error);
     return [];

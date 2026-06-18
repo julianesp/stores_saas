@@ -9,7 +9,7 @@ import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { toast } from 'sonner';
-import { Loader2, Mail, Clock, ShoppingCart, Package, FileText, Lock, Settings, BarChart3, Eye, Sparkles, Bell } from 'lucide-react';
+import { Loader2, Mail, Clock, FileText, Lock, Settings, BarChart3, Eye, Sparkles, Bell } from 'lucide-react';
 import { EmailPreferences, UserProfile } from '@/lib/types';
 import { getUserProfile } from '@/lib/cloudflare-api';
 import { hasEmailMarketingAccess } from '@/lib/cloudflare-subscription-helpers';
@@ -165,24 +165,24 @@ export default function EmailSettingsPage() {
 
               <div className="bg-white rounded-lg p-6 w-full max-w-md space-y-3">
                 <div className="flex items-start gap-3">
-                  <Mail className="h-5 w-5 text-brand mt-0.5" />
-                  <div className="text-left">
-                    <p className="font-medium">Emails de Carritos Abandonados</p>
-                    <p className="text-sm text-gray-600">Recupera ventas perdidas automáticamente</p>
-                  </div>
-                </div>
-                <div className="flex items-start gap-3">
-                  <Package className="h-5 w-5 text-brand mt-0.5" />
-                  <div className="text-left">
-                    <p className="font-medium">Alertas de Stock</p>
-                    <p className="text-sm text-gray-600">Notifica a clientes cuando haya disponibilidad</p>
-                  </div>
-                </div>
-                <div className="flex items-start gap-3">
                   <FileText className="h-5 w-5 text-brand mt-0.5" />
                   <div className="text-left">
                     <p className="font-medium">Reportes Automáticos</p>
-                    <p className="text-sm text-gray-600">Recibe reportes diarios en tu email</p>
+                    <p className="text-sm text-gray-600">Recibe reportes diarios de ventas en tu email</p>
+                  </div>
+                </div>
+                <div className="flex items-start gap-3">
+                  <Clock className="h-5 w-5 text-brand mt-0.5" />
+                  <div className="text-left">
+                    <p className="font-medium">Recordatorios de Suscripción</p>
+                    <p className="text-sm text-gray-600">Recibe avisos antes de que venza tu plan</p>
+                  </div>
+                </div>
+                <div className="flex items-start gap-3">
+                  <Mail className="h-5 w-5 text-brand mt-0.5" />
+                  <div className="text-left">
+                    <p className="font-medium">Campañas Personalizadas</p>
+                    <p className="text-sm text-gray-600">Comunícate con tus clientes por email</p>
                   </div>
                 </div>
               </div>
@@ -325,61 +325,6 @@ export default function EmailSettingsPage() {
                   }
                 />
               </div>
-            </CardContent>
-          </Card>
-
-          {/* Alertas de Stock */}
-          <Card>
-            <CardHeader>
-              <div className="flex items-center gap-2">
-                <Package className="h-5 w-5" />
-                <CardTitle>Alertas de Stock</CardTitle>
-              </div>
-              <CardDescription>
-                Notifica a clientes cuando productos agotados vuelvan a estar disponibles
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="flex items-center justify-between">
-                <Label htmlFor="stock-alerts">Activar alertas de stock</Label>
-                <Switch
-                  id="stock-alerts"
-                  checked={preferences.stock_alerts_enabled}
-                  onCheckedChange={(checked) =>
-                    setPreferences({ ...preferences, stock_alerts_enabled: checked })
-                  }
-                />
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Carritos Abandonados */}
-          <Card>
-            <CardHeader>
-              <div className="flex items-center gap-2">
-                <ShoppingCart className="h-5 w-5" />
-                <CardTitle>Recuperación de Carritos Abandonados</CardTitle>
-              </div>
-              <CardDescription>
-                Envía emails automáticos a clientes que abandonaron su carrito
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="flex items-center justify-between">
-                <Label htmlFor="cart-emails">Activar emails de carritos abandonados</Label>
-                <Switch
-                  id="cart-emails"
-                  checked={preferences.abandoned_cart_emails_enabled}
-                  onCheckedChange={(checked) =>
-                    setPreferences({ ...preferences, abandoned_cart_emails_enabled: checked })
-                  }
-                />
-              </div>
-              {preferences.abandoned_cart_emails_enabled && (
-                <p className="text-sm text-muted-foreground mt-4">
-                  Se enviarán 3 emails: a 1 hora, 24 horas y 72 horas después del abandono
-                </p>
-              )}
             </CardContent>
           </Card>
 

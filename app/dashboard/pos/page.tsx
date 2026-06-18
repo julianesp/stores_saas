@@ -91,7 +91,7 @@ export default function POSPage() {
   const [barcodeInput, setBarcodeInput] = useState("");
   const [activeOffers, setActiveOffers] = useState<Offer[]>([]);
   const [paymentMethod, setPaymentMethod] = useState<
-    "efectivo" | "tarjeta" | "transferencia" | "credito"
+    "efectivo" | "nequi" | "tarjeta" | "transferencia" | "credito"
   >("efectivo");
   const [creditDays, setCreditDays] = useState<number>(7); // Plazo por defecto: 7 días
   const [processing, setProcessing] = useState(false);
@@ -2192,6 +2192,7 @@ export default function POSPage() {
                           setPaymentMethod(
                             e.target.value as
                               | "efectivo"
+                              | "nequi"
                               | "tarjeta"
                               | "transferencia"
                               | "credito",
@@ -2200,6 +2201,7 @@ export default function POSPage() {
                         className="w-full h-9 md:h-10 rounded-md border border-gray-300 px-3 text-sm"
                       >
                         <option value="efectivo">Efectivo</option>
+                        <option value="nequi">Nequi</option>
                         {/* <option value="tarjeta">Tarjeta</option> */}
                         {/* <option value="transferencia">Transferencia</option> */}
                         <option value="credito" disabled={!selectedCustomer}>

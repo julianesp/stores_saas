@@ -110,6 +110,7 @@ export async function GET(request: NextRequest) {
       'Cliente': sale.cliente,
       'Teléfono': sale.telefono,
       'Método de Pago': sale.metodo_pago === 'efectivo' ? 'Efectivo' :
+                        sale.metodo_pago === 'nequi' ? 'Nequi' :
                         sale.metodo_pago === 'tarjeta' ? 'Tarjeta' :
                         sale.metodo_pago === 'transferencia' ? 'Transferencia' : 'Crédito'
     }));

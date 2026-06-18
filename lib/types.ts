@@ -4,7 +4,7 @@ export interface UserProfile {
   id: string;
   clerk_user_id: string;
   email: string;
-  role: 'admin' | 'cajero' | 'cliente';
+  role: 'admin' | 'cajero';
   full_name?: string;
   phone?: string;
   is_superadmin?: boolean; // Solo para admin@neurai.dev
@@ -200,7 +200,7 @@ export interface Sale {
   tax: number;
   discount: number;
   total: number;
-  payment_method: 'efectivo' | 'tarjeta' | 'transferencia' | 'credito';
+  payment_method: 'efectivo' | 'nequi' | 'tarjeta' | 'transferencia' | 'credito';
   status: 'completada' | 'cancelada' | 'pendiente';
   notes?: string;
   points_earned?: number; // Puntos ganados por el cliente en esta compra
@@ -393,7 +393,7 @@ export interface CreditPaymentWithRelations extends CreditPayment {
 }
 
 // Tipos para sistema de notificaciones
-export type NotificationType = 'stock' | 'loyalty' | 'sale' | 'system' | 'subscription';
+export type NotificationType = 'stock' | 'expiration' | 'debt' | 'loyalty' | 'sale' | 'system' | 'subscription';
 
 export interface Notification {
   id: string;

@@ -1,54 +1,54 @@
-'use client';
+"use client";
 
-import { Zap, DollarSign, Clock, TrendingUp, X, Check } from 'lucide-react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Zap, DollarSign, Clock, TrendingUp, X, Check } from "lucide-react";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
 export default function OvercomeResistance() {
   return (
-    <section className="py-16 md:py-20 bg-gradient-to-br from-indigo-900 to-purple-900">
+    <section className="py-16 md:py-20 bg-gradient-[#007c80] from-[#007C80] to-[#007C80]/80">
       <div className="container mx-auto px-4">
         <div className="text-center mb-12">
           <h2 className="text-3xl md:text-4xl font-bold text-white mb-4">
             ¿Por Qué Cambiar de Sistema?
           </h2>
-          <p className="text-lg text-white/80 max-w-3xl mx-auto">
-            Sabemos que el cambio da miedo. Pero quedarte con un sistema obsoleto te cuesta más de
-            lo que piensas.
+          <p className="text-lg text-white max-w-3xl mx-auto">
+            Sabemos que el cambio da miedo. Pero quedarte con un sistema
+            obsoleto te cuesta más de lo que piensas.
           </p>
         </div>
 
         {/* Comparison */}
         <div className="grid md:grid-cols-2 gap-8 max-w-5xl mx-auto mb-12">
           {/* Old Way */}
-          <Card className="bg-red-900/30 border-red-500">
+          <Card className="bg-brand border-white border-2">
             <CardHeader>
               <CardTitle className="text-white flex items-center gap-2">
-                <X className="h-6 w-6 text-red-400" />
+                <X className="h-6 w-6 text-white" />
                 Sin un Sistema Moderno
               </CardTitle>
             </CardHeader>
             <CardContent>
               <ul className="space-y-3">
-                <li className="flex items-start gap-2 text-red-200">
-                  <X className="h-5 w-5 text-red-400 flex-shrink-0 mt-0.5" />
+                <li className="flex items-start gap-2 text-white">
+                  <X className="h-5 w-5 text-white shrink-0 mt-0.5" />
                   <span className="text-sm">
-                    Pierdes ventas porque no tienes tienda online
+                    Cobras a ojo y pierdes el control de las cuentas por cobrar
                   </span>
                 </li>
-                <li className="flex items-start gap-2 text-red-200">
-                  <X className="h-5 w-5 text-red-400 flex-shrink-0 mt-0.5" />
+                <li className="flex items-start gap-2 text-white">
+                  <X className="h-5 w-5 text-white   shrink-0 mt-0.5" />
                   <span className="text-sm">
                     Gastas horas haciendo inventario manualmente
                   </span>
                 </li>
-                <li className="flex items-start gap-2 text-red-200">
-                  <X className="h-5 w-5 text-red-400 flex-shrink-0 mt-0.5" />
+                <li className="flex items-start gap-2 text-white">
+                  <X className="h-5 w-5 text-white shrink-0 mt-0.5" />
                   <span className="text-sm">
                     No sabes qué productos te generan más ganancia
                   </span>
                 </li>
-                <li className="flex items-start gap-2 text-red-200">
-                  <X className="h-5 w-5 text-red-400 flex-shrink-0 mt-0.5" />
+                <li className="flex items-start gap-2 text-white">
+                  <X className="h-5 w-5 text-white   shrink-0 mt-0.5" />
                   <span className="text-sm">
                     Pierdes dinero en productos vencidos o robos
                   </span>
@@ -58,35 +58,35 @@ export default function OvercomeResistance() {
           </Card>
 
           {/* New Way */}
-          <Card className="bg-green-900/30 border-green-500">
+          <Card className="bg-brand border-white border-2">
             <CardHeader>
               <CardTitle className="text-white flex items-center gap-2">
-                <Check className="h-6 w-6 text-green-400" />
+                <Check className="h-6 w-6 text-white" />
                 Con Posib.dev
               </CardTitle>
             </CardHeader>
             <CardContent>
               <ul className="space-y-3">
-                <li className="flex items-start gap-2 text-green-200">
-                  <Check className="h-5 w-5 text-green-400 flex-shrink-0 mt-0.5" />
+                <li className="flex items-start gap-2 text-white">
+                  <Check className="h-5 w-5 text-white shrink-0 mt-0.5" />
                   <span className="text-sm">
-                    Vendes 24/7 con tu tienda online automática
+                    Controlas ventas a crédito y cuentas por cobrar al instante
                   </span>
                 </li>
-                <li className="flex items-start gap-2 text-green-200">
-                  <Check className="h-5 w-5 text-green-400 flex-shrink-0 mt-0.5" />
+                <li className="flex items-start gap-2 text-white">
+                  <Check className="h-5 w-5 text-white shrink-0 mt-0.5" />
                   <span className="text-sm">
                     Inventario actualizado en tiempo real, sin esfuerzo
                   </span>
                 </li>
-                <li className="flex items-start gap-2 text-green-200">
-                  <Check className="h-5 w-5 text-green-400 flex-shrink-0 mt-0.5" />
+                <li className="flex items-start gap-2 text-white">
+                  <Check className="h-5 w-5 text-white shrink-0 mt-0.5" />
                   <span className="text-sm">
                     Reportes claros que te muestran tus mejores productos
                   </span>
                 </li>
-                <li className="flex items-start gap-2 text-green-200">
-                  <Check className="h-5 w-5 text-green-400 flex-shrink-0 mt-0.5" />
+                <li className="flex items-start gap-2 text-white">
+                  <Check className="h-5 w-5 text-white shrink-0 mt-0.5" />
                   <span className="text-sm">
                     Alertas de vencimiento y control total del stock
                   </span>

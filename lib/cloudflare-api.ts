@@ -499,7 +499,7 @@ export interface Sale {
   tax: number;
   discount: number;
   total: number;
-  payment_method: 'efectivo' | 'tarjeta' | 'transferencia' | 'credito';
+  payment_method: 'efectivo' | 'nequi' | 'tarjeta' | 'transferencia' | 'credito';
   payment_status?: 'pagado' | 'pendiente' | 'parcial';
   status: 'completada' | 'cancelada' | 'pendiente';
   points_earned?: number;
@@ -512,7 +512,7 @@ export interface UserProfile {
   id: string;
   clerk_user_id: string;
   email: string;
-  role: 'admin' | 'cajero' | 'cliente';
+  role: 'admin' | 'cajero';
   full_name?: string;
   phone?: string;
   is_superadmin?: boolean;

@@ -7,7 +7,6 @@ import {
   Users,
   ArrowRight,
   CreditCard,
-  Store,
   TrendingUp,
   Bell,
   Gift,
@@ -52,8 +51,8 @@ export default function Home() {
           Gestión Completa para tu Tienda
         </h2>
         <p className="text-base sm:text-lg md:text-xl text-white mb-6 md:mb-8 max-w-2xl mx-auto px-2">
-          Sistema integral de punto de venta, inventario, facturación y tienda
-          online. Todo lo que necesitas para administrar y hacer crecer tu
+          Sistema integral de punto de venta, inventario, facturación y gestión
+          de clientes. Todo lo que necesitas para administrar y hacer crecer tu
           negocio.
         </p>
         <div className="flex flex-row gap-3 md:gap-4 justify-center max-w-md sm:max-w-none mx-auto">
@@ -291,7 +290,7 @@ export default function Home() {
             Herramientas poderosas que hacen la diferencia
           </p>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 md:gap-8">
-            <div className="text-center p-4">
+            {/* <div className="text-center p-4">
               <div className="bg-gradient-to-br from-brand to-brand-hover rounded-full w-14 h-14 md:w-16 md:h-16 flex items-center justify-center mx-auto mb-3 md:mb-4 shadow-lg">
                 <Store className="h-7 w-7 md:h-8 md:w-8 text-white" />
               </div>
@@ -302,7 +301,7 @@ export default function Home() {
                 Crea tu tienda web personalizada y vende 24/7. Los clientes
                 pueden ver catálogo, añadir al carrito y pagar en línea
               </p>
-            </div>
+            </div> */}
 
             <div className="text-center p-4">
               <div className="bg-gradient-to-br from-brand to-brand-hover rounded-full w-14 h-14 md:w-16 md:h-16 flex items-center justify-center mx-auto mb-3 md:mb-4 shadow-lg">
@@ -338,8 +337,8 @@ export default function Home() {
                 Multi-Usuario
               </h4>
               <p className="text-white/90 text-sm md:text-base px-2">
-                Roles diferenciados para administradores, cajeros y clientes con
-                permisos personalizados
+                Roles diferenciados para administradores y cajeros con permisos
+                personalizados
               </p>
             </div>
 
@@ -351,8 +350,8 @@ export default function Home() {
                 Múltiples Pagos
               </h4>
               <p className="text-white/90 text-sm md:text-base px-2">
-                Acepta efectivo, tarjeta, transferencias y pagos en línea.
-                Integración con Wompi y otros gateways
+                Registra ventas en efectivo, Nequi y crédito a clientes, con
+                control de cuentas por cobrar
               </p>
             </div>
 
@@ -405,11 +404,11 @@ export default function Home() {
 
           <Card className="bg-gradient-to-br from-brand to-brand-hover border-0 text-white">
             <CardHeader className="p-6">
-              <Store className="h-10 w-10 mb-3" />
-              <CardTitle className="text-xl mb-2">Vende Más</CardTitle>
+              <Users className="h-10 w-10 mb-3" />
+              <CardTitle className="text-xl mb-2">Fideliza Clientes</CardTitle>
               <CardDescription className="text-white/80">
-                Con tu tienda online activa 24/7, llegas a más clientes y
-                aumentas tus ventas sin límites
+                Lleva el historial de compras, ventas a crédito y puntos de
+                lealtad para que tus clientes vuelvan
               </CardDescription>
             </CardHeader>
           </Card>
