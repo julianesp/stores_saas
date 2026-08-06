@@ -5,7 +5,7 @@ export const SUBSCRIPTION_PLANS = [
   {
     id: 'basic-monthly',
     name: 'Plan básico',
-    price: 29900,
+    price: 24900,
     popular: true,
     features: [
       'Gestión completa de inventario',

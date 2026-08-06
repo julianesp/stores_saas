@@ -66,10 +66,10 @@ export async function POST(req: NextRequest) {
 
     // Verificar que el monto sea correcto
     const amountCOP = amount;
-    if (amountCOP !== 29900 && amountCOP !== 9900 && amountCOP !== 39800 && amountCOP !== 5000 && amountCOP !== 34900 && amountCOP !== 10000) {
+    if (amountCOP !== 24900 && amountCOP !== 29900 && amountCOP !== 9900 && amountCOP !== 39800 && amountCOP !== 5000 && amountCOP !== 34900 && amountCOP !== 10000) {
       return NextResponse.json({
         success: false,
-        message: `Monto incorrecto: $${amountCOP}. Se esperaba $29,900, $9,900, $5,000 u otro monto válido`,
+        message: `Monto incorrecto: $${amountCOP}. Se esperaba $24,900, $9,900, $5,000 u otro monto válido`,
         canActivate: false,
       });
     }
@@ -78,7 +78,8 @@ export async function POST(req: NextRequest) {
     let planId = 'basic-monthly';
     let hasAIAddon = false;
 
-    if (amountCOP === 29900) {
+    if (amountCOP === 24900 || amountCOP === 29900) {
+      // Plan básico (24900 actual; 29900 por compatibilidad con pagos anteriores)
       planId = 'basic-monthly';
     } else if (amountCOP === 9900) {
       // precio anterior del addon IA (compatibilidad)
