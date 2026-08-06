@@ -71,6 +71,7 @@ export default function ActivatePlanManuallyPage() {
   const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
   const [selectedPlan, setSelectedPlan] = useState('');
   const [paymentReference, setPaymentReference] = useState('');
+  const [userFilter, setUserFilter] = useState<'all' | 'paid' | 'pending'>('all');
   const searchRef = useRef<HTMLDivElement>(null);
 
   // Cargar todos los usuarios al montar el componente
@@ -122,11 +123,26 @@ export default function ActivatePlanManuallyPage() {
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
-  // Usuarios que han pagado al menos una vez (tienen registro de pago o suscripción activa),
-  // ordenados por pago más reciente primero.
-  const paidUsers = allUsers
-    .filter((u) => !!u.last_payment_date || u.subscription_status === 'active')
+  // Un usuario "ha pagado" si tiene registro de pago o suscripción activa.
+  const hasPaid = (u: UserProfile) => !!u.last_payment_date || u.subscription_status === 'active';
+
+  // Conteos para las pestañas de filtro.
+  const paidCount = allUsers.filter(hasPaid).length;
+  const pendingCount = allUsers.length - paidCount;
+
+  // Lista mostrada en la tabla según el filtro activo. Prioriza a los pendientes
+  // (trial/expirados) primero cuando se ven todos, porque son los que se activan;
+  // dentro de cada grupo, ordena por pago más reciente.
+  const displayedUsers = allUsers
+    .filter((u) => {
+      if (userFilter === 'paid') return hasPaid(u);
+      if (userFilter === 'pending') return !hasPaid(u);
+      return true;
+    })
     .sort((a, b) => {
+      const aPaid = hasPaid(a);
+      const bPaid = hasPaid(b);
+      if (aPaid !== bPaid) return aPaid ? 1 : -1; // pendientes arriba
       const da = a.last_payment_date ? new Date(a.last_payment_date).getTime() : 0;
       const db = b.last_payment_date ? new Date(b.last_payment_date).getTime() : 0;
       return db - da;
@@ -365,18 +381,39 @@ export default function ActivatePlanManuallyPage() {
         </CardContent>
       </Card>
 
-      {/* Lista de Usuarios que han Pagado */}
+      {/* Lista de Usuarios */}
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
-            <CreditCard className="h-5 w-5" />
-            Usuarios que han pagado
+            <User className="h-5 w-5" />
+            Usuarios
           </CardTitle>
           <CardDescription>
             {loadingUsers
               ? 'Cargando...'
-              : `${paidUsers.length} usuario${paidUsers.length !== 1 ? 's' : ''} con pago o suscripción activa. Haz clic en uno para seleccionarlo.`}
+              : `${displayedUsers.length} usuario${displayedUsers.length !== 1 ? 's' : ''}. Haz clic en uno para seleccionarlo y activar su plan.`}
           </CardDescription>
+          {!loadingUsers && (
+            <div className="flex flex-wrap gap-2 pt-2">
+              {([
+                { key: 'all', label: 'Todos', count: allUsers.length },
+                { key: 'pending', label: 'Pendientes de activar', count: pendingCount },
+                { key: 'paid', label: 'Ya pagaron', count: paidCount },
+              ] as const).map((tab) => (
+                <button
+                  key={tab.key}
+                  onClick={() => setUserFilter(tab.key)}
+                  className={`text-sm px-3 py-1.5 rounded-full border transition-colors ${
+                    userFilter === tab.key
+                      ? 'bg-brand text-white border-brand'
+                      : 'bg-white text-gray-600 border-gray-200 hover:bg-gray-50'
+                  }`}
+                >
+                  {tab.label} ({tab.count})
+                </button>
+              ))}
+            </div>
+          )}
         </CardHeader>
         <CardContent>
           {loadingUsers ? (
@@ -384,11 +421,11 @@ export default function ActivatePlanManuallyPage() {
               <Loader2 className="h-4 w-4 animate-spin" />
               Cargando usuarios...
             </div>
-          ) : paidUsers.length === 0 ? (
+          ) : displayedUsers.length === 0 ? (
             <div className="text-center text-gray-500 py-8">
-              <CreditCard className="h-10 w-10 mx-auto mb-2 text-gray-400" />
-              <p className="text-sm font-medium">Aún no hay usuarios con pagos registrados</p>
-              <p className="text-xs mt-1">Cuando alguien pague, aparecerá aquí automáticamente</p>
+              <User className="h-10 w-10 mx-auto mb-2 text-gray-400" />
+              <p className="text-sm font-medium">No hay usuarios en este filtro</p>
+              <p className="text-xs mt-1">Prueba con otra pestaña</p>
             </div>
           ) : (
             <div className="overflow-x-auto">
@@ -403,7 +440,7 @@ export default function ActivatePlanManuallyPage() {
                   </tr>
                 </thead>
                 <tbody>
-                  {paidUsers.map((user) => {
+                  {displayedUsers.map((user) => {
                     const isSelected = userProfile?.id === user.id;
                     const lastPayment = user.last_payment_date
                       ? new Date(user.last_payment_date).toLocaleDateString('es-CO', {
@@ -463,7 +500,7 @@ export default function ActivatePlanManuallyPage() {
                           </div>
                         </td>
                         <td className="py-3 text-right">
-                          <span className="text-xs text-brand font-medium">Seleccionar</span>
+                          <span className="text-xs text-brand font-medium">Activar</span>
                         </td>
                       </tr>
                     );
