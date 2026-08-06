@@ -1,12 +1,18 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { NextResponse } from 'next/server';
 import { auth, currentUser } from '@clerk/nextjs/server';
-import { getUserProfile, updateUserProfile, createUserProfile } from '@/lib/cloudflare-api';
+import { getUserProfile, createUserProfile } from '@/lib/cloudflare-api';
 
 /**
- * Endpoint que automáticamente actualiza o crea el perfil del super admin
- * Se llama automáticamente desde el dashboard layout si detecta que el usuario es admin@neurai.dev
+ * Sincroniza el perfil del usuario actual. Se llama automáticamente desde el
+ * dashboard layout.
+ *
+ * IMPORTANTE: este endpoint NO concede el privilegio de superadmin basándose en
+ * el email. El flag `is_superadmin` es la fuente de verdad y solo se otorga a
+ * través del bootstrap protegido por secreto (/api/user/force-superadmin-update)
+ * o por un superadmin existente (/api/admin/set-superadmin). Aquí únicamente se
+ * garantiza que exista un perfil para el usuario autenticado.
  */
-export async function POST(req: NextRequest) {
+export async function POST() {
   try {
     const { userId, getToken } = await auth();
 
@@ -26,64 +32,38 @@ export async function POST(req: NextRequest) {
     }
 
     const userEmail = user.emailAddresses[0]?.emailAddress || '';
-    const superAdminEmail = process.env.SUPER_ADMIN_EMAIL || 'admin@neurai.dev';
-
-    // Verificar que el email coincida con el super admin
-    if (userEmail !== superAdminEmail) {
-      return NextResponse.json({
-        upgraded: false,
-        message: 'No eres el super admin',
-        isSuperAdmin: false,
-      });
-    }
 
     // Intentar obtener el perfil actual
     let currentProfile = null;
     try {
       currentProfile = await getUserProfile(getToken);
-    } catch (error) {
+    } catch {
       console.log('Perfil no encontrado, se creará uno nuevo');
     }
 
-    // Si ya es superadmin, no hacer nada
-    if (currentProfile?.is_superadmin) {
+    // Si ya existe el perfil, no tocamos privilegios: solo reportamos el estado.
+    if (currentProfile) {
       return NextResponse.json({
         upgraded: false,
-        message: 'Ya eres super admin',
-        isSuperAdmin: true,
+        message: 'Perfil ya existe',
+        isSuperAdmin: !!currentProfile.is_superadmin,
         profile: currentProfile,
       });
     }
 
-    // Si existe el perfil pero no es superadmin, actualizar
-    if (currentProfile) {
-      const updatedProfile = await updateUserProfile(currentProfile.id, {
-        is_superadmin: true,
-        subscription_status: 'active',
-      }, getToken);
-
-      return NextResponse.json({
-        upgraded: true,
-        message: 'Perfil actualizado a super admin',
-        isSuperAdmin: true,
-        profile: updatedProfile,
-      });
-    }
-
-    // Si no existe el perfil, crear uno nuevo
+    // Si no existe el perfil, crear uno normal (sin superadmin ni suscripción activa).
     const newProfile = await createUserProfile({
       clerk_user_id: userId,
       email: userEmail,
-      full_name: `${user.firstName || ''} ${user.lastName || ''}`.trim() || 'Admin',
+      full_name: `${user.firstName || ''} ${user.lastName || ''}`.trim() || userEmail,
       role: 'admin',
-      is_superadmin: true,
-      subscription_status: 'active',
+      is_superadmin: false,
     }, getToken);
 
     return NextResponse.json({
-      upgraded: true,
-      message: 'Perfil de super admin creado',
-      isSuperAdmin: true,
+      upgraded: false,
+      message: 'Perfil creado',
+      isSuperAdmin: false,
       profile: newProfile,
     });
 

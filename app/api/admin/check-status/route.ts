@@ -1,11 +1,11 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { NextResponse } from 'next/server';
 import { auth, currentUser } from '@clerk/nextjs/server';
 import { getUserProfile } from '@/lib/cloudflare-api';
 
 /**
  * Endpoint de diagnóstico para verificar el estado actual del usuario
  */
-export async function GET(req: NextRequest) {
+export async function GET() {
   try {
     const { userId, getToken } = await auth();
 
@@ -18,7 +18,6 @@ export async function GET(req: NextRequest) {
 
     const user = await currentUser();
     const userEmail = user?.emailAddresses[0]?.emailAddress || '';
-    const superAdminEmail = process.env.SUPER_ADMIN_EMAIL || 'admin@neurai.dev';
 
     // Obtener el perfil actual
     let currentProfile = null;
@@ -43,14 +42,9 @@ export async function GET(req: NextRequest) {
         subscription_status: currentProfile.subscription_status,
         role: currentProfile.role,
       } : null,
-      environment: {
-        superAdminEmail: superAdminEmail,
-        isConfiguredSuperAdmin: userEmail === superAdminEmail,
-      },
       diagnosis: {
         hasProfile: !!currentProfile,
         isSuperAdmin: currentProfile?.is_superadmin || false,
-        needsUpdate: userEmail === superAdminEmail && !currentProfile?.is_superadmin,
       },
     });
 

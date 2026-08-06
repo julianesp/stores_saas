@@ -1,24 +1,24 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { auth } from '@clerk/nextjs/server';
+import { NextResponse } from 'next/server';
+import { requireSuperAdmin } from '@/lib/api-auth';
 
 /**
  * Endpoint para obtener estadísticas de uso de todas las tiendas
  * Solo accesible para super admin
  * Delega la lógica al endpoint de Cloudflare Workers
  */
-export async function GET(req: NextRequest) {
+export async function GET() {
   try {
-    const { userId, getToken } = await auth();
+    const admin = await requireSuperAdmin();
 
-    if (!userId) {
+    if (!admin) {
       return NextResponse.json(
         { error: 'No autorizado' },
-        { status: 401 }
+        { status: 403 }
       );
     }
 
     // Obtener token para autenticación
-    const token = await getToken();
+    const token = await admin.getToken();
     if (!token) {
       return NextResponse.json(
         { error: 'No se pudo obtener el token de autenticación' },

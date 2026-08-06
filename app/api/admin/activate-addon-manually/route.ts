@@ -1,25 +1,27 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { auth } from '@clerk/nextjs/server';
-import { getUserProfile, updateUserProfile } from '@/lib/cloudflare-api';
+import { updateUserProfile } from '@/lib/cloudflare-api';
 import { getTransactionStatus } from '@/lib/epayco';
+import { requireSuperAdmin } from '@/lib/api-auth';
 import type { UserProfile } from '@/lib/types';
 
 export const runtime = 'nodejs';
 
 /**
- * Endpoint para activar manualmente un addon basándose en un ID de transacción de Wompi
- * Solo accesible por el mismo usuario o super admin
+ * Endpoint para activar manualmente un addon basándose en un ID de transacción.
+ * Herramienta administrativa: solo accesible por super admin.
  */
 export async function POST(request: NextRequest) {
   try {
-    const { getToken, userId } = await auth();
+    const admin = await requireSuperAdmin();
 
-    if (!getToken || !userId) {
+    if (!admin) {
       return NextResponse.json(
         { error: 'No autorizado' },
-        { status: 401 }
+        { status: 403 }
       );
     }
+
+    const { getToken } = admin;
 
     // Obtener el transaction ID del body
     const body = await request.json();
@@ -32,8 +34,8 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Obtener perfil del usuario actual
-    const currentUserProfile = await getUserProfile(getToken);
+    // El addon se activa sobre el perfil del propio super admin que ejecuta la acción
+    const currentUserProfile = admin.profile;
 
     if (!currentUserProfile) {
       return NextResponse.json(

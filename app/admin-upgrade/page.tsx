@@ -10,6 +10,7 @@ export default function AdminUpgradePage() {
   const { user } = useUser();
   const [status, setStatus] = useState<'idle' | 'loading' | 'success' | 'error'>('idle');
   const [message, setMessage] = useState('');
+  const [secret, setSecret] = useState('');
 
   const upgradeToSuperAdmin = async () => {
     try {
@@ -20,6 +21,7 @@ export default function AdminUpgradePage() {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          'x-bootstrap-secret': secret,
         },
       });
 
@@ -66,15 +68,32 @@ export default function AdminUpgradePage() {
                   <strong>¿Qué hace esto?</strong>
                 </p>
                 <p className="text-sm text-brand mt-1">
-                  Esta página actualizará tu cuenta existente para convertirla en Super Admin,
-                  dándote acceso completo al panel de administración del SaaS.
+                  Bootstrap del primer Super Admin. Requiere el secreto configurado
+                  en la variable de entorno SUPERADMIN_BOOTSTRAP_SECRET. Úsalo una sola vez;
+                  después promueve a otros administradores desde el panel.
                 </p>
+              </div>
+
+              <div className="space-y-1">
+                <label htmlFor="bootstrap-secret" className="text-sm font-medium text-gray-700">
+                  Secreto de bootstrap
+                </label>
+                <input
+                  id="bootstrap-secret"
+                  type="password"
+                  value={secret}
+                  onChange={(e) => setSecret(e.target.value)}
+                  placeholder="SUPERADMIN_BOOTSTRAP_SECRET"
+                  className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-brand focus:outline-none focus:ring-1 focus:ring-brand"
+                  autoComplete="off"
+                />
               </div>
 
               <Button
                 onClick={upgradeToSuperAdmin}
                 className="w-full"
                 size="lg"
+                disabled={!secret}
               >
                 <Shield className="mr-2 h-5 w-5" />
                 Actualizar a Super Admin
@@ -118,7 +137,7 @@ export default function AdminUpgradePage() {
 
           <div className="pt-4 border-t">
             <p className="text-xs text-gray-500 text-center">
-              Solo el email configurado en SUPER_ADMIN_EMAIL puede usar esta página
+              Requiere el secreto SUPERADMIN_BOOTSTRAP_SECRET. Solo para el arranque inicial.
             </p>
           </div>
         </CardContent>

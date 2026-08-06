@@ -1,46 +1,38 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { auth, currentUser } from '@clerk/nextjs/server';
+import { auth } from '@clerk/nextjs/server';
 import { getUserProfile, updateUserProfile } from '@/lib/cloudflare-api';
 
+export const runtime = 'nodejs';
+
 /**
- * Endpoint para forzar la actualización del usuario actual a super admin
- * Solo funciona si el email del usuario coincide con SUPER_ADMIN_EMAIL
+ * Bootstrap del primer superadmin.
+ *
+ * Solo funciona si se envía el secreto correcto en el header `x-bootstrap-secret`
+ * que debe coincidir con la variable de entorno SUPERADMIN_BOOTSTRAP_SECRET.
+ * Un email por sí solo NUNCA es suficiente para conceder superadmin, porque
+ * cualquiera podría registrar ese email en Clerk y auto-promoverse.
+ *
+ * Una vez exista un superadmin, promueva a los demás con /api/admin/set-superadmin.
  */
 export async function POST(req: NextRequest) {
   try {
     const { userId, getToken } = await auth();
 
     if (!userId) {
+      return NextResponse.json({ error: 'No autorizado' }, { status: 401 });
+    }
+
+    const bootstrapSecret = process.env.SUPERADMIN_BOOTSTRAP_SECRET;
+    const providedSecret = req.headers.get('x-bootstrap-secret');
+
+    // Sin secreto configurado, el endpoint queda inutilizable (comportamiento seguro por defecto).
+    if (!bootstrapSecret || !providedSecret || providedSecret !== bootstrapSecret) {
       return NextResponse.json(
         { error: 'No autorizado' },
-        { status: 401 }
-      );
-    }
-
-    const user = await currentUser();
-    if (!user) {
-      return NextResponse.json(
-        { error: 'Usuario no encontrado' },
-        { status: 404 }
-      );
-    }
-
-    const userEmail = user.emailAddresses[0]?.emailAddress || '';
-    const superAdminEmail = process.env.SUPER_ADMIN_EMAIL || 'admin@neurai.dev';
-
-    // Verificar que el email coincida con el super admin
-    if (userEmail !== superAdminEmail) {
-      return NextResponse.json(
-        {
-          error: 'Solo el email de super admin puede usar esta función',
-          yourEmail: userEmail,
-          superAdminEmail: superAdminEmail
-        },
         { status: 403 }
       );
     }
 
-    // Obtener el perfil actual
     const currentProfile = await getUserProfile(getToken);
 
     if (!currentProfile) {
@@ -50,7 +42,6 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // Actualizar a super admin
     const updatedProfile = await updateUserProfile(currentProfile.id, {
       is_superadmin: true,
       subscription_status: 'active',
@@ -60,10 +51,6 @@ export async function POST(req: NextRequest) {
       success: true,
       message: 'Perfil actualizado exitosamente a Super Admin',
       profile: updatedProfile,
-      previousStatus: {
-        is_superadmin: currentProfile.is_superadmin,
-        subscription_status: currentProfile.subscription_status,
-      },
     });
 
   } catch (error) {

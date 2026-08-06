@@ -1,13 +1,20 @@
 import { NextResponse } from 'next/server';
-import { auth } from '@clerk/nextjs/server';
+import { requireSuperAdmin } from '@/lib/api-auth';
 
 const API_URL = process.env.NEXT_PUBLIC_CLOUDFLARE_API_URL;
 
+/**
+ * Diagnóstico de perfiles. Devuelve datos crudos de la API, por lo que se
+ * restringe a super admin.
+ */
 export async function GET() {
-  try {
-    const { userId, getToken } = await auth();
-    if (!userId) return NextResponse.json({ error: 'No autenticado' }, { status: 401 });
+  const admin = await requireSuperAdmin();
+  if (!admin) {
+    return NextResponse.json({ error: 'No autorizado' }, { status: 403 });
+  }
 
+  try {
+    const { userId, getToken } = admin;
     const token = await getToken();
 
     const [r1, r2] = await Promise.all([
