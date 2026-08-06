@@ -122,6 +122,16 @@ export default function ActivatePlanManuallyPage() {
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
+  // Usuarios que han pagado al menos una vez (tienen registro de pago o suscripción activa),
+  // ordenados por pago más reciente primero.
+  const paidUsers = allUsers
+    .filter((u) => !!u.last_payment_date || u.subscription_status === 'active')
+    .sort((a, b) => {
+      const da = a.last_payment_date ? new Date(a.last_payment_date).getTime() : 0;
+      const db = b.last_payment_date ? new Date(b.last_payment_date).getTime() : 0;
+      return db - da;
+    });
+
   const handleSelectUser = (user: UserProfile) => {
     setUserProfile(user);
     setSearchQuery(user.email);
@@ -355,6 +365,116 @@ export default function ActivatePlanManuallyPage() {
         </CardContent>
       </Card>
 
+      {/* Lista de Usuarios que han Pagado */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <CreditCard className="h-5 w-5" />
+            Usuarios que han pagado
+          </CardTitle>
+          <CardDescription>
+            {loadingUsers
+              ? 'Cargando...'
+              : `${paidUsers.length} usuario${paidUsers.length !== 1 ? 's' : ''} con pago o suscripción activa. Haz clic en uno para seleccionarlo.`}
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          {loadingUsers ? (
+            <div className="flex items-center gap-2 text-sm text-gray-500 py-4">
+              <Loader2 className="h-4 w-4 animate-spin" />
+              Cargando usuarios...
+            </div>
+          ) : paidUsers.length === 0 ? (
+            <div className="text-center text-gray-500 py-8">
+              <CreditCard className="h-10 w-10 mx-auto mb-2 text-gray-400" />
+              <p className="text-sm font-medium">Aún no hay usuarios con pagos registrados</p>
+              <p className="text-xs mt-1">Cuando alguien pague, aparecerá aquí automáticamente</p>
+            </div>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="border-b border-gray-200 text-left text-gray-500">
+                    <th className="py-2 pr-4 font-medium">Tienda / Email</th>
+                    <th className="py-2 pr-4 font-medium">Estado</th>
+                    <th className="py-2 pr-4 font-medium">Último pago</th>
+                    <th className="py-2 pr-4 font-medium">Addons</th>
+                    <th className="py-2 font-medium"></th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {paidUsers.map((user) => {
+                    const isSelected = userProfile?.id === user.id;
+                    const lastPayment = user.last_payment_date
+                      ? new Date(user.last_payment_date).toLocaleDateString('es-CO', {
+                          day: '2-digit',
+                          month: '2-digit',
+                          year: 'numeric',
+                        })
+                      : '—';
+                    return (
+                      <tr
+                        key={user.id}
+                        onClick={() => handleSelectUser(user)}
+                        className={`border-b border-gray-100 last:border-b-0 cursor-pointer transition-colors ${
+                          isSelected ? 'bg-brand-light/50' : 'hover:bg-gray-50'
+                        }`}
+                      >
+                        <td className="py-3 pr-4">
+                          <p className="font-medium truncate max-w-[220px]">
+                            {user.store_name || 'Sin nombre'}
+                          </p>
+                          <p className="text-xs text-gray-500 truncate max-w-[220px]">{user.email}</p>
+                        </td>
+                        <td className="py-3 pr-4">
+                          <span
+                            className={`inline-block text-xs px-2 py-0.5 rounded-full ${
+                              user.subscription_status === 'active'
+                                ? 'bg-green-100 text-green-700'
+                                : user.subscription_status === 'trial'
+                                  ? 'bg-yellow-100 text-yellow-700'
+                                  : 'bg-red-100 text-red-700'
+                            }`}
+                          >
+                            {user.subscription_status === 'active'
+                              ? 'Activa'
+                              : user.subscription_status === 'trial'
+                                ? 'Trial'
+                                : user.subscription_status === 'expired'
+                                  ? 'Expirada'
+                                  : 'Cancelada'}
+                          </span>
+                        </td>
+                        <td className="py-3 pr-4 whitespace-nowrap text-gray-700">{lastPayment}</td>
+                        <td className="py-3 pr-4">
+                          <div className="flex flex-wrap gap-1">
+                            {user.has_ai_addon && (
+                              <span className="bg-purple-100 text-purple-700 px-2 py-0.5 rounded-full text-xs">IA</span>
+                            )}
+                            {user.has_store_addon && (
+                              <span className="bg-brand-light text-brand px-2 py-0.5 rounded-full text-xs">Tienda</span>
+                            )}
+                            {user.has_email_addon && (
+                              <span className="bg-green-100 text-green-700 px-2 py-0.5 rounded-full text-xs">Email</span>
+                            )}
+                            {!user.has_ai_addon && !user.has_store_addon && !user.has_email_addon && (
+                              <span className="text-gray-400 text-xs">—</span>
+                            )}
+                          </div>
+                        </td>
+                        <td className="py-3 text-right">
+                          <span className="text-xs text-brand font-medium">Seleccionar</span>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
       {/* Información del Usuario */}
       {userProfile && userStatus && (
         <Card className="border-brand/40 bg-brand-light/50">
@@ -552,7 +672,7 @@ export default function ActivatePlanManuallyPage() {
                 </li>
                 <li className="flex items-start gap-2">
                   <span className="font-bold text-purple-600">6.</span>
-                  <span>Haz clic en "Activar Plan" y listo!</span>
+                  <span>Haz clic en &quot;Activar Plan&quot; y listo!</span>
                 </li>
               </ol>
             </div>
