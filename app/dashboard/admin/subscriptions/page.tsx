@@ -5,7 +5,16 @@ import { useUser, useAuth } from '@clerk/nextjs';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
-import { getAllUserProfiles, updateUserProfile } from '@/lib/cloudflare-api';
+import { Label } from '@/components/ui/label';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
+import { getAllUserProfiles, updateUserProfile, createPaymentTransaction } from '@/lib/cloudflare-api';
 import { UserProfile, PaymentTransaction } from '@/lib/types';
 import {
   CreditCard,
@@ -31,6 +40,12 @@ export default function SubscriptionsManagementPage() {
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [currentUserProfile, setCurrentUserProfile] = useState<UserProfile | null>(null);
+
+  // Diálogo de activación manual (constancia de pago por Nequi u otro medio)
+  const [activateDialog, setActivateDialog] = useState<{ profileId: string; email: string } | null>(null);
+  const [nequiReference, setNequiReference] = useState('');
+  const [nequiAmount, setNequiAmount] = useState('24900');
+  const [activating, setActivating] = useState(false);
 
   useEffect(() => {
     fetchData();
@@ -65,11 +80,26 @@ export default function SubscriptionsManagementPage() {
     }
   };
 
-  const handleActivateSubscription = async (profileId: string, email: string) => {
-    if (!confirm(`¿Activar manualmente la suscripción de ${email}?\n\nEsto activará su acceso por 30 días.`)) {
+  // Abre el diálogo para capturar la constancia del pago antes de activar.
+  const handleActivateSubscription = (profileId: string, email: string) => {
+    setNequiReference('');
+    setNequiAmount('24900');
+    setActivateDialog({ profileId, email });
+  };
+
+  // Activa la suscripción y deja registro del pago manual (Nequi).
+  const confirmActivateSubscription = async () => {
+    if (!activateDialog) return;
+
+    const { profileId } = activateDialog;
+    const amount = parseInt(nequiAmount, 10);
+
+    if (isNaN(amount) || amount <= 0) {
+      toast.error('Ingresa un monto válido');
       return;
     }
 
+    setActivating(true);
     try {
       const now = new Date();
       const nextBilling = new Date();
@@ -81,11 +111,30 @@ export default function SubscriptionsManagementPage() {
         next_billing_date: nextBilling.toISOString(),
       }, getToken);
 
+      // Dejar constancia del pago manual como registro de transacción.
+      // No bloquea la activación si el registro falla (solo se avisa).
+      try {
+        await createPaymentTransaction({
+          user_profile_id: profileId,
+          amount,
+          currency: 'COP',
+          status: 'Aceptada',
+          payment_method_type: 'nequi',
+          reference: nequiReference.trim() || `NEQUI-MANUAL-${now.getTime()}`,
+        }, getToken);
+      } catch (txError) {
+        console.error('Error guardando constancia de pago Nequi:', txError);
+        toast.warning('Suscripción activada, pero no se pudo guardar la constancia del pago');
+      }
+
       toast.success('Suscripción activada correctamente');
+      setActivateDialog(null);
       fetchData();
     } catch (error) {
       console.error('Error activating subscription:', error);
       toast.error('Error al activar suscripción');
+    } finally {
+      setActivating(false);
     }
   };
 
@@ -400,6 +449,53 @@ export default function SubscriptionsManagementPage() {
           )}
         </CardContent>
       </Card>
+
+      {/* Diálogo de activación manual con constancia de pago (Nequi) */}
+      <Dialog open={!!activateDialog} onOpenChange={(open) => !open && setActivateDialog(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Activar suscripción</DialogTitle>
+            <DialogDescription>
+              Activará el acceso de {activateDialog?.email} por 30 días y dejará constancia del pago.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4 py-2">
+            <div className="space-y-1.5">
+              <Label htmlFor="nequi-amount">Monto pagado (COP)</Label>
+              <Input
+                id="nequi-amount"
+                type="number"
+                min={1}
+                value={nequiAmount}
+                onChange={(e) => setNequiAmount(e.target.value)}
+                placeholder="24900"
+              />
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="nequi-reference">Referencia de Nequi (opcional)</Label>
+              <Input
+                id="nequi-reference"
+                value={nequiReference}
+                onChange={(e) => setNequiReference(e.target.value)}
+                placeholder="Ej: número de comprobante o transacción Nequi"
+              />
+              <p className="text-xs text-gray-500">
+                Anota el comprobante del pago. Si lo dejas vacío, se guardará una referencia automática.
+              </p>
+            </div>
+          </div>
+
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setActivateDialog(null)} disabled={activating}>
+              Cancelar
+            </Button>
+            <Button onClick={confirmActivateSubscription} disabled={activating}>
+              {activating ? 'Activando...' : 'Activar y guardar constancia'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
