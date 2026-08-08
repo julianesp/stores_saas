@@ -23,6 +23,7 @@ import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   getProducts,
+  createProduct,
   updateProduct,
   getCustomers,
   getCustomerById,
@@ -132,6 +133,17 @@ export default function POSPage() {
   const [showUnitSelector, setShowUnitSelector] = useState(false);
   const [selectedProductForUnits, setSelectedProductForUnits] =
     useState<Product | null>(null);
+
+  // Estados para el registro rápido de un producto no encontrado
+  const [showQuickRegister, setShowQuickRegister] = useState(false);
+  const [quickRegisterSaving, setQuickRegisterSaving] = useState(false);
+  const [quickRegisterData, setQuickRegisterData] = useState({
+    barcode: "",
+    name: "",
+    sale_price: "",
+    cost_price: "",
+    stock: "",
+  });
 
   // Estado para animación del carrito al agregar producto
   const [cartBump, setCartBump] = useState(false);
@@ -390,10 +402,18 @@ export default function POSPage() {
       Swal.productAdded(product.name, 1);
     } else {
       console.log("❌ [LECTOR USB] Producto NO encontrado en ninguna lista");
-      Swal.error(
-        "Producto no encontrado",
-        `El código ${scannedBarcode} no está registrado`,
-      );
+      const result = await Swal.custom({
+        title: "Producto no encontrado",
+        html: `<p>El código <strong>${scannedBarcode}</strong> no está registrado.</p><p class="text-sm text-gray-600 mt-2">¿Deseas registrarlo ahora para venderlo?</p>`,
+        icon: "question",
+        showCancelButton: true,
+        confirmButtonText: "Registrar producto",
+        cancelButtonText: "Cancelar",
+        confirmButtonColor: "#155dfc",
+      });
+      if (result.isConfirmed) {
+        openQuickRegister({ barcode: scannedBarcode });
+      }
     }
     setBarcodeInput("");
     barcodeRef.current?.focus();
@@ -503,10 +523,20 @@ export default function POSPage() {
       }, 500);
     } else {
       console.log("❌ [CÁMARA] Producto NO encontrado en ninguna lista");
-      Swal.error(
-        "Producto no encontrado",
-        `El código ${scannedBarcode} no está registrado`,
-      );
+      // Cerrar el escáner para poder mostrar el formulario de registro.
+      setShowCameraScanner(false);
+      const result = await Swal.custom({
+        title: "Producto no encontrado",
+        html: `<p>El código <strong>${scannedBarcode}</strong> no está registrado.</p><p class="text-sm text-gray-600 mt-2">¿Deseas registrarlo ahora para venderlo?</p>`,
+        icon: "question",
+        showCancelButton: true,
+        confirmButtonText: "Registrar producto",
+        cancelButtonText: "Cancelar",
+        confirmButtonColor: "#155dfc",
+      });
+      if (result.isConfirmed) {
+        openQuickRegister({ barcode: scannedBarcode });
+      }
       // También resetear el código en caso de error
       setTimeout(() => setLastCameraScannedCode(""), 2000);
     }
@@ -623,6 +653,97 @@ export default function POSPage() {
         `${selectedProductForUnits.name} (${quantity} ${unitName}${quantity > 1 ? "s" : ""})`,
         quantity
       );
+    }
+  };
+
+  // Abre el modal de registro rápido, precargando el código de barras
+  // (cuando viene del escáner) o el nombre (cuando viene de la búsqueda).
+  const openQuickRegister = (opts: { barcode?: string; name?: string } = {}) => {
+    setQuickRegisterData({
+      barcode: opts.barcode || "",
+      name: opts.name || "",
+      sale_price: "",
+      cost_price: "",
+      stock: "",
+    });
+    setShowQuickRegister(true);
+  };
+
+  // Crea el producto no registrado en el momento de la venta y lo agrega al
+  // carrito para poder continuar la venta sin salir del POS.
+  const handleQuickRegister = async () => {
+    const name = quickRegisterData.name.trim();
+    const salePrice = parseFloat(quickRegisterData.sale_price);
+    const costPrice = quickRegisterData.cost_price.trim()
+      ? parseFloat(quickRegisterData.cost_price)
+      : 0;
+    const stock = quickRegisterData.stock.trim()
+      ? parseFloat(quickRegisterData.stock)
+      : 1;
+
+    if (!name) {
+      Swal.warning("Nombre requerido", "Ingresa el nombre del producto");
+      return;
+    }
+    if (isNaN(salePrice) || salePrice <= 0) {
+      Swal.warning(
+        "Precio inválido",
+        "Ingresa un precio de venta mayor a cero",
+      );
+      return;
+    }
+    if (isNaN(costPrice) || costPrice < 0) {
+      Swal.warning("Costo inválido", "El precio de costo no puede ser negativo");
+      return;
+    }
+    if (isNaN(stock) || stock <= 0) {
+      Swal.warning("Stock inválido", "La cantidad debe ser mayor a cero");
+      return;
+    }
+
+    setQuickRegisterSaving(true);
+    try {
+      const barcode = quickRegisterData.barcode.trim()
+        ? normalizeBarcode(quickRegisterData.barcode)
+        : undefined;
+
+      const newProduct = (await createProduct(
+        {
+          barcode: barcode || undefined,
+          name,
+          sale_price: salePrice,
+          cost_price: costPrice,
+          stock,
+          min_stock: 5,
+        },
+        getToken,
+      )) as unknown as Product;
+
+      // Normalizar sell_by_unit igual que en fetchProducts.
+      const created: Product = {
+        ...newProduct,
+        sell_by_unit: !!newProduct.sell_by_unit,
+      };
+
+      // Refrescar el catálogo para que el producto aparezca en la lista.
+      await fetchProducts();
+
+      // Agregarlo directamente al carrito (venta por paquete).
+      addToCart(created, 1, false);
+
+      setShowQuickRegister(false);
+      Swal.success(
+        "Producto registrado",
+        `${created.name} se creó y se agregó al carrito`,
+      );
+      barcodeRef.current?.focus();
+    } catch (error) {
+      console.error("Error registrando producto rápido:", error);
+      const errorMessage =
+        error instanceof Error ? error.message : "Intenta de nuevo";
+      Swal.error("No se pudo registrar el producto", errorMessage);
+    } finally {
+      setQuickRegisterSaving(false);
     }
   };
 
@@ -1421,6 +1542,158 @@ export default function POSPage() {
         </div>
       )}
 
+      {/* Modal de registro rápido de producto no encontrado */}
+      {showQuickRegister && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <Card className="w-full max-w-md">
+            <CardHeader className="pb-3">
+              <div className="flex items-center justify-between">
+                <CardTitle className="flex items-center gap-2 text-lg">
+                  <div className="p-2 bg-brand rounded-lg">
+                    <Plus className="h-5 w-5 text-white" />
+                  </div>
+                  Registrar producto
+                </CardTitle>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="h-8 w-8 p-0"
+                  onClick={() => setShowQuickRegister(false)}
+                  disabled={quickRegisterSaving}
+                >
+                  <X className="h-4 w-4" />
+                </Button>
+              </div>
+              <p className="text-xs text-gray-500 mt-1">
+                Complétalo para venderlo ahora. Podrás editar el resto de
+                detalles luego en Productos.
+              </p>
+            </CardHeader>
+            <CardContent>
+              <form
+                onSubmit={(e) => {
+                  e.preventDefault();
+                  handleQuickRegister();
+                }}
+                className="space-y-3"
+              >
+                {quickRegisterData.barcode && (
+                  <div>
+                    <label className="text-xs font-medium text-gray-600">
+                      Código de barras
+                    </label>
+                    <Input
+                      value={quickRegisterData.barcode}
+                      readOnly
+                      className="mt-1 font-mono bg-gray-50"
+                    />
+                  </div>
+                )}
+                <div>
+                  <label className="text-xs font-medium text-gray-600">
+                    Nombre <span className="text-red-500">*</span>
+                  </label>
+                  <Input
+                    autoFocus
+                    value={quickRegisterData.name}
+                    onChange={(e) =>
+                      setQuickRegisterData((prev) => ({
+                        ...prev,
+                        name: e.target.value,
+                      }))
+                    }
+                    placeholder="Ej: Gaseosa 350ml"
+                    className="mt-1"
+                  />
+                </div>
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="text-xs font-medium text-gray-600">
+                      Precio de venta <span className="text-red-500">*</span>
+                    </label>
+                    <Input
+                      type="number"
+                      inputMode="numeric"
+                      min="0"
+                      step="1"
+                      value={quickRegisterData.sale_price}
+                      onChange={(e) =>
+                        setQuickRegisterData((prev) => ({
+                          ...prev,
+                          sale_price: e.target.value,
+                        }))
+                      }
+                      placeholder="$ 0"
+                      className="mt-1"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-xs font-medium text-gray-600">
+                      Precio de costo
+                    </label>
+                    <Input
+                      type="number"
+                      inputMode="numeric"
+                      min="0"
+                      step="1"
+                      value={quickRegisterData.cost_price}
+                      onChange={(e) =>
+                        setQuickRegisterData((prev) => ({
+                          ...prev,
+                          cost_price: e.target.value,
+                        }))
+                      }
+                      placeholder="$ 0"
+                      className="mt-1"
+                    />
+                  </div>
+                </div>
+                <div>
+                  <label className="text-xs font-medium text-gray-600">
+                    Stock inicial <span className="text-red-500">*</span>
+                  </label>
+                  <Input
+                    type="number"
+                    inputMode="numeric"
+                    min="1"
+                    step="1"
+                    value={quickRegisterData.stock}
+                    onChange={(e) =>
+                      setQuickRegisterData((prev) => ({
+                        ...prev,
+                        stock: e.target.value,
+                      }))
+                    }
+                    placeholder="1"
+                    className="mt-1"
+                  />
+                </div>
+                <div className="flex gap-2 pt-2">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    className="flex-1"
+                    onClick={() => setShowQuickRegister(false)}
+                    disabled={quickRegisterSaving}
+                  >
+                    Cancelar
+                  </Button>
+                  <Button
+                    type="submit"
+                    className="flex-1 bg-brand hover:bg-brand-hover text-white"
+                    disabled={quickRegisterSaving}
+                  >
+                    {quickRegisterSaving
+                      ? "Guardando..."
+                      : "Crear y agregar al carrito"}
+                  </Button>
+                </div>
+              </form>
+            </CardContent>
+          </Card>
+        </div>
+      )}
+
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 md:gap-6">
         {/* Panel izquierdo - Productos */}
         <div className="lg:col-span-2 space-y-4 order-2 lg:order-1">
@@ -1713,6 +1986,17 @@ export default function POSPage() {
                         ? "Intenta cambiar los filtros de búsqueda"
                         : "Todos tus productos están sin stock"}
                     </p>
+                    {searchTerm.trim() && (
+                      <Button
+                        onClick={() =>
+                          openQuickRegister({ name: searchTerm.trim() })
+                        }
+                        className="bg-brand hover:bg-brand-hover text-white"
+                      >
+                        <Plus className="h-4 w-4 mr-2" />
+                        Registrar &quot;{searchTerm.trim()}&quot;
+                      </Button>
+                    )}
                     {!searchTerm && selectedCategory === "all" && (
                       <Link
                         href="/dashboard/products"
