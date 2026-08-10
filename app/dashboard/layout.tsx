@@ -86,6 +86,13 @@ function DashboardLayoutInner({
           let teamMemberStores: UserStore[] = [];
 
           try {
+            // Intentar primero el fetch directo al Worker. Si falla (caída
+            // transitoria, token, etc.), reintentar vía el route handler interno
+            // /api/user-stores, que normaliza la respuesta y usa la misma sesión
+            // de Clerk del servidor. Así un fallo puntual del Worker no deja al
+            // usuario sin tenant y varado en la pantalla de suscripción.
+            let stores: UserStore[] = [];
+
             const storesResponse = await fetch(
               `${process.env.NEXT_PUBLIC_CLOUDFLARE_API_URL}/api/user-stores`,
               {
@@ -97,8 +104,21 @@ function DashboardLayoutInner({
 
             if (storesResponse.ok) {
               const storesData = await storesResponse.json();
-              const stores = storesData.data || [];
+              stores = Array.isArray(storesData)
+                ? storesData
+                : storesData.data || [];
+            } else {
+              // Reintento por el route handler interno
+              const fallbackResponse = await fetch("/api/user-stores");
+              if (fallbackResponse.ok) {
+                const fallbackData = await fallbackResponse.json();
+                stores = Array.isArray(fallbackData)
+                  ? fallbackData
+                  : fallbackData.data || [];
+              }
+            }
 
+            if (stores.length > 0) {
               // Verificar si tiene acceso como team member a alguna tienda
               teamMemberStores = stores.filter(
                 (store: UserStore) => store.access_type === "team_member"

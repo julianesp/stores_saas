@@ -29,10 +29,6 @@ export default function StoreSwitcher() {
   const [selectedStore, setSelectedStore] = useState<string>("");
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    loadStores();
-  }, []);
-
   const loadStores = async () => {
     try {
       setLoading(true);
@@ -41,25 +37,34 @@ export default function StoreSwitcher() {
         throw new Error("Error al cargar tiendas");
       }
       const data = await response.json();
-      setStores(data);
+      // El route handler puede devolver un array plano o { data: [...] }
+      const list: AccessibleStore[] = Array.isArray(data) ? data : data?.data || [];
+      setStores(list);
 
       // Si hay una tienda seleccionada en localStorage, usarla
       const savedTenantId = localStorage.getItem("selected_tenant_id");
-      if (savedTenantId && data.find((s: AccessibleStore) => s.id === savedTenantId)) {
+      if (savedTenantId && list.find((s: AccessibleStore) => s.id === savedTenantId)) {
         setSelectedStore(savedTenantId);
-      } else if (data.length > 0) {
+      } else if (list.length > 0) {
         // Seleccionar la primera tienda por defecto (owner)
-        const ownerStore = data.find((s: AccessibleStore) => s.access_type === "owner") || data[0];
+        const ownerStore = list.find((s: AccessibleStore) => s.access_type === "owner") || list[0];
         setSelectedStore(ownerStore.id);
         setSelectedTenantId(ownerStore.id);
       }
     } catch (error) {
+      // Este selector solo se muestra cuando el usuario tiene MÁS de una tienda.
+      // Un fallo transitorio al cargar la lista no debe alarmar al usuario con un
+      // toast rojo (bloqueaba visualmente a quien solo tiene una tienda, como el
+      // caso de suscripciones activas que veían "Error al cargar las tiendas").
       console.error("Error loading stores:", error);
-      toast.error("Error al cargar las tiendas");
     } finally {
       setLoading(false);
     }
   };
+
+  useEffect(() => {
+    loadStores();
+  }, []);
 
   const handleStoreChange = (storeId: string) => {
     const store = stores.find((s) => s.id === storeId);
