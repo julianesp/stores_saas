@@ -1,6 +1,7 @@
 import type jsPDF from 'jspdf';
 import { Sale, SaleItemWithProduct, Customer, UserProfile } from '@/lib/types';
 import { formatCurrency } from '@/lib/utils';
+import { normalizeColombianPhone } from '@/lib/whatsapp';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
 
@@ -396,15 +397,16 @@ export function generateWhatsAppMessage(data: InvoiceData): string {
  * Abre WhatsApp con el mensaje de la factura
  */
 export function shareViaWhatsApp(phoneNumber: string | undefined, message: string) {
-  // Limpiar el número de teléfono (quitar espacios, guiones, etc.)
-  const cleanPhone = phoneNumber?.replace(/[^\d+]/g, '') || '';
+  // Normalizar el número al formato internacional (agrega el 57 a celulares
+  // colombianos de 10 dígitos); sin indicativo WhatsApp rechaza el enlace.
+  const normalizedPhone = phoneNumber ? normalizeColombianPhone(phoneNumber) : null;
 
   // Codificar el mensaje para URL
   const encodedMessage = encodeURIComponent(message);
 
-  // Generar URL de WhatsApp
-  const whatsappUrl = cleanPhone
-    ? `https://wa.me/${cleanPhone}?text=${encodedMessage}`
+  // Si no hay número válido, abrir WhatsApp con el selector de contacto
+  const whatsappUrl = normalizedPhone
+    ? `https://wa.me/${normalizedPhone}?text=${encodedMessage}`
     : `https://wa.me/?text=${encodedMessage}`;
 
   // Abrir en nueva pestaña

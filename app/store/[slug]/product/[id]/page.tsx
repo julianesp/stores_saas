@@ -13,6 +13,7 @@ import {
   parseProductImages,
 } from "@/lib/storefront-api";
 import { formatCurrency } from "@/lib/utils";
+import { buildWhatsAppLink } from "@/lib/whatsapp";
 import { Plus, Minus, Package, Phone, Tag, ShoppingCart } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -134,13 +135,14 @@ export default function ProductDetailPage() {
 
   const openWhatsApp = () => {
     if (config?.store_whatsapp && product) {
-      const phone = config.store_whatsapp.replace(/\D/g, "");
-      const message = encodeURIComponent(
+      // Normaliza el número (agrega el 57 a celulares de 10 dígitos)
+      const url = buildWhatsAppLink(
+        config.store_whatsapp,
         `Hola! Estoy interesado en: ${product.name}\nPrecio: ${formatCurrency(
           product.sale_price
         )}`
       );
-      window.open(`https://wa.me/${phone}?text=${message}`, "_blank");
+      if (url) window.open(url, "_blank");
     }
   };
 

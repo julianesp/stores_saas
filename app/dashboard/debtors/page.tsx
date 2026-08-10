@@ -9,7 +9,8 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Customer, Sale, SaleItemWithProduct } from '@/lib/types';
 import { getDebtorCustomers } from '@/lib/cloudflare-credit-helpers';
-import { getSales } from '@/lib/cloudflare-api';
+import { getSales, getUserProfile } from '@/lib/cloudflare-api';
+import { buildWhatsAppLink, buildDebtReminderMessage } from '@/lib/whatsapp';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { toast } from 'sonner';
@@ -24,6 +25,7 @@ export default function DebtorsPage() {
   const [loading, setLoading] = useState(true);
   const [totalDebt, setTotalDebt] = useState(0);
   const [exporting, setExporting] = useState(false);
+  const [storeName, setStoreName] = useState<string | null>(null);
 
   useEffect(() => {
     const fetchDebtors = async () => {
@@ -43,7 +45,18 @@ export default function DebtorsPage() {
       }
     };
 
+    // Nombre de la tienda para personalizar los recordatorios de WhatsApp
+    const fetchStoreName = async () => {
+      try {
+        const profile = await getUserProfile(getToken);
+        setStoreName(profile?.store_name || null);
+      } catch {
+        // Si falla, el mensaje simplemente no incluirá el nombre de la tienda
+      }
+    };
+
     fetchDebtors();
+    fetchStoreName();
   }, []);
 
   useEffect(() => {
@@ -366,11 +379,19 @@ export default function DebtorsPage() {
                           toast.error('Este cliente no tiene teléfono registrado');
                           return;
                         }
-                        const message = encodeURIComponent(
-                          `Hola ${debtor.name}, te recordamos que tienes una deuda pendiente de $${currentDebt.toLocaleString('es-CO')}. Por favor, cuando puedas realiza el pago. ¡Gracias!`
-                        );
-                        const phoneNumber = debtor.phone.replace(/\D/g, ''); // Eliminar caracteres no numéricos
-                        const whatsappUrl = `https://wa.me/${phoneNumber}?text=${message}`;
+                        const message = buildDebtReminderMessage({
+                          customerName: debtor.name,
+                          amount: currentDebt,
+                          storeName,
+                        });
+                        // buildWhatsAppLink normaliza el número al formato
+                        // internacional (agrega el 57 a celulares de 10 dígitos);
+                        // sin esto WhatsApp rechaza el enlace.
+                        const whatsappUrl = buildWhatsAppLink(debtor.phone, message);
+                        if (!whatsappUrl) {
+                          toast.error('El teléfono de este cliente no es válido para WhatsApp');
+                          return;
+                        }
                         window.open(whatsappUrl, '_blank');
                       };
 
@@ -454,11 +475,17 @@ export default function DebtorsPage() {
                       toast.error('Este cliente no tiene teléfono registrado');
                       return;
                     }
-                    const message = encodeURIComponent(
-                      `Hola ${debtor.name}, te recordamos que tienes una deuda pendiente de $${currentDebt.toLocaleString('es-CO')}. Por favor, cuando puedas realiza el pago. ¡Gracias!`
-                    );
-                    const phoneNumber = debtor.phone.replace(/\D/g, '');
-                    const whatsappUrl = `https://wa.me/${phoneNumber}?text=${message}`;
+                    const message = buildDebtReminderMessage({
+                      customerName: debtor.name,
+                      amount: currentDebt,
+                      storeName,
+                    });
+                    // Normaliza el número (agrega 57 a celulares de 10 dígitos)
+                    const whatsappUrl = buildWhatsAppLink(debtor.phone, message);
+                    if (!whatsappUrl) {
+                      toast.error('El teléfono de este cliente no es válido para WhatsApp');
+                      return;
+                    }
                     window.open(whatsappUrl, '_blank');
                   };
 

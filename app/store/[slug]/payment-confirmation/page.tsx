@@ -14,6 +14,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { getStoreConfig, StoreConfig } from "@/lib/storefront-api";
 import { formatCurrency } from "@/lib/utils";
+import { buildWhatsAppLink } from "@/lib/whatsapp";
 import { toast } from "sonner";
 
 type TransactionStatus = "PENDING" | "APPROVED" | "DECLINED" | "ERROR";
@@ -398,8 +399,6 @@ export default function PaymentConfirmationPage() {
   const sendWhatsAppConfirmation = () => {
     if (!config?.store_whatsapp || !transactionData) return;
 
-    const phone = config.store_whatsapp.replace(/\D/g, "");
-
     let message = `✅ *Pago Confirmado*\n\n`;
     message += `Hola! Mi pago fue procesado exitosamente:\n\n`;
     message += `💳 *ID Transacción:* ${transactionData.id}\n`;
@@ -419,8 +418,9 @@ export default function PaymentConfirmationPage() {
 
     message += `\n¿Cuándo recibiré mi pedido?`;
 
-    const encodedMessage = encodeURIComponent(message);
-    window.open(`https://wa.me/${phone}?text=${encodedMessage}`, "_blank");
+    // Normaliza el número (agrega el 57 a celulares de 10 dígitos)
+    const url = buildWhatsAppLink(config.store_whatsapp, message);
+    if (url) window.open(url, "_blank");
   };
 
   if (loading) {

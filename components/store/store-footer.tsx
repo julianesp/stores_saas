@@ -15,6 +15,7 @@ import {
   Info,
 } from 'lucide-react';
 import { StoreConfig } from '@/lib/storefront-api';
+import { normalizeColombianPhone } from '@/lib/whatsapp';
 
 interface StoreFooterProps {
   config: StoreConfig;
@@ -116,7 +117,7 @@ export function StoreFooter({ config }: StoreFooterProps) {
               {config.store_whatsapp && (
                 <li>
                   <a
-                    href={`https://wa.me/${config.store_whatsapp.replace(/\D/g, '')}`}
+                    href={`https://wa.me/${normalizeColombianPhone(config.store_whatsapp) || config.store_whatsapp.replace(/\D/g, '')}`}
                     target="_blank"
                     rel="noopener noreferrer"
                     className="flex items-center gap-2 text-sm hover:text-white transition-colors group"

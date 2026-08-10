@@ -15,6 +15,7 @@ import {
   parseProductImages,
 } from '@/lib/storefront-api';
 import { formatCurrency } from '@/lib/utils';
+import { buildWhatsAppLink } from '@/lib/whatsapp';
 import {
   Search,
   Phone,
@@ -129,9 +130,13 @@ export default function StorefrontPage() {
 
   const openWhatsApp = () => {
     if (config?.store_whatsapp) {
-      const phone = config.store_whatsapp.replace(/\D/g, '');
-      const message = encodeURIComponent(`Hola! Estoy interesado en productos de ${config.store_name}`);
-      window.open(`https://wa.me/${phone}?text=${message}`, '_blank');
+      // buildWhatsAppLink normaliza el número (agrega el 57 a celulares de
+      // 10 dígitos); sin indicativo de país WhatsApp rechaza el enlace.
+      const url = buildWhatsAppLink(
+        config.store_whatsapp,
+        `Hola! Estoy interesado en productos de ${config.store_name}`
+      );
+      if (url) window.open(url, '_blank');
     }
   };
 
