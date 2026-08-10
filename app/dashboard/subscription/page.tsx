@@ -180,6 +180,20 @@ export default function SubscriptionPageWompi() {
 
   const subscriptionStatus = getSubscriptionStatus();
 
+  // El usuario ya tiene una suscripción activa (ya pagó y está al día).
+  // En ese caso NO debemos mostrar banners de "prueba gratis" ni presionar
+  // para pagar de nuevo: solo confirmar que está al día.
+  const hasActiveSubscription = subscriptionStatus?.status === "active";
+
+  // Formatear la próxima fecha de pago de forma legible en español
+  const formattedNextBilling = profile?.next_billing_date
+    ? new Date(profile.next_billing_date).toLocaleDateString("es-CO", {
+        year: "numeric",
+        month: "long",
+        day: "numeric",
+      })
+    : null;
+
   // Verificar qué addons tiene activos el usuario
   const activeAddons = profile
     ? {
@@ -236,16 +250,23 @@ export default function SubscriptionPageWompi() {
       </Link>
 
       <div className="text-center">
-        <h1 className="text-3xl font-bold">Planes y Addons</h1>
+        <h1 className="text-3xl font-bold">
+          {hasActiveSubscription ? "Tu Suscripción" : "Planes y Addons"}
+        </h1>
         <p className="text-gray-500 mt-2">
-          Elige el plan base y agrega las funcionalidades que necesites
+          {hasActiveSubscription
+            ? "Tu plan está activo. Aquí puedes ver el estado de tu suscripción y tus complementos."
+            : "Elige el plan base y agrega las funcionalidades que necesites"}
         </p>
-        <div className="mt-4 inline-block bg-gradient-to-r from-purple-100 to-pink-100 border border-purple-300 rounded-lg px-6 py-3">
-          <p className="text-sm font-medium text-purple-900">
-            ✨ <strong>Prueba Gratis por 15 Días:</strong> Acceso completo a
-            todos los complementos
-          </p>
-        </div>
+        {/* El banner de prueba gratis solo tiene sentido para quien aún no ha pagado */}
+        {!hasActiveSubscription && (
+          <div className="mt-4 inline-block bg-gradient-to-r from-purple-100 to-pink-100 border border-purple-300 rounded-lg px-6 py-3">
+            <p className="text-sm font-medium text-purple-900">
+              ✨ <strong>Prueba Gratis por 15 Días:</strong> Acceso completo a
+              todos los complementos
+            </p>
+          </div>
+        )}
       </div>
 
       {/* Estado actual de suscripción */}
@@ -266,8 +287,10 @@ export default function SubscriptionPageWompi() {
                   )}
                   {subscriptionStatus.status === "active" && (
                     <>
-                      Suscripción activa - Próximo pago:{" "}
-                      {subscriptionStatus.nextBillingDate}
+                      ✅ Tu plan está al día. No necesitas hacer nada más.
+                      {formattedNextBilling && (
+                        <> Tu próxima renovación es el {formattedNextBilling}.</>
+                      )}
                     </>
                   )}
                   {subscriptionStatus.status === "expired" && (
@@ -324,7 +347,18 @@ export default function SubscriptionPageWompi() {
           </div>
           <div className="mt-4 bg-brand-light/50 border border-brand/40 rounded-lg p-4">
             <p className="text-sm text-brand text-center">
-              🔒 <strong>Pago seguro con ePayco:</strong> Al hacer clic en un plan se abrirá la pasarela de pago donde puedes elegir tu método preferido.
+              {hasActiveSubscription ? (
+                <>
+                  🔒 <strong>Pago seguro con ePayco:</strong> Estos son los
+                  métodos con los que se cobra tu renovación mensual.
+                </>
+              ) : (
+                <>
+                  🔒 <strong>Pago seguro con ePayco:</strong> Al hacer clic en un
+                  plan se abrirá la pasarela de pago donde puedes elegir tu
+                  método preferido.
+                </>
+              )}
             </p>
           </div>
         </CardContent>
@@ -358,18 +392,29 @@ export default function SubscriptionPageWompi() {
             </ul>
 
             <Button
-              className="w-full bg-gray-800 hover:bg-gray-900"
+              className={`w-full ${
+                hasActiveSubscription
+                  ? "bg-green-600 hover:bg-green-600"
+                  : "bg-gray-800 hover:bg-gray-900"
+              }`}
               size="lg"
               onClick={() => handleSubscribe(BASE_PLAN.id)}
-              disabled={loading && selectedItem === BASE_PLAN.id}
+              // Si ya está activo no debe poder pagar de nuevo por accidente
+              disabled={
+                hasActiveSubscription ||
+                (loading && selectedItem === BASE_PLAN.id)
+              }
             >
               {loading && selectedItem === BASE_PLAN.id ? (
                 <>
                   <Loader2 className="mr-2 h-5 w-5 animate-spin" />
                   Creando link de pago...
                 </>
-              ) : subscriptionStatus?.status === "active" ? (
-                "Plan Activo"
+              ) : hasActiveSubscription ? (
+                <>
+                  <Check className="mr-2 h-5 w-5" />
+                  Plan Activo
+                </>
               ) : (
                 "Suscribirse al Plan Base"
               )}
