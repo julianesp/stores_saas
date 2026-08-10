@@ -515,6 +515,8 @@ export interface UserProfile {
   role: 'admin' | 'cajero';
   full_name?: string;
   phone?: string;
+  // QR de pagos del tendero (Nequi/Daviplata/Bre-B) para cobrar en el POS
+  payment_qr_url?: string;
   is_superadmin?: boolean;
   subscription_status: 'trial' | 'active' | 'expired' | 'canceled';
   trial_start_date?: string;

@@ -96,6 +96,8 @@ export default function POSPage() {
   >("efectivo");
   const [creditDays, setCreditDays] = useState<number>(7); // Plazo por defecto: 7 días
   const [processing, setProcessing] = useState(false);
+  // Modal de cobro con QR (Nequi/Daviplata/transferencia)
+  const [showQrModal, setShowQrModal] = useState(false);
   const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(
     null,
   );
@@ -2519,7 +2521,19 @@ export default function POSPage() {
                     <Button
                       className="w-full text-sm md:text-base"
                       size="lg"
-                      onClick={processSale}
+                      onClick={() => {
+                        // Con Nequi/transferencia, primero mostrar el QR de
+                        // pago para que el cliente pague; la venta se procesa
+                        // cuando el tendero confirma que recibió el pago.
+                        if (
+                          paymentMethod === "nequi" ||
+                          paymentMethod === "transferencia"
+                        ) {
+                          setShowQrModal(true);
+                        } else {
+                          processSale();
+                        }
+                      }}
                       disabled={processing}
                     >
                       <DollarSign className="mr-2 h-4 w-4 md:h-5 md:w-5" />
@@ -2532,6 +2546,100 @@ export default function POSPage() {
           </Card>
         </div>
       </div>
+
+      {/* Modal de cobro con QR (Nequi/Daviplata/transferencia) */}
+      {showQrModal && (
+        <div
+          className="fixed inset-0 z-50 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4"
+          onClick={() => setShowQrModal(false)}
+        >
+          <div
+            className="bg-white rounded-xl shadow-2xl max-w-sm w-full p-6 space-y-4"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {userProfile?.payment_qr_url ? (
+              <>
+                <div className="text-center">
+                  <h3 className="text-lg font-bold">Cobrar con QR</h3>
+                  <p className="text-sm text-gray-500">
+                    Muéstrale este código al cliente
+                  </p>
+                </div>
+                <div className="flex justify-center">
+                  <Image
+                    src={userProfile.payment_qr_url}
+                    alt="QR de pago"
+                    width={280}
+                    height={280}
+                    className="rounded-lg border"
+                  />
+                </div>
+                <div className="text-center bg-brand-light/50 border border-brand/40 rounded-lg py-3">
+                  <p className="text-sm text-brand font-medium">
+                    El cliente debe pagar
+                  </p>
+                  <p className="text-3xl font-bold text-brand">
+                    {formatCurrency(calculateTotal())}
+                  </p>
+                </div>
+                <Button
+                  className="w-full"
+                  size="lg"
+                  disabled={processing}
+                  onClick={() => {
+                    setShowQrModal(false);
+                    processSale();
+                  }}
+                >
+                  ✓ El cliente ya pagó — Procesar venta
+                </Button>
+                <Button
+                  variant="outline"
+                  className="w-full"
+                  onClick={() => setShowQrModal(false)}
+                >
+                  Cancelar
+                </Button>
+              </>
+            ) : (
+              <>
+                <div className="text-center">
+                  <h3 className="text-lg font-bold">
+                    No has registrado tu QR de pagos
+                  </h3>
+                  <p className="text-sm text-gray-600 mt-2">
+                    Registra el QR de tu Nequi, Daviplata o cuenta bancaria
+                    para mostrárselo al cliente al momento de cobrar. Lo
+                    encuentras en la app de tu banco o billetera.
+                  </p>
+                </div>
+                <div className="text-center bg-gray-50 border rounded-lg py-3">
+                  <p className="text-sm text-gray-500">Total a cobrar</p>
+                  <p className="text-2xl font-bold">
+                    {formatCurrency(calculateTotal())}
+                  </p>
+                </div>
+                <Link href="/dashboard/config">
+                  <Button className="w-full" size="lg">
+                    Ir a Configuración y agregar mi QR
+                  </Button>
+                </Link>
+                <Button
+                  variant="outline"
+                  className="w-full"
+                  disabled={processing}
+                  onClick={() => {
+                    setShowQrModal(false);
+                    processSale();
+                  }}
+                >
+                  Procesar sin QR (el cliente ya pagó)
+                </Button>
+              </>
+            )}
+          </div>
+        </div>
+      )}
 
       {/* Modal de Factura */}
       {userProfile && lastSale && (

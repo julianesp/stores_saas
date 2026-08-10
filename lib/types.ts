@@ -31,6 +31,9 @@ export interface UserProfile {
   auto_reports_time?: string; // Hora para generar reportes (formato HH:MM)
   auto_reports_email?: string; // Email para enviar reportes (opcional)
 
+  // QR de pagos del tendero (Nequi/Daviplata/Bre-B) para cobrar en el POS
+  payment_qr_url?: string;
+
   // Configuración del Storefront (Tienda Online)
   store_slug?: string; // URL única de la tienda (ej: mi-tienda)
   store_name?: string; // Nombre público de la tienda

@@ -175,6 +175,8 @@ app.put('/:id', async (c) => {
       'loyalty_points',
       'loyalty_tier',
       'is_superadmin',
+      // QR de pagos del tendero (Nequi/Daviplata/Bre-B) para cobrar en el POS
+      'payment_qr_url',
       // Addon subscriptions
       'has_ai_addon',
       'has_store_addon',
