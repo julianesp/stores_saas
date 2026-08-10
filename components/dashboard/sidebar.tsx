@@ -27,6 +27,7 @@ import {
   Store,
   Mail,
   TrendingUp,
+  PiggyBank,
   GripVertical,
   UserCog,
   ChevronLeft,
@@ -156,6 +157,15 @@ const defaultStoreMenuItems = [
     href: "/dashboard/sales",
     icon: BarChart3,
     roles: ["admin", "cajero"],
+    permissions: ["view_sales_history"] as const,
+  },
+  {
+    id: "profitability",
+    title: "Rentabilidad",
+    href: "/dashboard/rentabilidad",
+    icon: PiggyBank,
+    // Datos de margen/ganancia: solo para el dueño (admin), no cajeros
+    roles: ["admin"],
     permissions: ["view_sales_history"] as const,
   },
   {
