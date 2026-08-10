@@ -328,7 +328,10 @@ export interface SubscriptionPlan {
 
 export interface SubscriptionStatus {
   canAccess: boolean;
-  status: 'trial' | 'active' | 'expired' | 'canceled';
+  // 'unknown' = no se pudo verificar el estado (fallo de red/autenticación con
+  // la API). NO significa que la suscripción haya expirado; sirve para no
+  // mostrar el modal de "suscripción expirada" ante un error transitorio.
+  status: 'trial' | 'active' | 'expired' | 'canceled' | 'unknown';
   daysLeft?: number;
   nextBillingDate?: string;
 }

@@ -7,6 +7,7 @@ import { Sidebar } from "@/components/dashboard/sidebar";
 import { Header } from "@/components/dashboard/header";
 import { TrialBanner } from "@/components/subscription/trial-banner";
 import { SubscriptionExpiredModal } from "@/components/subscription/expired-modal";
+import { ConnectionErrorModal } from "@/components/subscription/connection-error-modal";
 import { ExpirationAlert } from "@/components/subscription/expiration-alert";
 import { TrialNotificationWrapper } from "@/components/subscription/trial-notification-wrapper";
 import { AddonExpiryBanner } from "@/components/subscription/addon-expiry-banner";
@@ -277,6 +278,21 @@ function DashboardLayoutInner({
 
   // Permitir acceso a la página de suscripción incluso si está expirado
   const isSubscriptionPage = pathname?.startsWith("/dashboard/subscription");
+
+  // Caso "unknown": no pudimos verificar la cuenta por un fallo de red/auth con
+  // la API (p. ej. Unauthorized del Worker). NO es una suscripción expirada, así
+  // que mostramos un error de conexión reintentable en lugar de empujar a pagar.
+  // Se muestra en cualquier página (incluida la de suscripción), porque sin
+  // perfil verificado tampoco tiene sentido enseñar los planes.
+  if (
+    !loading &&
+    !isSuperAdmin &&
+    !isTeamMember &&
+    subscriptionInfo &&
+    subscriptionInfo.status === "unknown"
+  ) {
+    return <ConnectionErrorModal />;
+  }
 
   // Si no puede acceder y no está en la página de suscripción, mostrar modal (excepto superadmin y team members)
   if (

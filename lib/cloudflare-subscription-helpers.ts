@@ -12,9 +12,11 @@ export async function checkSubscriptionStatus(
     const userProfile = await getUserProfile(getToken);
 
     if (!userProfile) {
+      // No se pudo leer el perfil (p. ej. la API devolvió vacío). Esto NO es lo
+      // mismo que una suscripción expirada; no debemos bloquear ni empujar a pagar.
       return {
         canAccess: false,
-        status: 'expired',
+        status: 'unknown',
       };
     }
 
@@ -133,10 +135,14 @@ export async function checkSubscriptionStatus(
       status: userProfile.subscription_status,
     };
   } catch (error) {
+    // Un fallo de red o de autenticación (p. ej. el Worker devuelve
+    // Unauthorized) NO significa que la suscripción haya expirado. Devolvemos
+    // 'unknown' para que la UI muestre un error de conexión reintentable en
+    // lugar del modal de "suscripción expirada" que empuja a pagar de nuevo.
     console.error('Error checking subscription status:', error);
     return {
       canAccess: false,
-      status: 'expired',
+      status: 'unknown',
     };
   }
 }
