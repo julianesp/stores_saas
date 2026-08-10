@@ -2358,9 +2358,9 @@ export default function POSPage() {
                             size="sm"
                             variant="outline"
                             onClick={() => updateQuantity(item.product.id, -1, item.isUnitSale)}
-                            className="h-12 w-12 p-0 md:h-14 md:w-14 bg-brand  text-white border-brand rounded-2xl cursor-pointer hover:bg-red-700"
+                            className="h-10 w-10 p-0 md:h-11 md:w-11 bg-brand  text-white border-brand rounded-xl cursor-pointer hover:bg-red-700"
                           >
-                            <Minus className="h-6 w-6 md:h-7 md:w-7" />
+                            <Minus className="h-5 w-5" />
                           </Button>
                           <Input
                             type="text"
@@ -2409,23 +2409,23 @@ export default function POSPage() {
                                 e.preventDefault();
                               }
                             }}
-                            className="flex-1 h-12 md:h-14 text-center text-[16px] md:text-3xl font-bold p-1"
+                            className="flex-1 h-10 md:h-11 text-center text-[16px] md:text-xl font-bold p-1"
                           />
                           <Button
                             size="sm"
                             variant="outline"
                             onClick={() => updateQuantity(item.product.id, 1, item.isUnitSale)}
-                            className="h-12 w-12 p-0 md:h-14 md:w-14 bg-brand hover:bg-brand-hover text-white border-brand rounded-2xl cursor-pointer"
+                            className="h-10 w-10 p-0 md:h-11 md:w-11 bg-brand hover:bg-brand-hover text-white border-brand rounded-xl cursor-pointer"
                           >
-                            <Plus className="h-6 w-6 md:h-7 md:w-7" />
+                            <Plus className="h-5 w-5" />
                           </Button>
                           <Button
                             size="sm"
                             variant="ghost"
                             onClick={() => removeFromCart(item.product.id, item.isUnitSale)}
-                            className="h-12 w-12 p-0 md:h-14 md:w-14 shrink-0 hover:bg-brand-light/50 ml-2"
+                            className="h-10 w-10 p-0 md:h-11 md:w-11 shrink-0 hover:bg-brand-light/50 ml-2"
                           >
-                            <Trash2 className="h-7 w-7 md:h-8 md:w-8 text-brand" />
+                            <Trash2 className="h-5 w-5 md:h-6 md:w-6 text-brand" />
                           </Button>
                         </div>
                       </div>
