@@ -816,3 +816,40 @@ export function setAPIBaseURL(url: string) {
   console.warn('Changing API base URL to:', url);
   // Nota: En producción, usar siempre la variable de entorno
 }
+
+// ============================================
+// POS REVIEWS - Reseñas del sistema POS
+// ============================================
+
+export interface PosReview {
+  rating: number;
+  comment: string;
+  storeName: string;
+  storeCity: string;
+  isApproved: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
+/** Obtiene la reseña de la tienda autenticada (null si aún no ha reseñado). */
+export async function getMyPosReview(
+  getToken: GetTokenFn
+): Promise<PosReview | null> {
+  return fetchAPI<PosReview | null>('/api/pos-reviews/me', getToken);
+}
+
+/** Crea o actualiza la reseña de la tienda autenticada. */
+export async function saveMyPosReview(
+  data: { rating: number; comment: string },
+  getToken: GetTokenFn
+): Promise<PosReview> {
+  return fetchAPI<PosReview>('/api/pos-reviews/me', getToken, {
+    method: 'PUT',
+    body: JSON.stringify(data),
+  });
+}
+
+/** Elimina la reseña de la tienda autenticada. */
+export async function deleteMyPosReview(getToken: GetTokenFn): Promise<void> {
+  return fetchAPI<void>('/api/pos-reviews/me', getToken, { method: 'DELETE' });
+}

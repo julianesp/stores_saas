@@ -32,6 +32,7 @@ import { formatCurrency } from "@/lib/utils";
 import { toast } from "sonner";
 import { AutoReportsConfig } from "@/components/config/auto-reports-config";
 import { PaymentQrConfig } from "@/components/config/payment-qr-config";
+import PosReviewCard from "@/components/dashboard/PosReviewCard";
 import { landingConfig } from "@/lib/landing-config";
 import { useAuth } from "@clerk/nextjs";
 
@@ -273,6 +274,9 @@ export default function ConfigPage() {
           </div>
         </CardContent>
       </Card>
+
+      {/* Reseña del sistema POS con estrellas */}
+      <PosReviewCard />
 
       {/* QR de pagos para cobrar en el POS */}
       <PaymentQrConfig />

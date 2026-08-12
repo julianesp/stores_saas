@@ -28,6 +28,7 @@ import TrustBadges from "@/components/landing/TrustBadges";
 import VideoTutorials from "@/components/landing/VideoTutorials";
 import OvercomeResistance from "@/components/landing/OvercomeResistance";
 import ClientStores from "@/components/landing/ClientStores";
+import PosReviews from "@/components/landing/PosReviews";
 import FAQ from "@/components/landing/FAQ";
 import { landingConfig } from "@/lib/landing-config";
 
@@ -418,6 +419,9 @@ export default function Home() {
 
       {/* Tiendas Clientes */}
       <ClientStores />
+
+      {/* Reseñas del sistema POS */}
+      <PosReviews />
 
       {/* Pricing Plans */}
       <PricingPlans />
