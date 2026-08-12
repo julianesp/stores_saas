@@ -1,10 +1,12 @@
 'use client';
 
 import Image from 'next/image';
-import { Store } from 'lucide-react';
+import { Store, MapPin } from 'lucide-react';
 
 type ClientStore = {
   name: string;
+  /** Ubicación de la tienda (Pueblo, Ciudad/Departamento). */
+  location: string;
   /** URL de la foto de la tienda. Déjala vacía para mostrar el placeholder. */
   image?: string;
 };
@@ -14,6 +16,7 @@ type ClientStore = {
 const stores: ClientStore[] = [
   {
     name: 'Supermercado la 10',
+    location: 'Colón, Putumayo',
     image: '', // TODO: subir foto de la tienda y pegar la URL aquí
   },
 ];
@@ -52,6 +55,10 @@ export default function ClientStores() {
               </div>
               <p className="mt-4 text-white font-semibold text-base sm:text-lg">
                 {store.name}
+              </p>
+              <p className="mt-1 flex items-center justify-center gap-1 text-sm text-gray-400">
+                <MapPin className="h-4 w-4 shrink-0" />
+                {store.location}
               </p>
             </div>
           ))}
