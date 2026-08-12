@@ -21,8 +21,8 @@ const SITE_DESCRIPTION =
 
 export const metadata: Metadata = {
   title: {
-    default: 'Posib.dev | Sistema POS y punto de venta para tiendas en Colombia',
-    template: '%s | Posib.dev',
+    default: 'posib.dev | Sistema POS para tiendas en Colombia',
+    template: '%s | posib.dev',
   },
   description: SITE_DESCRIPTION,
   metadataBase: new URL('https://posib.dev'),
@@ -55,7 +55,7 @@ export const metadata: Metadata = {
     type: 'website',
     locale: 'es_CO',
     url: 'https://posib.dev',
-    title: 'Posib.dev | Sistema POS y punto de venta para tiendas en Colombia',
+    title: 'posib.dev | Sistema POS para tiendas en Colombia',
     description: SITE_DESCRIPTION,
     siteName: 'posib.dev',
     images: [
@@ -71,7 +71,7 @@ export const metadata: Metadata = {
   },
   twitter: {
     card: 'summary_large_image',
-    title: 'Posib.dev | Sistema POS para tiendas en Colombia',
+    title: 'posib.dev | Sistema POS para tiendas en Colombia',
     description: SITE_DESCRIPTION,
     images: [
       {

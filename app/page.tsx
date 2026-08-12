@@ -27,6 +27,7 @@ import FreeMigration from "@/components/landing/FreeMigration";
 import TrustBadges from "@/components/landing/TrustBadges";
 import VideoTutorials from "@/components/landing/VideoTutorials";
 import OvercomeResistance from "@/components/landing/OvercomeResistance";
+import ClientStores from "@/components/landing/ClientStores";
 import FAQ from "@/components/landing/FAQ";
 import { landingConfig } from "@/lib/landing-config";
 
@@ -37,7 +38,7 @@ export default function Home() {
       <header className="border-b  backdrop-blur-sm  top-0 z-50 fixed w-full rounded-e-4xl rounded-s-4xl shadow-2xl ">
         <div className="container mx-auto px-4 py-3 md:py-4 flex items-center justify-between">
           <h1 className="text-xl md:text-2xl font-bold text-white">
-            Posib.dev
+            posib.dev
           </h1>
         </div>
       </header>
@@ -163,7 +164,7 @@ export default function Home() {
                   <iframe
                     className="w-full h-full rounded-lg"
                     src="https://www.youtube.com/embed/I6qJtQ1t2rQ"
-                    title="Demo: Punto de Venta Rápido - Posib.dev"
+                    title="Demo: Punto de Venta Rápido - posib.dev"
                     allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
                     allowFullScreen
                   ></iframe>
@@ -184,7 +185,7 @@ export default function Home() {
                   <iframe
                     className="w-full h-full rounded-lg"
                     src="https://www.youtube.com/embed/b-yYlIAqopM"
-                    title="Demo: Vende un producto - Posib.dev"
+                    title="Demo: Vende un producto - posib.dev"
                     allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
                     allowFullScreen
                   ></iframe>
@@ -414,6 +415,9 @@ export default function Home() {
           </Card>
         </div>
       </section>
+
+      {/* Tiendas Clientes */}
+      <ClientStores />
 
       {/* Pricing Plans */}
       <PricingPlans />

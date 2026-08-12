@@ -25,7 +25,7 @@ export const landingConfig = {
 
   // Nombre de la marca
   brand: {
-    name: 'Posib.dev',
+    name: 'posib.dev',
     tagline: 'Sistema POS para tu Negocio',
     description: 'Gestión profesional para tu negocio',
   },

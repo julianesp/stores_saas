@@ -25,7 +25,7 @@ export default function TrustBadges() {
             Confían en Nosotros
           </h2>
           <p className="text-lg text-white/80 max-w-2xl mx-auto">
-            Miles de negocios en Colombia ya están creciendo con Posib.dev
+            Miles de negocios en Colombia ya están creciendo con posib.dev
           </p>
         </div>
 

@@ -62,7 +62,7 @@ export default function OvercomeResistance() {
             <CardHeader>
               <CardTitle className="text-white flex items-center gap-2">
                 <Check className="h-6 w-6 text-white" />
-                Con Posib.dev
+                Con posib.dev
               </CardTitle>
             </CardHeader>
             <CardContent>

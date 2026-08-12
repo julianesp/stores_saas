@@ -9,9 +9,9 @@ const faqs = [
     category: "General",
     questions: [
       {
-        question: "¿Qué es Posib.dev?",
+        question: "¿Qué es posib.dev?",
         answer:
-          "Posib.dev es un sistema POS (Punto de Venta) completo diseñado para pequeños y medianos negocios en Colombia. Te permite gestionar ventas, inventario, clientes, proveedores y más, todo desde una plataforma fácil de usar.",
+          "posib.dev es un sistema POS (Punto de Venta) completo diseñado para pequeños y medianos negocios en Colombia. Te permite gestionar ventas, inventario, clientes, proveedores y más, todo desde una plataforma fácil de usar.",
       },
       {
         question: "¿Necesito experiencia técnica para usar el sistema?",
