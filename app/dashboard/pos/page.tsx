@@ -2352,81 +2352,87 @@ export default function POSPage() {
                           </div>
                         </div>
 
-                        {/* Segunda fila: Controles de cantidad y eliminar */}
-                        <div className="flex items-center gap-2">
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            onClick={() => updateQuantity(item.product.id, -1, item.isUnitSale)}
-                            className="h-10 w-10 p-0 md:h-11 md:w-11 bg-brand  text-white border-brand rounded-xl cursor-pointer hover:bg-red-700"
-                          >
-                            <Minus className="h-5 w-5" />
-                          </Button>
-                          <Input
-                            type="text"
-                            inputMode="numeric"
-                            value={item.quantity}
-                            onChange={(e) => {
-                              const value = e.target.value;
-                              // Permitir vacío o solo números
-                              if (value === "" || /^\d+$/.test(value)) {
-                                if (value === "") {
-                                  // Permitir campo vacío temporalmente
-                                  setCart((prev) =>
-                                    prev.map((cartItem) =>
-                                      cartItem.product.id === item.product.id && cartItem.isUnitSale === item.isUnitSale
-                                        ? { ...cartItem, quantity: 0 }
-                                        : cartItem,
-                                    ),
-                                  );
-                                } else {
-                                  const val = parseInt(value);
-                                  setDirectQuantity(item.product.id, val, item.isUnitSale);
+                        {/* Segunda fila: cantidad arriba, botones -/+ abajo */}
+                        <div className="flex flex-col gap-2">
+                          {/* Fila superior: número de cantidad + eliminar */}
+                          <div className="flex items-center gap-2">
+                            <Input
+                              type="text"
+                              inputMode="numeric"
+                              value={item.quantity}
+                              onChange={(e) => {
+                                const value = e.target.value;
+                                // Permitir vacío o solo números
+                                if (value === "" || /^\d+$/.test(value)) {
+                                  if (value === "") {
+                                    // Permitir campo vacío temporalmente
+                                    setCart((prev) =>
+                                      prev.map((cartItem) =>
+                                        cartItem.product.id === item.product.id && cartItem.isUnitSale === item.isUnitSale
+                                          ? { ...cartItem, quantity: 0 }
+                                          : cartItem,
+                                      ),
+                                    );
+                                  } else {
+                                    const val = parseInt(value);
+                                    setDirectQuantity(item.product.id, val, item.isUnitSale);
+                                  }
                                 }
-                              }
-                            }}
-                            onBlur={(e) => {
-                              // Al perder el foco, si está vacío o es 0, establecer en 1
-                              if (
-                                e.target.value === "" ||
-                                parseInt(e.target.value) === 0
-                              ) {
-                                setDirectQuantity(item.product.id, 1, item.isUnitSale);
-                              }
-                            }}
-                            onKeyDown={(e) => {
-                              // Permitir borrar con backspace/delete
-                              if (e.key === "Backspace" || e.key === "Delete") {
-                                return;
-                              }
-                              // Solo permitir números y teclas de control
-                              if (
-                                !/\d/.test(e.key) &&
-                                !["ArrowLeft", "ArrowRight", "Tab"].includes(
-                                  e.key,
-                                )
-                              ) {
-                                e.preventDefault();
-                              }
-                            }}
-                            className="flex-1 h-10 md:h-11 text-center text-[16px] md:text-xl font-bold p-1"
-                          />
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            onClick={() => updateQuantity(item.product.id, 1, item.isUnitSale)}
-                            className="h-10 w-10 p-0 md:h-11 md:w-11 bg-brand hover:bg-brand-hover text-white border-brand rounded-xl cursor-pointer"
-                          >
-                            <Plus className="h-5 w-5" />
-                          </Button>
-                          <Button
-                            size="sm"
-                            variant="ghost"
-                            onClick={() => removeFromCart(item.product.id, item.isUnitSale)}
-                            className="h-10 w-10 p-0 md:h-11 md:w-11 shrink-0 hover:bg-brand-light/50 ml-2"
-                          >
-                            <Trash2 className="h-5 w-5 md:h-6 md:w-6 text-brand" />
-                          </Button>
+                              }}
+                              onBlur={(e) => {
+                                // Al perder el foco, si está vacío o es 0, establecer en 1
+                                if (
+                                  e.target.value === "" ||
+                                  parseInt(e.target.value) === 0
+                                ) {
+                                  setDirectQuantity(item.product.id, 1, item.isUnitSale);
+                                }
+                              }}
+                              onKeyDown={(e) => {
+                                // Permitir borrar con backspace/delete
+                                if (e.key === "Backspace" || e.key === "Delete") {
+                                  return;
+                                }
+                                // Solo permitir números y teclas de control
+                                if (
+                                  !/\d/.test(e.key) &&
+                                  !["ArrowLeft", "ArrowRight", "Tab"].includes(
+                                    e.key,
+                                  )
+                                ) {
+                                  e.preventDefault();
+                                }
+                              }}
+                              className="flex-1 h-10 md:h-11 text-center text-[16px] md:text-xl font-bold p-1"
+                            />
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              onClick={() => removeFromCart(item.product.id, item.isUnitSale)}
+                              className="h-10 w-10 p-0 md:h-11 md:w-11 shrink-0 hover:bg-brand-light/50"
+                            >
+                              <Trash2 className="h-5 w-5 md:h-6 md:w-6 text-brand" />
+                            </Button>
+                          </div>
+                          {/* Fila inferior: botones disminuir / aumentar */}
+                          <div className="flex items-center gap-2">
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => updateQuantity(item.product.id, -1, item.isUnitSale)}
+                              className="flex-1 h-10 md:h-11 bg-brand text-white border-brand rounded-xl cursor-pointer hover:bg-red-700"
+                            >
+                              <Minus className="h-5 w-5" />
+                            </Button>
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => updateQuantity(item.product.id, 1, item.isUnitSale)}
+                              className="flex-1 h-10 md:h-11 bg-brand hover:bg-brand-hover text-white border-brand rounded-xl cursor-pointer"
+                            >
+                              <Plus className="h-5 w-5" />
+                            </Button>
+                          </div>
                         </div>
                       </div>
                     );
