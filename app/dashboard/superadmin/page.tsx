@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { getAllUserProfiles } from "@/lib/cloudflare-api";
 import { UserProfile } from "@/lib/types";
+import ClientStoresManager from "@/components/dashboard/ClientStoresManager";
 import {
   Store,
   Users,
@@ -446,6 +447,9 @@ export default function SuperAdminPage() {
           <p className="text-black">Vista general del negocio multi-tenant</p>
         </div>
       </div>
+
+      {/* Gestión de tiendas clientes mostradas en la landing */}
+      <ClientStoresManager />
 
       {/* Estadísticas Principales - CLICABLES */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">

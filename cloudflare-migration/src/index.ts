@@ -36,6 +36,7 @@ import analyticsRoutes from './routes/analytics';
 import userStoresRoutes from './routes/user-stores';
 import facturasRoutes from './routes/facturas';
 import marketTrendsRoutes from './routes/market-trends';
+import clientStoresRoutes from './routes/client-stores';
 
 const app = new Hono<{ Bindings: Env }>();
 
@@ -328,6 +329,7 @@ app.route('/api/analytics', analyticsRoutes);
 app.route('/api/user-stores', userStoresRoutes);
 app.route('/api/facturas', facturasRoutes);
 app.route('/api/market', marketTrendsRoutes);
+app.route('/api/client-stores', clientStoresRoutes);
 
 // 404 handler
 app.notFound((c) => {
