@@ -47,7 +47,8 @@ app.get('/active-stores', async (c) => {
 
 /**
  * GET /stats/client-stores
- * Lista pública de tiendas clientes activas para mostrar en la landing.
+ * Lista pública de tiendas reales marcadas por el superadmin para la landing
+ * (landing_enabled = 1). Los datos salen de user_profiles.
  */
 app.get('/client-stores', async (c) => {
   try {
@@ -55,28 +56,32 @@ app.get('/client-stores', async (c) => {
 
     const result = await db
       .prepare(
-        `SELECT id, name, location, image_url, slug, profile_enabled
-         FROM client_stores
-         WHERE is_active = 1
-         ORDER BY sort_order ASC, created_at ASC`
+        `SELECT id, store_name, full_name, landing_location, store_city,
+                landing_image_url, store_slug, landing_profile_enabled
+         FROM user_profiles
+         WHERE landing_enabled = 1 AND deleted_at IS NULL
+         ORDER BY store_name ASC, full_name ASC`
       )
       .all<{
         id: string;
-        name: string;
-        location: string;
-        image_url: string | null;
-        slug: string | null;
-        profile_enabled: number;
+        store_name: string | null;
+        full_name: string | null;
+        landing_location: string | null;
+        store_city: string | null;
+        landing_image_url: string | null;
+        store_slug: string | null;
+        landing_profile_enabled: number;
       }>();
 
     const stores = (result.results || []).map((s) => ({
       id: s.id,
-      name: s.name,
-      location: s.location,
-      image: s.image_url || '',
+      name: s.store_name || s.full_name || 'Tienda',
+      location: s.landing_location || s.store_city || '',
+      image: s.landing_image_url || '',
       // Solo exponemos slug si el perfil público está habilitado, para que la
       // tarjeta de la landing enlace únicamente a los perfiles activados.
-      slug: s.profile_enabled === 1 && s.slug ? s.slug : '',
+      slug:
+        s.landing_profile_enabled === 1 && s.store_slug ? s.store_slug : '',
     }));
 
     return c.json({ success: true, stores });
@@ -89,8 +94,9 @@ app.get('/client-stores', async (c) => {
 
 /**
  * GET /stats/client-stores/:slug
- * Perfil público de una tienda cliente (imagen + contacto + Google Maps).
- * Solo responde si el perfil está habilitado (profile_enabled = 1).
+ * Perfil público de una tienda real (imagen + contacto + Google Maps).
+ * Solo responde si el perfil está habilitado (landing_profile_enabled = 1).
+ * Reutiliza los datos de contacto que la tienda ya tiene (store_*).
  */
 app.get('/client-stores/:slug', async (c) => {
   try {
@@ -99,24 +105,31 @@ app.get('/client-stores/:slug', async (c) => {
 
     const row = await db
       .prepare(
-        `SELECT name, location, image_url, description, address, phone, whatsapp,
-                email, facebook, instagram, maps_url
-         FROM client_stores
-         WHERE slug = ? AND is_active = 1 AND profile_enabled = 1`
+        `SELECT store_name, full_name, landing_location, store_city,
+                landing_image_url, store_description, store_address,
+                store_phone, phone, store_whatsapp, store_email, email,
+                store_facebook, store_instagram, landing_maps_url
+         FROM user_profiles
+         WHERE store_slug = ? AND landing_enabled = 1
+           AND landing_profile_enabled = 1 AND deleted_at IS NULL`
       )
       .bind(slug)
       .first<{
-        name: string;
-        location: string;
-        image_url: string | null;
-        description: string | null;
-        address: string | null;
+        store_name: string | null;
+        full_name: string | null;
+        landing_location: string | null;
+        store_city: string | null;
+        landing_image_url: string | null;
+        store_description: string | null;
+        store_address: string | null;
+        store_phone: string | null;
         phone: string | null;
-        whatsapp: string | null;
+        store_whatsapp: string | null;
+        store_email: string | null;
         email: string | null;
-        facebook: string | null;
-        instagram: string | null;
-        maps_url: string | null;
+        store_facebook: string | null;
+        store_instagram: string | null;
+        landing_maps_url: string | null;
       }>();
 
     if (!row) {
@@ -126,17 +139,17 @@ app.get('/client-stores/:slug', async (c) => {
     return c.json({
       success: true,
       store: {
-        name: row.name,
-        location: row.location,
-        image: row.image_url || '',
-        description: row.description || '',
-        address: row.address || '',
-        phone: row.phone || '',
-        whatsapp: row.whatsapp || '',
-        email: row.email || '',
-        facebook: row.facebook || '',
-        instagram: row.instagram || '',
-        mapsUrl: row.maps_url || '',
+        name: row.store_name || row.full_name || 'Tienda',
+        location: row.landing_location || row.store_city || '',
+        image: row.landing_image_url || '',
+        description: row.store_description || '',
+        address: row.store_address || '',
+        phone: row.store_phone || row.phone || '',
+        whatsapp: row.store_whatsapp || '',
+        email: row.store_email || row.email || '',
+        facebook: row.store_facebook || '',
+        instagram: row.store_instagram || '',
+        mapsUrl: row.landing_maps_url || '',
       },
     });
   } catch (error) {

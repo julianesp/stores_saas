@@ -1,14 +1,15 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useUser, useAuth } from "@clerk/nextjs";
 import { useRouter } from "next/navigation";
+import Image from "next/image";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Switch } from "@/components/ui/switch";
 import { getAllUserProfiles } from "@/lib/cloudflare-api";
 import { UserProfile } from "@/lib/types";
-import ClientStoresManager from "@/components/dashboard/ClientStoresManager";
 import {
   Store,
   Users,
@@ -26,6 +27,9 @@ import {
   Filter,
   Info,
   ShoppingCart,
+  Upload,
+  Loader2,
+  ExternalLink,
 } from "lucide-react";
 import { toast } from "sonner";
 import { formatCurrency } from "@/lib/utils";
@@ -82,6 +86,21 @@ export default function SuperAdminPage() {
     open: boolean;
     store: UserProfile | null;
   }>({ open: false, store: null });
+  // Estado de la presencia en la landing por tienda (id -> guardando/subiendo).
+  const [landingSaving, setLandingSaving] = useState<Record<string, boolean>>(
+    {},
+  );
+  const [landingUploading, setLandingUploading] = useState<
+    Record<string, boolean>
+  >({});
+  const landingFileInputs = useRef<Record<string, HTMLInputElement | null>>({});
+  // Diálogo para editar ubicación corta + enlace de Google Maps del perfil.
+  const [landingDialog, setLandingDialog] = useState<{
+    open: boolean;
+    store: UserProfile | null;
+    location: string;
+    mapsUrl: string;
+  }>({ open: false, store: null, location: "", mapsUrl: "" });
 
   useEffect(() => {
     fetchData();
@@ -205,6 +224,86 @@ export default function SuperAdminPage() {
     } catch (error) {
       console.error("Error updating store status:", error);
       toast.error(error instanceof Error ? error.message : "Error al actualizar estado de la tienda");
+    }
+  };
+
+  /**
+   * Actualiza los campos de presencia en la landing de una tienda concreta.
+   * Aplica el cambio de forma optimista sobre el estado local para que los
+   * switches respondan al instante y revierte si el guardado falla.
+   */
+  const updateLandingFields = async (
+    storeId: string,
+    updates: Partial<UserProfile>,
+  ) => {
+    const previous = stores;
+    // Actualización optimista.
+    setStores((prev) =>
+      prev.map((s) => (s.id === storeId ? { ...s, ...updates } : s)),
+    );
+    setLandingSaving((prev) => ({ ...prev, [storeId]: true }));
+
+    try {
+      const token = await getToken();
+      const response = await fetch("/api/admin/update-user-profile", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ userId: storeId, updates }),
+      });
+      const data = await response.json();
+      if (!data.success) {
+        throw new Error(data.error || "Error al actualizar");
+      }
+    } catch (error) {
+      console.error("Error updating landing fields:", error);
+      toast.error(
+        error instanceof Error ? error.message : "No se pudo guardar el cambio",
+      );
+      // Revertir en caso de error.
+      setStores(previous);
+    } finally {
+      setLandingSaving((prev) => ({ ...prev, [storeId]: false }));
+    }
+  };
+
+  /** Sube la imagen de una tienda a Cloudinary y la guarda en su perfil. */
+  const handleLandingImageUpload = async (
+    storeId: string,
+    file: File,
+  ) => {
+    if (!file.type.startsWith("image/")) {
+      toast.error("El archivo debe ser una imagen");
+      return;
+    }
+
+    setLandingUploading((prev) => ({ ...prev, [storeId]: true }));
+    try {
+      const formData = new FormData();
+      formData.append("file", file);
+
+      const res = await fetch("/api/upload-image", {
+        method: "POST",
+        body: formData,
+      });
+      const data = await res.json();
+      if (!res.ok || !data.secure_url) {
+        throw new Error(data.error || "Error al subir la imagen");
+      }
+
+      await updateLandingFields(storeId, {
+        landing_image_url: data.secure_url,
+      });
+      toast.success("Imagen actualizada");
+    } catch (error) {
+      console.error("Error uploading landing image:", error);
+      toast.error(
+        error instanceof Error ? error.message : "Error al subir la imagen",
+      );
+    } finally {
+      setLandingUploading((prev) => ({ ...prev, [storeId]: false }));
     }
   };
 
@@ -447,9 +546,6 @@ export default function SuperAdminPage() {
           <p className="text-black">Vista general del negocio multi-tenant</p>
         </div>
       </div>
-
-      {/* Gestión de tiendas clientes mostradas en la landing */}
-      <ClientStoresManager />
 
       {/* Estadísticas Principales - CLICABLES */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
@@ -836,6 +932,7 @@ export default function SuperAdminPage() {
                     <th className="text-center p-4 font-medium bg-white">Ventas</th>
                     <th className="text-center p-4 font-medium bg-white">Clientes</th>
                     <th className="text-left p-4 font-medium bg-white">Última Venta</th>
+                    <th className="text-center p-4 font-medium bg-white">Landing</th>
                     <th className="text-right p-4 font-medium bg-white">Acciones</th>
                   </tr>
                 </thead>
@@ -1048,6 +1145,126 @@ export default function SuperAdminPage() {
                             <span className="text-gray-400">Sin ventas</span>
                           )}
                         </td>
+
+                        {/* Columna Landing: imagen + interruptores por tienda */}
+                        <td className="p-4 align-top">
+                          <div className="flex flex-col items-center gap-2 min-w-[150px]">
+                            {/* Miniatura + subir imagen */}
+                            <div className="relative flex h-16 w-16 items-center justify-center overflow-hidden rounded-md border bg-gray-50">
+                              {store.landing_image_url ? (
+                                <Image
+                                  src={store.landing_image_url}
+                                  alt={store.store_name || store.full_name || "Tienda"}
+                                  fill
+                                  sizes="64px"
+                                  className="object-cover"
+                                />
+                              ) : (
+                                <Store className="h-6 w-6 text-gray-300" />
+                              )}
+                              {landingUploading[store.id] && (
+                                <div className="absolute inset-0 flex items-center justify-center bg-white/70">
+                                  <Loader2 className="h-5 w-5 animate-spin text-brand" />
+                                </div>
+                              )}
+                            </div>
+
+                            <input
+                              ref={(el) => {
+                                landingFileInputs.current[store.id] = el;
+                              }}
+                              type="file"
+                              accept="image/*"
+                              className="hidden"
+                              onChange={(e) => {
+                                const file = e.target.files?.[0];
+                                if (file) handleLandingImageUpload(store.id, file);
+                                e.target.value = "";
+                              }}
+                            />
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              className="h-7 px-2 text-xs"
+                              disabled={landingUploading[store.id]}
+                              onClick={() =>
+                                landingFileInputs.current[store.id]?.click()
+                              }
+                            >
+                              <Upload className="h-3 w-3 mr-1" />
+                              {store.landing_image_url ? "Cambiar" : "Subir foto"}
+                            </Button>
+
+                            {/* Switch: mostrar en la landing */}
+                            <label className="flex items-center gap-2 text-xs text-gray-700 cursor-pointer">
+                              <Switch
+                                checked={!!store.landing_enabled}
+                                disabled={landingSaving[store.id]}
+                                onCheckedChange={(checked) =>
+                                  updateLandingFields(store.id, {
+                                    landing_enabled: checked,
+                                  })
+                                }
+                              />
+                              En landing
+                            </label>
+
+                            {/* Switch: perfil público con info extra */}
+                            <label className="flex items-center gap-2 text-xs text-gray-700 cursor-pointer">
+                              <Switch
+                                checked={!!store.landing_profile_enabled}
+                                disabled={landingSaving[store.id]}
+                                onCheckedChange={(checked) =>
+                                  updateLandingFields(store.id, {
+                                    landing_profile_enabled: checked,
+                                  })
+                                }
+                              />
+                              Perfil público
+                            </label>
+
+                            {/* Editar ubicación + Google Maps del perfil */}
+                            {store.landing_profile_enabled && (
+                              <Button
+                                size="sm"
+                                variant="ghost"
+                                className="h-6 px-2 text-[11px]"
+                                onClick={() =>
+                                  setLandingDialog({
+                                    open: true,
+                                    store,
+                                    location: store.landing_location || "",
+                                    mapsUrl: store.landing_maps_url || "",
+                                  })
+                                }
+                              >
+                                Editar ubicación
+                              </Button>
+                            )}
+
+                            {/* Aviso si falta slug para el perfil */}
+                            {store.landing_profile_enabled && !store.store_slug && (
+                              <p className="text-[10px] text-amber-600 text-center leading-tight">
+                                Falta configurar la URL (slug) de la tienda para
+                                que el perfil sea accesible.
+                              </p>
+                            )}
+
+                            {/* Enlace al perfil público */}
+                            {store.landing_profile_enabled && store.store_slug && (
+                              <a
+                                href={`/tienda/${store.store_slug}`}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="inline-flex items-center gap-1 text-[11px] text-brand hover:underline"
+                              >
+                                <ExternalLink className="h-3 w-3" />
+                                Ver perfil
+                              </a>
+                            )}
+                          </div>
+                        </td>
+
                         <td className="p-4">
                           <div className="flex gap-2 justify-end flex-wrap">
                             <Button
@@ -1372,6 +1589,92 @@ export default function SuperAdminPage() {
               onClick={() => setDetailsDialog({ open: false, store: null })}
             >
               Cerrar
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Diálogo: editar ubicación y Google Maps del perfil público */}
+      <Dialog
+        open={landingDialog.open}
+        onOpenChange={(open) =>
+          setLandingDialog((prev) => ({ ...prev, open }))
+        }
+      >
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Ubicación del perfil público</DialogTitle>
+            <DialogDescription>
+              Datos que se mostrarán en{" "}
+              {landingDialog.store?.store_name ||
+                landingDialog.store?.full_name ||
+                "la tienda"}
+              . El resto del contacto (WhatsApp, teléfono, dirección) se toma de
+              la configuración de la tienda.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-1">
+              <label className="text-sm font-medium text-gray-700">
+                Ubicación corta
+              </label>
+              <Input
+                className="text-gray-700"
+                value={landingDialog.location}
+                onChange={(e) =>
+                  setLandingDialog((prev) => ({
+                    ...prev,
+                    location: e.target.value,
+                  }))
+                }
+                placeholder="Colón, Putumayo"
+              />
+            </div>
+            <div className="space-y-1">
+              <label className="text-sm font-medium text-gray-700">
+                Enlace de Google Maps
+              </label>
+              <Input
+                className="text-gray-700"
+                value={landingDialog.mapsUrl}
+                onChange={(e) =>
+                  setLandingDialog((prev) => ({
+                    ...prev,
+                    mapsUrl: e.target.value,
+                  }))
+                }
+                placeholder="https://maps.app.goo.gl/..."
+              />
+              <p className="text-xs text-gray-500">
+                Genera el botón &quot;Cómo llegar&quot;. En Google Maps: busca el
+                lugar → Compartir → Copiar vínculo.
+              </p>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() =>
+                setLandingDialog((prev) => ({ ...prev, open: false }))
+              }
+            >
+              Cancelar
+            </Button>
+            <Button
+              disabled={
+                !landingDialog.store || landingSaving[landingDialog.store.id]
+              }
+              onClick={async () => {
+                if (!landingDialog.store) return;
+                await updateLandingFields(landingDialog.store.id, {
+                  landing_location: landingDialog.location.trim(),
+                  landing_maps_url: landingDialog.mapsUrl.trim(),
+                });
+                setLandingDialog((prev) => ({ ...prev, open: false }));
+                toast.success("Ubicación guardada");
+              }}
+            >
+              Guardar
             </Button>
           </DialogFooter>
         </DialogContent>

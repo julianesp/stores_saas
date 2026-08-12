@@ -216,6 +216,12 @@ app.put('/:id', async (c) => {
       'auto_reports_email',
       // API Key personal de Gemini
       'gemini_api_key',
+      // Presencia en la landing de posib.dev (gestionada por el superadmin)
+      'landing_image_url',
+      'landing_enabled',
+      'landing_profile_enabled',
+      'landing_maps_url',
+      'landing_location',
     ];
 
     const updates: string[] = [];
