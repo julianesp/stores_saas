@@ -2329,23 +2329,23 @@ export default function POSPage() {
                               </span>
                             )}
                           </div>
-                          <div className="flex items-baseline gap-2">
+                          <div className="flex items-baseline flex-wrap gap-x-2 gap-y-1">
                             {item.hasOffer && item.originalPrice && (
-                              <span className="text-base md:text-lg text-gray-400 line-through">
+                              <span className="text-xs md:text-sm text-gray-400 line-through">
                                 {formatCurrency(item.originalPrice)}
                               </span>
                             )}
                             <span
-                              className={`font-bold text-lg md:text-xl ${item.hasOffer ? "text-brand" : "text-brand"}`}
+                              className={`font-bold text-sm md:text-base ${item.hasOffer ? "text-brand" : "text-brand"}`}
                             >
                               {formatCurrency(price)}
                             </span>
-                            <span className="text-base md:text-lg text-gray-600">
+                            <span className="text-xs md:text-sm text-gray-600">
                               x {item.quantity} {unitLabel}
                               {item.quantity > 1 ? "s" : ""}
                             </span>
                             <span
-                              className={`ml-auto font-bold text-lg md:text-xl ${item.hasOffer ? "text-brand" : "text-brand"}`}
+                              className={`ml-auto font-bold text-sm md:text-base whitespace-nowrap ${item.hasOffer ? "text-brand" : "text-brand"}`}
                             >
                               = {formatCurrency(price * item.quantity)}
                             </span>
