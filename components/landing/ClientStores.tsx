@@ -1,48 +1,13 @@
-'use client';
-
-import { useEffect, useState } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { Store, MapPin } from 'lucide-react';
-
-type ClientStore = {
-  id: string;
-  name: string;
-  /** Ubicación de la tienda (Pueblo, Ciudad/Departamento). */
-  location: string;
-  /** URL de la foto de la tienda. Vacío muestra el placeholder. */
-  image?: string;
-  /** Slug del perfil público. Vacío si el perfil no está habilitado. */
-  slug?: string;
-};
+import { getVisibleLandingStores } from '@/lib/landing-stores';
 
 export default function ClientStores() {
-  const [stores, setStores] = useState<ClientStore[]>([]);
-  const [loaded, setLoaded] = useState(false);
+  const stores = getVisibleLandingStores();
 
-  useEffect(() => {
-    let cancelled = false;
-
-    fetch('/api/stats/client-stores')
-      .then((res) => res.json())
-      .then((data) => {
-        if (cancelled) return;
-        setStores(Array.isArray(data.stores) ? data.stores : []);
-      })
-      .catch(() => {
-        if (!cancelled) setStores([]);
-      })
-      .finally(() => {
-        if (!cancelled) setLoaded(true);
-      });
-
-    return () => {
-      cancelled = true;
-    };
-  }, []);
-
-  // Mientras carga o si no hay tiendas, no renderizamos la sección.
-  if (!loaded || stores.length === 0) {
+  // Si no hay tiendas visibles, no renderizamos la sección.
+  if (stores.length === 0) {
     return null;
   }
 
@@ -85,11 +50,10 @@ export default function ClientStores() {
               </>
             );
 
-            // Si el perfil público está habilitado (hay slug), la tarjeta enlaza
-            // a /tienda/[slug]; si no, es una tarjeta estática.
-            return store.slug ? (
+            // La tarjeta enlaza al perfil solo si el perfil público está habilitado.
+            return store.profileEnabled ? (
               <Link
-                key={store.id}
+                key={store.slug}
                 href={`/tienda/${store.slug}`}
                 className="flex flex-col items-center text-center w-40 sm:w-48 transition-transform hover:scale-[1.03]"
               >
@@ -97,7 +61,7 @@ export default function ClientStores() {
               </Link>
             ) : (
               <div
-                key={store.id}
+                key={store.slug}
                 className="flex flex-col items-center text-center w-40 sm:w-48"
               >
                 {card}

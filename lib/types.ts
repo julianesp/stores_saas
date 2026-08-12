@@ -57,13 +57,6 @@ export interface UserProfile {
   store_min_order?: number; // Pedido mínimo
   store_nequi_number?: string; // Número de Nequi o cuenta bancaria
 
-  // Presencia en la landing de posib.dev (gestionada por el superadmin)
-  landing_image_url?: string; // Foto de la tienda mostrada en la landing/perfil
-  landing_enabled?: boolean; // Mostrar la tienda como tarjeta en la landing
-  landing_profile_enabled?: boolean; // Habilitar el perfil público /tienda/[slug]
-  landing_maps_url?: string; // Enlace de Google Maps para "Cómo llegar"
-  landing_location?: string; // Ubicación corta (Pueblo, Departamento)
-
   // Configuración de pagos con ePayco (tienda online)
   epayco_public_key?: string; // Public Key de ePayco del comercio
   epayco_private_key?: string; // Private Key de ePayco del comercio (sensible)

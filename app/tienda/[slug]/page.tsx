@@ -12,38 +12,10 @@ import {
   Facebook,
   Instagram,
 } from 'lucide-react';
-
-const API_BASE_URL =
-  process.env.NEXT_PUBLIC_CLOUDFLARE_API_URL ||
-  'https://tienda-pos-api.julii1295.workers.dev';
-
-interface StoreProfile {
-  name: string;
-  location: string;
-  image: string;
-  description: string;
-  address: string;
-  phone: string;
-  whatsapp: string;
-  email: string;
-  facebook: string;
-  instagram: string;
-  mapsUrl: string;
-}
-
-async function getProfile(slug: string): Promise<StoreProfile | null> {
-  try {
-    const res = await fetch(
-      `${API_BASE_URL}/stats/client-stores/${encodeURIComponent(slug)}`,
-      { cache: 'no-store' }
-    );
-    if (!res.ok) return null;
-    const data = await res.json();
-    return data.success ? (data.store as StoreProfile) : null;
-  } catch {
-    return null;
-  }
-}
+import {
+  getLandingStoreProfile,
+  landingStores,
+} from '@/lib/landing-stores';
 
 /** Normaliza un WhatsApp colombiano a enlace wa.me. */
 function whatsappLink(raw: string): string {
@@ -52,13 +24,20 @@ function whatsappLink(raw: string): string {
   return `https://wa.me/${withCountry}`;
 }
 
+// Pre-genera las rutas de los perfiles habilitados en tiempo de build.
+export function generateStaticParams() {
+  return landingStores
+    .filter((s) => s.enabled && s.profileEnabled)
+    .map((s) => ({ slug: s.slug }));
+}
+
 export async function generateMetadata({
   params,
 }: {
   params: Promise<{ slug: string }>;
 }): Promise<Metadata> {
   const { slug } = await params;
-  const profile = await getProfile(slug);
+  const profile = getLandingStoreProfile(slug);
 
   if (!profile) {
     return { title: 'Tienda no encontrada · posib.dev' };
@@ -80,7 +59,7 @@ export default async function StoreProfilePage({
   params: Promise<{ slug: string }>;
 }) {
   const { slug } = await params;
-  const profile = await getProfile(slug);
+  const profile = getLandingStoreProfile(slug);
 
   if (!profile) {
     notFound();
