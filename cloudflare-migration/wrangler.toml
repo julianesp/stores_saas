@@ -47,11 +47,16 @@ bucket_name = "posib-facturas"
 
 # Cron Triggers para automatización de emails
 # Docs: https://developers.cloudflare.com/workers/configuration/cron-triggers/
+#
+# Un único cron que dispara CADA HORA. El handler `scheduled` en src/index.ts
+# decide qué tarea ejecutar según la hora (UTC):
+#   - Cada hora:        reportes diarios + carritos abandonados
+#   - Horas pares:      alertas de stock (hour % 2 === 0)
+#   - 8 AM UTC:         recordatorios de deudas
+#   - 9 AM UTC:         recordatorios de suscripción
+# Consolidado de 5 crons a 1 para respetar el límite de 5 crons/cuenta del plan
+# gratuito de Cloudflare Workers (compartido entre todos los Workers).
 [triggers]
 crons = [
-  "0 9 * * *",    # Recordatorios de suscripción - 9 AM diario
-  "0 */1 * * *",  # Reportes diarios - cada hora (verifica preferencias)
-  "0 */2 * * *",  # Alertas de stock - cada 2 horas
-  "0 * * * *",    # Carritos abandonados - cada hora
-  "0 8 * * *"     # Recordatorios de deudas - 8 AM diario
+  "0 * * * *"     # Cada hora en punto — el código reparte las tareas por hora
 ]
