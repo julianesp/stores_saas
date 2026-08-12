@@ -853,3 +853,46 @@ export async function saveMyPosReview(
 export async function deleteMyPosReview(getToken: GetTokenFn): Promise<void> {
   return fetchAPI<void>('/api/pos-reviews/me', getToken, { method: 'DELETE' });
 }
+
+export interface AdminPosReview extends PosReview {
+  userProfileId: string;
+}
+
+/** (Superadmin) Lista todas las reseñas para moderación. */
+export async function getAllPosReviews(
+  getToken: GetTokenFn
+): Promise<AdminPosReview[]> {
+  return fetchAPI<AdminPosReview[]>(
+    '/api/pos-reviews/admin/all',
+    getToken,
+    {},
+    true, // omitir X-Tenant-ID: operación global de superadmin
+  );
+}
+
+/** (Superadmin) Aprueba o rechaza una reseña. */
+export async function moderatePosReview(
+  userProfileId: string,
+  isApproved: boolean,
+  getToken: GetTokenFn,
+): Promise<void> {
+  return fetchAPI<void>(
+    `/api/pos-reviews/admin/${userProfileId}`,
+    getToken,
+    { method: 'PUT', body: JSON.stringify({ isApproved }) },
+    true,
+  );
+}
+
+/** (Superadmin) Elimina cualquier reseña. */
+export async function deletePosReviewAsAdmin(
+  userProfileId: string,
+  getToken: GetTokenFn,
+): Promise<void> {
+  return fetchAPI<void>(
+    `/api/pos-reviews/admin/${userProfileId}`,
+    getToken,
+    { method: 'DELETE' },
+    true,
+  );
+}

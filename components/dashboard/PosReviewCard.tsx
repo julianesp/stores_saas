@@ -60,7 +60,9 @@ export default function PosReviewCard() {
       await saveMyPosReview({ rating, comment: comment.trim() }, getToken);
       setAlreadyReviewed(true);
       toast.success(
-        alreadyReviewed ? "¡Reseña actualizada!" : "¡Gracias por tu reseña!",
+        alreadyReviewed
+          ? "¡Reseña actualizada! Se revisará antes de publicarse."
+          : "¡Gracias por tu reseña! La revisaremos antes de publicarla.",
       );
     } catch (error) {
       console.error("Error guardando reseña:", error);
@@ -83,7 +85,8 @@ export default function PosReviewCard() {
         </CardTitle>
         <p className="text-sm text-gray-600">
           Cuéntanos tu experiencia con posib.dev. Tu calificación ayuda a otras
-          tiendas a conocer el sistema y se muestra en nuestra página principal.
+          tiendas a conocer el sistema. Las reseñas se revisan antes de aparecer
+          en nuestra página principal.
         </p>
       </CardHeader>
       <CardContent>

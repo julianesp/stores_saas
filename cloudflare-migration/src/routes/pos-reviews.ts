@@ -122,4 +122,100 @@ app.delete('/me', async (c) => {
   return c.json<APIResponse<null>>({ success: true, data: null });
 });
 
+// ============================================
+// Moderación (solo superadmin)
+// ============================================
+
+/** Verifica que el usuario autenticado sea superadmin. */
+async function ensureSuperAdmin(c: any): Promise<Response | null> {
+  const tenant: Tenant = c.get('tenant');
+  const clerkUserId = (tenant as any).clerk_user_id;
+
+  const profile = await c.env.DB.prepare(
+    'SELECT is_superadmin FROM user_profiles WHERE clerk_user_id = ?'
+  )
+    .bind(clerkUserId)
+    .first<{ is_superadmin: number }>();
+
+  if (!profile?.is_superadmin) {
+    return c.json<APIResponse<null>>(
+      { success: false, error: 'No tienes permisos para moderar reseñas', data: null },
+      403
+    );
+  }
+  return null;
+}
+
+/**
+ * GET /api/pos-reviews/admin/all
+ * Lista todas las reseñas (aprobadas y pendientes) para moderación.
+ */
+app.get('/admin/all', async (c) => {
+  const denied = await ensureSuperAdmin(c);
+  if (denied) return denied;
+
+  const result = await c.env.DB.prepare(
+    'SELECT * FROM pos_reviews ORDER BY is_approved ASC, updated_at DESC'
+  ).all<ReviewRow>();
+
+  const reviews = (result.results || []).map((r) => ({
+    userProfileId: r.user_profile_id,
+    ...serialize(r),
+  }));
+
+  return c.json<APIResponse<typeof reviews>>({ success: true, data: reviews });
+});
+
+/**
+ * PUT /api/pos-reviews/admin/:userProfileId
+ * Aprueba o rechaza una reseña. Body: { isApproved: boolean }.
+ */
+app.put('/admin/:userProfileId', async (c) => {
+  const denied = await ensureSuperAdmin(c);
+  if (denied) return denied;
+
+  const userProfileId = c.req.param('userProfileId');
+  const body = await c.req.json<{ isApproved?: boolean }>();
+
+  const result = await c.env.DB.prepare(
+    'UPDATE pos_reviews SET is_approved = ?, updated_at = ? WHERE user_profile_id = ?'
+  )
+    .bind(body.isApproved ? 1 : 0, new Date().toISOString(), userProfileId)
+    .run();
+
+  if (!result.meta.changes) {
+    return c.json<APIResponse<null>>(
+      { success: false, error: 'Reseña no encontrada', data: null },
+      404
+    );
+  }
+
+  return c.json<APIResponse<null>>({ success: true, data: null });
+});
+
+/**
+ * DELETE /api/pos-reviews/admin/:userProfileId
+ * Elimina cualquier reseña (moderación).
+ */
+app.delete('/admin/:userProfileId', async (c) => {
+  const denied = await ensureSuperAdmin(c);
+  if (denied) return denied;
+
+  const userProfileId = c.req.param('userProfileId');
+  const result = await c.env.DB.prepare(
+    'DELETE FROM pos_reviews WHERE user_profile_id = ?'
+  )
+    .bind(userProfileId)
+    .run();
+
+  if (!result.meta.changes) {
+    return c.json<APIResponse<null>>(
+      { success: false, error: 'Reseña no encontrada', data: null },
+      404
+    );
+  }
+
+  return c.json<APIResponse<null>>({ success: true, data: null });
+});
+
 export default app;
