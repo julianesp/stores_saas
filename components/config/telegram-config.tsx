@@ -50,8 +50,9 @@ export function TelegramConfig() {
       setLoading(true);
       const token = await getToken();
       if (!token) return;
-      // GET /api/user-profiles/ devuelve el perfil del owner autenticado
-      const res = await fetch(`${WORKER_URL}/api/user-profiles/`, {
+      // GET /api/user-profiles (sin barra final) devuelve el perfil del owner.
+      // OJO: con barra final Hono responde 404 (son rutas distintas).
+      const res = await fetch(`${WORKER_URL}/api/user-profiles`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       if (res.ok) {
