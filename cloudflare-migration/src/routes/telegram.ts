@@ -229,4 +229,155 @@ app.post('/expiration-alerts', async (c) => {
   }
 });
 
+/**
+ * Formatea un número como pesos colombianos sin decimales (ej. "$1.234.500").
+ */
+function formatCOP(n: number): string {
+  return '$' + Math.round(n || 0).toLocaleString('es-CO');
+}
+
+/**
+ * CRON: resumen diario por Telegram. Agrupa en UN solo mensaje por tenant:
+ *  - Ventas del día anterior (total y # de órdenes) + top productos
+ *  - Productos con stock bajo / agotados
+ *  - Fiado por cobrar (clientes con deuda y total)
+ *  - Aviso de suscripción próxima a vencer
+ *
+ * Se envía una vez al día. Se omiten las secciones sin datos; si no hay nada
+ * relevante, no se envía mensaje (para no molestar en días tranquilos).
+ */
+app.post('/daily-summary', async (c) => {
+  const db = c.env.DB;
+  const botToken = c.env.TELEGRAM_BOT_TOKEN;
+
+  if (c.env.CRON_SECRET) {
+    const provided = c.req.header('X-Cron-Secret');
+    if (provided !== c.env.CRON_SECRET) {
+      return c.json({ success: false, error: 'Unauthorized' }, 401);
+    }
+  }
+  if (!botToken) {
+    return c.json({ success: false, error: 'TELEGRAM_BOT_TOKEN not configured' }, 200);
+  }
+
+  try {
+    const tenants = await db
+      .prepare(
+        `SELECT id, telegram_chat_id, subscription_status, trial_end_date, next_billing_date
+         FROM user_profiles
+         WHERE telegram_chat_id IS NOT NULL AND telegram_enabled = 1`
+      )
+      .all();
+
+    // Fecha de "ayer" (el resumen corre en la mañana sobre el día que cerró)
+    const yesterday = new Date();
+    yesterday.setDate(yesterday.getDate() - 1);
+    const yesterdayStr = yesterday.toISOString().split('T')[0];
+
+    let messagesSent = 0;
+
+    for (const tenant of (tenants.results as any[]) || []) {
+      const sections: string[] = [];
+
+      // 1) Ventas del día anterior + top productos
+      const salesData = await db
+        .prepare(
+          `SELECT COUNT(*) as total_sales, COALESCE(SUM(total), 0) as total_revenue
+           FROM sales
+           WHERE tenant_id = ? AND DATE(created_at) = ? AND status = 'completada'`
+        )
+        .bind(tenant.id, yesterdayStr)
+        .first<any>();
+
+      if (salesData && salesData.total_sales > 0) {
+        const top = await db
+          .prepare(
+            `SELECT p.name, SUM(si.quantity) as qty
+             FROM sale_items si
+             JOIN sales s ON si.sale_id = s.id
+             JOIN products p ON si.product_id = p.id
+             WHERE s.tenant_id = ? AND DATE(s.created_at) = ? AND s.status = 'completada'
+             GROUP BY p.id, p.name
+             ORDER BY qty DESC
+             LIMIT 3`
+          )
+          .bind(tenant.id, yesterdayStr)
+          .all();
+
+        let ventas = `📊 <b>Ventas de ayer</b>\n${formatCOP(salesData.total_revenue)} en ${salesData.total_sales} ${salesData.total_sales === 1 ? 'venta' : 'ventas'}`;
+        const topList = (top.results as any[]) || [];
+        if (topList.length > 0) {
+          ventas +=
+            '\nMás vendidos: ' +
+            topList.map((p) => `${escapeTelegramHtml(p.name)} (${p.qty})`).join(', ');
+        }
+        sections.push(ventas);
+      }
+
+      // 2) Stock bajo / agotado
+      const lowStock = await db
+        .prepare(
+          `SELECT name, stock FROM products
+           WHERE tenant_id = ? AND stock <= min_stock
+           ORDER BY stock ASC LIMIT 8`
+        )
+        .bind(tenant.id)
+        .all();
+      const lowList = (lowStock.results as any[]) || [];
+      if (lowList.length > 0) {
+        const lines = lowList.map((p) => {
+          const estado = p.stock <= 0 ? 'agotado' : `quedan ${p.stock}`;
+          return `• ${escapeTelegramHtml(p.name)} — ${estado}`;
+        });
+        sections.push(`📦 <b>Stock por reponer</b>\n${lines.join('\n')}`);
+      }
+
+      // 3) Fiado por cobrar
+      const debt = await db
+        .prepare(
+          `SELECT COUNT(*) as num, COALESCE(SUM(current_debt), 0) as total
+           FROM customers
+           WHERE tenant_id = ? AND current_debt > 0`
+        )
+        .bind(tenant.id)
+        .first<any>();
+      if (debt && debt.num > 0) {
+        sections.push(
+          `💰 <b>Fiado por cobrar</b>\nTe deben ${formatCOP(debt.total)} entre ${debt.num} ${debt.num === 1 ? 'cliente' : 'clientes'}`
+        );
+      }
+
+      // 4) Suscripción próxima a vencer (≤5 días)
+      const refDate =
+        tenant.subscription_status === 'trial'
+          ? tenant.trial_end_date
+          : tenant.next_billing_date;
+      if (refDate) {
+        const days = daysUntil(refDate);
+        if (days >= 0 && days <= 5) {
+          const cuando = days === 0 ? 'hoy' : days === 1 ? 'mañana' : `en ${days} días`;
+          sections.push(
+            `⏰ <b>Tu plan vence ${cuando}</b>\nRenueva en posib.dev → Suscripción para no perder el servicio.`
+          );
+        }
+      }
+
+      // Si no hay nada que reportar, no enviamos mensaje ese día
+      if (sections.length === 0) continue;
+
+      const message = `☀️ <b>Resumen de tu tienda</b>\n\n${sections.join('\n\n')}`;
+      const result = await sendTelegramMessage(String(tenant.telegram_chat_id), message, botToken);
+      if (result.success) messagesSent++;
+    }
+
+    return c.json({ success: true, messagesSent });
+  } catch (error) {
+    console.error('Error en daily-summary de Telegram:', error);
+    return c.json(
+      { success: false, error: error instanceof Error ? error.message : 'Unknown error' },
+      200
+    );
+  }
+});
+
 export default app;

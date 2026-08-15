@@ -420,13 +420,19 @@ async function scheduled(event: ScheduledEvent, env: Env, ctx: ExecutionContext)
     console.log('Debt reminders result:', debtResult);
   }
 
-  // A las 13h UTC (8 AM Colombia) - Alertas de vencimiento por Telegram.
-  // Solo notifica productos que entran por primera vez en el umbral, así que
-  // correr una vez al día es suficiente y no genera avisos repetidos.
+  // A las 13h UTC (8 AM Colombia) - Alertas por Telegram.
   if (hour === 13) {
+    // Vencimiento: solo notifica productos que entran por primera vez en el
+    // umbral, así que correr una vez al día no genera avisos repetidos.
     console.log('Running Telegram expiration alerts...');
     const telegramResult = await makeRequest('api/telegram/expiration-alerts');
     console.log('Telegram expiration alerts result:', telegramResult);
+
+    // Resumen diario: ventas de ayer, stock por reponer, fiado por cobrar y
+    // aviso de suscripción, agrupados en un solo mensaje por tenant.
+    console.log('Running Telegram daily summary...');
+    const summaryResult = await makeRequest('api/telegram/daily-summary');
+    console.log('Telegram daily summary result:', summaryResult);
   }
 
   console.log('Cron jobs completed');
