@@ -3,7 +3,7 @@
  * Funciones para manejo de créditos de clientes
  */
 
-import { Sale, Customer, CreditPayment, CreditPaymentWithRelations, SaleWithRelations } from './types';
+import { Sale, Customer } from './types';
 import {
   getCustomers,
   updateCustomer,
