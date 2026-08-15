@@ -2,20 +2,26 @@
 
 import { useState, useEffect } from 'react';
 import { useAuth } from '@clerk/nextjs';
-import { Tag, Plus, AlertTriangle } from 'lucide-react';
+import { AlertTriangle, Sparkles } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
-import { getProducts, createProduct, getCategories, createCategory, createOffer } from '@/lib/cloudflare-api';
+import { getProducts, getCategories, createOffer } from '@/lib/cloudflare-api';
 import { ProductWithRelations, Product, Category } from '@/lib/types';
 import { formatCurrency } from '@/lib/utils';
 import { toast } from 'sonner';
-import { differenceInDays } from 'date-fns';
+import {
+  getExpirationInfo,
+  createAutoExpirationOffers,
+  AUTO_OFFER_DISCOUNT,
+  EXPIRATION_WARNING_DAYS,
+} from '@/lib/expiration-helpers';
 
 export default function OffersPage() {
   const { getToken } = useAuth();
 
   const [products, setProducts] = useState<ProductWithRelations[]>([]);
   const [expiringProducts, setExpiringProducts] = useState<ProductWithRelations[]>([]);
+  const [autoRunning, setAutoRunning] = useState(false);
 
   useEffect(() => {
     fetchProducts();
@@ -47,12 +53,10 @@ export default function OffersPage() {
 
       setProducts(productsWithExpiration);
 
-      // Productos que vencen en menos de 15 días
-      const expiring = productsWithExpiration.filter(p => {
-        if (!p.expiration_date) return false;
-        const days = differenceInDays(new Date(p.expiration_date), new Date());
-        return days <= 15 && days >= 0;
-      });
+      // Productos próximos a vencer o ya vencidos (según el umbral central)
+      const expiring = productsWithExpiration.filter(
+        p => getExpirationInfo(p).needsAttention
+      );
       setExpiringProducts(expiring);
     } catch (error) {
       console.error('Error fetching products:', error);
@@ -83,6 +87,30 @@ export default function OffersPage() {
     }
   };
 
+  const handleAutoOffers = async () => {
+    try {
+      setAutoRunning(true);
+      const result = await createAutoExpirationOffers(getToken);
+
+      if (result.created === 0 && result.skipped === 0) {
+        toast.info('No hay productos próximos a vencer para poner en promoción');
+      } else if (result.created === 0) {
+        toast.info('Todos los productos próximos a vencer ya tienen promoción activa');
+      } else {
+        toast.success(
+          `${result.created} producto${result.created === 1 ? '' : 's'} puesto${result.created === 1 ? '' : 's'} en promoción automáticamente (${AUTO_OFFER_DISCOUNT}% OFF)`
+        );
+      }
+
+      fetchProducts();
+    } catch (error) {
+      console.error('Error creando ofertas automáticas:', error);
+      toast.error(error instanceof Error ? error.message : 'Error al crear ofertas automáticas');
+    } finally {
+      setAutoRunning(false);
+    }
+  };
+
   return (
     <div className="space-y-6">
       <div>
@@ -93,12 +121,32 @@ export default function OffersPage() {
       {/* Productos próximos a vencer */}
       <Card>
         <CardContent className="pt-6">
-          <div className="flex items-center gap-2 mb-4">
-            <AlertTriangle className="h-5 w-5 text-orange-600" />
-            <h2 className="text-lg font-semibold">
-              Productos Próximos a Vencer ({expiringProducts.length})
-            </h2>
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4">
+            <div className="flex items-center gap-2">
+              <AlertTriangle className="h-5 w-5 text-orange-600" />
+              <h2 className="text-lg font-semibold">
+                Productos Próximos a Vencer ({expiringProducts.length})
+              </h2>
+            </div>
+            {expiringProducts.length > 0 && (
+              <Button
+                onClick={handleAutoOffers}
+                disabled={autoRunning}
+                className="gap-2 bg-brand hover:bg-brand-hover text-white"
+              >
+                <Sparkles className="h-4 w-4" />
+                {autoRunning
+                  ? 'Creando promociones...'
+                  : `Poner todo en promoción (${AUTO_OFFER_DISCOUNT}% OFF)`}
+              </Button>
+            )}
           </div>
+
+          <p className="text-xs text-gray-500 mb-4">
+            Se consideran los productos que vencen dentro de {EXPIRATION_WARNING_DAYS} días. La
+            promoción automática crea una oferta para cada producto que aún no tenga una, sin
+            duplicar las existentes.
+          </p>
 
           {expiringProducts.length === 0 ? (
             <p className="text-center py-8 text-gray-500">
@@ -107,20 +155,23 @@ export default function OffersPage() {
           ) : (
             <div className="space-y-3">
               {expiringProducts.map(product => {
-                const daysToExpire = differenceInDays(
-                  new Date(product.expiration_date!),
-                  new Date()
-                );
+                const expInfo = getExpirationInfo(product);
+                const cardBg =
+                  expInfo.severity === 'expired'
+                    ? 'bg-red-50 border-red-200'
+                    : expInfo.severity === 'critical'
+                      ? 'bg-orange-50 border-orange-200'
+                      : 'bg-yellow-50 border-yellow-200';
 
                 return (
                   <div
                     key={product.id}
-                    className="flex items-center justify-between p-4 border rounded-lg bg-orange-50"
+                    className={`flex items-center justify-between p-4 border rounded-lg ${cardBg}`}
                   >
                     <div className="flex-1">
                       <h3 className="font-medium">{product.name}</h3>
                       <p className="text-sm text-gray-600">
-                        Vence en {daysToExpire} días - {formatCurrency(product.sale_price)}
+                        {expInfo.label} - {formatCurrency(product.sale_price)}
                       </p>
                       <p className="text-xs text-gray-500">Disponible: {product.stock} unidades</p>
                     </div>

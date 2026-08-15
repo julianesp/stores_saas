@@ -19,8 +19,10 @@ import {
   Edit,
   Plus,
   Minus,
+  CalendarClock,
 } from "lucide-react";
 import { formatCurrency } from "@/lib/utils";
+import { getExpirationInfo, type ExpirationSeverity } from "@/lib/expiration-helpers";
 import { toast } from "sonner";
 import {
   Dialog,
@@ -41,6 +43,7 @@ function InventoryContent() {
   const [searchTerm, setSearchTerm] = useState("");
   const [filterCategory, setFilterCategory] = useState("");
   const [showLowStockOnly, setShowLowStockOnly] = useState(false);
+  const [showExpiringOnly, setShowExpiringOnly] = useState(false);
 
   // Estados para el modal de edición
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
@@ -84,11 +87,16 @@ function InventoryContent() {
       !filterCategory || product.category_id === filterCategory;
     const matchesLowStock =
       !showLowStockOnly || product.stock <= product.min_stock;
-    return matchesSearch && matchesCategory && matchesLowStock;
+    const matchesExpiring =
+      !showExpiringOnly || getExpirationInfo(product).needsAttention;
+    return matchesSearch && matchesCategory && matchesLowStock && matchesExpiring;
   });
 
   const lowStockProducts = filteredProducts.filter(
     (p) => p.stock <= p.min_stock
+  );
+  const expiringProducts = filteredProducts.filter(
+    (p) => getExpirationInfo(p).needsAttention
   );
   const totalValue = filteredProducts.reduce(
     (sum, p) => sum + p.stock * p.cost_price,
@@ -137,6 +145,20 @@ function InventoryContent() {
     setStockAdjustment(stockAdjustment + amount);
   };
 
+  // Clases del badge de vencimiento según severidad
+  const expirationBadgeClass = (severity: ExpirationSeverity): string => {
+    switch (severity) {
+      case "expired":
+        return "bg-red-100 text-red-800";
+      case "critical":
+        return "bg-orange-100 text-orange-800";
+      case "warning":
+        return "bg-yellow-100 text-yellow-800";
+      default:
+        return "bg-gray-100 text-gray-700";
+    }
+  };
+
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
@@ -155,7 +177,7 @@ function InventoryContent() {
       </div>
 
       {/* Estadísticas */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">
@@ -192,6 +214,19 @@ function InventoryContent() {
               {lowStockProducts.length}
             </div>
             <p className="text-xs text-gray-500">productos con cantidad baja</p>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Por Vencer</CardTitle>
+            <CalendarClock className="h-4 w-4 text-yellow-600" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold text-yellow-600">
+              {expiringProducts.length}
+            </div>
+            <p className="text-xs text-gray-500">productos próximos a vencer</p>
           </CardContent>
         </Card>
       </div>
@@ -241,6 +276,24 @@ function InventoryContent() {
                 Mostrar solo productos con cantidad baja
               </label>
             </div>
+
+            {/* Filtro de productos por vencer */}
+            <div className="flex items-center gap-2">
+              <input
+                type="checkbox"
+                id="expiringFilter"
+                checked={showExpiringOnly}
+                onChange={(e) => setShowExpiringOnly(e.target.checked)}
+                className="h-4 w-4 rounded border-gray-300 text-yellow-600 focus:ring-yellow-500"
+              />
+              <label
+                htmlFor="expiringFilter"
+                className="text-sm font-medium flex items-center gap-2"
+              >
+                <CalendarClock className="h-4 w-4 text-yellow-600" />
+                Mostrar solo productos próximos a vencer
+              </label>
+            </div>
           </div>
         </CardContent>
       </Card>
@@ -279,6 +332,7 @@ function InventoryContent() {
                     <th className="text-right p-4 font-medium">Venta</th>
                     <th className="text-right p-4 font-medium">Valor Total</th>
                     <th className="text-center p-4 font-medium">Estado</th>
+                    <th className="text-center p-4 font-medium">Vencimiento</th>
                     <th className="text-center p-4 font-medium">Acciones</th>
                   </tr>
                 </thead>
@@ -286,6 +340,7 @@ function InventoryContent() {
                   {filteredProducts.map((product) => {
                     const isLowStock = product.stock <= product.min_stock;
                     const totalValue = product.stock * product.cost_price;
+                    const expInfo = getExpirationInfo(product);
 
                     return (
                       <tr
@@ -333,6 +388,24 @@ function InventoryContent() {
                           ) : (
                             <span className="inline-flex px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800">
                               Normal
+                            </span>
+                          )}
+                        </td>
+                        <td className="p-4 text-center">
+                          {expInfo.severity === "none" ? (
+                            <span className="text-xs text-gray-400">—</span>
+                          ) : expInfo.severity === "ok" ? (
+                            <span className="text-xs text-gray-500">
+                              {expInfo.label}
+                            </span>
+                          ) : (
+                            <span
+                              className={`inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium ${expirationBadgeClass(
+                                expInfo.severity
+                              )}`}
+                            >
+                              <CalendarClock className="h-3 w-3" />
+                              {expInfo.label}
                             </span>
                           )}
                         </td>
