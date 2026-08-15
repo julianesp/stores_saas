@@ -25,12 +25,18 @@ CREATE TABLE IF NOT EXISTS user_profiles (
   wompi_customer_id TEXT,
   plan_id TEXT,
 
+  -- Telegram (avisos de productos próximos a vencer)
+  telegram_chat_id TEXT,
+  telegram_link_code TEXT,
+  telegram_enabled INTEGER DEFAULT 1,
+
   created_at TEXT NOT NULL DEFAULT (datetime('now')),
   updated_at TEXT NOT NULL DEFAULT (datetime('now'))
 );
 
 CREATE INDEX idx_user_profiles_clerk ON user_profiles(clerk_user_id);
 CREATE INDEX idx_user_profiles_email ON user_profiles(email);
+CREATE INDEX idx_user_profiles_telegram_code ON user_profiles(telegram_link_code);
 
 -- Categories
 CREATE TABLE IF NOT EXISTS categories (
@@ -508,3 +514,21 @@ LEFT JOIN categories c ON p.category_id = c.id AND p.tenant_id = c.tenant_id
 LEFT JOIN suppliers s ON p.supplier_id = s.id AND p.tenant_id = s.tenant_id
 WHERE p.stock <= p.min_stock
 ORDER BY (p.stock - p.min_stock) ASC;
+
+-- ============================================================
+-- Telegram: registro de productos ya notificados por vencimiento
+-- (avisar solo cuando el producto entra por primera vez en el umbral)
+-- ============================================================
+CREATE TABLE IF NOT EXISTS expiration_notifications (
+  id TEXT PRIMARY KEY,
+  tenant_id TEXT NOT NULL,       -- ⬅️ AISLAMIENTO POR TENANT
+  product_id TEXT NOT NULL,
+  expiration_date TEXT NOT NULL,
+  notified_at TEXT NOT NULL DEFAULT (datetime('now')),
+
+  FOREIGN KEY (tenant_id) REFERENCES user_profiles(id) ON DELETE CASCADE,
+  FOREIGN KEY (product_id) REFERENCES products(id) ON DELETE CASCADE
+);
+
+CREATE UNIQUE INDEX IF NOT EXISTS idx_expiration_notif_product ON expiration_notifications(product_id);
+CREATE INDEX IF NOT EXISTS idx_expiration_notif_tenant ON expiration_notifications(tenant_id);

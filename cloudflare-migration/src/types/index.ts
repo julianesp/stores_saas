@@ -22,6 +22,12 @@ export interface Env {
   // CRON secret for scheduled tasks
   CRON_SECRET?: string;
 
+  // Telegram bot (avisos de productos próximos a vencer)
+  TELEGRAM_BOT_TOKEN?: string;
+  // Secret token que Telegram reenvía en el header del webhook (opcional pero
+  // recomendado): se configura al registrar el webhook con setWebhook.
+  TELEGRAM_WEBHOOK_SECRET?: string;
+
   // D1 shared database
   DB: D1Database;
 

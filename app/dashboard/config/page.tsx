@@ -32,6 +32,7 @@ import { formatCurrency } from "@/lib/utils";
 import { toast } from "sonner";
 import { AutoReportsConfig } from "@/components/config/auto-reports-config";
 import { PaymentQrConfig } from "@/components/config/payment-qr-config";
+import { TelegramConfig } from "@/components/config/telegram-config";
 import PosReviewCard from "@/components/dashboard/PosReviewCard";
 import { landingConfig } from "@/lib/landing-config";
 import { useAuth } from "@clerk/nextjs";
@@ -280,6 +281,9 @@ export default function ConfigPage() {
 
       {/* QR de pagos para cobrar en el POS */}
       <PaymentQrConfig />
+
+      {/* Alertas por Telegram (productos próximos a vencer) */}
+      <TelegramConfig />
 
       {/* Estado del Sistema - Temporalmente oculto */}
       <Card>

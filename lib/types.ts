@@ -66,6 +66,11 @@ export interface UserProfile {
   // API Key personal de Gemini para el addon de IA
   gemini_api_key?: string;
 
+  // Telegram: avisos de productos próximos a vencer
+  telegram_chat_id?: string; // Chat vinculado (se llena cuando el tendero completa el /start)
+  telegram_link_code?: string; // Código temporal para vincular el bot
+  telegram_enabled?: boolean; // Interruptor de los avisos
+
   created_at: string;
   updated_at: string;
 }

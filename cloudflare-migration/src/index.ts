@@ -37,6 +37,7 @@ import userStoresRoutes from './routes/user-stores';
 import facturasRoutes from './routes/facturas';
 import marketTrendsRoutes from './routes/market-trends';
 import posReviewsRoutes from './routes/pos-reviews';
+import telegramRoutes from './routes/telegram';
 
 const app = new Hono<{ Bindings: Env }>();
 
@@ -86,6 +87,9 @@ app.post('/api/wompi/webhook', wompiRoutes);
 
 // Subscriptions webhook (NO auth - Wompi verifica con signature)
 app.post('/api/subscriptions/webhook', subscriptionsRoutes);
+
+// Telegram webhook (NO auth - Telegram no envía JWT; se verifica su secret token)
+app.route('/api/telegram', telegramRoutes);
 
 // Storefront public API (NO auth required - endpoints públicos para tiendas online)
 app.route('/api/storefront', storefrontRoutes);
@@ -361,11 +365,17 @@ async function scheduled(event: ScheduledEvent, env: Env, ctx: ExecutionContext)
   // Helper para hacer requests internos
   const makeRequest = async (path: string) => {
     try {
+      const headers: Record<string, string> = {
+        'Content-Type': 'application/json',
+      };
+      // Rutas de cron protegidas (p. ej. Telegram) validan este secret.
+      if (env.CRON_SECRET) {
+        headers['X-Cron-Secret'] = env.CRON_SECRET;
+      }
+
       const request = new Request(`https://internal/${path}`, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers,
       });
 
       const response = await app.fetch(request, env, ctx);
@@ -408,6 +418,15 @@ async function scheduled(event: ScheduledEvent, env: Env, ctx: ExecutionContext)
     console.log('Running debt reminders...');
     const debtResult = await makeRequest('api/email/debt-reminders');
     console.log('Debt reminders result:', debtResult);
+  }
+
+  // A las 13h UTC (8 AM Colombia) - Alertas de vencimiento por Telegram.
+  // Solo notifica productos que entran por primera vez en el umbral, así que
+  // correr una vez al día es suficiente y no genera avisos repetidos.
+  if (hour === 13) {
+    console.log('Running Telegram expiration alerts...');
+    const telegramResult = await makeRequest('api/telegram/expiration-alerts');
+    console.log('Telegram expiration alerts result:', telegramResult);
   }
 
   console.log('Cron jobs completed');

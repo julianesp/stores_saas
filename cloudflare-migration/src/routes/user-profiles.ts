@@ -216,6 +216,10 @@ app.put('/:id', async (c) => {
       'auto_reports_email',
       // API Key personal de Gemini
       'gemini_api_key',
+      // Telegram (avisos de vencimiento)
+      'telegram_link_code',
+      'telegram_enabled',
+      'telegram_chat_id',
     ];
 
     const updates: string[] = [];
