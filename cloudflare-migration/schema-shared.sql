@@ -532,3 +532,24 @@ CREATE TABLE IF NOT EXISTS expiration_notifications (
 
 CREATE UNIQUE INDEX IF NOT EXISTS idx_expiration_notif_product ON expiration_notifications(product_id);
 CREATE INDEX IF NOT EXISTS idx_expiration_notif_tenant ON expiration_notifications(tenant_id);
+
+-- ============================================================
+-- Telegram: destinatarios adicionales por tienda (empleada, socios, etc.)
+-- Reciben las mismas notificaciones que el dueño, sin necesitar cuenta.
+-- ============================================================
+CREATE TABLE IF NOT EXISTS telegram_recipients (
+  id TEXT PRIMARY KEY,
+  tenant_id TEXT NOT NULL,
+  name TEXT NOT NULL,
+  chat_id TEXT,
+  link_code TEXT,
+  enabled INTEGER DEFAULT 1,
+  created_at TEXT NOT NULL DEFAULT (datetime(\"now\")),
+  updated_at TEXT NOT NULL DEFAULT (datetime(\"now\")),
+
+  FOREIGN KEY (tenant_id) REFERENCES user_profiles(id) ON DELETE CASCADE
+);
+
+CREATE INDEX IF NOT EXISTS idx_telegram_recipients_tenant ON telegram_recipients(tenant_id);
+CREATE INDEX IF NOT EXISTS idx_telegram_recipients_code ON telegram_recipients(link_code);
+CREATE INDEX IF NOT EXISTS idx_telegram_recipients_chat ON telegram_recipients(chat_id);

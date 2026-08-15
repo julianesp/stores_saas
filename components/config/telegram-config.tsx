@@ -10,9 +10,18 @@ import {
   CardDescription,
 } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
-import { Send, Copy, Check, ExternalLink } from "lucide-react";
+import { Send, Copy, Check, ExternalLink, UserPlus, Trash2, Users } from "lucide-react";
 import { toast } from "sonner";
+
+interface TelegramRecipient {
+  id: string;
+  name: string;
+  chat_id: string | null;
+  link_code: string | null;
+  enabled: number;
+}
 
 const WORKER_URL =
   process.env.NEXT_PUBLIC_WORKER_URL ||
@@ -45,6 +54,27 @@ export function TelegramConfig() {
   const [copied, setCopied] = useState(false);
   const [busy, setBusy] = useState(false);
 
+  // Destinatarios adicionales (empleada, socios, etc.)
+  const [recipients, setRecipients] = useState<TelegramRecipient[]>([]);
+  const [newName, setNewName] = useState("");
+  const [addingRecipient, setAddingRecipient] = useState(false);
+
+  const loadRecipients = useCallback(async () => {
+    try {
+      const token = await getToken();
+      if (!token) return;
+      const res = await fetch(`${WORKER_URL}/api/telegram-recipients`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setRecipients(data.data || []);
+      }
+    } catch (error) {
+      console.error("Error cargando destinatarios de Telegram:", error);
+    }
+  }, [getToken]);
+
   const loadProfile = useCallback(async () => {
     try {
       setLoading(true);
@@ -63,16 +93,76 @@ export function TelegramConfig() {
         setEnabled(profile.telegram_enabled !== 0 && profile.telegram_enabled !== false);
         setLinkCode(profile.telegram_link_code || "");
       }
+      await loadRecipients();
     } catch (error) {
       console.error("Error cargando config de Telegram:", error);
     } finally {
       setLoading(false);
     }
-  }, [getToken]);
+  }, [getToken, loadRecipients]);
 
   useEffect(() => {
     loadProfile();
   }, [loadProfile]);
+
+  // Enlace directo al bot con el código de un destinatario
+  const recipientStartLink = (code: string | null) =>
+    BOT_USERNAME && code ? `https://t.me/${BOT_USERNAME}?start=${code}` : "";
+
+  const handleAddRecipient = async () => {
+    const name = newName.trim();
+    if (!name) {
+      toast.error("Escribe un nombre para identificar a la persona");
+      return;
+    }
+    setAddingRecipient(true);
+    try {
+      const token = await getToken();
+      const res = await fetch(`${WORKER_URL}/api/telegram-recipients`, {
+        method: "POST",
+        headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+        body: JSON.stringify({ name }),
+      });
+      if (!res.ok) throw new Error("Error");
+      setNewName("");
+      await loadRecipients();
+      toast.success("Destinatario agregado. Comparte su código para conectarlo.");
+    } catch {
+      toast.error("No se pudo agregar el destinatario");
+    } finally {
+      setAddingRecipient(false);
+    }
+  };
+
+  const handleDeleteRecipient = async (id: string) => {
+    try {
+      const token = await getToken();
+      const res = await fetch(`${WORKER_URL}/api/telegram-recipients/${id}`, {
+        method: "DELETE",
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (!res.ok) throw new Error("Error");
+      await loadRecipients();
+      toast.success("Destinatario eliminado");
+    } catch {
+      toast.error("No se pudo eliminar");
+    }
+  };
+
+  const handleRegenRecipientCode = async (id: string) => {
+    try {
+      const token = await getToken();
+      const res = await fetch(`${WORKER_URL}/api/telegram-recipients/${id}/code`, {
+        method: "POST",
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (!res.ok) throw new Error("Error");
+      await loadRecipients();
+      toast.success("Código nuevo generado");
+    } catch {
+      toast.error("No se pudo generar el código");
+    }
+  };
 
   const patchProfile = async (body: Record<string, unknown>) => {
     if (!profileId) throw new Error("Perfil no cargado");
@@ -224,6 +314,122 @@ export function TelegramConfig() {
                 {busy ? "Generando..." : "Generar código de conexión"}
               </Button>
             )}
+          </div>
+        )}
+
+        {/* Destinatarios adicionales: la empleada u otras personas */}
+        {!loading && (
+          <div className="border-t pt-4 space-y-4">
+            <div className="flex items-center gap-2">
+              <Users className="h-4 w-4 text-gray-600" />
+              <h4 className="font-medium">Otras personas que reciben las alertas</h4>
+            </div>
+            <p className="text-sm text-gray-500">
+              Agrega a tu empleada u otras personas para que también reciban en su Telegram
+              el resumen diario y los avisos de vencimiento. No necesitan cuenta en posib.dev.
+            </p>
+
+            {/* Lista de destinatarios */}
+            {recipients.length > 0 && (
+              <div className="space-y-2">
+                {recipients.map((r) => {
+                  const link = recipientStartLink(r.link_code);
+                  return (
+                    <div key={r.id} className="border rounded-lg p-3">
+                      <div className="flex items-center justify-between gap-2">
+                        <div className="min-w-0">
+                          <p className="font-medium truncate">{r.name}</p>
+                          {r.chat_id ? (
+                            <p className="text-xs text-green-600 flex items-center gap-1">
+                              <Check className="h-3 w-3" /> Conectado
+                            </p>
+                          ) : (
+                            <p className="text-xs text-amber-600">Pendiente de conectar</p>
+                          )}
+                        </div>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => handleDeleteRecipient(r.id)}
+                          className="text-red-600 hover:text-red-700 hover:bg-red-50 flex-shrink-0"
+                          aria-label={`Eliminar ${r.name}`}
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </div>
+
+                      {/* Si aún no está conectado, mostrar cómo conectarlo */}
+                      {!r.chat_id && (
+                        <div className="mt-3 space-y-2">
+                          {r.link_code ? (
+                            <>
+                              <div className="flex items-center gap-2">
+                                <div className="flex-1 font-mono text-sm tracking-widest text-center bg-gray-100 rounded py-2 select-all">
+                                  {r.link_code}
+                                </div>
+                                <Button
+                                  variant="outline"
+                                  size="icon"
+                                  onClick={() => {
+                                    navigator.clipboard.writeText(r.link_code || "");
+                                    toast.success("Código copiado");
+                                  }}
+                                  aria-label="Copiar código"
+                                >
+                                  <Copy className="h-4 w-4" />
+                                </Button>
+                              </div>
+                              {link ? (
+                                <a href={link} target="_blank" rel="noopener noreferrer">
+                                  <Button variant="outline" size="sm" className="w-full">
+                                    <Send className="h-4 w-4 mr-2" />
+                                    Abrir el bot con este código
+                                  </Button>
+                                </a>
+                              ) : (
+                                <p className="text-xs text-gray-500">
+                                  Esa persona debe enviar <strong>/start {r.link_code}</strong> al
+                                  bot en Telegram.
+                                </p>
+                              )}
+                              <p className="text-xs text-gray-500">
+                                Comparte este código (o el enlace) con {r.name} por WhatsApp para
+                                que se conecte desde su propio Telegram.
+                              </p>
+                            </>
+                          ) : (
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              className="w-full"
+                              onClick={() => handleRegenRecipientCode(r.id)}
+                            >
+                              Generar código de conexión
+                            </Button>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+
+            {/* Agregar nuevo destinatario */}
+            <div className="flex gap-2">
+              <Input
+                value={newName}
+                onChange={(e) => setNewName(e.target.value)}
+                placeholder="Nombre (ej. María - empleada)"
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") handleAddRecipient();
+                }}
+              />
+              <Button onClick={handleAddRecipient} disabled={addingRecipient}>
+                <UserPlus className="h-4 w-4 mr-2" />
+                {addingRecipient ? "..." : "Agregar"}
+              </Button>
+            </div>
           </div>
         )}
       </CardContent>

@@ -34,6 +34,51 @@ function daysUntil(dateStr: string): number {
 }
 
 /**
+ * Devuelve todos los chat_ids que deben recibir notificaciones de un tenant:
+ * el dueño (user_profiles.telegram_chat_id) + los destinatarios adicionales
+ * activos (telegram_recipients). Deduplica por si algún chat está repetido.
+ *
+ * @param ownerChatId chat_id del dueño (puede venir null si no conectó).
+ */
+async function getTenantChatIds(
+  db: D1Database,
+  tenantId: string,
+  ownerChatId: string | null
+): Promise<string[]> {
+  const ids = new Set<string>();
+  if (ownerChatId) ids.add(String(ownerChatId));
+
+  const recipients = await db
+    .prepare(
+      `SELECT chat_id FROM telegram_recipients
+       WHERE tenant_id = ? AND chat_id IS NOT NULL AND enabled = 1`
+    )
+    .bind(tenantId)
+    .all();
+
+  for (const r of (recipients.results as any[]) || []) {
+    if (r.chat_id) ids.add(String(r.chat_id));
+  }
+  return Array.from(ids);
+}
+
+/**
+ * Envía un mensaje a varios chats. Devuelve cuántos se enviaron con éxito.
+ */
+async function sendToChats(
+  chatIds: string[],
+  message: string,
+  botToken?: string
+): Promise<number> {
+  let sent = 0;
+  for (const chatId of chatIds) {
+    const result = await sendTelegramMessage(chatId, message, botToken);
+    if (result.success) sent++;
+  }
+  return sent;
+}
+
+/**
  * Webhook del bot de Telegram. Procesa el comando /start <código> para
  * vincular el chat del usuario con el tenant cuyo telegram_link_code coincide.
  */
@@ -74,32 +119,56 @@ app.post('/webhook', async (c) => {
         return c.json({ ok: true });
       }
 
-      // Buscar el tenant con ese código de vinculación
+      const now = new Date().toISOString();
+
+      // 1) ¿Es el código del dueño? (user_profiles)
       const profile = await c.env.DB
-        .prepare('SELECT id, full_name FROM user_profiles WHERE telegram_link_code = ?')
+        .prepare('SELECT id FROM user_profiles WHERE telegram_link_code = ?')
         .bind(code)
         .first<any>();
 
-      if (!profile) {
+      if (profile) {
+        await c.env.DB
+          .prepare(
+            'UPDATE user_profiles SET telegram_chat_id = ?, telegram_link_code = NULL, telegram_enabled = 1, updated_at = ? WHERE id = ?'
+          )
+          .bind(String(chatId), now, profile.id)
+          .run();
+
         await sendTelegramMessage(
           String(chatId),
-          '❌ El código no es válido o ya expiró. Genera uno nuevo desde posib.dev → Configuración → Telegram.',
+          '✅ ¡Listo! Tu tienda quedó conectada. Te avisaré aquí cuando tengas productos próximos a vencer y un resumen diario de tu tienda. 🧀🍞',
           botToken
         );
         return c.json({ ok: true });
       }
 
-      // Guardar el chat_id y limpiar el código (un solo uso)
-      await c.env.DB
-        .prepare(
-          'UPDATE user_profiles SET telegram_chat_id = ?, telegram_link_code = NULL, telegram_enabled = 1, updated_at = ? WHERE id = ?'
-        )
-        .bind(String(chatId), new Date().toISOString(), profile.id)
-        .run();
+      // 2) ¿Es el código de un destinatario adicional? (telegram_recipients)
+      const recipient = await c.env.DB
+        .prepare('SELECT id, name FROM telegram_recipients WHERE link_code = ?')
+        .bind(code)
+        .first<any>();
 
+      if (recipient) {
+        await c.env.DB
+          .prepare(
+            'UPDATE telegram_recipients SET chat_id = ?, link_code = NULL, enabled = 1, updated_at = ? WHERE id = ?'
+          )
+          .bind(String(chatId), now, recipient.id)
+          .run();
+
+        await sendTelegramMessage(
+          String(chatId),
+          `✅ ¡Listo! Quedaste conectado a las alertas de la tienda. Recibirás aquí el resumen diario y los avisos de productos por vencer. 🧀🍞`,
+          botToken
+        );
+        return c.json({ ok: true });
+      }
+
+      // Código no encontrado en ninguna de las dos tablas
       await sendTelegramMessage(
         String(chatId),
-        '✅ ¡Listo! Tu tienda quedó conectada. Te avisaré aquí cuando tengas productos próximos a vencer para que los pongas en promoción. 🧀🍞',
+        '❌ El código no es válido o ya expiró. Genera uno nuevo desde posib.dev → Configuración → Telegram.',
         botToken
       );
       return c.json({ ok: true });
@@ -197,12 +266,15 @@ app.post('/expiration-alerts', async (c) => {
         `${header}\n\n${lines.join('\n')}\n\n` +
         '💡 Ponlos en promoción desde posib.dev → Ofertas para venderlos antes de que se venzan.';
 
-      const result = await sendTelegramMessage(String(tenant.telegram_chat_id), message, botToken);
+      // Enviar al dueño + destinatarios adicionales (empleada, etc.)
+      const chatIds = await getTenantChatIds(db, tenant.id, tenant.telegram_chat_id);
+      const sent = await sendToChats(chatIds, message, botToken);
 
-      if (result.success) {
-        messagesSent++;
+      if (sent > 0) {
+        messagesSent += sent;
 
-        // Registrar cada producto como notificado (idempotente por índice único)
+        // Registrar cada producto como notificado (idempotente por índice único).
+        // Se marca una sola vez por producto, no por destinatario.
         const now = new Date().toISOString();
         for (const p of list) {
           const id = crypto.randomUUID();
@@ -366,8 +438,9 @@ app.post('/daily-summary', async (c) => {
       if (sections.length === 0) continue;
 
       const message = `☀️ <b>Resumen de tu tienda</b>\n\n${sections.join('\n\n')}`;
-      const result = await sendTelegramMessage(String(tenant.telegram_chat_id), message, botToken);
-      if (result.success) messagesSent++;
+      // Enviar al dueño + destinatarios adicionales (empleada, etc.)
+      const chatIds = await getTenantChatIds(db, tenant.id, tenant.telegram_chat_id);
+      messagesSent += await sendToChats(chatIds, message, botToken);
     }
 
     return c.json({ success: true, messagesSent });
