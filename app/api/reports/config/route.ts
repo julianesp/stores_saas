@@ -60,45 +60,60 @@ export async function POST(request: NextRequest) {
     }
 
     const token = await getToken();
+    const finalTime = time || '20:00';
 
-    // Intentar actualizar el perfil con PATCH que solo actualiza campos específicos
-    const updateResponse = await fetch(`${API_BASE_URL}/api/user-profiles/${userProfile.id}`, {
-      method: 'PATCH',
+    // 1) Guardar en user_profiles (PUT — el Worker no soporta PATCH en esta ruta).
+    const putResponse = await fetch(`${API_BASE_URL}/api/user-profiles/${userProfile.id}`, {
+      method: 'PUT',
       headers: {
         'Content-Type': 'application/json',
         'Authorization': `Bearer ${token}`,
       },
       body: JSON.stringify({
         auto_reports_enabled: enabled ? 1 : 0,
-        auto_reports_time: time || '20:00',
+        auto_reports_time: finalTime,
         auto_reports_email: email || null,
       }),
     });
 
-    if (!updateResponse.ok) {
-      const errorData = await updateResponse.json().catch(() => ({}));
-      console.error('Error updating reports config:', errorData);
+    if (!putResponse.ok) {
+      const putErrorData = await putResponse.json().catch(() => ({}));
+      console.error('Error updating reports config (user_profiles):', putErrorData);
+      throw new Error(putErrorData.error || 'Error al actualizar configuración');
+    }
 
-      // Si PATCH falla, intentar con PUT enviando el perfil completo
-      const putResponse = await fetch(`${API_BASE_URL}/api/user-profiles/${userProfile.id}`, {
+    // 2) Sincronizar con email_preferences, que es de donde el CRON del Worker
+    //    lee la hora (daily_reports_time) para enviar el reporte. Sin esto, la
+    //    hora configurada aquí nunca llega al cron y el reporte no sale a tiempo.
+    //    Leemos primero las preferencias actuales para no pisar los otros flags.
+    try {
+      const prefsRes = await fetch(`${API_BASE_URL}/api/email/preferences`, {
+        headers: { 'Authorization': `Bearer ${token}` },
+      });
+      const prefsData = prefsRes.ok ? await prefsRes.json().catch(() => ({})) : {};
+      const currentPrefs = prefsData?.data || prefsData || {};
+
+      await fetch(`${API_BASE_URL}/api/email/preferences`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${token}`,
         },
         body: JSON.stringify({
-          ...userProfile,
-          auto_reports_enabled: enabled ? 1 : 0,
-          auto_reports_time: time || '20:00',
-          auto_reports_email: email || null,
+          // Conservar los demás flags tal como estaban
+          subscription_reminders_enabled: currentPrefs.subscription_reminders_enabled ?? 1,
+          stock_alerts_enabled: currentPrefs.stock_alerts_enabled ?? 1,
+          abandoned_cart_emails_enabled: currentPrefs.abandoned_cart_emails_enabled ?? 1,
+          from_name: currentPrefs.from_name ?? null,
+          from_email: currentPrefs.from_email ?? null,
+          // Actualizar lo que controla esta pantalla
+          daily_reports_enabled: enabled ? 1 : 0,
+          daily_reports_time: finalTime,
         }),
       });
-
-      if (!putResponse.ok) {
-        const putErrorData = await putResponse.json().catch(() => ({}));
-        console.error('Error with PUT request:', putErrorData);
-        throw new Error(putErrorData.error || 'Error al actualizar configuración');
-      }
+    } catch (syncError) {
+      // No bloquear el guardado principal si la sincronización falla; solo log.
+      console.error('Error sincronizando email_preferences:', syncError);
     }
 
     return NextResponse.json({
