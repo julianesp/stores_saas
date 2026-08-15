@@ -363,38 +363,64 @@ export function TelegramConfig() {
                         <div className="mt-3 space-y-2">
                           {r.link_code ? (
                             <>
-                              <div className="flex items-center gap-2">
-                                <div className="flex-1 font-mono text-sm tracking-widest text-center bg-gray-100 rounded py-2 select-all">
-                                  {r.link_code}
-                                </div>
-                                <Button
-                                  variant="outline"
-                                  size="icon"
-                                  onClick={() => {
-                                    navigator.clipboard.writeText(r.link_code || "");
-                                    toast.success("Código copiado");
-                                  }}
-                                  aria-label="Copiar código"
-                                >
-                                  <Copy className="h-4 w-4" />
-                                </Button>
-                              </div>
+                              <p className="text-xs font-medium text-gray-700">
+                                Comparte este enlace con {r.name} para que se conecte:
+                              </p>
                               {link ? (
-                                <a href={link} target="_blank" rel="noopener noreferrer">
-                                  <Button variant="outline" size="sm" className="w-full">
-                                    <Send className="h-4 w-4 mr-2" />
-                                    Abrir el bot con este código
-                                  </Button>
-                                </a>
+                                <>
+                                  {/* Enlace compartible copiable */}
+                                  <div className="flex items-center gap-2">
+                                    <div className="flex-1 text-xs text-sky-700 bg-sky-50 border border-sky-200 rounded px-2 py-2 break-all select-all">
+                                      {link}
+                                    </div>
+                                    <Button
+                                      variant="outline"
+                                      size="icon"
+                                      onClick={() => {
+                                        navigator.clipboard.writeText(link);
+                                        toast.success("Enlace copiado");
+                                      }}
+                                      aria-label="Copiar enlace"
+                                    >
+                                      <Copy className="h-4 w-4" />
+                                    </Button>
+                                  </div>
+                                  {/* Compartir directo por WhatsApp */}
+                                  <a
+                                    href={`https://wa.me/?text=${encodeURIComponent(
+                                      `Hola ${r.name}, conéctate a las alertas de la tienda abriendo este enlace en Telegram y tocando Iniciar: ${link}`,
+                                    )}`}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                  >
+                                    <Button size="sm" className="w-full bg-green-600 hover:bg-green-700 text-white">
+                                      Compartir por WhatsApp
+                                    </Button>
+                                  </a>
+                                </>
                               ) : (
-                                <p className="text-xs text-gray-500">
-                                  Esa persona debe enviar <strong>/start {r.link_code}</strong> al
-                                  bot en Telegram.
-                                </p>
+                                // Sin username del bot configurado: caer al código manual
+                                <div className="flex items-center gap-2">
+                                  <div className="flex-1 font-mono text-sm tracking-widest text-center bg-gray-100 rounded py-2 select-all">
+                                    {r.link_code}
+                                  </div>
+                                  <Button
+                                    variant="outline"
+                                    size="icon"
+                                    onClick={() => {
+                                      navigator.clipboard.writeText(r.link_code || "");
+                                      toast.success("Código copiado");
+                                    }}
+                                    aria-label="Copiar código"
+                                  >
+                                    <Copy className="h-4 w-4" />
+                                  </Button>
+                                </div>
                               )}
                               <p className="text-xs text-gray-500">
-                                Comparte este código (o el enlace) con {r.name} por WhatsApp para
-                                que se conecte desde su propio Telegram.
+                                {r.name} debe abrir el enlace en su celular (con Telegram instalado) y
+                                tocar <strong>Iniciar</strong>. Si ya usó el bot antes, que envíe{" "}
+                                <strong>/start {r.link_code}</strong>.
                               </p>
                             </>
                           ) : (
