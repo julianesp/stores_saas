@@ -53,10 +53,12 @@
   flex-direction: column;
   overflow: hidden; /* recorta el contenido siguiendo el borde curvo */
 
-  /* Forma de hoja: borde izquierdo con un arco discreto mediante radios
-     elípticos en las esquinas superior-izquierda e inferior-izquierda. */
-  border-top-left-radius: 12% 32%;
-  border-bottom-left-radius: 12% 32%;
+  /* Borde izquierdo con forma de arco pronunciado (tipo ")"): radios elípticos
+     con radio vertical al 50% en ambas esquinas izquierdas, de modo que las dos
+     mitades se unan en el centro formando una curva continua que acompaña la
+     rueda. El radio horizontal marca cuánto sobresale el arco a la izquierda. */
+  border-top-left-radius: 55% 50%;
+  border-bottom-left-radius: 55% 50%;
 
   transition:
     transform 0.4s cubic-bezier(0.22, 1, 0.36, 1),
@@ -69,8 +71,7 @@
     inset: 0;
     z-index: -1;
     border-radius: inherit;
-    /* Velo sutil que deja ver la página con un desenfoque leve. */
-    background-color: rgba(15, 23, 42, 0.35);
+    /* Sin color de fondo: solo el desenfoque glass, dejando ver la página. */
     -webkit-backdrop-filter: saturate(140%) blur(4px);
     backdrop-filter: saturate(140%) blur(4px);
   }
@@ -78,9 +79,9 @@
   @media (max-width: 640px) {
     width: 64%;
     min-width: 220px;
-    /* En móvil, curva aún más sutil para que quepan los textos */
-    border-top-left-radius: 7% 50%;
-    border-bottom-left-radius: 7% 50%;
+    /* En móvil, arco algo más contenido para que quepan los textos */
+    border-top-left-radius: 40% 50%;
+    border-bottom-left-radius: 40% 50%;
   }
 }
 

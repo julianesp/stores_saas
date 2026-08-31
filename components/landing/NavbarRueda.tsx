@@ -5,12 +5,14 @@ import { createPortal } from "react-dom";
 import Link from "next/link";
 import styles from "./NavbarRueda.module.scss";
 
-type NavLink = { href: string; label: string };
+// label2 (opcional) fuerza una segunda línea, para textos largos que no caben
+// en una sola en el panel angosto (p. ej. "Preguntas frecuentes").
+type NavLink = { href: string; label: string; label2?: string };
 
 const navigationLinks: NavLink[] = [
   { href: "#precios", label: "Precios" },
   { href: "#resenas", label: "Reseñas" },
-  { href: "#faq", label: "Preguntas frecuentes" },
+  { href: "#faq", label: "Preguntas", label2: "frecuentes" },
   { href: "/sign-in", label: "Entrar" },
   { href: "/sign-up", label: "Crear cuenta" },
 ];
@@ -18,7 +20,9 @@ const navigationLinks: NavLink[] = [
 // Reordena los enlaces en "montaña": los de texto más largo quedan al centro
 // (donde el panel es más ancho por la curva) y los más cortos en los extremos.
 function ordenarPorLongitud(links: NavLink[]): NavLink[] {
-  const porLongitud = [...links].sort((a, b) => b.label.length - a.label.length);
+  // Longitud total del texto (incluye label2 si el enlace es de dos líneas).
+  const largo = (l: NavLink) => l.label.length + (l.label2 ? l.label2.length + 1 : 0);
+  const porLongitud = [...links].sort((a, b) => largo(b) - largo(a));
   const n = porLongitud.length;
   const resultado = new Array<NavLink>(n);
   const centro = Math.floor((n - 1) / 2);
@@ -241,6 +245,11 @@ export default function NavbarRueda() {
                 {(() => {
                   const DIAM = 360;
                   const giro = ruedaActiva * 22;
+                  // La rueda se mete más hacia la derecha (hacia afuera) respecto
+                  // al borde: en vez de -DIAM/2 (centro justo en el borde), se
+                  // desplaza ~70px más a la derecha, de modo que se vea menos de
+                  // su arco y los enlaces ganen espacio a la izquierda para leerse.
+                  const RUEDA_RIGHT = -DIAM / 2 - 70;
                   return (
                     <svg
                       className="absolute pointer-events-none"
@@ -248,7 +257,7 @@ export default function NavbarRueda() {
                       height={DIAM}
                       style={{
                         top: "50%",
-                        right: -DIAM / 2,
+                        right: RUEDA_RIGHT,
                         transform: `translateY(-50%) rotate(${giro}deg)`,
                         transition: "transform 0.35s cubic-bezier(0.22,1,0.36,1)",
                       }}
@@ -297,7 +306,9 @@ export default function NavbarRueda() {
                       onClick={() => setIsMenuOpen(false)}
                       style={{
                         position: "absolute",
-                        right: `${x + 16}px`,
+                        // Offset negativo: acerca los enlaces hacia la rueda
+                        // (los corre a la derecha, pegados al arco).
+                        right: `${x - 40}px`,
                         top: "50%",
                         transform: `translateY(calc(-50% + ${y}px)) scale(${escala})`,
                         opacity: isMenuOpen ? opacidad : 0,
@@ -307,9 +318,12 @@ export default function NavbarRueda() {
                         pointerEvents: isMenuOpen && abs < BORDE ? "auto" : "none",
                         touchAction: "none",
                       }}
-                      className={`${esActivo ? styles.pillLinkActivo : styles.pillLink} inline-flex items-center justify-between gap-4 px-5 py-2.5 rounded-xl text-xs sm:text-sm font-semibold uppercase tracking-wide whitespace-nowrap`}
+                      className={`${esActivo ? styles.pillLinkActivo : styles.pillLink} inline-flex items-center justify-between gap-4 px-5 py-2.5 rounded-xl text-xs sm:text-sm font-semibold uppercase tracking-wide`}
                     >
-                      <span>{link.label}</span>
+                      <span className="flex flex-col leading-tight text-right">
+                        <span>{link.label}</span>
+                        {link.label2 && <span>{link.label2}</span>}
+                      </span>
                       <svg className="w-4 h-4 flex-shrink-0 opacity-80" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24" aria-hidden="true">
                         <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
                       </svg>
