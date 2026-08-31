@@ -1,0 +1,125 @@
+/* Navbar tipo "glass" con menú de rueda/llanta.
+   Portado del proyecto ingaips y adaptado a posib.dev (sin dark mode ni
+   selector de tema). El color de marca es el teal de posib.dev (#007c80). */
+.navbar {
+  position: fixed;
+  top: 0;
+  z-index: 50;
+
+  width: 100%;
+
+  border-bottom: 1px solid rgba(0, 124, 128, 0.9);
+  border-bottom-left-radius: 25px;
+  border-bottom-right-radius: 25px;
+  box-shadow: 10px 10px 30px rgba(0, 0, 0, 0.25);
+
+  /* El efecto "glass" (blur) va en una capa ::before DETRÁS del contenido, no
+     en el propio nav. En varios navegadores móviles un elemento fixed con
+     backdrop-filter rompe el hit-testing táctil de sus hijos (el botón no
+     recibía el toque). Aislar el filtro en ::before evita ese bug. */
+  &::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    z-index: -1;
+    border-radius: inherit;
+    -webkit-backdrop-filter: saturate(140%) blur(8px);
+    backdrop-filter: saturate(140%) blur(8px);
+  }
+}
+
+/* Fallback si el navegador no soporta backdrop-filter (Firefox sin flag) */
+@supports not ((-webkit-backdrop-filter: none) or (backdrop-filter: none)) {
+  .navbar::before {
+    background-color: rgba(15, 23, 42, 0.95);
+  } /* sólido sin blur */
+}
+
+/* Panel lateral derecho con forma de hoja (borde izquierdo curvo).
+   Ocupa ~26% del ancho (panel delgado), altura completa, anclado a la derecha.
+   El efecto glass (blur) va en una capa ::before para que el `transform`
+   de la animación no rompa el backdrop-filter. */
+.panelCurvo {
+  position: fixed;
+  top: 0;
+  right: 0;
+  height: 100dvh;
+  width: 26%;
+  min-width: 260px;
+  max-width: 320px;
+  z-index: 60;
+
+  display: flex;
+  flex-direction: column;
+  overflow: hidden; /* recorta el contenido siguiendo el borde curvo */
+
+  /* Forma de hoja: borde izquierdo con un arco discreto mediante radios
+     elípticos en las esquinas superior-izquierda e inferior-izquierda. */
+  border-top-left-radius: 12% 32%;
+  border-bottom-left-radius: 12% 32%;
+
+  transition:
+    transform 0.4s cubic-bezier(0.22, 1, 0.36, 1),
+    opacity 0.4s ease;
+  box-shadow: -10px 0 40px rgba(0, 0, 0, 0.4);
+
+  &::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    z-index: -1;
+    border-radius: inherit;
+    /* Velo sutil que deja ver la página con un desenfoque leve. */
+    background-color: rgba(15, 23, 42, 0.35);
+    -webkit-backdrop-filter: saturate(140%) blur(4px);
+    backdrop-filter: saturate(140%) blur(4px);
+  }
+
+  @media (max-width: 640px) {
+    width: 64%;
+    min-width: 220px;
+    /* En móvil, curva aún más sutil para que quepan los textos */
+    border-top-left-radius: 7% 50%;
+    border-bottom-left-radius: 7% 50%;
+  }
+}
+
+/* Fallback si el navegador no soporta backdrop-filter */
+@supports not ((-webkit-backdrop-filter: none) or (backdrop-filter: none)) {
+  .panelCurvo::before {
+    background-color: rgba(23, 30, 44, 0.97);
+  }
+}
+
+/* Botón-píldora de cada enlace de la rueda (los NO activos). Atenuados,
+   como cubiertos por una sombra leve hasta que rotan al centro. */
+.pillLink {
+  color: #cbd5e1;
+  background-color: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+
+  &:hover {
+    background-color: rgba(255, 255, 255, 0.16);
+    color: #ffffff;
+  }
+}
+
+/* Enlace activo (en el centro de la rueda): destacado, es el que se pulsa. */
+.pillLinkActivo {
+  color: #0f172a;
+  background-color: #ffffff;
+  border: 1px solid #ffffff;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35);
+
+  &:hover {
+    background-color: #f8fafc;
+  }
+}
+
+/* Contenedor del logo/marca centrado en el navbar. */
+.logoLink {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+}

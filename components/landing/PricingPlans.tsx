@@ -1,6 +1,6 @@
 "use client";
 
-import { Check, Sparkles, Store, Mail, Plus } from "lucide-react";
+import { Check, Sparkles, Mail } from "lucide-react";
 import {
   Card,
   CardContent,
@@ -15,7 +15,7 @@ const basePlan = {
   name: "Plan Básico",
   price: "$24.900",
   priceValue: 24900,
-  description: "Todo lo esencial para gestionar tu negocio",
+  description: "Todo lo que tu negocio necesita, en un solo plan",
   features: [
     "Punto de Venta (POS)",
     "Gestión de inventario completa",
@@ -28,11 +28,11 @@ const basePlan = {
   ],
 };
 
-const addons = [
+// Funcionalidades que ANTES eran complementos de pago aparte y ahora vienen
+// incluidas sin costo adicional dentro del Plan Básico de $24.900.
+const includedFeatures = [
   {
     name: "Análisis con IA",
-    price: "$5.000",
-    priceValue: 5000,
     icon: Sparkles,
     color: "purple",
     description: "Predicciones y análisis inteligentes",
@@ -44,28 +44,8 @@ const addons = [
       "Detección de anomalías en ventas",
     ],
   },
-  // {
-  //   name: "Tienda Online",
-  //   price: "$9.900",
-  //   priceValue: 9900,
-  //   icon: Store,
-  //   color: "blue",
-  //   description: "Vende en línea 24/7",
-  //   features: [
-  //     "Tienda online personalizable",
-  //     "Carrito de compras completo",
-  //     "Pedidos online en tiempo real",
-  //     "Integración con Wompi (pagos)",
-  //     "Zonas de envío configurables",
-  //     "Integración con WhatsApp",
-  //     "Sincronización automática de inventario",
-  //   ],
-  //   popular: true,
-  // },
   {
     name: "Email Marketing",
-    price: "$5.000",
-    priceValue: 5000,
     icon: Mail,
     color: "green",
     description: "Automatiza tu comunicación con clientes",
@@ -106,11 +86,11 @@ export default function PricingPlans() {
       <div className="container mx-auto px-4 ">
         <div className="text-center mb-12">
           <h2 className="text-3xl md:text-4xl font-bold text-white mb-4">
-            Planes Diseñados para tu Negocio
+            Un Solo Plan con Todo Incluido
           </h2>
           <p className="text-lg text-white/80 max-w-2xl mx-auto">
-            Comienza con el Plan Básico y agrega las funcionalidades que
-            necesites
+            Un único precio con todas las funcionalidades. El Análisis con IA y
+            el Email Marketing ahora vienen incluidos, sin costo adicional.
           </p>
         </div>
 
@@ -119,7 +99,7 @@ export default function PricingPlans() {
           <Card className="border-4 border-brand shadow-2xl bg-gray-800">
             <div className="absolute -top-4 left-1/2 transform -translate-x-1/2">
               <span className="bg-brand text-white text-sm font-bold px-4 py-1 rounded-full">
-                Plan Base Requerido
+                Todo Incluido
               </span>
             </div>
 
@@ -146,6 +126,20 @@ export default function PricingPlans() {
                     <span className="text-gray-200 text-sm">{feature}</span>
                   </li>
                 ))}
+                <li className="flex items-start gap-2">
+                  <Sparkles className="h-5 w-5 text-purple-400 flex-shrink-0 mt-0.5" />
+                  <span className="text-gray-200 text-sm">
+                    <strong className="text-white">Análisis con IA</strong>{" "}
+                    incluido
+                  </span>
+                </li>
+                <li className="flex items-start gap-2">
+                  <Mail className="h-5 w-5 text-green-400 flex-shrink-0 mt-0.5" />
+                  <span className="text-gray-200 text-sm">
+                    <strong className="text-white">Email Marketing</strong>{" "}
+                    incluido
+                  </span>
+                </li>
               </ul>
 
               <Link href="/sign-up" className="block">
@@ -157,27 +151,32 @@ export default function PricingPlans() {
           </Card>
         </div>
 
-        {/* Complementos */}
+        {/* Funcionalidades incluidas (antes eran complementos de pago) */}
         <div className="max-w-6xl mx-auto">
           <div className="text-center mb-8">
             <h3 className="text-2xl md:text-3xl font-bold text-white mb-3">
-              Complementos Disponibles
+              Y además, incluido sin costo adicional
             </h3>
             <p className="text-white/80 text-[20px]">
-              Agrega funcionalidades extra a tu Plan Básico
+              Estas funcionalidades ya vienen con tu Plan Básico de $24.900
             </p>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            {addons.map((addon) => {
-              const colors = getColorClasses(addon.color);
-              const Icon = addon.icon;
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            {includedFeatures.map((feature) => {
+              const colors = getColorClasses(feature.color);
+              const Icon = feature.icon;
 
               return (
                 <Card
-                  key={addon.name}
+                  key={feature.name}
                   className="relative border-2 border-brand bg-gray-800 hover:shadow-2xl transition-shadow"
                 >
+                  <div className="absolute -top-3 right-4">
+                    <span className="bg-green-500 text-white text-xs font-bold px-3 py-1 rounded-full">
+                      Incluido
+                    </span>
+                  </div>
                   <CardHeader className="text-center pb-3 pt-6">
                     <div
                       className={`w-14 h-14 mx-auto mb-3 rounded-full ${colors.bg} flex items-center justify-center border-2 ${colors.border}`}
@@ -185,37 +184,24 @@ export default function PricingPlans() {
                       <Icon className={`h-7 w-7 ${colors.accent}`} />
                     </div>
                     <CardTitle className="text-xl text-white mb-2">
-                      {addon.name}
+                      {feature.name}
                     </CardTitle>
-                    <div className="flex items-center justify-center gap-1 mb-2">
-                      <Plus className="h-4 w-4 text-brand" />
-                      <span className="text-3xl font-bold text-white">
-                        {addon.price}
-                      </span>
-                      <span className="text-gray-400 text-sm">/mes</span>
-                    </div>
                     <CardDescription className="text-gray-300 text-2xl">
-                      {addon.description}
+                      {feature.description}
                     </CardDescription>
                   </CardHeader>
 
                   <CardContent className="pt-0">
-                    <ul className="space-y-2 mb-6 min-h-[140px]">
-                      {addon.features.slice(0, 4).map((feature, index) => (
+                    <ul className="space-y-2 min-h-[140px]">
+                      {feature.features.slice(0, 5).map((item, index) => (
                         <li key={index} className="flex items-start gap-2">
                           <Check className="h-4 w-4 text-brand mt-0.5" />
                           <span className="text-white text-[16px] leading-tight">
-                            {feature}
+                            {item}
                           </span>
                         </li>
                       ))}
                     </ul>
-
-                    <Link href="/sign-up" className="block">
-                      <Button className="w-full bg-brand text-white hover:bg-brand-hover font-semibold cursor-pointer">
-                        Agregar Complemento
-                      </Button>
-                    </Link>
                   </CardContent>
                 </Card>
               );
@@ -226,11 +212,10 @@ export default function PricingPlans() {
         <div className="mt-12 text-center">
           <p className="text-white/70 text-sm">
             ✨ <strong>15 días de prueba gratis</strong> con acceso completo a
-            todos los complementos. Sin tarjeta de crédito.
+            todas las funcionalidades. Sin tarjeta de crédito.
           </p>
           <p className="text-white/60 text-xs mt-2">
-            Los complementos se pueden activar y desactivar en cualquier momento
-            desde tu cuenta
+            Un solo precio, sin complementos ni cargos adicionales
           </p>
         </div>
       </div>

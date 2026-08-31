@@ -61,6 +61,21 @@ body {
   font-family: Arial, Helvetica, sans-serif;
 }
 
+/*
+ * Contorno oscuro sutil para texto claro sobre fondos variables (p. ej. el
+ * navbar transparente de la landing, que sobre fondos claros perdía contraste).
+ * Combina un contorno fino en las 4 direcciones con una sombra difusa suave.
+ */
+.text-outline-dark {
+  text-shadow:
+    0 0 1px rgba(0, 0, 0, 0.7),
+    1px 1px 0 rgba(0, 0, 0, 0.35),
+    -1px 1px 0 rgba(0, 0, 0, 0.35),
+    1px -1px 0 rgba(0, 0, 0, 0.35),
+    -1px -1px 0 rgba(0, 0, 0, 0.35),
+    0 2px 4px rgba(0, 0, 0, 0.4);
+}
+
 /* Ajustar posición de toasts para que no tapen el botón del carrito */
 [data-sonner-toaster] {
   top: 80px !important;

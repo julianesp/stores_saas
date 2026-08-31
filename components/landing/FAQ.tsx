@@ -29,19 +29,19 @@ const faqs = [
           "Sí, todos los planes incluyen 15 días de prueba gratis con acceso completo a todas las funcionalidades. No se requiere tarjeta de crédito para iniciar la prueba.",
       },
       {
-        question: "¿Qué plan me conviene?",
+        question: "¿Qué incluye el plan?",
         answer:
-          "El plan Básico ($24.900/mes) es ideal si estás empezando y solo necesitas el POS e inventario básico y también puedes adquirir el Análisis con IA para saber cómo va tu negocio o el Email Marketing para mantener a tus clientes informados de nuevos pedidos o descuentos exclusivos para ellos",
+          "Con el Plan Básico ($24.900/mes) tienes todo incluido: POS, inventario, clientes, proveedores, créditos y deudores, ofertas, y además el Análisis con IA para saber cómo va tu negocio y el Email Marketing para mantener a tus clientes informados de nuevos pedidos o descuentos exclusivos. Todo en un solo precio, sin complementos que pagar aparte.",
       },
       {
-        question: "¿Puedo cambiar de plan después?",
+        question: "¿El Análisis con IA y el Email Marketing tienen costo extra?",
         answer:
-          "Sí, puedes actualizar o cambiar tu plan en cualquier momento desde el panel de suscripciones. Los cambios se aplican de inmediato y el cobro se ajusta proporcionalmente.",
+          "No. Antes eran complementos de pago aparte, pero ahora vienen incluidos en el Plan Básico de $24.900/mes sin ningún costo adicional.",
       },
       {
         question: "¿Hay costos ocultos?",
         answer:
-          "No, el precio que ves es el precio que pagas. No hay cargos ocultos, ni tarifas de instalación. Solo pagas tu plan mensual y listo.",
+          "No, el precio que ves es el precio que pagas. No hay cargos ocultos, ni tarifas de instalación, ni complementos que pagar aparte. Solo pagas tus $24.900 al mes y tienes todo incluido.",
       },
     ],
   },

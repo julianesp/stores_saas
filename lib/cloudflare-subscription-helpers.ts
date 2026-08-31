@@ -163,7 +163,9 @@ export async function getUserProfileByClerkId(getToken: GetTokenFn): Promise<Use
 /**
  * Verifica si un usuario tiene acceso a las funcionalidades de IA
  * Durante el período de prueba, todos tienen acceso gratis
- * Después del trial, solo quienes paguen el addon de IA ($9,900 COP/mes)
+ * Con suscripción activa, el Análisis con IA viene INCLUIDO en el Plan Básico
+ * ($24.900/mes), sin costo adicional. El flag has_ai_addon se conserva por
+ * compatibilidad con cuentas antiguas, pero ya no es requisito.
  */
 export function hasAIAccess(userProfile: UserProfile): boolean {
   // Super admin siempre tiene acceso
@@ -176,29 +178,21 @@ export function hasAIAccess(userProfile: UserProfile): boolean {
     return true;
   }
 
-  // Con suscripción activa, verificar si tiene el addon de IA
+  // Con suscripción activa, la IA viene incluida en el plan
   if (userProfile.subscription_status === 'active') {
-    // Verificar si el addon está activo Y no ha expirado
-    if (userProfile.has_ai_addon) {
-      // Si tiene fecha de expiración, verificarla
-      if (userProfile.ai_addon_expires_at) {
-        const expiresAt = new Date(userProfile.ai_addon_expires_at);
-        const now = new Date();
-        return now < expiresAt;
-      }
-      // Si no tiene fecha de expiración, asumimos que está activo (legacy)
-      return true;
-    }
+    return true;
   }
 
-  // Sin suscripción válida o addon, sin acceso
+  // Sin suscripción válida, sin acceso
   return false;
 }
 
 /**
  * Verifica si un usuario tiene acceso a Email Marketing
  * Durante el período de prueba, todos tienen acceso gratis
- * Después del trial, solo quienes paguen el addon de Email Marketing ($4,900 COP/mes)
+ * Con suscripción activa, el Email Marketing viene INCLUIDO en el Plan Básico
+ * ($24.900/mes), sin costo adicional. El flag has_email_addon se conserva por
+ * compatibilidad con cuentas antiguas, pero ya no es requisito.
  */
 export function hasEmailMarketingAccess(userProfile: UserProfile): boolean {
   // Super admin siempre tiene acceso
@@ -211,22 +205,12 @@ export function hasEmailMarketingAccess(userProfile: UserProfile): boolean {
     return true;
   }
 
-  // Con suscripción activa, verificar si tiene el addon de Email Marketing
+  // Con suscripción activa, el Email Marketing viene incluido en el plan
   if (userProfile.subscription_status === 'active') {
-    // Verificar si el addon está activo Y no ha expirado
-    if (userProfile.has_email_addon) {
-      // Si tiene fecha de expiración, verificarla
-      if (userProfile.email_addon_expires_at) {
-        const expiresAt = new Date(userProfile.email_addon_expires_at);
-        const now = new Date();
-        return now < expiresAt;
-      }
-      // Si no tiene fecha de expiración, asumimos que está activo (legacy)
-      return true;
-    }
+    return true;
   }
 
-  // Sin suscripción válida o addon, sin acceso
+  // Sin suscripción válida, sin acceso
   return false;
 }
 

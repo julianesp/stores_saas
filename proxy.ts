@@ -8,6 +8,8 @@ const isPublicRoute = createRouteMatcher([
   '/api/public(.*)',
   '/store(.*)',
   '/tienda(.*)',
+  '/terminos(.*)',
+  '/privacidad(.*)',
   '/payment-confirmation(.*)',
   '/api/payments(.*)',
   '/manifest.webmanifest',

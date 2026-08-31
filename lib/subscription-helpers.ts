@@ -231,8 +231,8 @@ export async function getUserProfileByClerkId(clerkUserId: string): Promise<User
 /**
  * Verifica si un usuario tiene acceso a las funcionalidades de IA
  * Durante el período de prueba, todos tienen acceso gratis
- * Con Plan Premium activo, tienen acceso incluido
- * Plan Básico NO tiene acceso a IA
+ * Con suscripción activa, la IA viene INCLUIDA en el Plan Básico ($24.900/mes),
+ * sin costo adicional.
  */
 export function hasAIAccess(userProfile: UserProfile): boolean {
   // Super admin siempre tiene acceso
@@ -245,20 +245,8 @@ export function hasAIAccess(userProfile: UserProfile): boolean {
     return true;
   }
 
-  // Con suscripción activa
+  // Con suscripción activa, la IA viene incluida en el plan
   if (userProfile.subscription_status === 'active') {
-    // Plan Premium incluye IA
-    if (userProfile.plan_id === 'plan-premium') {
-      return true;
-    }
-
-    // Plan Básico NO tiene acceso a IA
-    if (userProfile.plan_id === 'plan-basico') {
-      return false;
-    }
-
-    // Si tiene suscripción activa pero no se identificó el plan,
-    // dar acceso por defecto (compatibilidad con suscripciones antiguas)
     return true;
   }
 
@@ -269,8 +257,8 @@ export function hasAIAccess(userProfile: UserProfile): boolean {
 /**
  * Verifica si un usuario tiene acceso a Email Marketing
  * Durante el período de prueba, todos tienen acceso gratis
- * Con Plan Premium activo, tienen acceso incluido
- * Plan Básico NO tiene acceso a Email Marketing
+ * Con suscripción activa, el Email Marketing viene INCLUIDO en el Plan Básico
+ * ($24.900/mes), sin costo adicional.
  */
 export function hasEmailMarketingAccess(userProfile: UserProfile): boolean {
   // Super admin siempre tiene acceso
@@ -283,21 +271,9 @@ export function hasEmailMarketingAccess(userProfile: UserProfile): boolean {
     return true;
   }
 
-  // Con suscripción activa
+  // Con suscripción activa, el Email Marketing viene incluido en el plan
   if (userProfile.subscription_status === 'active') {
-    // Plan Premium incluye Email Marketing
-    if (userProfile.plan_id === 'plan-premium') {
-      return true;
-    }
-
-    // Plan Básico NO tiene acceso a Email Marketing
-    if (userProfile.plan_id === 'plan-basico') {
-      return false;
-    }
-
-    // Si tiene suscripción activa pero no se identificó el plan,
-    // no dar acceso por defecto
-    return false;
+    return true;
   }
 
   // Sin suscripción válida, sin acceso

@@ -21,6 +21,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import NavbarRueda from "@/components/landing/NavbarRueda";
 import WhatsAppButton from "@/components/landing/WhatsAppButton";
 import PricingPlans from "@/components/landing/PricingPlans";
 import FreeMigration from "@/components/landing/FreeMigration";
@@ -30,19 +31,14 @@ import OvercomeResistance from "@/components/landing/OvercomeResistance";
 import ClientStores from "@/components/landing/ClientStores";
 import PosReviews from "@/components/landing/PosReviews";
 import FAQ from "@/components/landing/FAQ";
+import Footer from "@/components/landing/Footer";
 import { landingConfig } from "@/lib/landing-config";
 
 export default function Home() {
   return (
     <div className="min-h-screen bg-linear-to-br from-gray-600 to-gray-200">
       {/* Header */}
-      <header className="border-b  backdrop-blur-sm  top-0 z-50 fixed w-full rounded-e-4xl rounded-s-4xl shadow-2xl ">
-        <div className="container mx-auto px-4 py-3 md:py-4 flex items-center justify-between">
-          <h1 className="text-xl md:text-2xl font-bold text-white">
-            posib.dev
-          </h1>
-        </div>
-      </header>
+      <NavbarRueda />
 
       {/* WhatsApp Button */}
       <WhatsAppButton />
@@ -421,10 +417,14 @@ export default function Home() {
       <ClientStores />
 
       {/* Reseñas del sistema POS */}
-      <PosReviews />
+      <div id="resenas" className="scroll-mt-24">
+        <PosReviews />
+      </div>
 
       {/* Pricing Plans */}
-      <PricingPlans />
+      <div id="precios" className="scroll-mt-24">
+        <PricingPlans />
+      </div>
 
       {/* Free Migration */}
       {/* <FreeMigration /> */}
@@ -439,7 +439,9 @@ export default function Home() {
       {/* <VideoTutorials /> */}
 
       {/* FAQ */}
-      <FAQ />
+      <div id="faq" className="scroll-mt-24">
+        <FAQ />
+      </div>
 
       {/* CTA */}
       <section className="container mx-auto px-4 py-12 md:py-20 text-center">
@@ -477,29 +479,7 @@ export default function Home() {
       </section>
 
       {/* Footer */}
-      <footer className="border-t bg-gray-800 py-6 md:py-8">
-        <div className="container mx-auto px-4 text-center text-gray-300">
-          <p className="text-sm md:text-base">
-            posib.dev - Sistema POS para tu Negocio
-          </p>
-          <p className="text-xs md:text-sm text-gray-400 mt-2">
-            Gestión profesional para tu negocio
-          </p>
-          <div className="mt-4 text-xs text-gray-500">
-            <p>© 2026 posib.dev - Todos los derechos reservados</p>
-          </div>
-          <div className="mt-4 flex justify-center">
-            <a
-              href="https://www.neurai.dev/"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="inline-flex items-center gap-1 rounded-full border border-gray-600 bg-gray-700/50 px-3 py-1 text-xs text-gray-300 transition-colors hover:bg-gray-700 hover:text-white"
-            >
-              Hecho por neurai.dev
-            </a>
-          </div>
-        </div>
-      </footer>
+      <Footer />
 
       {/* Chat en Vivo con Tawk.to */}
       {/* <TawkToChat
