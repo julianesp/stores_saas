@@ -8,7 +8,6 @@ import {
   CreditCard,
   Sparkles,
   Mail,
-  AlertCircle,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -23,11 +22,6 @@ import { UserProfile } from "@/lib/types";
 import { useTenant } from "@/lib/tenant-context";
 import { toast } from "sonner";
 import { formatCurrency } from "@/lib/utils";
-import {
-  hasAIAccess,
-  hasStoreAccess,
-  hasEmailMarketingAccess,
-} from "@/lib/cloudflare-subscription-helpers";
 
 interface EpaycoWindow {
   ePayco?: {
@@ -193,15 +187,6 @@ export default function SubscriptionPageWompi() {
         day: "numeric",
       })
     : null;
-
-  // Verificar qué addons tiene activos el usuario
-  const activeAddons = profile
-    ? {
-        ai: hasAIAccess(profile),
-        store: hasStoreAccess(profile),
-        email: hasEmailMarketingAccess(profile),
-      }
-    : { ai: false, store: false, email: false };
 
   const getColorClasses = (color: string) => {
     const colors: Record<
@@ -423,58 +408,28 @@ export default function SubscriptionPageWompi() {
         </Card>
       </div>
 
-      {/* Addons */}
+      {/* Funcionalidades incluidas (antes eran addons de pago) */}
       <div>
-        <h2 className="text-2xl font-bold mb-4">Addons Disponibles</h2>
+        <h2 className="text-2xl font-bold mb-4">Funcionalidades Incluidas</h2>
         <p className="text-gray-600 mb-6">
-          Agrega funcionalidades extra a tu plan base (se pueden combinar)
+          Estas funcionalidades ya vienen con tu Plan Básico, sin costo adicional
         </p>
 
         <div className="grid md:grid-cols-3 gap-6">
           {ADDONS.map((addon) => {
             const colors = getColorClasses(addon.color);
             const Icon = addon.icon;
-            const isActive = activeAddons[addon.type];
 
             return (
               <Card
                 key={addon.id}
-                className={`relative ${colors.border} ${isActive ? "border-2" : ""}`}
+                className={`relative border-2 ${colors.border}`}
               >
-                {isActive && subscriptionStatus?.status === "trial" && (
-                  <div className="absolute -top-3 left-1/2 transform -translate-x-1/2">
-                    <span
-                      className={`${colors.bg} ${colors.text} px-3 py-1 rounded-full text-xs font-medium border ${colors.border}`}
-                    >
-                      Activo en Trial
-                    </span>
-                  </div>
-                )}
-                {isActive && subscriptionStatus?.status === "active" && (() => {
-                  // Obtener fecha de vencimiento según el tipo de addon
-                  let expiresAt: string | null | undefined = null;
-                  if (addon.type === 'ai') expiresAt = profile?.ai_addon_expires_at;
-                  else if (addon.type === 'email') expiresAt = profile?.email_addon_expires_at;
-
-                  // Calcular días restantes
-                  let daysLeft = 0;
-                  let isNearExpiry = false;
-                  if (expiresAt) {
-                    const expiryDate = new Date(expiresAt);
-                    const today = new Date();
-                    const diffTime = expiryDate.getTime() - today.getTime();
-                    daysLeft = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-                    isNearExpiry = daysLeft <= 3 && daysLeft > 0;
-                  }
-
-                  return (
-                    <div className="absolute -top-3 left-1/2 transform -translate-x-1/2">
-                      <span className={`${isNearExpiry ? 'bg-orange-500' : 'bg-green-500'} text-white px-3 py-1 rounded-full text-xs font-medium`}>
-                        ✓ Activo
-                      </span>
-                    </div>
-                  );
-                })()}
+                <div className="absolute -top-3 left-1/2 transform -translate-x-1/2">
+                  <span className="bg-green-500 text-white px-3 py-1 rounded-full text-xs font-medium">
+                    ✓ Incluido
+                  </span>
+                </div>
 
                 <CardHeader>
                   <div className="flex items-center gap-2">
@@ -484,10 +439,10 @@ export default function SubscriptionPageWompi() {
                     <CardTitle className="text-xl">{addon.name}</CardTitle>
                   </div>
                   <div className="mt-4">
-                    <span className="text-3xl font-bold">
-                      +{formatCurrency(addon.price)}
+                    <span className="inline-flex items-center gap-1 rounded-full bg-green-100 px-3 py-1 text-sm font-semibold text-green-700">
+                      <Check className="h-4 w-4" />
+                      Incluido en tu plan
                     </span>
-                    <span className="text-gray-500 ml-2">/mes</span>
                   </div>
                 </CardHeader>
 
@@ -501,73 +456,6 @@ export default function SubscriptionPageWompi() {
                     ))}
                   </ul>
 
-                  {/* Mostrar información de fecha de vencimiento si está activo */}
-                  {isActive && subscriptionStatus?.status === "active" && (() => {
-                    let expiresAt: string | null | undefined = null;
-                    if (addon.type === 'ai') expiresAt = profile?.ai_addon_expires_at;
-                    else if (addon.type === 'email') expiresAt = profile?.email_addon_expires_at;
-
-                    if (!expiresAt) return null;
-
-                    const expiryDate = new Date(expiresAt);
-                    const today = new Date();
-                    const diffTime = expiryDate.getTime() - today.getTime();
-                    const daysLeft = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-                    const isNearExpiry = daysLeft <= 3 && daysLeft > 0;
-                    const isExpired = daysLeft <= 0;
-
-                    return (
-                      <div className={`p-3 rounded-lg border ${
-                        isExpired ? 'bg-red-50 border-red-200' :
-                        isNearExpiry ? 'bg-orange-50 border-orange-200' :
-                        'bg-green-50 border-green-200'
-                      }`}>
-                        <p className="text-xs font-medium mb-1 flex items-center gap-1">
-                          <AlertCircle className={`h-3 w-3 ${
-                            isExpired ? 'text-red-600' :
-                            isNearExpiry ? 'text-orange-600' :
-                            'text-green-600'
-                          }`} />
-                          {isExpired ? 'Expirado' : isNearExpiry ? '¡Próximo a vencer!' : 'Información del Addon'}
-                        </p>
-                        <p className="text-xs text-gray-700">
-                          <strong>Vence:</strong> {expiryDate.toLocaleDateString('es-CO', {
-                            year: 'numeric',
-                            month: 'long',
-                            day: 'numeric'
-                          })}
-                        </p>
-                        {!isExpired && (
-                          <p className={`text-xs mt-1 ${
-                            isNearExpiry ? 'text-orange-700 font-medium' : 'text-gray-600'
-                          }`}>
-                            {daysLeft === 1 ? '¡Queda 1 día!' : `Quedan ${daysLeft} días`}
-                          </p>
-                        )}
-                      </div>
-                    );
-                  })()}
-
-                  <Button
-                    className={`w-full ${colors.button}`}
-                    size="lg"
-                    onClick={() => handleSubscribe(addon.id)}
-                    disabled={loading && selectedItem === addon.id}
-                  >
-                    {loading && selectedItem === addon.id ? (
-                      <>
-                        <Loader2 className="mr-2 h-5 w-5 animate-spin" />
-                        Procesando...
-                      </>
-                    ) : isActive && subscriptionStatus?.status === "active" ? (
-                      "Renovar Addon"
-                    ) : (
-                      <>
-                        <Icon className="mr-2 h-5 w-5" />
-                        Agregar Addon
-                      </>
-                    )}
-                  </Button>
                 </CardContent>
               </Card>
             );
@@ -586,7 +474,7 @@ export default function SubscriptionPageWompi() {
               ✓ <strong>Activación automática</strong> - Tu plan se activa inmediatamente tras confirmar el pago
             </p>
             <p>
-              ✓ <strong>Facturación mensual</strong> - Paga solo por lo que necesites
+              ✓ <strong>Todo incluido</strong> - Un solo precio con IA y Email Marketing sin costo extra
             </p>
             <p>
               ✓ <strong>Cancela cuando quieras</strong> - Sin penalizaciones ni compromisos largos
@@ -595,15 +483,15 @@ export default function SubscriptionPageWompi() {
               ✓ <strong>Soporte técnico incluido</strong> - Escríbenos por WhatsApp
             </p>
             <p className="text-xs text-gray-500 mt-4 pt-4 border-t">
-              Los pagos se procesan automáticamente a través de ePayco. Cada addon se factura de manera
-              independiente y puedes activarlos o desactivarlos en cualquier momento.
+              Los pagos se procesan automáticamente a través de ePayco. El Análisis con IA y el
+              Email Marketing vienen incluidos en tu Plan Básico, sin cargos adicionales.
             </p>
           </div>
         </CardContent>
       </Card>
 
-      {/* Calculadora de precio total */}
-      {profile && subscriptionStatus?.status !== "trial" && (
+      {/* Costo mensual: un solo precio, con todo incluido */}
+      {profile && subscriptionStatus?.status === "active" && (
         <Card className="max-w-2xl mx-auto bg-gradient-to-br from-purple-50 to-pink-50 border-purple-200">
           <CardHeader>
             <CardTitle className="text-center">Tu Costo Mensual</CardTitle>
@@ -611,33 +499,15 @@ export default function SubscriptionPageWompi() {
           <CardContent>
             <div className="space-y-2">
               <div className="flex justify-between items-center">
-                <span>Plan Básico</span>
+                <span>Plan Básico (todo incluido)</span>
                 <span className="font-bold">
                   {formatCurrency(BASE_PLAN.price)}
                 </span>
               </div>
-              {activeAddons.ai && (
-                <div className="flex justify-between items-center text-purple-700">
-                  <span>+ Análisis IA</span>
-                  <span className="font-bold">{formatCurrency(5000)}</span>
-                </div>
-              )}
-              {activeAddons.email && (
-                <div className="flex justify-between items-center text-green-700">
-                  <span>+ Email Marketing</span>
-                  <span className="font-bold">{formatCurrency(5000)}</span>
-                </div>
-              )}
               <div className="border-t pt-2 mt-2 flex justify-between items-center text-lg font-bold">
                 <span>Total</span>
                 <span>
-                  {formatCurrency(
-                    (subscriptionStatus?.status === "active"
-                      ? BASE_PLAN.price
-                      : 0) +
-                      (activeAddons.ai ? 5000 : 0) +
-                      (activeAddons.email ? 5000 : 0),
-                  )}
+                  {formatCurrency(BASE_PLAN.price)}
                   <span className="text-sm font-normal text-gray-600">
                     /mes
                   </span>

@@ -525,7 +525,7 @@ export function CustomerRFMSection({ getToken, daysAnalyzed }: CustomerRFMSectio
         <CardHeader>
           <CardTitle className="flex items-center gap-2 text-brand">
             <Sparkles className="h-5 w-5" />
-            ¿Cómo funciona esto? (Explicado para humanos normales)
+            ¿Cómo funciona esto?
           </CardTitle>
         </CardHeader>
         <CardContent className="text-sm text-gray-800 space-y-3">
