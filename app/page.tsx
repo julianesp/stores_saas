@@ -22,6 +22,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import NavbarRueda from "@/components/landing/NavbarRueda";
+import FadeInSection from "@/components/landing/FadeInSection";
 import WhatsAppButton from "@/components/landing/WhatsAppButton";
 import PricingPlans from "@/components/landing/PricingPlans";
 import FreeMigration from "@/components/landing/FreeMigration";
@@ -75,6 +76,7 @@ export default function Home() {
       </section>
 
       {/* Del caos al control - Storytelling con imágenes */}
+      <FadeInSection>
       <section className="container mx-auto px-4 py-12 md:py-20">
         <div className="text-center mb-10 md:mb-14">
           <h3 className="text-2xl sm:text-3xl md:text-4xl font-bold text-white mb-3">
@@ -143,8 +145,10 @@ export default function Home() {
           </Link>
         </div>
       </section>
+      </FadeInSection>
 
       {/* Demo Videos Section */}
+      <FadeInSection>
       <section className="bg-white/5 backdrop-blur-sm py-12 md:py-16">
         <div className="container mx-auto px-4">
           <h3 className="text-2xl md:text-3xl font-bold text-center mb-4 text-white">
@@ -214,8 +218,10 @@ export default function Home() {
           </div>
         </div>
       </section>
+      </FadeInSection>
 
       {/* Features */}
+      <FadeInSection>
       <section className="container mx-auto px-4 py-12 md:py-16">
         <h3 className="text-2xl md:text-3xl font-bold text-center mb-3 text-white">
           Funcionalidades Principales
@@ -277,8 +283,10 @@ export default function Home() {
           </Card>
         </div>
       </section>
+      </FadeInSection>
 
       {/* More Features */}
+      <FadeInSection>
       <section className="bg-white/5 backdrop-blur-sm py-12 md:py-16">
         <div className="container mx-auto px-4">
           <h3 className="text-2xl md:text-3xl font-bold text-center mb-3 text-white">
@@ -368,8 +376,10 @@ export default function Home() {
           </div>
         </div>
       </section>
+      </FadeInSection>
 
       {/* Benefits */}
+      <FadeInSection>
       <section className="container mx-auto px-4 py-12 md:py-16">
         <h3 className="text-2xl md:text-3xl font-bold text-center mb-3 text-white">
           ¿Por qué elegir este sistema?
@@ -412,19 +422,26 @@ export default function Home() {
           </Card>
         </div>
       </section>
+      </FadeInSection>
 
       {/* Tiendas Clientes */}
-      <ClientStores />
+      <FadeInSection>
+        <ClientStores />
+      </FadeInSection>
 
       {/* Reseñas del sistema POS */}
-      <div id="resenas" className="scroll-mt-24">
-        <PosReviews />
-      </div>
+      <FadeInSection>
+        <div id="resenas" className="scroll-mt-24">
+          <PosReviews />
+        </div>
+      </FadeInSection>
 
       {/* Pricing Plans */}
-      <div id="precios" className="scroll-mt-24">
-        <PricingPlans />
-      </div>
+      <FadeInSection>
+        <div id="precios" className="scroll-mt-24">
+          <PricingPlans />
+        </div>
+      </FadeInSection>
 
       {/* Free Migration */}
       {/* <FreeMigration /> */}
@@ -433,17 +450,22 @@ export default function Home() {
       {/* <TrustBadges /> */}
 
       {/* Overcome Resistance to Change */}
-      <OvercomeResistance />
+      <FadeInSection>
+        <OvercomeResistance />
+      </FadeInSection>
 
       {/* Video Tutorials */}
       {/* <VideoTutorials /> */}
 
       {/* FAQ */}
-      <div id="faq" className="scroll-mt-24">
-        <FAQ />
-      </div>
+      <FadeInSection>
+        <div id="faq" className="scroll-mt-24">
+          <FAQ />
+        </div>
+      </FadeInSection>
 
       {/* CTA */}
+      <FadeInSection>
       <section className="container mx-auto px-4 py-12 md:py-20 text-center">
         <h3 className="text-2xl sm:text-3xl md:text-4xl font-bold mb-4 md:mb-6 text-white">
           ¿Listo para Empezar?
@@ -477,6 +499,7 @@ export default function Home() {
           </a> */}
         </div>
       </section>
+      </FadeInSection>
 
       {/* Footer */}
       <Footer />
