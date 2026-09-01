@@ -26,7 +26,6 @@ export default function EmailSettingsPage() {
   const router = useRouter();
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-  const [sendingTest, setSendingTest] = useState(false);
   const [preferences, setPreferences] = useState<EmailPreferences | null>(null);
   const [advancedSettings, setAdvancedSettings] = useState<Record<string, unknown>>({});
   const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
@@ -105,34 +104,6 @@ export default function EmailSettingsPage() {
       toast.error('No se pudieron guardar las preferencias');
     } finally {
       setSaving(false);
-    }
-  };
-
-  const handleSendTest = async () => {
-    setSendingTest(true);
-    try {
-      const token = await getToken();
-      const response = await fetch(
-        `${process.env.NEXT_PUBLIC_CLOUDFLARE_API_URL}/api/email/test`,
-        {
-          method: 'POST',
-          headers: {
-            'Authorization': `Bearer ${token}`,
-          },
-        }
-      );
-
-      const data = await response.json();
-
-      if (response.ok) {
-        toast.success('Email de prueba enviado! Revisa tu bandeja de entrada.');
-      } else {
-        throw new Error(data.error || 'Error al enviar email de prueba');
-      }
-    } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'No se pudo enviar el email de prueba');
-    } finally {
-      setSendingTest(false);
     }
   };
 
@@ -328,6 +299,32 @@ export default function EmailSettingsPage() {
             </CardContent>
           </Card>
 
+          {/* Ofertas a los clientes */}
+          <Card>
+            <CardHeader>
+              <div className="flex items-center gap-2">
+                <Sparkles className="h-5 w-5" />
+                <CardTitle>Avisar ofertas a mis clientes</CardTitle>
+              </div>
+              <CardDescription>
+                Cuando crees una promoción, se enviará un email a tus clientes
+                con correo registrado para avisarles del descuento.
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="flex items-center justify-between">
+                <Label htmlFor="offers-emails">Enviar avisos de ofertas</Label>
+                <Switch
+                  id="offers-emails"
+                  checked={preferences.offers_emails_enabled}
+                  onCheckedChange={(checked) =>
+                    setPreferences({ ...preferences, offers_emails_enabled: checked })
+                  }
+                />
+              </div>
+            </CardContent>
+          </Card>
+
           {/* Configuración del Remitente */}
           <Card>
             <CardHeader>
@@ -370,26 +367,6 @@ export default function EmailSettingsPage() {
           </Card>
 
           <div className="flex flex-col sm:flex-row gap-3 sm:gap-4">
-            <Button
-              onClick={handleSendTest}
-              disabled={sendingTest}
-              variant="outline"
-              size="lg"
-              className="w-full sm:flex-1"
-            >
-              {sendingTest ? (
-                <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Enviando...
-                </>
-              ) : (
-                <>
-                  <Mail className="mr-2 h-4 w-4" />
-                  Enviar Email de Prueba
-                </>
-              )}
-            </Button>
-
             <Button
               onClick={handleSave}
               disabled={saving}

@@ -459,3 +459,89 @@ export function debtReminderTemplate(data: {
 
   return baseTemplate(content, '#dc2626');
 }
+
+/**
+ * Template: Producto en oferta / promoción.
+ * Se envía a los clientes cuando el dueño crea una promoción real
+ * (reason 'promocion' o 'liquidacion'). Muestra el descuento, el precio
+ * original tachado y el precio final.
+ */
+export function offerTemplate(data: {
+  product_name: string;
+  product_image?: string | null;
+  store_name: string;
+  discount_percentage: number;
+  original_price: number;
+  final_price: number;
+  end_date?: string | null;
+  product_url?: string | null;
+}): string {
+  const fmt = (n: number) => `$${Math.round(n).toLocaleString('es-CO')}`;
+  const vence = data.end_date
+    ? new Date(data.end_date).toLocaleDateString('es-CO', {
+        day: 'numeric',
+        month: 'long',
+      })
+    : null;
+
+  const content = `
+    <div class="header" style="background-color: #dc2626;">
+      <h1>🔥 ¡${data.discount_percentage}% de descuento!</h1>
+    </div>
+    <div class="content">
+      <p style="font-size: 16px; color: #374151;">
+        ¡Aprovecha esta promoción en <strong>${data.store_name}</strong>!
+      </p>
+
+      ${
+        data.product_image
+          ? `<div style="text-align: center; margin: 24px 0;">
+               <img src="${data.product_image}" alt="${data.product_name}" style="max-width: 280px; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
+             </div>`
+          : ''
+      }
+
+      <p style="font-size: 20px; font-weight: 700; color: #111827; text-align: center; margin-bottom: 4px;">
+        ${data.product_name}
+      </p>
+
+      <div style="text-align: center; margin: 16px 0;">
+        <span style="font-size: 16px; color: #9ca3af; text-decoration: line-through; margin-right: 10px;">
+          ${fmt(data.original_price)}
+        </span>
+        <span style="font-size: 26px; font-weight: 700; color: #dc2626;">
+          ${fmt(data.final_price)}
+        </span>
+      </div>
+
+      <div style="text-align: center; margin: 12px 0;">
+        <span style="display: inline-block; background-color: #dc2626; color: #ffffff; font-weight: 700; font-size: 18px; padding: 6px 16px; border-radius: 999px;">
+          -${data.discount_percentage}%
+        </span>
+      </div>
+
+      ${
+        vence
+          ? `<p style="font-size: 14px; color: #6b7280; text-align: center;">
+               Válido hasta el ${vence}.
+             </p>`
+          : ''
+      }
+
+      ${
+        data.product_url
+          ? `<div style="text-align: center;">
+               <a href="${data.product_url}" class="button" style="background-color: #dc2626;">Ver oferta</a>
+             </div>`
+          : ''
+      }
+
+      <p style="font-size: 14px; color: #6b7280; margin-top: 30px; border-top: 1px solid #e5e7eb; padding-top: 20px;">
+        ¡Te esperamos!<br/>
+        <strong>${data.store_name}</strong>
+      </p>
+    </div>
+  `;
+
+  return baseTemplate(content, '#dc2626');
+}

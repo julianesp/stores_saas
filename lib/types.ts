@@ -520,6 +520,7 @@ export interface EmailPreferences {
   subscription_reminders_enabled: boolean;
   stock_alerts_enabled: boolean;
   abandoned_cart_emails_enabled: boolean;
+  offers_emails_enabled: boolean; // Avisar ofertas/promociones a los clientes
   from_name?: string; // Sender name
   from_email?: string; // Reply-to email
   created_at: string;

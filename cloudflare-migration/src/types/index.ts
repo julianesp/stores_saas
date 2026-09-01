@@ -22,6 +22,9 @@ export interface Env {
   // CRON secret for scheduled tasks
   CRON_SECRET?: string;
 
+  // Resend API key para el envío de emails (marketing/transaccionales)
+  RESEND_API_KEY?: string;
+
   // Telegram bot (avisos de productos próximos a vencer)
   TELEGRAM_BOT_TOKEN?: string;
   // Secret token que Telegram reenvía en el header del webhook (opcional pero

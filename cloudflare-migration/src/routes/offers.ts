@@ -6,8 +6,119 @@
 import { Hono } from 'hono';
 import type { Env, Tenant, APIResponse } from '../types';
 import { TenantDB, generateId } from '../utils/db-helpers';
+import { sendEmail, logEmail } from '../utils/email';
+import { offerTemplate } from '../utils/email-templates';
 
 const app = new Hono<{ Bindings: Env }>();
+
+/**
+ * Envía un email de promoción a todos los clientes con correo de la tienda.
+ * Se ejecuta en segundo plano (ctx.waitUntil) para no bloquear la creación de
+ * la oferta. Respeta la preferencia offers_emails_enabled del tenant.
+ */
+async function enviarEmailsOferta(
+  db: D1Database,
+  tenantId: string,
+  offer: { id: string; product_id: string; discount_percentage: number; end_date: string },
+  product: { name: string; sale_price: number; image_url?: string | null },
+  resendApiKey?: string
+): Promise<void> {
+  try {
+    // Datos de la tienda + preferencia de ofertas
+    const store = await db
+      .prepare(
+        `SELECT store_name, store_slug, from_name_pref.from_name AS pref_from_name,
+                from_name_pref.from_email AS pref_from_email,
+                from_name_pref.offers_emails_enabled AS offers_enabled
+         FROM user_profiles up
+         LEFT JOIN email_preferences from_name_pref
+           ON from_name_pref.user_profile_id = up.id
+         WHERE up.id = ?`
+      )
+      .bind(tenantId)
+      .first<{
+        store_name: string | null;
+        store_slug: string | null;
+        pref_from_name: string | null;
+        pref_from_email: string | null;
+        offers_enabled: number | null;
+      }>();
+
+    // Si la tienda desactivó los avisos de ofertas, no enviar.
+    // (offers_enabled null = sin fila de preferencias => se asume activo)
+    if (store && store.offers_enabled === 0) {
+      return;
+    }
+
+    const storeName = store?.store_name || 'Tu tienda';
+    const storeSlug = store?.store_slug || null;
+
+    // Clientes con email de la tienda
+    const clientes = await db
+      .prepare(
+        `SELECT email, name FROM customers
+         WHERE tenant_id = ? AND email IS NOT NULL AND email != ''`
+      )
+      .bind(tenantId)
+      .all<{ email: string; name: string | null }>();
+
+    if (!clientes.results || clientes.results.length === 0) return;
+
+    const finalPrice = Math.max(
+      0,
+      product.sale_price * (1 - offer.discount_percentage / 100)
+    );
+    const productUrl = storeSlug
+      ? `https://posib.dev/store/${storeSlug}/product/${offer.product_id}`
+      : null;
+
+    const html = offerTemplate({
+      product_name: product.name,
+      product_image: product.image_url,
+      store_name: storeName,
+      discount_percentage: offer.discount_percentage,
+      original_price: product.sale_price,
+      final_price: finalPrice,
+      end_date: offer.end_date,
+      product_url: productUrl,
+    });
+
+    for (const cliente of clientes.results) {
+      try {
+        const result = await sendEmail(
+          {
+            to: cliente.email,
+            toName: cliente.name || undefined,
+            from: store?.pref_from_email || 'noreply@posib.dev',
+            fromName: store?.pref_from_name || storeName,
+            subject: `🔥 ${offer.discount_percentage}% de descuento en ${product.name}`,
+            html,
+          },
+          resendApiKey
+        );
+
+        await logEmail(
+          db,
+          tenantId,
+          'offer_alert',
+          cliente.email,
+          `Oferta: ${product.name}`,
+          result.success ? 'sent' : 'failed',
+          result.success ? undefined : result.error,
+          {
+            offer_id: offer.id,
+            product_id: offer.product_id,
+            discount_percentage: offer.discount_percentage,
+          }
+        );
+      } catch (err) {
+        console.error('Error enviando email de oferta a', cliente.email, err);
+      }
+    }
+  } catch (error) {
+    console.error('Error en enviarEmailsOferta:', error);
+  }
+}
 
 interface Offer {
   id: string;
@@ -203,6 +314,30 @@ app.post('/', async (c) => {
         offer.updated_at
       )
       .run();
+
+    // Solo promociones reales avisan a los clientes (no las ofertas automáticas
+    // de "próximo a vencer"). El envío va en segundo plano para no demorar la
+    // respuesta de crear la oferta.
+    if (reason === 'promocion' || reason === 'liquidacion') {
+      c.executionCtx.waitUntil(
+        enviarEmailsOferta(
+          c.env.DB,
+          tenant.id,
+          {
+            id: offer.id,
+            product_id: offer.product_id,
+            discount_percentage: offer.discount_percentage,
+            end_date: offer.end_date,
+          },
+          {
+            name: (product as any).name,
+            sale_price: (product as any).sale_price,
+            image_url: (product as any).image_url,
+          },
+          c.env.RESEND_API_KEY
+        )
+      );
+    }
 
     return c.json<APIResponse<Offer>>({
       success: true,

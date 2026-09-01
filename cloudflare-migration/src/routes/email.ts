@@ -602,6 +602,7 @@ app.put('/preferences', async (c) => {
           subscription_reminders_enabled = ?,
           stock_alerts_enabled = ?,
           abandoned_cart_emails_enabled = ?,
+          offers_emails_enabled = ?,
           from_name = ?,
           from_email = ?
         WHERE user_profile_id = ?`
@@ -612,6 +613,7 @@ app.put('/preferences', async (c) => {
         body.subscription_reminders_enabled ? 1 : 0,
         body.stock_alerts_enabled ? 1 : 0,
         body.abandoned_cart_emails_enabled ? 1 : 0,
+        body.offers_emails_enabled ? 1 : 0,
         body.from_name || null,
         body.from_email || null,
         userProfileId
