@@ -14,6 +14,7 @@ import {
   getCategories,
   getSuppliers,
   getProducts,
+  getUserProfile,
   createProduct,
   updateProduct,
   createCategory,
@@ -21,6 +22,7 @@ import {
   type Product as ApiProduct,
 } from "@/lib/cloudflare-api";
 import { Category, Supplier, Product } from "@/lib/types";
+import { getBusinessType, type BusinessType } from "@/lib/business-types";
 
 // Payload que envía el formulario: usa el modelo de dominio (`images` como
 // array, `main_image_index`); se serializa al modelo de la API al guardar.
@@ -73,6 +75,11 @@ export function ProductForm({ initialData, productId }: ProductFormProps) {
   const [loading, setLoading] = useState(false);
   const [categories, setCategories] = useState<Category[]>([]);
   const [suppliers, setSuppliers] = useState<Supplier[]>([]);
+  // Tipo de negocio de la tienda: adapta qué campos se muestran (vencimiento,
+  // código de barras) y el vocabulario. Por defecto abarrotes (tienda completa).
+  const [businessType, setBusinessType] = useState<BusinessType>(() =>
+    getBusinessType(null),
+  );
   const [productImages, setProductImages] = useState<string[]>(initialData?.images || []);
   const [mainImageIndex, setMainImageIndex] = useState<number>(initialData?.main_image_index ?? 0);
   const [doesNotExpire, setDoesNotExpire] = useState(!initialData?.expiration_date);
@@ -282,7 +289,18 @@ export function ProductForm({ initialData, productId }: ProductFormProps) {
   useEffect(() => {
     fetchCategories();
     fetchSuppliers();
+    fetchBusinessType();
   }, []);
+
+  const fetchBusinessType = async () => {
+    try {
+      const profile = await getUserProfile(getToken);
+      setBusinessType(getBusinessType(profile?.business_type));
+    } catch (error) {
+      console.error("Error fetching business type:", error);
+      // Si falla, se queda con el valor por defecto (abarrotes = todo visible)
+    }
+  };
 
   // Asegurar que los valores de category_id y supplier_id se mantengan cuando se edita
   // Este efecto se ejecuta cuando las categorías y proveedores se cargan
@@ -483,7 +501,14 @@ export function ProductForm({ initialData, productId }: ProductFormProps) {
           <CardTitle>Información Básica</CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div
+            className={
+              businessType.features.showBarcode
+                ? "grid grid-cols-1 md:grid-cols-2 gap-4"
+                : "grid grid-cols-1 gap-4"
+            }
+          >
+            {businessType.features.showBarcode && (
             <div className="space-y-2">
               <Label htmlFor="barcode" className="flex items-center gap-2">
                 <Scan className="h-4 w-4 text-brand" />
@@ -530,13 +555,16 @@ export function ProductForm({ initialData, productId }: ProductFormProps) {
                 <p className="text-sm text-red-600">{errors.barcode.message}</p>
               )}
             </div>
+            )}
 
             <div className="space-y-2">
-              <Label htmlFor="name">Nombre *</Label>
+              <Label htmlFor="name">
+                Nombre de {businessType.vocabulary.itemSingular.toLowerCase()} *
+              </Label>
               <Input
                 id="name"
                 {...register("name")}
-                placeholder="Nombre del producto"
+                placeholder={`Nombre de ${businessType.vocabulary.itemSingular.toLowerCase()}`}
               />
               {errors.name && (
                 <p className="text-sm text-red-600">{errors.name.message}</p>
@@ -956,6 +984,7 @@ export function ProductForm({ initialData, productId }: ProductFormProps) {
             </div>
           </div>
 
+          {businessType.features.showExpiration && (
           <div className="space-y-3">
             <Label htmlFor="expiration_date">Fecha de Vencimiento</Label>
 
@@ -1005,6 +1034,7 @@ export function ProductForm({ initialData, productId }: ProductFormProps) {
               </p>
             )}
           </div>
+          )}
         </CardContent>
       </Card>
 
@@ -1027,7 +1057,7 @@ export function ProductForm({ initialData, productId }: ProductFormProps) {
       <div className="flex gap-4">
         <Button type="submit" disabled={loading}>
           {loading ? "Guardando..." : productId ? "Actualizar" : "Crear"}{" "}
-          Producto
+          {businessType.vocabulary.itemSingular}
         </Button>
         <Button type="button" variant="outline" onClick={() => router.back()}>
           Cancelar

@@ -22,6 +22,7 @@ import { UserProfile } from "@/lib/types";
 import { useTenant } from "@/lib/tenant-context";
 import { toast } from "sonner";
 import { formatCurrency } from "@/lib/utils";
+import { BUSINESS_TYPES, getBusinessType } from "@/lib/business-types";
 
 interface EpaycoWindow {
   ePayco?: {
@@ -33,22 +34,17 @@ interface EpaycoWindow {
 import Link from "next/link";
 import Image from "next/image";
 
-// Plan base de suscripción
-const BASE_PLAN = {
-  id: "basic-monthly",
-  name: "Plan Básico",
-  price: 24900,
-  features: [
-    "Gestión completa de inventario",
-    "Punto de venta (POS)",
-    "Gestión de clientes y proveedores",
-    "Reportes y estadísticas básicas",
-    "Sistema de créditos y deudores",
-    "Ofertas y promociones",
-    "Soporte técnico por email",
-    "Actualizaciones automáticas",
-  ],
-};
+// Funcionalidades incluidas en todos los planes (todo incluido, un solo precio).
+const PLAN_FEATURES = [
+  "Gestión completa de inventario",
+  "Punto de venta (POS)",
+  "Gestión de clientes y proveedores",
+  "Reportes y estadísticas básicas",
+  "Sistema de créditos y deudores",
+  "Ofertas y promociones",
+  "Soporte técnico por email",
+  "Actualizaciones automáticas",
+];
 
 // Addons disponibles
 const ADDONS = [
@@ -92,6 +88,11 @@ export default function SubscriptionPageWompi() {
   const [loading, setLoading] = useState(false);
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [selectedItem, setSelectedItem] = useState<string | null>(null);
+  // Tipo de negocio elegido para la suscripción. Por defecto el primero
+  // (abarrotes); si el perfil ya tiene uno, se preselecciona al cargar.
+  const [selectedBusinessType, setSelectedBusinessType] = useState(
+    BUSINESS_TYPES[0].id,
+  );
 
   useEffect(() => {
     async function fetchProfile() {
@@ -99,6 +100,9 @@ export default function SubscriptionPageWompi() {
         try {
           const data = await getUserProfile(getToken);
           setProfile(data);
+          if (data?.business_type) {
+            setSelectedBusinessType(data.business_type);
+          }
         } catch (error) {
           console.error("Error loading profile:", error);
         }
@@ -349,63 +353,105 @@ export default function SubscriptionPageWompi() {
         </CardContent>
       </Card>
 
-      {/* Plan Base */}
+      {/* Selección de tipo de negocio + Plan */}
       <div>
-        <h2 className="text-2xl font-bold mb-4">Plan Base</h2>
-        <Card className="border-gray-300 border-2">
-          <CardHeader>
-            <CardTitle className="text-2xl">{BASE_PLAN.name}</CardTitle>
-            <CardDescription>
-              Todo lo esencial para gestionar tu negocio
-            </CardDescription>
-            <div className="mt-4">
-              <span className="text-4xl font-bold">
-                {formatCurrency(BASE_PLAN.price)}
-              </span>
-              <span className="text-gray-500 ml-2">/mes</span>
-            </div>
-          </CardHeader>
+        <h2 className="text-2xl font-bold mb-2">Elige tu tipo de negocio</h2>
+        <p className="text-gray-600 mb-4">
+          Adaptamos el sistema a tu negocio: los módulos, el vocabulario y las
+          funciones se ajustan al tipo que elijas.
+        </p>
 
-          <CardContent className="space-y-4">
-            <ul className="space-y-3">
-              {BASE_PLAN.features.map((feature, index) => (
-                <li key={index} className="flex items-start gap-2">
-                  <Check className="h-5 w-5 text-green-600 mt-0.5 flex-shrink-0" />
-                  <span className="text-sm">{feature}</span>
-                </li>
-              ))}
-            </ul>
+        {/* Tarjetas seleccionables de tipo de negocio */}
+        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3 mb-6">
+          {BUSINESS_TYPES.map((bt) => {
+            const isSelected = selectedBusinessType === bt.id;
+            return (
+              <button
+                key={bt.id}
+                type="button"
+                onClick={() => setSelectedBusinessType(bt.id)}
+                // Si ya tiene suscripción activa, el tipo no debería cambiarse
+                // desde aquí (se cambia junto con un nuevo pago).
+                disabled={hasActiveSubscription}
+                aria-pressed={isSelected}
+                className={`text-left rounded-xl border-2 p-3 transition-all ${
+                  isSelected
+                    ? "border-brand bg-brand-light/50 ring-2 ring-brand/40"
+                    : "border-gray-200 hover:border-brand/50 hover:bg-gray-50"
+                } ${hasActiveSubscription ? "opacity-60 cursor-not-allowed" : ""}`}
+              >
+                <div className="text-3xl mb-1">{bt.emoji}</div>
+                <div className="font-semibold text-sm leading-tight">
+                  {bt.name}
+                </div>
+                <div className="text-xs text-gray-500 mt-1">
+                  {formatCurrency(bt.price)}/mes
+                </div>
+              </button>
+            );
+          })}
+        </div>
 
-            <Button
-              className={`w-full ${
-                hasActiveSubscription
-                  ? "bg-green-600 hover:bg-green-600"
-                  : "bg-gray-800 hover:bg-gray-900"
-              }`}
-              size="lg"
-              onClick={() => handleSubscribe(BASE_PLAN.id)}
-              // Si ya está activo no debe poder pagar de nuevo por accidente
-              disabled={
-                hasActiveSubscription ||
-                (loading && selectedItem === BASE_PLAN.id)
-              }
-            >
-              {loading && selectedItem === BASE_PLAN.id ? (
-                <>
-                  <Loader2 className="mr-2 h-5 w-5 animate-spin" />
-                  Creando link de pago...
-                </>
-              ) : hasActiveSubscription ? (
-                <>
-                  <Check className="mr-2 h-5 w-5" />
-                  Plan Activo
-                </>
-              ) : (
-                "Suscribirse al Plan Base"
-              )}
-            </Button>
-          </CardContent>
-        </Card>
+        {(() => {
+          const selectedType = getBusinessType(selectedBusinessType);
+          return (
+            <Card className="border-brand/40 border-2">
+              <CardHeader>
+                <CardTitle className="text-2xl flex items-center gap-2">
+                  <span>{selectedType.emoji}</span>
+                  Plan {selectedType.name}
+                </CardTitle>
+                <CardDescription>{selectedType.description}</CardDescription>
+                <div className="mt-4">
+                  <span className="text-4xl font-bold">
+                    {formatCurrency(selectedType.price)}
+                  </span>
+                  <span className="text-gray-500 ml-2">/mes</span>
+                </div>
+              </CardHeader>
+
+              <CardContent className="space-y-4">
+                <ul className="space-y-3">
+                  {PLAN_FEATURES.map((feature, index) => (
+                    <li key={index} className="flex items-start gap-2">
+                      <Check className="h-5 w-5 text-green-600 mt-0.5 flex-shrink-0" />
+                      <span className="text-sm">{feature}</span>
+                    </li>
+                  ))}
+                </ul>
+
+                <Button
+                  className={`w-full ${
+                    hasActiveSubscription
+                      ? "bg-green-600 hover:bg-green-600"
+                      : "bg-gray-800 hover:bg-gray-900"
+                  }`}
+                  size="lg"
+                  onClick={() => handleSubscribe(selectedType.planId)}
+                  // Si ya está activo no debe poder pagar de nuevo por accidente
+                  disabled={
+                    hasActiveSubscription ||
+                    (loading && selectedItem === selectedType.planId)
+                  }
+                >
+                  {loading && selectedItem === selectedType.planId ? (
+                    <>
+                      <Loader2 className="mr-2 h-5 w-5 animate-spin" />
+                      Creando link de pago...
+                    </>
+                  ) : hasActiveSubscription ? (
+                    <>
+                      <Check className="mr-2 h-5 w-5" />
+                      Plan Activo
+                    </>
+                  ) : (
+                    `Suscribirse al Plan ${selectedType.name}`
+                  )}
+                </Button>
+              </CardContent>
+            </Card>
+          );
+        })()}
       </div>
 
       {/* Funcionalidades incluidas (antes eran addons de pago) */}
@@ -499,15 +545,18 @@ export default function SubscriptionPageWompi() {
           <CardContent>
             <div className="space-y-2">
               <div className="flex justify-between items-center">
-                <span>Plan Básico (todo incluido)</span>
+                <span>
+                  Plan {getBusinessType(profile.business_type).name} (todo
+                  incluido)
+                </span>
                 <span className="font-bold">
-                  {formatCurrency(BASE_PLAN.price)}
+                  {formatCurrency(getBusinessType(profile.business_type).price)}
                 </span>
               </div>
               <div className="border-t pt-2 mt-2 flex justify-between items-center text-lg font-bold">
                 <span>Total</span>
                 <span>
-                  {formatCurrency(BASE_PLAN.price)}
+                  {formatCurrency(getBusinessType(profile.business_type).price)}
                   <span className="text-sm font-normal text-gray-600">
                     /mes
                   </span>

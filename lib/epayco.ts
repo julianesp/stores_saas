@@ -1,20 +1,40 @@
 import crypto from 'crypto';
+import { BUSINESS_TYPES } from './business-types';
 
-// Planes de suscripción
+// Funcionalidades incluidas en todo plan de tipo de negocio (todo incluido).
+const INCLUDED_FEATURES = [
+  'Gestión completa de inventario',
+  'Punto de venta (POS)',
+  'Gestión de clientes',
+  'Reportes y estadísticas básicas',
+  'Soporte técnico por email',
+  'Actualizaciones automáticas',
+];
+
+// Planes de suscripción por tipo de negocio (derivados de lib/business-types.ts).
+// Cada tipo de negocio es un plan distinto con su propio precio.
+const BUSINESS_PLANS = BUSINESS_TYPES.map((t) => ({
+  id: t.planId,
+  name: `Plan ${t.name}`,
+  price: t.price,
+  businessType: t.id,
+  isAddon: false,
+  features: INCLUDED_FEATURES,
+}));
+
+// Planes de suscripción disponibles.
+// - Los planes de tipo de negocio se generan desde business-types.ts.
+// - 'basic-monthly' se conserva como ALIAS legacy de abarrotes para no romper
+//   cuentas ni links de pago anteriores a la clasificación de tiendas.
+// - 'ai-addon-monthly' se conserva por compatibilidad histórica.
 export const SUBSCRIPTION_PLANS = [
+  ...BUSINESS_PLANS,
   {
     id: 'basic-monthly',
     name: 'Plan básico',
     price: 24900,
     popular: true,
-    features: [
-      'Gestión completa de inventario',
-      'Punto de venta (POS)',
-      'Gestión de clientes',
-      'Reportes y estadísticas básicas',
-      'Soporte técnico por email',
-      'Actualizaciones automáticas',
-    ],
+    features: INCLUDED_FEATURES,
   },
   {
     id: 'ai-addon-monthly',

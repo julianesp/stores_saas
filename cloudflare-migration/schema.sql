@@ -13,6 +13,9 @@ CREATE TABLE IF NOT EXISTS user_profiles (
   phone TEXT,
   is_superadmin INTEGER DEFAULT 0,
 
+  -- Clasificación de tienda (abarrotes, papeleria, comidas_rapidas, licorera, farmacia)
+  business_type TEXT DEFAULT 'abarrotes',
+
   -- Subscription fields
   subscription_status TEXT NOT NULL DEFAULT 'trial' CHECK(subscription_status IN ('trial', 'active', 'expired', 'canceled')),
   trial_start_date TEXT,

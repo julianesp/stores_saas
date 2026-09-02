@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { verifyEPaycoSignature, type EPaycoConfirmation } from '@/lib/epayco';
+import { getBusinessTypeByPlanId } from '@/lib/business-types';
 
 /**
  * Webhook de confirmación de ePayco
@@ -87,6 +88,15 @@ export async function POST(req: NextRequest) {
 
     if (isMainPlan) {
       updatePayload.plan_id = planId;
+
+      // Si el plan corresponde a un tipo de negocio (abarrotes, papelería,
+      // pizzería, licorera, farmacia), guardar también el business_type para
+      // adaptar la interfaz. Los planes legacy (basic-monthly) no lo tienen y
+      // el perfil queda con el valor por defecto (abarrotes).
+      const businessType = getBusinessTypeByPlanId(planId);
+      if (businessType) {
+        updatePayload.business_type = businessType.id;
+      }
     }
     if (isAiAddon) {
       updatePayload.has_ai_addon = 1;
