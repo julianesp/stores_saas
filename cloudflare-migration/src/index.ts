@@ -39,6 +39,7 @@ import marketTrendsRoutes from './routes/market-trends';
 import posReviewsRoutes from './routes/pos-reviews';
 import telegramRoutes from './routes/telegram';
 import telegramRecipientsRoutes from './routes/telegram-recipients';
+import businessTypePricesRoutes from './routes/business-type-prices';
 
 const app = new Hono<{ Bindings: Env }>();
 
@@ -336,6 +337,7 @@ app.route('/api/facturas', facturasRoutes);
 app.route('/api/market', marketTrendsRoutes);
 app.route('/api/pos-reviews', posReviewsRoutes);
 app.route('/api/telegram-recipients', telegramRecipientsRoutes);
+app.route('/api/business-type-prices', businessTypePricesRoutes);
 
 // 404 handler
 app.notFound((c) => {

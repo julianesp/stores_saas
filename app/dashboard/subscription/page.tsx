@@ -17,7 +17,7 @@ import {
   CardTitle,
   CardDescription,
 } from "@/components/ui/card";
-import { getUserProfile } from "@/lib/cloudflare-api";
+import { getUserProfile, getBusinessTypePrices } from "@/lib/cloudflare-api";
 import { UserProfile } from "@/lib/types";
 import { useTenant } from "@/lib/tenant-context";
 import { toast } from "sonner";
@@ -93,6 +93,9 @@ export default function SubscriptionPageWompi() {
   const [selectedBusinessType, setSelectedBusinessType] = useState(
     BUSINESS_TYPES[0].id,
   );
+  // Precios editables desde el panel superadmin. Si aún no cargaron (o el
+  // tipo no tiene precio vivo), se usa el precio estático de business-types.ts.
+  const [livePrices, setLivePrices] = useState<Record<string, number>>({});
 
   useEffect(() => {
     async function fetchProfile() {
@@ -110,6 +113,28 @@ export default function SubscriptionPageWompi() {
     }
     fetchProfile();
   }, [getToken, tenantReady]);
+
+  useEffect(() => {
+    async function fetchPrices() {
+      if (!getToken) return;
+      try {
+        const data = await getBusinessTypePrices(getToken);
+        const map: Record<string, number> = {};
+        (Array.isArray(data) ? data : []).forEach((p) => {
+          map[p.businessType] = p.price;
+        });
+        setLivePrices(map);
+      } catch (error) {
+        console.error("Error loading live prices:", error);
+      }
+    }
+    fetchPrices();
+  }, [getToken]);
+
+  const getPrice = (businessTypeId?: string | null) => {
+    const resolvedType = getBusinessType(businessTypeId);
+    return livePrices[resolvedType.id] ?? resolvedType.price;
+  };
 
   const handleSubscribe = async (itemId: string) => {
     if (!user) return;
@@ -385,7 +410,7 @@ export default function SubscriptionPageWompi() {
                   {bt.name}
                 </div>
                 <div className="text-xs text-gray-500 mt-1">
-                  {formatCurrency(bt.price)}/mes
+                  {formatCurrency(getPrice(bt.id))}/mes
                 </div>
               </button>
             );
@@ -404,7 +429,7 @@ export default function SubscriptionPageWompi() {
                 <CardDescription>{selectedType.description}</CardDescription>
                 <div className="mt-4">
                   <span className="text-4xl font-bold">
-                    {formatCurrency(selectedType.price)}
+                    {formatCurrency(getPrice(selectedType.id))}
                   </span>
                   <span className="text-gray-500 ml-2">/mes</span>
                 </div>
@@ -550,13 +575,13 @@ export default function SubscriptionPageWompi() {
                   incluido)
                 </span>
                 <span className="font-bold">
-                  {formatCurrency(getBusinessType(profile.business_type).price)}
+                  {formatCurrency(getPrice(profile.business_type))}
                 </span>
               </div>
               <div className="border-t pt-2 mt-2 flex justify-between items-center text-lg font-bold">
                 <span>Total</span>
                 <span>
-                  {formatCurrency(getBusinessType(profile.business_type).price)}
+                  {formatCurrency(getPrice(profile.business_type))}
                   <span className="text-sm font-normal text-gray-600">
                     /mes
                   </span>

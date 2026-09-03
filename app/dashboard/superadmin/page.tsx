@@ -9,6 +9,7 @@ import { Input } from "@/components/ui/input";
 import { getAllUserProfiles } from "@/lib/cloudflare-api";
 import { UserProfile } from "@/lib/types";
 import PosReviewsModerator from "@/components/dashboard/PosReviewsModerator";
+import BusinessTypePricesEditor from "@/components/dashboard/BusinessTypePricesEditor";
 import {
   Store,
   Users,
@@ -447,6 +448,9 @@ export default function SuperAdminPage() {
           <p className="text-black">Vista general del negocio multi-tenant</p>
         </div>
       </div>
+
+      {/* Precios de planes por tipo de negocio */}
+      <BusinessTypePricesEditor />
 
       {/* Moderación de reseñas del sistema POS */}
       <PosReviewsModerator />

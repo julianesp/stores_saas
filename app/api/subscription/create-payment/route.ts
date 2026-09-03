@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { auth } from '@clerk/nextjs/server';
 import { createEPaycoCheckout, SUBSCRIPTION_PLANS } from '@/lib/epayco';
+import { getBusinessTypeByPlanId } from '@/lib/business-types';
 
 export async function POST(req: NextRequest) {
   try {
@@ -85,13 +86,35 @@ export async function POST(req: NextRequest) {
       );
     }
 
+    // Precio en vivo editado desde el panel superadmin (si el plan corresponde
+    // a un tipo de negocio). Si falla o no hay override, se usa plan.price.
+    let livePrice: number | undefined;
+    const businessType = getBusinessTypeByPlanId(planId);
+    if (businessType) {
+      try {
+        const pricesResponse = await fetch(`${apiUrl}/api/business-type-prices`, {
+          headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+        });
+        if (pricesResponse.ok) {
+          const pricesData = await pricesResponse.json();
+          const match = (pricesData.data || []).find(
+            (p: { businessType: string; price: number }) => p.businessType === businessType.id
+          );
+          if (match) livePrice = match.price;
+        }
+      } catch (err) {
+        console.error('[create-payment] error fetching live prices:', err);
+      }
+    }
+
     // Crear checkout en ePayco
     const checkoutData = await createEPaycoCheckout(
       planId,
       userProfile.id,
       userProfile.email,
       userProfile.store_name || userProfile.email,
-      userProfile.phone
+      userProfile.phone,
+      livePrice
     );
 
     console.log('ePayco checkout created:', checkoutData);
