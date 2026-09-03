@@ -3,6 +3,35 @@ import { useState, useEffect } from 'react';
 import { Permission, TeamMember, UserProfile } from '@/lib/types';
 import { hasPermission, hasAllPermissions, hasAnyPermission } from '@/lib/permissions';
 
+// Último perfil/rol conocido, para no dejar el menú sin opciones cuando el
+// dispositivo está sin conexión y las llamadas a /api/team/me y
+// /api/user/profile fallan.
+const PERMISSIONS_CACHE_KEY = 'posib-permissions-cache';
+
+interface CachedPermissions {
+  currentUser: UserProfile | TeamMember;
+  isOwner: boolean;
+}
+
+function readCachedPermissions(): CachedPermissions | null {
+  if (typeof window === 'undefined') return null;
+  try {
+    const raw = localStorage.getItem(PERMISSIONS_CACHE_KEY);
+    return raw ? JSON.parse(raw) : null;
+  } catch {
+    return null;
+  }
+}
+
+function writeCachedPermissions(data: CachedPermissions) {
+  if (typeof window === 'undefined') return;
+  try {
+    localStorage.setItem(PERMISSIONS_CACHE_KEY, JSON.stringify(data));
+  } catch {
+    // Cuota de localStorage llena u otro error: no es crítico, se ignora.
+  }
+}
+
 /**
  * Hook para gestionar permisos del usuario actual
  */
@@ -34,6 +63,7 @@ export function usePermissions() {
 
           setCurrentUser(member);
           setIsOwner(false);
+          writeCachedPermissions({ currentUser: member, isOwner: false });
           setLoading(false);
           return;
         }
@@ -48,6 +78,7 @@ export function usePermissions() {
           const profile = await profileResponse.json();
           setCurrentUser(profile);
           setIsOwner(true);
+          writeCachedPermissions({ currentUser: profile, isOwner: true });
           setLoading(false);
           return;
         }
@@ -55,6 +86,13 @@ export function usePermissions() {
         setIsOwner(false);
       } catch (error) {
         console.error('[usePermissions] Error al cargar perfil:', error);
+        // Sin conexión: usar el último perfil/rol cacheado para no dejar
+        // el menú sin opciones.
+        const cached = readCachedPermissions();
+        if (cached) {
+          setCurrentUser(cached.currentUser);
+          setIsOwner(cached.isOwner);
+        }
       } finally {
         setLoading(false);
       }
