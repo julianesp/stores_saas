@@ -131,13 +131,18 @@ export async function createEPaycoCheckout(
   userProfileId: string,
   userEmail: string,
   userName: string,
-  userPhone?: string
+  userPhone?: string,
+  // Precio editado desde el panel superadmin (lib/cloudflare-api.ts →
+  // getBusinessTypePrices). Si no se pasa, se usa el precio estático de plan.price.
+  livePrice?: number
 ): Promise<EPaycoPaymentLink & { sessionId?: string }> {
   const plan = SUBSCRIPTION_PLANS.find(p => p.id === planId);
 
   if (!plan) {
     throw new Error('Plan no encontrado');
   }
+
+  const effectivePrice = livePrice ?? plan.price;
 
   // Generar referencia única
   const referenceCode = `SUB-${userProfileId}-${Date.now()}`;
@@ -208,7 +213,7 @@ export async function createEPaycoCheckout(
     // ePayco Smart Checkout v2 espera los montos como string y el desglose de
     // impuestos explícito. Si falta tax/tax_base o el amount va como número,
     // el checkout abre pero deja el botón "Pagar" inhabilitado.
-    const amountStr = String(plan.price);
+    const amountStr = String(effectivePrice);
 
     const sessionPayload = {
       // Información básica de la transacción (snake_case según documentación oficial)

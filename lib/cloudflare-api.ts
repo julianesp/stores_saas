@@ -899,3 +899,39 @@ export async function deletePosReviewAsAdmin(
     true,
   );
 }
+
+// ============================================
+// BUSINESS TYPE PRICES - Precios editables por tipo de negocio
+// ============================================
+
+export interface BusinessTypePrice {
+  businessType: BusinessTypeId | string;
+  price: number;
+  updatedAt: string;
+}
+
+/** Lista los precios vigentes por tipo de negocio (lectura para cualquier usuario autenticado). */
+export async function getBusinessTypePrices(
+  getToken: GetTokenFn
+): Promise<BusinessTypePrice[]> {
+  return fetchAPI<BusinessTypePrice[]>(
+    '/api/business-type-prices',
+    getToken,
+    {},
+    true, // omitir X-Tenant-ID: precios son globales, no por tienda
+  );
+}
+
+/** (Superadmin) Actualiza el precio mensual de un tipo de negocio. */
+export async function updateBusinessTypePrice(
+  businessType: BusinessTypeId | string,
+  price: number,
+  getToken: GetTokenFn,
+): Promise<void> {
+  return fetchAPI<void>(
+    `/api/business-type-prices/${businessType}`,
+    getToken,
+    { method: 'PUT', body: JSON.stringify({ price }) },
+    true,
+  );
+}

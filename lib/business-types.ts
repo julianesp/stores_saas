@@ -16,9 +16,8 @@
  *   - app/dashboard/subscription → el tendero elige y paga
  *
  * ── Cómo cambiar los precios ───────────────────────────────────────────────
- * Los precios de abajo son PLACEHOLDER (todos en $24.900). Ajusta el campo
- * `price` de cada tipo cuando tengas los precios definitivos. No hay que tocar
- * nada más: epayco.ts y la página de suscripción los leen de aquí.
+ * Edita el campo `price` de cada tipo abajo. No hay que tocar nada más:
+ * epayco.ts y la página de suscripción los leen de aquí.
  */
 
 /** Identificadores estables de tipo de negocio. No renombrar (se guardan en BD). */
@@ -83,12 +82,6 @@ export interface BusinessType {
 /** Tipo de negocio por defecto (comportamiento histórico = tienda completa). */
 export const DEFAULT_BUSINESS_TYPE: BusinessTypeId = 'abarrotes';
 
-/**
- * PRECIO PLACEHOLDER. Todos los tipos comparten este valor por ahora.
- * Cuando definas precios diferenciados, edita el `price` de cada tipo abajo.
- */
-const PLACEHOLDER_PRICE = 24900;
-
 export const BUSINESS_TYPES: BusinessType[] = [
   {
     id: 'abarrotes',
@@ -97,7 +90,7 @@ export const BUSINESS_TYPES: BusinessType[] = [
       'Tienda de barrio completa: control de vencimientos, fiado, código de barras y proveedores.',
     emoji: '🛒',
     planId: 'plan-abarrotes-monthly',
-    price: PLACEHOLDER_PRICE,
+    price: 24900,
     vocabulary: { itemSingular: 'Producto', itemPlural: 'Productos' },
     hiddenModules: [],
     features: {
@@ -114,7 +107,7 @@ export const BUSINESS_TYPES: BusinessType[] = [
       'Útiles escolares y de oficina. Sin vencimientos, foco en variedad de artículos.',
     emoji: '✏️',
     planId: 'plan-papeleria-monthly',
-    price: PLACEHOLDER_PRICE,
+    price: 19900,
     vocabulary: { itemSingular: 'Artículo', itemPlural: 'Artículos' },
     hiddenModules: [],
     features: {
@@ -131,7 +124,7 @@ export const BUSINESS_TYPES: BusinessType[] = [
       'Platos y combos preparados. Sin código de barras ni inventario perecedero clásico.',
     emoji: '🍕',
     planId: 'plan-comidas-rapidas-monthly',
-    price: PLACEHOLDER_PRICE,
+    price: 19900,
     vocabulary: { itemSingular: 'Plato', itemPlural: 'Platos y combos' },
     hiddenModules: ['inventory'],
     features: {
@@ -148,7 +141,7 @@ export const BUSINESS_TYPES: BusinessType[] = [
       'Licores y cigarrillos. Ticket promedio alto, sin fecha de vencimiento.',
     emoji: '🍾',
     planId: 'plan-licorera-monthly',
-    price: PLACEHOLDER_PRICE,
+    price: 24900,
     vocabulary: { itemSingular: 'Producto', itemPlural: 'Productos' },
     hiddenModules: [],
     features: {
@@ -165,7 +158,7 @@ export const BUSINESS_TYPES: BusinessType[] = [
       'Medicamentos y productos de salud. Control estricto de vencimientos.',
     emoji: '💊',
     planId: 'plan-farmacia-monthly',
-    price: PLACEHOLDER_PRICE,
+    price: 29900,
     vocabulary: { itemSingular: 'Medicamento', itemPlural: 'Medicamentos' },
     hiddenModules: [],
     features: {
