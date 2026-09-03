@@ -43,6 +43,7 @@ import {
 } from "@/lib/cloudflare-subscription-helpers";
 import { UserProfile, Permission } from "@/lib/types";
 import { usePermissions } from "@/hooks/usePermissions";
+import { getHiddenModules } from "@/lib/business-types";
 
 // Menú para Super Administradores (gestión del SaaS)
 const superAdminMenuItems = [
@@ -420,7 +421,17 @@ export function Sidebar({ isMobile = false, onLinkClick }: SidebarProps) {
 
     if (isSuperAdmin) return superAdminMenuItems;
 
+    // Módulos ocultos según el tipo de negocio (abarrotes, papelería, etc.).
+    // Si el perfil aún no cargó, no ocultamos nada (getHiddenModules devuelve
+    // los de 'abarrotes' por defecto, que es la tienda completa).
+    const hiddenModules = getHiddenModules(userProfile?.business_type);
+
     const filtered = storeMenuItems.filter((item) => {
+      // Ocultar módulos que no aplican a este tipo de negocio
+      if (hiddenModules.includes(item.id as (typeof hiddenModules)[number])) {
+        return false;
+      }
+
       // Si es solo para owners y el usuario no es owner, ocultar
       if ((item as { ownerOnly?: boolean }).ownerOnly && !isOwner) {
         return false;

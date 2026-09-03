@@ -11,6 +11,7 @@
  */
 
 import type { PurchaseOrderWithItems } from '@/lib/types';
+import type { BusinessTypeId } from '@/lib/business-types';
 
 // URL base de la API de Cloudflare Workers
 const API_BASE_URL = process.env.NEXT_PUBLIC_CLOUDFLARE_API_URL || 'https://tienda-pos-api.julii1295.workers.dev';
@@ -518,6 +519,8 @@ export interface UserProfile {
   // QR de pagos del tendero (Nequi/Daviplata/Bre-B) para cobrar en el POS
   payment_qr_url?: string;
   is_superadmin?: boolean;
+  // Clasificación de tienda (ver lib/business-types.ts)
+  business_type?: BusinessTypeId;
   subscription_status: 'trial' | 'active' | 'expired' | 'canceled';
   trial_start_date?: string;
   trial_end_date?: string;

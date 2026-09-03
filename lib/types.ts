@@ -1,5 +1,7 @@
 // Tipos para las tablas de la base de datos
 
+import type { BusinessTypeId } from './business-types';
+
 export interface UserProfile {
   id: string;
   clerk_user_id: string;
@@ -8,6 +10,11 @@ export interface UserProfile {
   full_name?: string;
   phone?: string;
   is_superadmin?: boolean; // Solo para admin@neurai.dev
+
+  // Clasificación de la tienda: adapta la interfaz (módulos, vocabulario) y
+  // corresponde al plan de suscripción que se compró. Ver lib/business-types.ts.
+  // Si está vacío, se asume 'abarrotes' (comportamiento histórico).
+  business_type?: BusinessTypeId;
 
   // Campos de suscripción
   subscription_status: 'trial' | 'active' | 'expired' | 'canceled';

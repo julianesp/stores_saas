@@ -175,6 +175,8 @@ app.put('/:id', async (c) => {
       'loyalty_points',
       'loyalty_tier',
       'is_superadmin',
+      // Clasificación de tienda (abarrotes, papelería, pizzería, licorera, farmacia)
+      'business_type',
       // QR de pagos del tendero (Nequi/Daviplata/Bre-B) para cobrar en el POS
       'payment_qr_url',
       // Addon subscriptions
