@@ -242,6 +242,9 @@ const COLLAPSED_WIDTH = 64; // Ancho cuando está colapsado
 const STORAGE_KEY = "sidebar-width";
 const COLLAPSED_STORAGE_KEY = "sidebar-collapsed";
 const MENU_ORDER_STORAGE_KEY = "sidebar-menu-order";
+// Último perfil conocido, para no dejar el menú sin opciones cuando el
+// dispositivo está sin conexión y /api/user/init-profile falla.
+const PROFILE_CACHE_KEY = "posib-profile-cache";
 
 export function Sidebar({ isMobile = false, onLinkClick }: SidebarProps) {
   const pathname = usePathname();
@@ -402,9 +405,29 @@ export function Sidebar({ isMobile = false, onLinkClick }: SidebarProps) {
               setHasEmail(hasEmailMarketingAccess(data.profile));
               setHasStore(hasStoreAccess(data.profile));
             }
+            try {
+              localStorage.setItem(PROFILE_CACHE_KEY, JSON.stringify(data.profile));
+            } catch {
+              // Cuota de localStorage llena u otro error: no es crítico.
+            }
           }
         } catch (error) {
           console.error("Error fetching profile:", error);
+          // Sin conexión: usar el último perfil cacheado para no dejar el
+          // menú sin opciones.
+          try {
+            const cached = localStorage.getItem(PROFILE_CACHE_KEY);
+            if (cached) {
+              const profile = JSON.parse(cached);
+              setIsSuperAdmin(profile.is_superadmin || false);
+              setUserProfile(profile);
+              setHasAI(hasAIAccess(profile));
+              setHasEmail(hasEmailMarketingAccess(profile));
+              setHasStore(hasStoreAccess(profile));
+            }
+          } catch {
+            // Sin caché disponible: se deja el estado por defecto.
+          }
         }
       }
     }
