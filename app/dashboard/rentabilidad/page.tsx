@@ -16,8 +16,9 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { getSales, getProducts, Product } from '@/lib/cloudflare-api';
-import { SaleWithRelations, SaleItem } from '@/lib/types';
+import { SaleWithRelations } from '@/lib/types';
 import { formatCurrency } from '@/lib/utils';
+import { getItemCost, getItemRevenue, startOfDay } from '@/lib/profit-helpers';
 
 type Period = 'today' | 'week' | 'month' | '3months' | 'all';
 
@@ -36,37 +37,6 @@ interface ProductProfit {
   revenue: number;
   cost: number;
   profit: number;
-}
-
-/**
- * Costo estimado de un item vendido, usando el costo ACTUAL del producto.
- * Para productos que se venden por unidad suelta (ej. huevos de una cubeta),
- * si el precio del item coincide con el precio por unidad, se prorratea el
- * costo del paquete entre sus unidades.
- */
-function getItemCost(item: SaleItem, product?: Product): number {
-  if (!product) return 0;
-  const cost = product.cost_price || 0;
-  if (
-    product.sell_by_unit &&
-    product.units_per_package &&
-    product.units_per_package > 0 &&
-    product.price_per_unit &&
-    Math.abs(item.unit_price - product.price_per_unit) < 0.01
-  ) {
-    return (cost / product.units_per_package) * item.quantity;
-  }
-  return cost * item.quantity;
-}
-
-function getItemRevenue(item: SaleItem): number {
-  if (typeof item.subtotal === 'number') return item.subtotal;
-  return item.unit_price * item.quantity - (item.discount || 0);
-}
-
-/** Inicio del día local de una fecha */
-function startOfDay(d: Date): Date {
-  return new Date(d.getFullYear(), d.getMonth(), d.getDate());
 }
 
 export default function RentabilidadPage() {

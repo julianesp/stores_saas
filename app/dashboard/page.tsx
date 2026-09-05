@@ -19,6 +19,7 @@ import {
   Plus,
   HandCoins,
   ArrowRight,
+  PiggyBank,
 } from "lucide-react";
 import { getUserProfileByClerkId } from "@/lib/cloudflare-subscription-helpers";
 import { getAllUserProfiles } from "@/lib/cloudflare-api";
@@ -29,10 +30,12 @@ import { formatCurrency } from "@/lib/utils";
 import { toast } from "sonner";
 import {
   getDashboardMetrics,
+  getDailyProfit,
   getTopProducts,
   getExpiringProducts,
   getExpiringProductsList,
   DashboardMetrics,
+  DailyProfit,
   TopProduct,
 } from "@/lib/dashboard-helpers";
 import { Product } from "@/lib/cloudflare-api";
@@ -62,6 +65,7 @@ export default function DashboardPage() {
     monthlyGrowth: 0,
   });
   const [topProducts, setTopProducts] = useState<TopProduct[]>([]);
+  const [dailyProfit, setDailyProfit] = useState<DailyProfit | null>(null);
   const [expiringProductsCount, setExpiringProductsCount] = useState(0);
   const [expiringProducts, setExpiringProducts] = useState<Product[]>([]);
   const [debtors, setDebtors] = useState<Customer[]>([]);
@@ -119,12 +123,14 @@ export default function DashboardPage() {
             // (p. ej. deudores) no tumbe todo el dashboard.
             const [
               dashboardMetrics,
+              profit,
               products,
               expiringCount,
               expiringProductsList,
               debtorCustomers,
             ] = await Promise.all([
               getDashboardMetrics(getToken),
+              getDailyProfit(getToken),
               getTopProducts(4, getToken),
               getExpiringProducts(getToken),
               getExpiringProductsList(getToken),
@@ -132,6 +138,7 @@ export default function DashboardPage() {
             ]);
 
             setMetrics(dashboardMetrics);
+            setDailyProfit(profit);
             setTopProducts(products);
             setExpiringProductsCount(expiringCount);
             setExpiringProducts(expiringProductsList.slice(0, 5)); // Primeros 5
@@ -473,6 +480,56 @@ export default function DashboardPage() {
           </div>
         </Link>
       </div>
+
+      {/* Ganancia de hoy — cuánto ganó realmente el tendero (venta − costo) */}
+      <Link href="/dashboard/rentabilidad" className="block group">
+        <Card className="border-2 border-emerald-200 bg-gradient-to-r from-emerald-50 to-green-50 hover:border-emerald-300 hover:shadow-md transition-all">
+          <CardContent className="pt-6">
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+              <div className="flex items-center gap-4">
+                <div className="p-3 bg-emerald-600 rounded-xl flex-shrink-0">
+                  <PiggyBank className="h-7 w-7 text-white" />
+                </div>
+                <div>
+                  <p className="text-sm font-medium text-emerald-800">
+                    Ganancia de hoy
+                  </p>
+                  <p
+                    className={`text-3xl md:text-4xl font-bold ${
+                      (dailyProfit?.profit ?? 0) >= 0
+                        ? "text-emerald-700"
+                        : "text-red-600"
+                    }`}
+                  >
+                    {formatCurrency(dailyProfit?.profit ?? 0)}
+                  </p>
+                  <p className="text-xs text-gray-600 mt-1">
+                    Vendiste {formatCurrency(dailyProfit?.revenue ?? 0)} · costo{" "}
+                    {formatCurrency(dailyProfit?.cost ?? 0)}
+                    {(dailyProfit?.revenue ?? 0) > 0
+                      ? ` · margen ${(dailyProfit?.margin ?? 0).toFixed(0)}%`
+                      : ""}
+                  </p>
+                </div>
+              </div>
+              <div className="flex items-center gap-1 text-sm font-medium text-emerald-700 sm:self-center">
+                Ver detalle
+                <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-0.5" />
+              </div>
+            </div>
+            {dailyProfit?.hasMissingCost && (
+              <div className="mt-4 flex items-start gap-2 text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded-lg p-2">
+                <AlertTriangle className="h-4 w-4 flex-shrink-0 mt-0.5" />
+                <span>
+                  Algunos productos vendidos hoy no tienen precio de costo
+                  registrado, así que la ganancia real podría ser menor. Agrega
+                  el costo a esos productos para verla exacta.
+                </span>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      </Link>
 
       {/* Métricas principales */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 md:gap-4">

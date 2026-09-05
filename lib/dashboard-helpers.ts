@@ -1,4 +1,5 @@
 import { GetTokenFn, getProducts, getSales, getCustomers, Product } from './cloudflare-api';
+import { computeProfit, startOfDay, ProfitSummary } from './profit-helpers';
 
 export interface DashboardMetrics {
   dailySales: number;
@@ -7,6 +8,12 @@ export interface DashboardMetrics {
   lowStockProducts: number;
   activeCustomers: number;
   monthlyGrowth: number;
+}
+
+export interface DailyProfit extends ProfitSummary {
+  /** true si al menos un producto vendido hoy no tiene costo registrado:
+   *  la ganancia mostrada estaría inflada. */
+  hasMissingCost: boolean;
 }
 
 export interface TopProduct {
@@ -109,6 +116,52 @@ export async function getDashboardMetrics(getToken: GetTokenFn): Promise<Dashboa
       activeCustomers: 0,
       monthlyGrowth: 0,
     };
+  }
+}
+
+/**
+ * Calcula la ganancia neta del día de hoy: ingresos de las ventas de hoy menos
+ * el costo estimado de la mercancía vendida (usando el costo actual de cada
+ * producto). Las ventas de /api/sales ya vienen con sus items, así que basta
+ * una llamada a getSales + una a getProducts.
+ */
+export async function getDailyProfit(getToken: GetTokenFn): Promise<DailyProfit> {
+  try {
+    const [allSales, allProducts] = await Promise.all([
+      getSales(getToken),
+      getProducts(getToken),
+    ]);
+
+    const productsById = new Map<string, Product>();
+    allProducts.forEach((p) => productsById.set(p.id, p));
+
+    const todayStart = startOfDay(new Date());
+    const todaySales = allSales.filter((sale) => {
+      if (sale.status !== 'completada') return false;
+      const saleDate = sale.created_at ? new Date(sale.created_at) : null;
+      return saleDate && saleDate >= todayStart;
+    });
+
+    const summary = computeProfit(todaySales, productsById);
+
+    // ¿Algún producto vendido hoy sin costo registrado? Entonces la ganancia
+    // mostrada es optimista (asume costo 0 para ese producto).
+    let hasMissingCost = false;
+    for (const sale of todaySales) {
+      for (const item of sale.items || []) {
+        const product = productsById.get(item.product_id);
+        if (!product || !product.cost_price || product.cost_price <= 0) {
+          hasMissingCost = true;
+          break;
+        }
+      }
+      if (hasMissingCost) break;
+    }
+
+    return { ...summary, hasMissingCost };
+  } catch (error) {
+    console.error('Error getting daily profit:', error);
+    return { revenue: 0, cost: 0, profit: 0, margin: 0, hasMissingCost: false };
   }
 }
 

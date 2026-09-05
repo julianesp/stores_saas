@@ -149,7 +149,9 @@ export default function POSPage() {
 
   // Estado para animación del carrito al agregar producto
   const [cartBump, setCartBump] = useState(false);
-  const [floatingProducts, setFloatingProducts] = useState<Set<string>>(new Set());
+  const [floatingProducts, setFloatingProducts] = useState<Set<string>>(
+    new Set(),
+  );
   const cartIconRef = useRef<HTMLDivElement>(null);
 
   // COMENTADO: Tour deshabilitado
@@ -164,7 +166,10 @@ export default function POSPage() {
 
     // Validar email
     if (!newCustomerData.email.trim()) {
-      Swal.warning("Email requerido", "El email es necesario para enviar recordatorios de pago");
+      Swal.warning(
+        "Email requerido",
+        "El email es necesario para enviar recordatorios de pago",
+      );
       return;
     }
 
@@ -177,14 +182,20 @@ export default function POSPage() {
 
     // Validar teléfono
     if (!newCustomerData.phone.trim()) {
-      Swal.warning("Teléfono requerido", "El teléfono es necesario para enviar recordatorios de pago");
+      Swal.warning(
+        "Teléfono requerido",
+        "El teléfono es necesario para enviar recordatorios de pago",
+      );
       return;
     }
 
     // Validar que el teléfono tenga al menos 7 dígitos
-    const phoneDigits = newCustomerData.phone.replace(/\D/g, '');
+    const phoneDigits = newCustomerData.phone.replace(/\D/g, "");
     if (phoneDigits.length < 7) {
-      Swal.warning("Teléfono inválido", "El teléfono debe tener al menos 7 dígitos");
+      Swal.warning(
+        "Teléfono inválido",
+        "El teléfono debe tener al menos 7 dígitos",
+      );
       return;
     }
 
@@ -216,7 +227,10 @@ export default function POSPage() {
     } catch (error) {
       console.error("Error creating customer:", error);
       // Mostrar el mensaje de error específico del backend
-      const errorMessage = error instanceof Error ? error.message : "Por favor verifica los datos ingresados";
+      const errorMessage =
+        error instanceof Error
+          ? error.message
+          : "Por favor verifica los datos ingresados";
       Swal.error("Error al crear cliente", errorMessage);
     }
   };
@@ -281,7 +295,10 @@ export default function POSPage() {
       // Sin conexión: leer el último catálogo cacheado.
       const cached = await readCachedCollection<Product>("products");
       if (cached.length > 0) {
-        const data = cached.map((p) => ({ ...p, sell_by_unit: !!p.sell_by_unit }));
+        const data = cached.map((p) => ({
+          ...p,
+          sell_by_unit: !!p.sell_by_unit,
+        }));
         setHasAnyProducts(data.length > 0);
         const productsInStock = data.filter((p) => p.stock > 0);
         productsInStock.sort((a, b) => a.name.localeCompare(b.name));
@@ -549,17 +566,17 @@ export default function POSPage() {
     quantity: number = 1,
     isUnitSale: boolean | undefined = undefined,
   ) => {
-    console.log('🛒 addToCart called:', {
+    console.log("🛒 addToCart called:", {
       product: product.name,
       quantity,
       isUnitSale,
-      sell_by_unit: product.sell_by_unit
+      sell_by_unit: product.sell_by_unit,
     });
 
     // Si el producto se vende por unidades y no se especificó explícitamente el tipo de venta, abrir modal
     // isUnitSale === undefined significa que se llamó desde la lista de productos
     if (!!product.sell_by_unit && isUnitSale === undefined) {
-      console.log('📱 Opening unit selector modal (isUnitSale not specified)');
+      console.log("📱 Opening unit selector modal (isUnitSale not specified)");
       setSelectedProductForUnits(product);
       setShowUnitSelector(true);
       return;
@@ -574,9 +591,17 @@ export default function POSPage() {
 
     // Partícula flotante "+1" sobre la card del producto
     setFloatingProducts((prev) => new Set(prev).add(product.id));
-    setTimeout(() => setFloatingProducts((prev) => { const s = new Set(prev); s.delete(product.id); return s; }), 900);
+    setTimeout(
+      () =>
+        setFloatingProducts((prev) => {
+          const s = new Set(prev);
+          s.delete(product.id);
+          return s;
+        }),
+      900,
+    );
 
-    console.log('➕ Adding to cart...', { finalIsUnitSale });
+    console.log("➕ Adding to cart...", { finalIsUnitSale });
     setCart((prev) => {
       // Buscar si ya existe en el carrito (del mismo tipo: paquete o unidad)
       const existing = prev.find(
@@ -588,10 +613,12 @@ export default function POSPage() {
       const unitsPerPackage = product.units_per_package || 1;
       const pricePerUnit =
         product.price_per_unit || product.sale_price / unitsPerPackage;
-      const effectivePrice = finalIsUnitSale ? pricePerUnit : product.sale_price;
+      const effectivePrice = finalIsUnitSale
+        ? pricePerUnit
+        : product.sale_price;
       const availableStock = finalIsUnitSale
-        ? Math.floor(product.stock * unitsPerPackage)  // Unidades disponibles
-        : Math.floor(product.stock);  // Paquetes completos disponibles
+        ? Math.floor(product.stock * unitsPerPackage) // Unidades disponibles
+        : Math.floor(product.stock); // Paquetes completos disponibles
 
       if (existing) {
         const newQuantity = existing.quantity + quantity;
@@ -636,10 +663,10 @@ export default function POSPage() {
   };
 
   const handleUnitSelectorConfirm = (quantity: number, isUnitSale: boolean) => {
-    console.log('✅ Unit selector confirmed:', {
+    console.log("✅ Unit selector confirmed:", {
       product: selectedProductForUnits?.name,
       quantity,
-      isUnitSale
+      isUnitSale,
     });
 
     if (selectedProductForUnits) {
@@ -653,14 +680,16 @@ export default function POSPage() {
         : selectedProductForUnits.package_name || "paquete";
       Swal.productAdded(
         `${selectedProductForUnits.name} (${quantity} ${unitName}${quantity > 1 ? "s" : ""})`,
-        quantity
+        quantity,
       );
     }
   };
 
   // Abre el modal de registro rápido, precargando el código de barras
   // (cuando viene del escáner) o el nombre (cuando viene de la búsqueda).
-  const openQuickRegister = (opts: { barcode?: string; name?: string } = {}) => {
+  const openQuickRegister = (
+    opts: { barcode?: string; name?: string } = {},
+  ) => {
     setQuickRegisterData({
       barcode: opts.barcode || "",
       name: opts.name || "",
@@ -695,7 +724,10 @@ export default function POSPage() {
       return;
     }
     if (isNaN(costPrice) || costPrice < 0) {
-      Swal.warning("Costo inválido", "El precio de costo no puede ser negativo");
+      Swal.warning(
+        "Costo inválido",
+        "El precio de costo no puede ser negativo",
+      );
       return;
     }
     if (isNaN(stock) || stock <= 0) {
@@ -749,7 +781,11 @@ export default function POSPage() {
     }
   };
 
-  const updateQuantity = (productId: string, delta: number, isUnitSale: boolean = false) => {
+  const updateQuantity = (
+    productId: string,
+    delta: number,
+    isUnitSale: boolean = false,
+  ) => {
     setCart((prev) =>
       prev.map((item) => {
         if (item.product.id === productId && item.isUnitSale === isUnitSale) {
@@ -779,7 +815,11 @@ export default function POSPage() {
     );
   };
 
-  const setDirectQuantity = (productId: string, quantity: number, isUnitSale: boolean = false) => {
+  const setDirectQuantity = (
+    productId: string,
+    quantity: number,
+    isUnitSale: boolean = false,
+  ) => {
     setCart((prev) =>
       prev.map((item) => {
         if (item.product.id === productId && item.isUnitSale === isUnitSale) {
@@ -812,7 +852,12 @@ export default function POSPage() {
   };
 
   const removeFromCart = (productId: string, isUnitSale: boolean = false) => {
-    setCart((prev) => prev.filter((item) => !(item.product.id === productId && item.isUnitSale === isUnitSale)));
+    setCart((prev) =>
+      prev.filter(
+        (item) =>
+          !(item.product.id === productId && item.isUnitSale === isUnitSale),
+      ),
+    );
   };
 
   const calculateTotal = () => {
@@ -990,13 +1035,10 @@ export default function POSPage() {
         return;
       }
 
-      const subtotal = cart.reduce(
-        (sum, item) => {
-          const price = item.effectivePrice || item.product.sale_price;
-          return sum + price * item.quantity;
-        },
-        0,
-      );
+      const subtotal = cart.reduce((sum, item) => {
+        const price = item.effectivePrice || item.product.sale_price;
+        return sum + price * item.quantity;
+      }, 0);
       // El número de venta se genera automáticamente en la API de Cloudflare
 
       // Canjear puntos por descuento si aplica
@@ -1146,24 +1188,24 @@ export default function POSPage() {
           const packagesSold = unitsSold / unitsPerPackage;
           newStock = cartItem.product.stock - packagesSold;
 
-          console.log('🔄 Venta por unidades:', {
+          console.log("🔄 Venta por unidades:", {
             producto: cartItem.product.name,
             stockAnterior: cartItem.product.stock,
             unidadesVendidas: unitsSold,
             unidadesPorPaquete: unitsPerPackage,
             paquetesDescontados: packagesSold,
             nuevoStock: newStock,
-            unidadesRestantes: Math.floor(newStock * unitsPerPackage)
+            unidadesRestantes: Math.floor(newStock * unitsPerPackage),
           });
         } else {
           // Venta por paquetes: descontar directamente
           newStock = cartItem.product.stock - cartItem.quantity;
 
-          console.log('📦 Venta por paquetes:', {
+          console.log("📦 Venta por paquetes:", {
             producto: cartItem.product.name,
             stockAnterior: cartItem.product.stock,
             paquetesVendidos: cartItem.quantity,
-            nuevoStock: newStock
+            nuevoStock: newStock,
           });
         }
 
@@ -1352,7 +1394,7 @@ export default function POSPage() {
           dueDate.setDate(dueDate.getDate() + creditDays);
           htmlContent += `
             <div class="bg-brand-light/50 border border-brand/40 rounded-lg p-3 mt-2">
-              <p class="text-sm font-semibold text-brand">💳 Venta a Crédito (${creditDays} ${creditDays === 1 ? 'día' : 'días'})</p>
+              <p class="text-sm font-semibold text-brand">💳 Venta a Crédito (${creditDays} ${creditDays === 1 ? "día" : "días"})</p>
               <p class="text-xs text-gray-600 mt-1">Fecha de vencimiento: ${dueDate.toLocaleDateString(
                 "es-CO",
               )}</p>
@@ -1397,7 +1439,8 @@ export default function POSPage() {
               // Construir los items con la información del producto
               const saleItemsWithProducts: SaleItemWithProduct[] = cart.map(
                 (cartItem) => {
-                  const price = cartItem.effectivePrice || cartItem.product.sale_price;
+                  const price =
+                    cartItem.effectivePrice || cartItem.product.sale_price;
                   return {
                     id: "", // Se genera en la API
                     user_profile_id: (sale as Sale).user_profile_id,
@@ -1517,21 +1560,6 @@ export default function POSPage() {
 
   return (
     <div className="space-y-4 md:space-y-6">
-      <div className="flex justify-between items-center">
-        <h1 className="text-2xl md:text-3xl font-bold">Punto de Venta</h1>
-        {/* COMENTADO: Botón de ayuda/tour deshabilitado
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={startTour}
-          title="Ver guía interactiva"
-        >
-          <HelpCircle className="h-4 w-4 sm:mr-2" />
-          <span className="hidden sm:inline">Ayuda</span>
-        </Button>
-        */}
-      </div>
-
       {/* Modal del escáner de cámara */}
       {showCameraScanner && (
         <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
@@ -1832,9 +1860,7 @@ export default function POSPage() {
                     <div className="flex items-center gap-2 text-xs text-gray-500">
                       <div
                         className={`h-1.5 w-1.5 rounded-full ${
-                          scanSuccess
-                            ? "bg-brand animate-ping"
-                            : "bg-brand"
+                          scanSuccess ? "bg-brand animate-ping" : "bg-brand"
                         }`}
                       ></div>
                       <span>
@@ -1908,7 +1934,12 @@ export default function POSPage() {
                         onClick={() => addToCart(product)}
                       >
                         {floatingProducts.has(product.id) && (
-                          <div className="floating-plus-one-card" aria-hidden="true">+1</div>
+                          <div
+                            className="floating-plus-one-card"
+                            aria-hidden="true"
+                          >
+                            +1
+                          </div>
                         )}
                         <CardContent className="p-2 md:p-4">
                           {/* Imagen del producto */}
@@ -1953,25 +1984,38 @@ export default function POSPage() {
                             )}
                           </div>
                           <p className="text-xs text-gray-500">
-                            Disponible: {
-                              !!product.sell_by_unit
-                                ? (() => {
-                                    // IMPORTANTE: El stock está en PAQUETES para TODOS los productos
-                                    const unitsPerPackage = product.units_per_package || 1;
-                                    const packageName = product.package_name || 'paquete';
-                                    const unitName = product.unit_name || 'unidad';
+                            Disponible:{" "}
+                            {!!product.sell_by_unit
+                              ? (() => {
+                                  // IMPORTANTE: El stock está en PAQUETES para TODOS los productos
+                                  const unitsPerPackage =
+                                    product.units_per_package || 1;
+                                  const packageName =
+                                    product.package_name || "paquete";
+                                  const unitName =
+                                    product.unit_name || "unidad";
 
-                                    // Calcular unidades totales y desglosar
-                                    const totalUnits = Math.floor(product.stock * unitsPerPackage);
-                                    const fullPackages = Math.floor(product.stock);
-                                    const remainingUnits = totalUnits - (fullPackages * unitsPerPackage);
-                                    const packageNamePlural = fullPackages === 1 ? packageName : `${packageName}s`;
-                                    const unitNamePlural = remainingUnits === 1 ? unitName : `${unitName}es`;
+                                  // Calcular unidades totales y desglosar
+                                  const totalUnits = Math.floor(
+                                    product.stock * unitsPerPackage,
+                                  );
+                                  const fullPackages = Math.floor(
+                                    product.stock,
+                                  );
+                                  const remainingUnits =
+                                    totalUnits - fullPackages * unitsPerPackage;
+                                  const packageNamePlural =
+                                    fullPackages === 1
+                                      ? packageName
+                                      : `${packageName}s`;
+                                  const unitNamePlural =
+                                    remainingUnits === 1
+                                      ? unitName
+                                      : `${unitName}es`;
 
-                                    return `${totalUnits} ${unitName}${totalUnits === 1 ? '' : 'es'} (${fullPackages} ${packageNamePlural}${remainingUnits > 0 ? ` + ${remainingUnits} ${unitNamePlural}` : ''})`;
-                                  })()
-                                : `${Math.round(product.stock)} ${product.package_name || 'unidades'}`
-                            }
+                                  return `${totalUnits} ${unitName}${totalUnits === 1 ? "" : "es"} (${fullPackages} ${packageNamePlural}${remainingUnits > 0 ? ` + ${remainingUnits} ${unitNamePlural}` : ""})`;
+                                })()
+                              : `${Math.round(product.stock)} ${product.package_name || "unidades"}`}
                           </p>
                         </CardContent>
                       </Card>
@@ -2016,13 +2060,25 @@ export default function POSPage() {
 
         {/* Panel derecho - Carrito */}
         <div className="space-y-4 order-1 lg:order-2">
-          <Card className="lg:sticky lg:top-20">
+          <Card className="lg:sticky lg:top-0">
             <CardHeader className="pb-3">
               <CardTitle className="flex items-center gap-2 text-base md:text-lg">
                 <div ref={cartIconRef} className="relative">
-                  <ShoppingCart className="h-4 w-4 md:h-5 md:w-5" style={ cartBump ? { animation: "cartBump 0.5s ease forwards", color: "#155dfc" } : {}} />
+                  <ShoppingCart
+                    className="h-4 w-4 md:h-5 md:w-5"
+                    style={
+                      cartBump
+                        ? {
+                            animation: "cartBump 0.5s ease forwards",
+                            color: "#155dfc",
+                          }
+                        : {}
+                    }
+                  />
                   {cart.length > 0 && (
-                    <span className={`absolute -top-2 -right-2 bg-brand text-white text-[10px] font-bold rounded-full h-4 w-4 flex items-center justify-center ${cartBump ? "animate-ping-once" : ""}`}>
+                    <span
+                      className={`absolute -top-2 -right-2 bg-brand text-white text-[10px] font-bold rounded-full h-4 w-4 flex items-center justify-center ${cartBump ? "animate-ping-once" : ""}`}
+                    >
                       {cart.reduce((sum, i) => sum + i.quantity, 0)}
                     </span>
                   )}
@@ -2076,13 +2132,12 @@ export default function POSPage() {
                               setApplyDiscount(checked);
 
                               if (checked) {
-                                const total = cart.reduce(
-                                  (sum, item) => {
-                                    const price = item.effectivePrice || item.product.sale_price;
-                                    return sum + price * item.quantity;
-                                  },
-                                  0,
-                                );
+                                const total = cart.reduce((sum, item) => {
+                                  const price =
+                                    item.effectivePrice ||
+                                    item.product.sale_price;
+                                  return sum + price * item.quantity;
+                                }, 0);
                                 const discount = Math.round(
                                   total *
                                     (REWARD_CONSTANTS.DISCOUNT_PERCENTAGE /
@@ -2368,14 +2423,20 @@ export default function POSPage() {
                                     // Permitir campo vacío temporalmente
                                     setCart((prev) =>
                                       prev.map((cartItem) =>
-                                        cartItem.product.id === item.product.id && cartItem.isUnitSale === item.isUnitSale
+                                        cartItem.product.id ===
+                                          item.product.id &&
+                                        cartItem.isUnitSale === item.isUnitSale
                                           ? { ...cartItem, quantity: 0 }
                                           : cartItem,
                                       ),
                                     );
                                   } else {
                                     const val = parseInt(value);
-                                    setDirectQuantity(item.product.id, val, item.isUnitSale);
+                                    setDirectQuantity(
+                                      item.product.id,
+                                      val,
+                                      item.isUnitSale,
+                                    );
                                   }
                                 }
                               }}
@@ -2385,12 +2446,19 @@ export default function POSPage() {
                                   e.target.value === "" ||
                                   parseInt(e.target.value) === 0
                                 ) {
-                                  setDirectQuantity(item.product.id, 1, item.isUnitSale);
+                                  setDirectQuantity(
+                                    item.product.id,
+                                    1,
+                                    item.isUnitSale,
+                                  );
                                 }
                               }}
                               onKeyDown={(e) => {
                                 // Permitir borrar con backspace/delete
-                                if (e.key === "Backspace" || e.key === "Delete") {
+                                if (
+                                  e.key === "Backspace" ||
+                                  e.key === "Delete"
+                                ) {
                                   return;
                                 }
                                 // Solo permitir números y teclas de control
@@ -2408,7 +2476,9 @@ export default function POSPage() {
                             <Button
                               size="sm"
                               variant="ghost"
-                              onClick={() => removeFromCart(item.product.id, item.isUnitSale)}
+                              onClick={() =>
+                                removeFromCart(item.product.id, item.isUnitSale)
+                              }
                               className="h-10 w-10 p-0 md:h-11 md:w-11 shrink-0 hover:bg-brand-light/50"
                             >
                               <Trash2 className="h-5 w-5 md:h-6 md:w-6 text-brand" />
@@ -2419,7 +2489,13 @@ export default function POSPage() {
                             <Button
                               size="sm"
                               variant="outline"
-                              onClick={() => updateQuantity(item.product.id, -1, item.isUnitSale)}
+                              onClick={() =>
+                                updateQuantity(
+                                  item.product.id,
+                                  -1,
+                                  item.isUnitSale,
+                                )
+                              }
                               className="flex-1 h-10 md:h-11 bg-brand text-white border-brand rounded-xl cursor-pointer hover:bg-red-700"
                             >
                               <Minus className="h-5 w-5" />
@@ -2427,7 +2503,13 @@ export default function POSPage() {
                             <Button
                               size="sm"
                               variant="outline"
-                              onClick={() => updateQuantity(item.product.id, 1, item.isUnitSale)}
+                              onClick={() =>
+                                updateQuantity(
+                                  item.product.id,
+                                  1,
+                                  item.isUnitSale,
+                                )
+                              }
                               className="flex-1 h-10 md:h-11 bg-brand hover:bg-brand-hover text-white border-brand rounded-xl cursor-pointer"
                             >
                               <Plus className="h-5 w-5" />
@@ -2449,13 +2531,12 @@ export default function POSPage() {
                           <span>Subtotal:</span>
                           <span>
                             {formatCurrency(
-                              cart.reduce(
-                                (sum, item) => {
-                                  const price = item.effectivePrice || item.product.sale_price;
-                                  return sum + price * item.quantity;
-                                },
-                                0,
-                              ),
+                              cart.reduce((sum, item) => {
+                                const price =
+                                  item.effectivePrice ||
+                                  item.product.sale_price;
+                                return sum + price * item.quantity;
+                              }, 0),
                             )}
                           </span>
                         </div>
@@ -2614,9 +2695,9 @@ export default function POSPage() {
                     No has registrado tu QR de pagos
                   </h3>
                   <p className="text-sm text-gray-600 mt-2">
-                    Registra el QR de tu Nequi, Daviplata o cuenta bancaria
-                    para mostrárselo al cliente al momento de cobrar. Lo
-                    encuentras en la app de tu banco o billetera.
+                    Registra el QR de tu Nequi, Daviplata o cuenta bancaria para
+                    mostrárselo al cliente al momento de cobrar. Lo encuentras
+                    en la app de tu banco o billetera.
                   </p>
                 </div>
                 <div className="text-center bg-gray-50 border rounded-lg py-3">

@@ -1,6 +1,7 @@
 "use client";
 
 import { useRef } from "react";
+import { useAuth } from "@clerk/nextjs";
 import { useReactToPrint } from "react-to-print";
 import {
   Dialog,
@@ -13,8 +14,6 @@ import { Input } from "@/components/ui/input";
 import { InvoiceReceipt } from "./invoice-receipt";
 import {
   generateInvoicePDF,
-  shareInvoicePDFViaWhatsApp,
-  generateWhatsAppMessage,
   shareViaWhatsApp,
 } from "@/lib/invoice-helpers";
 import { Sale, SaleItemWithProduct, Customer, UserProfile } from "@/lib/types";
@@ -42,6 +41,7 @@ export function InvoiceModal({
   cashierName,
 }: InvoiceModalProps) {
   const invoiceRef = useRef<HTMLDivElement>(null);
+  const { getToken } = useAuth();
   const [phoneNumber, setPhoneNumber] = useState(customer?.phone || "");
 
   // Configurar impresión
@@ -91,10 +91,14 @@ export function InvoiceModal({
       const pdfBase64 = doc.output('datauristring').split(',')[1];
       const fileName = `Factura-${sale.sale_number}-${Date.now()}.pdf`;
 
-      // 2. Subir PDF a R2 via Worker
+      // 2. Subir PDF a R2 via Worker (con el token de Clerk, si no el Worker responde 401)
+      const token = await getToken();
       const uploadRes = await fetch('/api/facturas/upload', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
         body: JSON.stringify({ pdfBase64, fileName }),
       });
 
@@ -134,87 +138,7 @@ export function InvoiceModal({
           </DialogTitle>
         </DialogHeader>
 
-        {/* Opciones de acción */}
-        <div className="border-b pb-4 space-y-4">
-          {/* Botones principales */}
-          <div className="grid grid-cols-2 md:grid-cols-2 gap-2 justify-center w-full">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={handlePrint}
-              className="gap-2 text-black"
-            >
-              <Printer className="h-4 w-4 text-black" />
-              Imprimir
-            </Button>
-
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={handleDownloadPDF}
-              className="gap-2 text-black bg-green-400 cursor-pointer md:"
-              
-            >
-              <Download className="h-4 w-4 text-black" />
-              Descargar PDF
-            </Button>
-
-            {/* <Button
-              variant="outline"
-              size="sm"
-              onClick={handleCopyToClipboard}
-              className="gap-2 text-black"
-            >
-              <Share2 className="h-4 w-4 text-black" />
-              Copiar
-            </Button>
-
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={handleShareFacebook}
-              className="gap-2 text-black"
-            >
-              <Facebook className="h-4 w-4 text-black" />
-              Facebook
-            </Button> */}
-          </div>
-
-          {/* Enviar por WhatsApp */}
-          <div className="space-y-2 bg-green-50 border border-green-200 rounded-lg p-3">
-            <label className="text-sm font-semibold text-green-800 flex items-center gap-2">
-              <MessageCircle className="h-4 w-4" />
-              Enviar factura por WhatsApp
-            </label>
-            <div className="flex gap-2">
-              <Input
-                placeholder="Número de celular del cliente"
-                value={phoneNumber}
-                onChange={(e) => setPhoneNumber(e.target.value)}
-                className="flex-1 text-gray-800"
-              />
-              <Button
-                onClick={handleShareWhatsApp}
-                className="gap-2 bg-green-600 hover:bg-green-700 text-white"
-              >
-                <MessageCircle className="h-4 w-4" />
-                Enviar
-              </Button>
-            </div>
-            {customer?.phone && (
-              <p className="text-xs text-green-700">
-                Número cargado del cliente: <strong>{customer.phone}</strong>
-              </p>
-            )}
-            {!customer?.phone && (
-              <p className="text-xs text-gray-500">
-                Ingresa el número o déjalo en blanco para elegir el contacto en WhatsApp
-              </p>
-            )}
-          </div>
-        </div>
-
-        {/* Vista previa de la factura (con scroll) */}
+        {/* Vista previa de la factura (con scroll) — lo más importante primero */}
         <div className="flex-1 overflow-y-auto">
           <InvoiceReceipt
             ref={invoiceRef}
@@ -226,11 +150,73 @@ export function InvoiceModal({
           />
         </div>
 
-        {/* Botón de cerrar */}
-        <div className="border-t pt-4 flex justify-end">
-          <Button variant="outline" onClick={() => onOpenChange(false)}>
-            <h3 className="text-black size-6">Cerrar</h3>
-          </Button>
+        {/* Footer: imprimir, descargar y enviar por WhatsApp juntos a la
+            izquierda; cerrar a la derecha. */}
+        <div className="border-t pt-4 space-y-3">
+          <div className="flex flex-col md:flex-row md:items-end md:justify-between gap-3">
+            {/* Acciones sobre la factura */}
+            <div className="flex flex-wrap items-end gap-2">
+              <Button
+                variant="outline"
+                onClick={handlePrint}
+                className="gap-2 text-black"
+              >
+                <Printer className="h-4 w-4 text-black" />
+                Imprimir
+              </Button>
+              <Button
+                variant="outline"
+                onClick={handleDownloadPDF}
+                className="gap-2 text-black"
+              >
+                <Download className="h-4 w-4 text-black" />
+                Descargar
+              </Button>
+
+              {/* Enviar por WhatsApp: número + botón, al lado de las otras acciones */}
+              <div className="flex flex-col gap-1">
+                <label className="text-xs font-semibold text-green-800 flex items-center gap-1">
+                  <MessageCircle className="h-3.5 w-3.5" />
+                  Enviar factura por WhatsApp
+                </label>
+                <div className="flex gap-2">
+                  <Input
+                    placeholder="Número de celular del cliente"
+                    value={phoneNumber}
+                    onChange={(e) => setPhoneNumber(e.target.value)}
+                    className="w-48 md:w-56 text-gray-800"
+                  />
+                  <Button
+                    onClick={handleShareWhatsApp}
+                    className="gap-2 bg-green-600 hover:bg-green-700 text-white"
+                  >
+                    <MessageCircle className="h-4 w-4" />
+                    Enviar
+                  </Button>
+                </div>
+              </div>
+            </div>
+
+            {/* Cerrar */}
+            <Button
+              variant="outline"
+              onClick={() => onOpenChange(false)}
+              className="self-end md:self-auto"
+            >
+              <span className="text-black">Cerrar</span>
+            </Button>
+          </div>
+
+          {/* Ayuda del número de WhatsApp */}
+          {customer?.phone ? (
+            <p className="text-xs text-green-700">
+              Número cargado del cliente: <strong>{customer.phone}</strong>
+            </p>
+          ) : (
+            <p className="text-xs text-gray-500">
+              Ingresa el número o déjalo en blanco para elegir el contacto en WhatsApp
+            </p>
+          )}
         </div>
       </DialogContent>
     </Dialog>
