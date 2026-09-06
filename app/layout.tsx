@@ -159,10 +159,11 @@ export default function RootLayout({
         <body
           className={`${geistSans.variable} ${geistMono.variable} antialiased `}
         >
-          <Script
-            id="json-ld-software"
+          {/* JSON-LD para SEO: se sirve en el HTML del servidor y lo leen los
+              bots del DOM; no necesita ejecutarse como JS, por eso es un
+              <script> plano y no next/script (recomendación oficial de Next). */}
+          <script
             type="application/ld+json"
-            strategy="beforeInteractive"
             dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
           />
           <Script
