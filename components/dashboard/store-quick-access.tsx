@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useAuth } from "@clerk/nextjs";
-import { Store, ExternalLink } from "lucide-react";
+import { Store } from "lucide-react";
 import {
   getUserProfileByClerkId,
   hasStoreAccess,
@@ -65,11 +65,9 @@ export function StoreQuickAccess() {
       rel="noopener noreferrer"
       title="Ver mi tienda online"
       aria-label="Ver mi tienda online"
-      className="fixed bottom-6 right-6 z-50 flex items-center gap-2 rounded-full bg-brand px-4 py-3 text-sm font-semibold text-white shadow-lg hover:scale-105 hover:shadow-xl transition-transform"
+      className="fixed bottom-6 right-6 z-50 flex items-center justify-center rounded-full bg-brand p-4 text-white shadow-lg hover:scale-105 hover:shadow-xl transition-transform"
     >
-      <Store className="h-5 w-5" />
-      <span className="hidden sm:inline">Mi tienda</span>
-      <ExternalLink className="h-4 w-4" />
+      <Store className="h-6 w-6" />
     </a>
   );
 }
