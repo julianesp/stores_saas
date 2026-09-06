@@ -5,6 +5,9 @@ import type { BusinessTypeId } from './business-types';
 export interface UserProfile {
   id: string;
   clerk_user_id: string;
+  // ID de Clerk del entorno de test/dev. En local el token trae este id en
+  // lugar de clerk_user_id; el Worker acepta ambos al resolver al dueño.
+  clerk_user_id_test?: string;
   email: string;
   role: 'admin' | 'cajero';
   full_name?: string;
