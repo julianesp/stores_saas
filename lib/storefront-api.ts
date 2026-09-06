@@ -85,9 +85,24 @@ async function fetchStorefrontAPI<T>(endpoint: string): Promise<T> {
 
 /**
  * Get store configuration by slug
+ *
+ * Cacheada en memoria por slug: el layout y cada página la piden por separado
+ * al navegar, y sin el cache cada vista dispara 2+ fetches del mismo config.
  */
-export async function getStoreConfig(slug: string): Promise<StoreConfig> {
-  return fetchStorefrontAPI<StoreConfig>(`/api/storefront/config/${slug}`);
+const CONFIG_CACHE_TTL_MS = 60_000;
+const configCache = new Map<string, { promise: Promise<StoreConfig>; timestamp: number }>();
+
+export function getStoreConfig(slug: string): Promise<StoreConfig> {
+  const cached = configCache.get(slug);
+  if (cached && Date.now() - cached.timestamp < CONFIG_CACHE_TTL_MS) {
+    return cached.promise;
+  }
+
+  const promise = fetchStorefrontAPI<StoreConfig>(`/api/storefront/config/${slug}`);
+  configCache.set(slug, { promise, timestamp: Date.now() });
+  // No cachear errores para poder reintentar
+  promise.catch(() => configCache.delete(slug));
+  return promise;
 }
 
 /**

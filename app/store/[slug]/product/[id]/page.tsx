@@ -14,7 +14,16 @@ import {
 } from "@/lib/storefront-api";
 import { formatCurrency } from "@/lib/utils";
 import { buildWhatsAppLink } from "@/lib/whatsapp";
-import { Plus, Minus, Package, Phone, Tag, ShoppingCart } from "lucide-react";
+import { readCart, writeCart } from "@/lib/storefront-cart";
+import {
+  ArrowLeft,
+  Plus,
+  Minus,
+  Package,
+  Phone,
+  Tag,
+  ShoppingCart,
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -65,29 +74,7 @@ export default function ProductDetailPage() {
     if (!product) return;
 
     try {
-      // Obtener carrito actual
-      type CartItem = {
-        id: string;
-        name: string;
-        price: number;
-        quantity: number;
-        stock: number;
-        image: string | null;
-        discount_percentage: number;
-      };
-
-      const cartKey = `cart_${slug}`;
-      const savedCart = localStorage.getItem(cartKey);
-      let cart: CartItem[] = [];
-
-      if (savedCart) {
-        try {
-          cart = JSON.parse(savedCart) as CartItem[];
-        } catch (e) {
-          console.warn("Invalid cart in localStorage, resetting", e);
-          cart = [];
-        }
-      }
+      const cart = readCart(slug);
 
       // Verificar si el producto ya está en el carrito
       const existingIndex = cart.findIndex((item) => item.id === product.id);
@@ -117,12 +104,17 @@ export default function ProductDetailPage() {
         });
       }
 
-      // Guardar carrito
-      localStorage.setItem(cartKey, JSON.stringify(cart));
+      writeCart(slug, cart);
       toast.success(
         `${quantity} ${
           quantity === 1 ? "producto agregado" : "productos agregados"
-        } al carrito`
+        } al carrito`,
+        {
+          action: {
+            label: "Ver carrito",
+            onClick: () => router.push(`/store/${slug}/cart`),
+          },
+        }
       );
 
       // Resetear cantidad a 1
@@ -190,6 +182,16 @@ export default function ProductDetailPage() {
   return (
     <div className="bg-gray-50">
       <div className="max-w-7xl mx-auto px-4 py-8">
+        {/* Volver al catálogo */}
+        <Link
+          href={`/store/${slug}#productos`}
+          className="inline-flex items-center gap-2 text-sm font-medium mb-6 hover:underline"
+          style={{ color: primaryColor }}
+        >
+          <ArrowLeft className="h-4 w-4" />
+          Volver a productos
+        </Link>
+
         <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
           {/* Galería de imágenes */}
           <div className="space-y-4">
@@ -376,7 +378,7 @@ export default function ProductDetailPage() {
                 </Button>
               )}
 
-              {/* {config.store_whatsapp && (
+              {config.store_whatsapp && (
                 <Button
                   size="lg"
                   variant="outline"
@@ -387,7 +389,7 @@ export default function ProductDetailPage() {
                   <Phone className="h-5 w-5 mr-2" />
                   Consultar por WhatsApp
                 </Button>
-              )} */}
+              )}
             </div>
 
             {/* Información de entrega */}

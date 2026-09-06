@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { useParams } from 'next/navigation';
+import { useParams, useRouter } from 'next/navigation';
 import Image from 'next/image';
 import Link from 'next/link';
 import {
@@ -16,6 +16,7 @@ import {
 } from '@/lib/storefront-api';
 import { formatCurrency } from '@/lib/utils';
 import { buildWhatsAppLink } from '@/lib/whatsapp';
+import { readCart, writeCart } from '@/lib/storefront-cart';
 import {
   Search,
   Phone,
@@ -29,17 +30,18 @@ import {
   Shield,
   CreditCard,
   Clock,
-  Star,
-  TrendingUp,
+  ShoppingCart,
   Tag,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent } from '@/components/ui/card';
 import { StoreCarousel } from '@/components/store';
+import { toast } from 'sonner';
 
 export default function StorefrontPage() {
   const params = useParams();
+  const router = useRouter();
   const slug = params.slug as string;
 
   const [config, setConfig] = useState<StoreConfig | null>(null);
@@ -85,16 +87,62 @@ export default function StorefrontPage() {
       const productsData = await getStoreProducts(slug, categoryId || undefined);
       setProducts(productsData);
       setSelectedCategory(categoryId);
+      // En móvil, cerrar el panel de categorías y llevar al usuario a la lista
+      setShowFilters(false);
+      if (window.innerWidth < 1024) {
+        document.getElementById('productos')?.scrollIntoView({ behavior: 'smooth' });
+      }
     } catch (err) {
       console.error('Error loading products:', err);
     }
   };
 
+  // Agregar 1 unidad directamente desde la tarjeta del catálogo
+  const quickAddToCart = (product: StoreProduct) => {
+    try {
+      const cart = readCart(slug);
+      const existing = cart.find((item) => item.id === product.id);
+
+      if (existing) {
+        if (existing.quantity + 1 > product.stock) {
+          toast.error('No hay más stock disponible de este producto');
+          return;
+        }
+        existing.quantity += 1;
+      } else {
+        cart.push({
+          id: product.id,
+          name: product.name,
+          price: product.sale_price,
+          quantity: 1,
+          stock: product.stock,
+          image: parseProductImages(product.images)[0] || null,
+          discount_percentage: product.discount_percentage || 0,
+        });
+      }
+
+      writeCart(slug, cart);
+      toast.success(`${product.name} agregado al carrito`, {
+        action: {
+          label: 'Ver carrito',
+          onClick: () => router.push(`/store/${slug}/cart`),
+        },
+      });
+    } catch (err) {
+      console.error('Error adding to cart:', err);
+      toast.error('Error al agregar al carrito');
+    }
+  };
+
   // Filtrar y eliminar duplicados
   const filteredProducts = products
-    .filter((product) =>
-      product.name.toLowerCase().includes(searchTerm.toLowerCase())
-    )
+    .filter((product) => {
+      const term = searchTerm.toLowerCase();
+      return (
+        product.name.toLowerCase().includes(term) ||
+        (product.description?.toLowerCase().includes(term) ?? false)
+      );
+    })
     .filter((product, index, self) =>
       index === self.findIndex((p) => p.id === product.id)
     );
@@ -423,6 +471,18 @@ export default function StorefrontPage() {
               <div className="text-center py-12">
                 <Package className="h-16 w-16 text-black mx-auto mb-4" />
                 <p className="text-black text-lg">No hay productos disponibles</p>
+                {(searchTerm || selectedCategory) && (
+                  <Button
+                    variant="outline"
+                    className="mt-4 text-black"
+                    onClick={() => {
+                      setSearchTerm('');
+                      loadProductsByCategory(null);
+                    }}
+                  >
+                    Ver todos los productos
+                  </Button>
+                )}
               </div>
             ) : (
               <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 md:gap-6">
@@ -462,6 +522,7 @@ export default function StorefrontPage() {
                                 src={images[0]}
                                 alt={product.name}
                                 fill
+                                sizes="(max-width: 768px) 50vw, (max-width: 1024px) 33vw, 25vw"
                                 className="object-cover group-hover:scale-110 transition-transform duration-500"
                               />
                             ) : (
@@ -514,6 +575,22 @@ export default function StorefrontPage() {
                                 </div>
                               )}
                             </div>
+
+                            {product.stock > 0 && (
+                              <Button
+                                size="sm"
+                                className="w-full mt-3 text-white"
+                                style={{ backgroundColor: primaryColor }}
+                                onClick={(e) => {
+                                  // Evitar que el Link de la tarjeta navegue
+                                  e.preventDefault();
+                                  quickAddToCart(product);
+                                }}
+                              >
+                                <ShoppingCart className="h-4 w-4 mr-1.5" />
+                                Agregar
+                              </Button>
+                            )}
                           </div>
                         </CardContent>
                       </Card>
@@ -525,6 +602,18 @@ export default function StorefrontPage() {
           </div>
         </div>
       </div>
+
+      {/* Botón flotante de WhatsApp */}
+      {config.store_whatsapp && (
+        <button
+          onClick={openWhatsApp}
+          aria-label="Contactar por WhatsApp"
+          className="fixed bottom-6 right-6 z-50 flex items-center justify-center h-14 w-14 rounded-full shadow-lg hover:scale-110 transition-transform"
+          style={{ backgroundColor: '#25D366' }}
+        >
+          <Phone className="h-7 w-7 text-white" />
+        </button>
+      )}
     </div>
   );
 }

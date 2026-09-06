@@ -5,8 +5,8 @@
   "main": "src/index.ts",
   "scripts": {
     "dev": "wrangler dev",
-    "deploy": "wrangler deploy",
-    "deploy:production": "wrangler deploy --env production",
+    "deploy:check": "wrangler deploy --env=\"\" --dry-run",
+    "deploy": "wrangler deploy --env=\"\"",
     "tail": "wrangler tail",
     "kv:create": "wrangler kv:namespace create TENANTS",
     "d1:create:manager": "wrangler d1 create tenants-manager",

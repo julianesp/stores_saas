@@ -15,6 +15,11 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { StoreConfig } from "@/lib/storefront-api";
+import {
+  CART_UPDATED_EVENT,
+  cartItemCount,
+  readCart,
+} from "@/lib/storefront-cart";
 
 interface StoreNavbarProps {
   config: StoreConfig;
@@ -29,36 +34,22 @@ export function StoreNavbar({ config }: StoreNavbarProps) {
   const [cartCount, setCartCount] = useState(0);
 
   useEffect(() => {
+    const updateCartCount = () => setCartCount(cartItemCount(readCart(slug)));
+
     updateCartCount();
 
-    // Actualizar contador cuando cambia el localStorage
-    const handleStorageChange = () => updateCartCount();
-    window.addEventListener("storage", handleStorageChange);
-
-    // También actualizar cuando se hace foco en la ventana
+    // "storage" solo se dispara desde otras pestañas; CART_UPDATED_EVENT
+    // cubre los cambios hechos en esta misma pestaña (agregar/quitar/vaciar)
+    window.addEventListener("storage", updateCartCount);
+    window.addEventListener(CART_UPDATED_EVENT, updateCartCount);
     window.addEventListener("focus", updateCartCount);
 
     return () => {
-      window.removeEventListener("storage", handleStorageChange);
+      window.removeEventListener("storage", updateCartCount);
+      window.removeEventListener(CART_UPDATED_EVENT, updateCartCount);
       window.removeEventListener("focus", updateCartCount);
     };
   }, [slug]);
-
-  const updateCartCount = () => {
-    try {
-      const cartKey = `cart_${slug}`;
-      const savedCart = localStorage.getItem(cartKey);
-      const cart = savedCart ? JSON.parse(savedCart) : [];
-      const totalItems = cart.reduce(
-        (sum: number, item: { quantity: number }) => sum + item.quantity,
-        0
-      );
-      setCartCount(totalItems);
-    } catch (error) {
-      console.error("Error reading cart:", error);
-      setCartCount(0);
-    }
-  };
 
   const primaryColor = config.store_primary_color || "#3B82F6";
   const storeName = config.store_name || "Tienda Online";

@@ -14,6 +14,12 @@ import {
   createEPaycoSession,
 } from "@/lib/storefront-api";
 import { formatCurrency } from "@/lib/utils";
+import { buildWhatsAppLink } from "@/lib/whatsapp";
+import {
+  readCart,
+  writeCart,
+  type StoreCartItem,
+} from "@/lib/storefront-cart";
 import {
   ArrowLeft,
   ShoppingCart,
@@ -40,14 +46,7 @@ import {
 } from "@/components/ui/select";
 import { toast } from "sonner";
 
-interface CartItem {
-  id: string;
-  name: string;
-  price: number;
-  quantity: number;
-  image: string | null;
-  discount_percentage?: number;
-}
+type CartItem = StoreCartItem;
 
 interface EPaycoCheckout {
   checkout: {
@@ -117,29 +116,34 @@ export default function CheckoutPage() {
       }
 
       // Cargar carrito desde localStorage
-      const cartKey = `cart_${slug}`;
-      const savedCart = localStorage.getItem(cartKey);
-      if (savedCart) {
-        try {
-          const parsedCart = JSON.parse(savedCart);
-          if (parsedCart.length === 0) {
-            // Carrito vacío, redirigir
-            router.push(`/store/${slug}/cart`);
-            return;
-          }
-          setCart(parsedCart);
-        } catch {
-          router.push(`/store/${slug}/cart`);
-        }
-      } else {
+      const parsedCart = readCart(slug);
+      if (parsedCart.length === 0) {
+        // Carrito vacío, redirigir
         router.push(`/store/${slug}/cart`);
+        return;
       }
+      setCart(parsedCart);
     } catch (err) {
       console.error("Error loading checkout:", err);
       toast.error("Error al cargar el checkout");
     } finally {
       setLoading(false);
     }
+  };
+
+  const sendOrderByWhatsApp = () => {
+    if (!storeWhatsApp) return;
+
+    let message = `Hola! Acabo de realizar el pedido *${orderNumber}* por ${formatCurrency(orderTotal)}.\n`;
+    message += `Mi nombre es ${customerName}.\n`;
+    message +=
+      deliveryMethod === "pickup"
+        ? "Recogeré el pedido en la tienda."
+        : `Entrega a domicilio: ${deliveryAddress}.`;
+    message += `\n¿Me confirmas cómo completar el pago?`;
+
+    const url = buildWhatsAppLink(storeWhatsApp, message);
+    if (url) window.open(url, "_blank");
   };
 
   const calculateItemTotal = (item: CartItem): number => {
@@ -201,8 +205,9 @@ export default function CheckoutPage() {
       }
     }
 
-    // Validar pedido mínimo solo si está configurado
-    if (config?.store_min_order && config.store_min_order > 0 && total < config.store_min_order) {
+    // Validar pedido mínimo solo si está configurado (sobre el subtotal de
+    // productos: el costo de envío no debe "completar" el mínimo)
+    if (config?.store_min_order && config.store_min_order > 0 && subtotal < config.store_min_order) {
       toast.error(
         `El pedido mínimo es de ${formatCurrency(config.store_min_order)}`
       );
@@ -280,7 +285,7 @@ export default function CheckoutPage() {
       }
 
       // Limpiar carrito
-      localStorage.removeItem(`cart_${slug}`);
+      writeCart(slug, []);
       setCart([]);
 
       // Marcar como completado
@@ -330,7 +335,7 @@ export default function CheckoutPage() {
     return (
       <div className="min-h-screen bg-gray-50">
         <header
-          className="sticky top-0 z-50 bg-white shadow-md"
+          className="sticky top-16 z-40 bg-white shadow-md"
           style={{ borderBottom: `4px solid ${primaryColor}` }}
         >
           <div className="max-w-7xl mx-auto px-4 py-4">
@@ -463,6 +468,20 @@ export default function CheckoutPage() {
                     </Button>
                   )}
 
+                  {/* Enviar el pedido por WhatsApp para coordinar pago/entrega */}
+                  {storeWhatsApp && (
+                    <Button
+                      type="button"
+                      size="lg"
+                      className="w-full text-lg text-white"
+                      style={{ backgroundColor: "#25D366" }}
+                      onClick={sendOrderByWhatsApp}
+                    >
+                      <MessageSquare className="h-5 w-5 mr-2" />
+                      Enviar pedido por WhatsApp
+                    </Button>
+                  )}
+
                   {/* Botón volver a la tienda */}
                   <Link href={`/store/${slug}`}>
                     <Button variant="outline" size="lg" className="w-full">
@@ -496,9 +515,9 @@ export default function CheckoutPage() {
   // Formulario de checkout
   return (
     <div className="min-h-screen bg-gray-50">
-      {/* Header */}
+      {/* Header contextual: debajo del navbar del layout (h-16), no encima */}
       <header
-        className="sticky top-0 z-50 bg-white shadow-md"
+        className="sticky top-16 z-40 bg-white shadow-md"
         style={{ borderBottom: `4px solid ${primaryColor}` }}
       >
         <div className="max-w-7xl mx-auto px-4 py-4">
@@ -803,10 +822,10 @@ export default function CheckoutPage() {
                       <p className="text-sm text-black">
                         Pedido mínimo: {formatCurrency(config.store_min_order)}
                       </p>
-                      {total < config.store_min_order && (
+                      {subtotal < config.store_min_order && (
                         <p className="text-sm font-semibold text-orange-600 mt-1">
                           Faltan{" "}
-                          {formatCurrency(config.store_min_order - total)}
+                          {formatCurrency(config.store_min_order - subtotal)}
                         </p>
                       )}
                     </div>
@@ -830,7 +849,7 @@ export default function CheckoutPage() {
                     style={{ backgroundColor: primaryColor }}
                     disabled={
                       submitting ||
-                      Boolean(config.store_min_order && config.store_min_order > 0 && total < config.store_min_order) ||
+                      Boolean(config.store_min_order && config.store_min_order > 0 && subtotal < config.store_min_order) ||
                       Boolean(config.epayco_enabled && total < 5000)
                     }
                   >

@@ -23,16 +23,11 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
-
-interface CartItem {
-  id: string;
-  name: string;
-  price: number;
-  quantity: number;
-  stock: number; // Agregar stock para validación
-  image: string | null;
-  discount_percentage?: number;
-}
+import {
+  readCart,
+  writeCart,
+  type StoreCartItem as CartItem,
+} from "@/lib/storefront-cart";
 
 export default function CartPage() {
   const params = useParams();
@@ -54,16 +49,7 @@ export default function CartPage() {
       setConfig(configData);
 
       // Cargar carrito desde localStorage
-      const cartKey = `cart_${slug}`;
-      const savedCart = localStorage.getItem(cartKey);
-      if (savedCart) {
-        try {
-          const parsedCart = JSON.parse(savedCart);
-          setCart(parsedCart);
-        } catch {
-          setCart([]);
-        }
-      }
+      setCart(readCart(slug));
     } catch (err) {
       console.error("Error loading cart:", err);
       toast.error("Error al cargar el carrito");
@@ -92,7 +78,7 @@ export default function CartPage() {
     );
 
     setCart(updatedCart);
-    localStorage.setItem(`cart_${slug}`, JSON.stringify(updatedCart));
+    writeCart(slug, updatedCart);
     toast.success("Cantidad actualizada");
   };
 
@@ -136,19 +122,19 @@ export default function CartPage() {
     );
 
     setCart(updatedCart);
-    localStorage.setItem(`cart_${slug}`, JSON.stringify(updatedCart));
+    writeCart(slug, updatedCart);
   };
 
   const removeItem = (itemId: string) => {
     const updatedCart = cart.filter((item) => item.id !== itemId);
     setCart(updatedCart);
-    localStorage.setItem(`cart_${slug}`, JSON.stringify(updatedCart));
+    writeCart(slug, updatedCart);
     toast.success("Producto eliminado del carrito");
   };
 
   const clearCart = () => {
     setCart([]);
-    localStorage.removeItem(`cart_${slug}`);
+    writeCart(slug, []);
     toast.success("Carrito vaciado");
   };
 
@@ -160,8 +146,9 @@ export default function CartPage() {
     return finalPrice * item.quantity;
   };
 
+  // Subtotal a precio original; los descuentos se restan una sola vez en el total
   const subtotal = cart.reduce(
-    (sum, item) => sum + calculateItemTotal(item),
+    (sum, item) => sum + item.price * item.quantity,
     0
   );
   const totalDiscount = cart.reduce((sum, item) => {
@@ -172,7 +159,7 @@ export default function CartPage() {
     }
     return sum;
   }, 0);
-  const total = subtotal;
+  const total = subtotal - totalDiscount;
 
   const handleCheckout = () => {
     if (config?.store_min_order && total < config.store_min_order) {
@@ -218,9 +205,9 @@ export default function CartPage() {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      {/* Header */}
+      {/* Header contextual: debajo del navbar del layout (h-16), no encima */}
       <header
-        className="sticky top-0 z-50 bg-white shadow-md"
+        className="sticky top-16 z-40 bg-white shadow-md"
         style={{ borderBottom: `4px solid ${primaryColor}` }}
       >
         <div className="max-w-7xl mx-auto px-4 py-4">

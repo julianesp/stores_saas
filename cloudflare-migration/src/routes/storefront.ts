@@ -6,6 +6,7 @@
 import { Hono } from 'hono';
 import type { Env, Tenant, APIResponse } from '../types';
 import { TenantDB, generateId } from '../utils/db-helpers';
+import { findActiveStore, type StoreAccessRow } from '../utils/storefront-access';
 
 const app = new Hono<{ Bindings: Env }>();
 
@@ -39,33 +40,40 @@ app.get('/config/:slug', async (c) => {
   const slug = c.req.param('slug');
 
   try {
-    // Buscar tienda por slug
-    const result = await c.env.DB.prepare(
-      `SELECT
-        id, store_slug, store_name, store_description,
-        store_logo_url, store_banner_url, store_banner_images,
-        store_primary_color, store_secondary_color,
-        store_whatsapp, store_facebook, store_instagram,
-        store_address, store_city, store_phone, store_email,
-        store_enabled, store_terms,
-        store_shipping_enabled, store_pickup_enabled, store_min_order,
-        store_nequi_number
-      FROM user_profiles
-      WHERE store_slug = ? AND store_enabled = 1`
-    )
-      .bind(slug)
-      .first();
+    // Buscar tienda por slug (validando suscripción/addon)
+    const store = await findActiveStore<StoreAccessRow & StoreConfig>(
+      c.env.DB,
+      slug,
+      `store_slug, store_name, store_description,
+       store_logo_url, store_banner_url, store_banner_images,
+       store_primary_color, store_secondary_color,
+       store_whatsapp, store_facebook, store_instagram,
+       store_address, store_city, store_phone, store_email,
+       store_enabled, store_terms,
+       store_shipping_enabled, store_pickup_enabled, store_min_order,
+       store_nequi_number`
+    );
 
-    if (!result) {
+    if (!store) {
       return c.json<APIResponse>({
         success: false,
         error: 'Store not found or disabled',
       }, 404);
     }
 
+    // No exponer los campos de suscripción en la respuesta pública
+    const {
+      is_superadmin: _sa,
+      subscription_status: _ss,
+      trial_end_date: _te,
+      has_store_addon: _ha,
+      store_addon_expires_at: _ae,
+      ...config
+    } = store;
+
     return c.json<APIResponse<StoreConfig>>({
       success: true,
-      data: result as StoreConfig,
+      data: config as StoreConfig,
     });
   } catch (error) {
     console.error('Error fetching store config:', error);
@@ -83,11 +91,7 @@ app.get('/products/:slug', async (c) => {
 
   try {
     // Primero obtener el tenant_id de la tienda
-    const store = await c.env.DB.prepare(
-      'SELECT id FROM user_profiles WHERE store_slug = ? AND store_enabled = 1'
-    )
-      .bind(slug)
-      .first<{ id: string }>();
+    const store = await findActiveStore(c.env.DB, slug);
 
     if (!store) {
       return c.json<APIResponse>({
@@ -145,11 +149,7 @@ app.get('/product/:slug/:productId', async (c) => {
 
   try {
     // Verificar que la tienda existe y está activa
-    const store = await c.env.DB.prepare(
-      'SELECT id FROM user_profiles WHERE store_slug = ? AND store_enabled = 1'
-    )
-      .bind(slug)
-      .first<{ id: string }>();
+    const store = await findActiveStore(c.env.DB, slug);
 
     if (!store) {
       return c.json<APIResponse>({
@@ -201,11 +201,7 @@ app.get('/categories/:slug', async (c) => {
 
   try {
     // Verificar que la tienda existe y está activa
-    const store = await c.env.DB.prepare(
-      'SELECT id FROM user_profiles WHERE store_slug = ? AND store_enabled = 1'
-    )
-      .bind(slug)
-      .first<{ id: string }>();
+    const store = await findActiveStore(c.env.DB, slug);
 
     if (!store) {
       return c.json<APIResponse>({
@@ -258,11 +254,9 @@ app.post('/orders/:slug', async (c) => {
     }
 
     // Verificar que la tienda existe y está activa
-    const store = await c.env.DB.prepare(
-      'SELECT id, store_name, store_whatsapp, epayco_enabled FROM user_profiles WHERE store_slug = ? AND store_enabled = 1'
-    )
-      .bind(slug)
-      .first<{ id: string; store_name?: string; store_whatsapp?: string; epayco_enabled: number }>();
+    const store = await findActiveStore<
+      StoreAccessRow & { store_name?: string; store_whatsapp?: string; epayco_enabled: number }
+    >(c.env.DB, slug, 'store_name, store_whatsapp, epayco_enabled');
 
     if (!store) {
       return c.json<APIResponse>({
@@ -362,11 +356,7 @@ app.get('/shipping-zones/:slug', async (c) => {
 
   try {
     // Verificar que la tienda existe y está activa
-    const store = await c.env.DB.prepare(
-      'SELECT id FROM user_profiles WHERE store_slug = ? AND store_enabled = 1'
-    )
-      .bind(slug)
-      .first<{ id: string }>();
+    const store = await findActiveStore(c.env.DB, slug);
 
     if (!store) {
       return c.json<APIResponse>({
@@ -414,11 +404,9 @@ app.post('/wompi/create-payment-link/:slug', async (c) => {
     }
 
     // Verificar que la tienda existe, está activa y tiene Wompi habilitado
-    const store = await c.env.DB.prepare(
-      'SELECT id, wompi_public_key, wompi_private_key, wompi_enabled FROM user_profiles WHERE store_slug = ? AND store_enabled = 1'
-    )
-      .bind(slug)
-      .first<{ id: string; wompi_public_key?: string; wompi_private_key?: string; wompi_enabled: number }>();
+    const store = await findActiveStore<
+      StoreAccessRow & { wompi_public_key?: string; wompi_private_key?: string; wompi_enabled: number }
+    >(c.env.DB, slug, 'wompi_public_key, wompi_private_key, wompi_enabled');
 
     if (!store) {
       return c.json<APIResponse>({

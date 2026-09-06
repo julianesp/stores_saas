@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, Suspense } from "react";
 import { useParams, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import {
@@ -29,7 +29,7 @@ interface TransactionData {
   approval_code?: string;
 }
 
-export default function PaymentConfirmationPage() {
+function PaymentConfirmationContent() {
   const params = useParams();
   const searchParams = useSearchParams();
   const slug = params.slug as string;
@@ -41,7 +41,6 @@ export default function PaymentConfirmationPage() {
   const [loading, setLoading] = useState(true);
   const [transactionStatus, setTransactionStatus] = useState<TransactionStatus>("PENDING");
   const [transactionData, setTransactionData] = useState<TransactionData | null>(null);
-  const [verificationAttempts, setVerificationAttempts] = useState(0);
 
   useEffect(() => {
     loadConfigAndTransaction();
@@ -82,6 +81,9 @@ export default function PaymentConfirmationPage() {
       // Si hay ref_payco, verificar el estado via el Worker
       if (refPayco) {
         await checkTransactionStatus(refPayco);
+      } else {
+        // Sin referencia de pago no hay nada que verificar
+        setTransactionStatus("ERROR");
       }
     } catch (error) {
       console.error("Error loading data:", error);
@@ -93,8 +95,6 @@ export default function PaymentConfirmationPage() {
 
   const checkTransactionStatus = async (refPaycoId: string) => {
     try {
-      setVerificationAttempts((prev) => prev + 1);
-
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), 5000);
 
@@ -439,7 +439,7 @@ export default function PaymentConfirmationPage() {
   return (
     <div className="min-h-screen bg-gray-50">
       <header
-        className="sticky top-0 z-50 bg-white shadow-md"
+        className="sticky top-16 z-40 bg-white shadow-md"
         style={{ borderBottom: `4px solid ${primaryColor}` }}
       >
         <div className="max-w-7xl mx-auto px-4 py-4">
@@ -573,9 +573,11 @@ export default function PaymentConfirmationPage() {
                 <p className="text-gray-600 mb-6">
                   Estamos verificando tu transacción
                 </p>
-                <Button onClick={() => checkTransactionStatus(refPayco!)}>
-                  Verificar nuevamente
-                </Button>
+                {refPayco && (
+                  <Button onClick={() => checkTransactionStatus(refPayco)}>
+                    Verificar nuevamente
+                  </Button>
+                )}
               </div>
             )}
 
@@ -609,7 +611,7 @@ export default function PaymentConfirmationPage() {
               </div>
             )}
 
-            {transactionStatus === "ERROR" && !refPayco && (
+            {transactionStatus === "ERROR" && (
               <div className="text-center">
                 <AlertCircle className="h-16 w-16 text-yellow-600 mx-auto mb-4" />
                 <h2 className="text-2xl font-bold mb-2">
@@ -629,5 +631,20 @@ export default function PaymentConfirmationPage() {
         </Card>
       </div>
     </div>
+  );
+}
+
+// useSearchParams exige un boundary de Suspense en el App Router
+export default function PaymentConfirmationPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="min-h-screen flex items-center justify-center bg-gray-50">
+          <Loader2 className="h-12 w-12 animate-spin text-brand" />
+        </div>
+      }
+    >
+      <PaymentConfirmationContent />
+    </Suspense>
   );
 }
