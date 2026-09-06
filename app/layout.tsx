@@ -169,6 +169,22 @@ export default function RootLayout({
             src="https://checkout.epayco.co/checkout.js"
             strategy="lazyOnload"
           />
+          {/* Google Ads (gtag.js) — mide conversiones de la campaña Performance Max.
+              La etiqueta base carga en todo el sitio; los eventos de conversión
+              (p. ej. registro) se disparan aparte con gtag('event', 'conversion', …). */}
+          <Script
+            id="google-ads-gtag-src"
+            src="https://www.googletagmanager.com/gtag/js?id=AW-17995545981"
+            strategy="afterInteractive"
+          />
+          <Script id="google-ads-gtag-init" strategy="afterInteractive">
+            {`
+              window.dataLayer = window.dataLayer || [];
+              function gtag(){dataLayer.push(arguments);}
+              gtag('js', new Date());
+              gtag('config', 'AW-17995545981');
+            `}
+          </Script>
           {children}
           <Analytics />
           <Toaster

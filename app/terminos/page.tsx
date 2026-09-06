@@ -93,7 +93,36 @@ export default function TerminosPage() {
 
             <section>
               <h2 className="mb-2 text-lg font-semibold text-white">
-                6. Cambios en los términos
+                6. Cookies y analítica web
+              </h2>
+              <p>
+                Este sitio utiliza cookies y tecnologías de terceros para medir
+                el rendimiento de nuestra publicidad y mejorar el servicio. En
+                particular, empleamos la etiqueta de Google (Google Ads) para
+                registrar cuándo un usuario que llega desde uno de nuestros
+                anuncios completa una acción, como el registro de una cuenta.
+                Estos datos se usan de forma agregada para medir la efectividad
+                de las campañas y no para identificarte personalmente.
+              </p>
+              <p className="mt-2">
+                Puedes gestionar o rechazar las cookies desde la configuración
+                de tu navegador. Para más información sobre cómo Google utiliza
+                estos datos, consulta la{" "}
+                <a
+                  href="https://policies.google.com/technologies/partner-sites"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-brand underline"
+                >
+                  política de privacidad de Google
+                </a>
+                .
+              </p>
+            </section>
+
+            <section>
+              <h2 className="mb-2 text-lg font-semibold text-white">
+                7. Cambios en los términos
               </h2>
               <p>
                 Podemos actualizar estos términos en cualquier momento. Los
@@ -103,7 +132,7 @@ export default function TerminosPage() {
 
             <section>
               <h2 className="mb-2 text-lg font-semibold text-white">
-                7. Contacto
+                8. Contacto
               </h2>
               <p>
                 Para consultas sobre estos términos, escríbenos a{" "}
