@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { useParams, usePathname } from "next/navigation";
@@ -32,9 +32,24 @@ export function StoreNavbar({ config }: StoreNavbarProps) {
 
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [cartCount, setCartCount] = useState(0);
+  // Sube cada vez que el conteo AUMENTA. Sirve de key para re-montar el badge
+  // y disparar el "pop"; no se anima al quitar productos.
+  const [pop, setPop] = useState(0);
+  const prevCountRef = useRef(0);
 
   useEffect(() => {
-    const updateCartCount = () => setCartCount(cartItemCount(readCart(slug)));
+    // La primera lectura solo sincroniza el conteo, sin "pop": un carrito ya
+    // precargado al entrar no es una acción de "agregar".
+    let initialized = false;
+    const updateCartCount = () => {
+      const next = cartItemCount(readCart(slug));
+      if (initialized && next > prevCountRef.current) {
+        setPop((p) => p + 1);
+      }
+      prevCountRef.current = next;
+      initialized = true;
+      setCartCount(next);
+    };
 
     updateCartCount();
 
@@ -140,10 +155,11 @@ export function StoreNavbar({ config }: StoreNavbarProps) {
                 className="relative"
                 style={{ borderColor: primaryColor, color: primaryColor }}
               >
-                <ShoppingCart className="h-5 w-5" />
+                <ShoppingCart id="store-cart-icon" className="h-5 w-5" />
                 {cartCount > 0 && (
                   <span
-                    className="absolute -top-2 -right-2 h-5 w-5 rounded-full text-white text-xs flex items-center justify-center font-bold"
+                    key={pop}
+                    className="cart-badge-pop absolute -top-2 -right-2 h-5 w-5 rounded-full text-white text-xs flex items-center justify-center font-bold"
                     style={{ backgroundColor: primaryColor }}
                   >
                     {cartCount > 99 ? "99+" : cartCount}

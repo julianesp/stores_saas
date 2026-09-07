@@ -17,6 +17,7 @@ import {
 import { formatCurrency } from '@/lib/utils';
 import { buildWhatsAppLink } from '@/lib/whatsapp';
 import { readCart, writeCart } from '@/lib/storefront-cart';
+import { flyToCart } from '@/lib/fly-to-cart';
 import {
   Search,
   Phone,
@@ -54,6 +55,10 @@ export default function StorefrontPage() {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const [showFilters, setShowFilters] = useState(false);
+
+  // Producto cuyo botón "Agregar" está mostrando el pulso de feedback.
+  // Se limpia con un timeout tras la duración de la animación (140ms).
+  const [pulsingProductId, setPulsingProductId] = useState<string | null>(null);
 
   useEffect(() => {
     loadStore();
@@ -122,6 +127,11 @@ export default function StorefrontPage() {
       }
 
       writeCart(slug, cart);
+
+      // Pulso de feedback en el botón del producto (se limpia tras la animación)
+      setPulsingProductId(product.id);
+      window.setTimeout(() => setPulsingProductId(null), 160);
+
       toast.success(`${product.name} agregado al carrito`, {
         action: {
           label: 'Ver carrito',
@@ -131,6 +141,22 @@ export default function StorefrontPage() {
     } catch (err) {
       console.error('Error adding to cart:', err);
       toast.error('Error al agregar al carrito');
+    }
+  };
+
+  // Al escribir en la búsqueda: actualiza el término y, al empezar a escribir
+  // (la barra flota sobre el hero), baja a la grilla para que los resultados
+  // filtrados queden a la vista.
+  const handleSearchChange = (value: string) => {
+    const wasEmpty = searchTerm.length === 0;
+    setSearchTerm(value);
+    if (wasEmpty && value.length > 0) {
+      // Deja renderizar el filtro antes de desplazar.
+      requestAnimationFrame(() => {
+        document
+          .getElementById('productos')
+          ?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      });
     }
   };
 
@@ -220,25 +246,32 @@ export default function StorefrontPage() {
   const secondaryColor = config.store_secondary_color || '#10B981';
 
   return (
-    <div className="bg-gray-50">
-      {/* Búsqueda y banner */}
-      <div className="bg-white shadow-sm">
-        <div className="max-w-7xl mx-auto px-4 py-4">
-          <div className="relative">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-black h-5 w-5" />
-            <Input
-              type="text"
-              placeholder="Buscar productos..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="pl-10 text-gray-700"
-            />
-          </div>
+    <div className="relative bg-gray-50">
+      {/* Búsqueda: sin texto flota centrada sobre el hero; al escribir se vuelve
+          sticky bajo el navbar para seguir visible junto a los resultados. */}
+      <div
+        className={
+          searchTerm
+            ? 'sticky top-16 z-40 px-4 py-3 bg-white/80 backdrop-blur-sm border-b'
+            : 'absolute inset-x-0 top-4 z-40 px-4'
+        }
+      >
+        <div className="relative mx-auto w-full max-w-md">
+          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500 h-5 w-5 z-10 pointer-events-none" />
+          <Input
+            type="text"
+            placeholder="Buscar productos..."
+            value={searchTerm}
+            onChange={(e) => handleSearchChange(e.target.value)}
+            className="pl-10 text-gray-700 bg-white/95 shadow-lg backdrop-blur-sm"
+          />
         </div>
       </div>
 
-      {/* Hero Section: carrusel si hay imágenes, banner único, o fallback */}
-      {(() => {
+      {/* Hero con las imágenes de presentación */}
+      <div className="relative">
+        {/* Hero Section: carrusel si hay imágenes, banner único, o fallback */}
+        {(() => {
         const carouselImages: string[] = (() => {
           try {
             const parsed = config.store_banner_images ? JSON.parse(config.store_banner_images) : [];
@@ -295,6 +328,7 @@ export default function StorefrontPage() {
           </div>
         );
       })()}
+      </div>
 
       {/* Sección de confianza */}
       <div className="bg-white border-y">
@@ -508,7 +542,7 @@ export default function StorefrontPage() {
               <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 md:gap-6">
                 {filteredProducts.map((product) => {
                   const images = parseProductImages(product.images);
-                  const hasOffer = product.discount_percentage && product.discount_percentage > 0;
+                  const hasOffer = Boolean(product.discount_percentage && product.discount_percentage > 0);
                   const originalPrice = product.sale_price;
                   const finalPrice = hasOffer
                     ? calculateDiscountedPrice(originalPrice, product.discount_percentage!)
@@ -520,7 +554,10 @@ export default function StorefrontPage() {
                       <Card className="group hover:shadow-2xl hover:-translate-y-1 transition-all duration-300 cursor-pointer h-full overflow-hidden border-2 hover:border-gray-300">
                         <CardContent className="p-0">
                           {/* Imagen */}
-                          <div className="relative aspect-square bg-gradient-to-br from-gray-50 to-gray-100 overflow-hidden">
+                          <div
+                            data-product-image
+                            className="relative aspect-square bg-gradient-to-br from-gray-50 to-gray-100 overflow-hidden"
+                          >
                             {hasOffer && (
                               <div className="absolute top-3 right-3 z-10 flex flex-col gap-1">
                                 <div
@@ -599,11 +636,21 @@ export default function StorefrontPage() {
                             {product.stock > 0 && (
                               <Button
                                 size="sm"
-                                className="w-full mt-3 text-white"
+                                className={`w-full mt-3 text-white ${
+                                  pulsingProductId === product.id
+                                    ? "cart-add-pulse"
+                                    : ""
+                                }`}
                                 style={{ backgroundColor: primaryColor }}
                                 onClick={(e) => {
                                   // Evitar que el Link de la tarjeta navegue
                                   e.preventDefault();
+                                  // Recuadro de imagen de esta tarjeta → vuela al carrito
+                                  const card = e.currentTarget.closest('a');
+                                  const imgBox = card?.querySelector<HTMLElement>(
+                                    '[data-product-image]'
+                                  );
+                                  flyToCart(imgBox ?? null);
                                   quickAddToCart(product);
                                 }}
                               >
