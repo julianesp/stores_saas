@@ -482,7 +482,7 @@ export default function CheckoutPage() {
                   <li>
                     {deliveryMethod === "pickup"
                       ? "Recoge tu pedido en la tienda una vez confirmado el pago."
-                      : "El envío se coordinará una vez confirmado el pago."}
+                      : "El domicilio ya está incluido en el total. Con tu comprobante coordinamos la entrega."}
                   </li>
                 </ul>
               </div>

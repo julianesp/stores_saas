@@ -209,10 +209,14 @@ export async function generateOrderPDF(data: OrderPdfData) {
 
   doc.setFont('helvetica', 'normal');
   doc.setFontSize(8);
-  doc.text('Este documento es tu comprobante de pedido', pageWidth / 2, yPos, { align: 'center' });
+  doc.text('Comprobante de pedido — envíalo junto a tu pago de Nequi', pageWidth / 2, yPos, { align: 'center' });
   yPos += 4;
+  if (data.deliveryMethod === 'shipping') {
+    doc.text('Presenta este comprobante para coordinar la entrega a domicilio', pageWidth / 2, yPos, { align: 'center' });
+    yPos += 4;
+  }
   if (data.storeWhatsapp) {
-    doc.text(`Envía tu comprobante de pago por WhatsApp: ${data.storeWhatsapp}`, pageWidth / 2, yPos, { align: 'center' });
+    doc.text(`Envíalo por WhatsApp al: ${data.storeWhatsapp}`, pageWidth / 2, yPos, { align: 'center' });
     yPos += 4;
   }
 
