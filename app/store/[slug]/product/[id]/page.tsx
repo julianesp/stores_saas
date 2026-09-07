@@ -169,8 +169,9 @@ export default function ProductDetailPage() {
   }
 
   const images = parseProductImages(product.images);
-  const hasOffer =
-    product.discount_percentage && product.discount_percentage > 0;
+  const hasOffer = Boolean(
+    product.discount_percentage && product.discount_percentage > 0
+  );
   const originalPrice = product.sale_price;
   const finalPrice = hasOffer
     ? calculateDiscountedPrice(originalPrice, product.discount_percentage!)

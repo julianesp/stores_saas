@@ -267,8 +267,11 @@ export default function CartPage() {
               </h2>
 
               {cart.map((item) => {
-                const hasOffer =
-                  item.discount_percentage && item.discount_percentage > 0;
+                // Boolean() evita renderizar un "0" cuando discount_percentage
+                // es 0: `0 && ...` devuelve 0 (número), y React lo pinta.
+                const hasOffer = Boolean(
+                  item.discount_percentage && item.discount_percentage > 0
+                );
                 const finalPrice = hasOffer
                   ? calculateDiscountedPrice(
                       item.price,

@@ -713,9 +713,10 @@ export default function CheckoutPage() {
                   {/* Productos */}
                   <div className="space-y-3 mb-4 max-h-64 overflow-y-auto">
                     {cart.map((item) => {
-                      const hasOffer =
+                      const hasOffer = Boolean(
                         item.discount_percentage &&
-                        item.discount_percentage > 0;
+                        item.discount_percentage > 0
+                      );
                       const finalPrice = hasOffer
                         ? calculateDiscountedPrice(
                             item.price,
