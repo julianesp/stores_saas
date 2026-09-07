@@ -25,8 +25,8 @@ const SUBSCRIPTION_PLANS = {
   },
   'addon-store-monthly': {
     name: 'Addon: Tienda Online',
-    price: 9900, // $9,900 COP
-    amount_in_cents: 990000,
+    price: 14900, // $14,900 COP
+    amount_in_cents: 1490000,
     interval: 'monthly',
   },
   'addon-email-monthly': {
