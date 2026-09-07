@@ -419,6 +419,26 @@ export default function StorefrontPage() {
                           </div>
                         </div>
                       )}
+
+                      {/* Cómo llegar: enlace de Maps del tendero, o búsqueda
+                          por dirección si no configuró el enlace */}
+                      {(config.store_maps_url || config.store_address) && (
+                        <a
+                          href={
+                            config.store_maps_url ||
+                            `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(
+                              `${config.store_address || ''} ${config.store_city || ''}`.trim()
+                            )}`
+                          }
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="inline-flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium text-white transition-opacity hover:opacity-90"
+                          style={{ backgroundColor: primaryColor }}
+                        >
+                          <MapPin className="h-4 w-4" />
+                          Cómo llegar
+                        </a>
+                      )}
                     </div>
 
                     {/* Redes sociales */}

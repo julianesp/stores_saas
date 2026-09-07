@@ -30,6 +30,7 @@ import {
 } from "lucide-react";
 
 import { ShippingZonesManager } from "@/components/store-config/shipping-zones-manager";
+import { ImageUploadField } from "@/components/store-config/image-upload-field";
 import {
   hasStorefrontAccess,
   getStorefrontBlockMessage,
@@ -64,20 +65,21 @@ export default function StoreConfigPage() {
   const [storeInstagram, setStoreInstagram] = useState("");
   const [storeAddress, setStoreAddress] = useState("");
   const [storeCity, setStoreCity] = useState("");
+  // Enlace de Google Maps del negocio (para "Cómo llegar" en la tienda)
+  const [storeMapsUrl, setStoreMapsUrl] = useState("");
   const [storePhone, setStorePhone] = useState("");
   const [storeEmail, setStoreEmail] = useState("");
   const [storeNequiNumber, setStoreNequiNumber] = useState("");
+  // QR de Nequi/Daviplata para que el cliente escanee y pague en la tienda
+  const [paymentQrUrl, setPaymentQrUrl] = useState("");
 
-  // Configuración de ePayco (pagos online)
-  const [epaycoPublicKey, setEpaycoPublicKey] = useState("");
-  const [epaycoPrivateKey, setEpaycoPrivateKey] = useState("");
-  const [epaycoCustomerId, setEpaycoCustomerId] = useState("");
-  const [epaycoEnabled, setEpaycoEnabled] = useState(false);
 
   // Configuración de entrega
   const [storeShippingEnabled, setStoreShippingEnabled] = useState(false);
   const [storePickupEnabled, setStorePickupEnabled] = useState(true);
-  const [storeMinOrder, setStoreMinOrder] = useState(0);
+  // Pedido mínimo predeterminado para todas las tiendas; el tendero puede subirlo
+  const DEFAULT_MIN_ORDER = 5000;
+  const [storeMinOrder, setStoreMinOrder] = useState(DEFAULT_MIN_ORDER);
   const [storeTerms, setStoreTerms] = useState("");
 
   useEffect(() => {
@@ -141,16 +143,14 @@ export default function StoreConfigPage() {
       setStoreInstagram(data.store_instagram || "");
       setStoreAddress(data.store_address || "");
       setStoreCity(data.store_city || "");
+      setStoreMapsUrl(data.store_maps_url || "");
       setStorePhone(data.store_phone || "");
       setStoreEmail(data.store_email || "");
       setStoreNequiNumber(data.store_nequi_number || "");
-      setEpaycoPublicKey(data.epayco_public_key || "");
-      setEpaycoPrivateKey(data.epayco_private_key || "");
-      setEpaycoCustomerId(data.epayco_customer_id || "");
-      setEpaycoEnabled(data.epayco_enabled || false);
+      setPaymentQrUrl(data.payment_qr_url || "");
       setStoreShippingEnabled(data.store_shipping_enabled || false);
       setStorePickupEnabled(data.store_pickup_enabled !== false);
-      setStoreMinOrder(data.store_min_order || 0);
+      setStoreMinOrder(data.store_min_order ?? DEFAULT_MIN_ORDER);
       setStoreTerms(data.store_terms || "");
     } catch (error) {
       console.error("Error loading profile:", error);
@@ -221,6 +221,15 @@ export default function StoreConfigPage() {
       }
     }
 
+    // Pedido mínimo: 0 = sin mínimo; cualquier otro valor no puede ser
+    // inferior a $5.000 (mínimo obligatorio para todas las tiendas).
+    if (storeMinOrder > 0 && storeMinOrder < DEFAULT_MIN_ORDER) {
+      toast.error(
+        `El pedido mínimo no puede ser menor a $${DEFAULT_MIN_ORDER.toLocaleString("es-CO")} COP`,
+      );
+      return;
+    }
+
     setSaving(true);
     try {
       await updateUserProfile(
@@ -246,10 +255,8 @@ export default function StoreConfigPage() {
           store_phone: storePhone.trim() || undefined,
           store_email: storeEmail.trim() || undefined,
           store_nequi_number: storeNequiNumber.trim() || undefined,
-          epayco_public_key: epaycoPublicKey.trim() || undefined,
-          epayco_private_key: epaycoPrivateKey.trim() || undefined,
-          epayco_customer_id: epaycoCustomerId.trim() || undefined,
-          epayco_enabled: epaycoEnabled,
+          payment_qr_url: paymentQrUrl || undefined,
+          store_maps_url: storeMapsUrl.trim() || undefined,
           store_shipping_enabled: storeShippingEnabled,
           store_pickup_enabled: storePickupEnabled,
           store_min_order: storeMinOrder,
@@ -452,30 +459,19 @@ export default function StoreConfigPage() {
             </div>
           </div>
 
-          <div className="space-y-2">
-            <Label htmlFor="logo">URL del Logo</Label>
-            <Input
-              id="logo"
-              value={storeLogoUrl}
-              onChange={(e) => setStoreLogoUrl(e.target.value)}
-              placeholder="https://..."
-              type="url"
-            />
-          </div>
+          <ImageUploadField
+            label="Logo de la tienda"
+            value={storeLogoUrl}
+            onChange={setStoreLogoUrl}
+            helpText="Sube el logo desde tu celular o computador (máx. 5MB)."
+          />
 
-          <div className="space-y-2">
-            <Label htmlFor="banner">URL del Banner</Label>
-            <Input
-              id="banner"
-              value={storeBannerUrl}
-              onChange={(e) => setStoreBannerUrl(e.target.value)}
-              placeholder="https://..."
-              type="url"
-            />
-            <p className="text-xs text-gray-500">
-              Se usa como imagen única si no hay imágenes en el carrusel.
-            </p>
-          </div>
+          <ImageUploadField
+            label="Banner de la tienda"
+            value={storeBannerUrl}
+            onChange={setStoreBannerUrl}
+            helpText="Se usa como imagen única si no hay imágenes en el carrusel."
+          />
 
           {/* Carrusel de presentación */}
           <div className="space-y-3">
@@ -602,6 +598,15 @@ export default function StoreConfigPage() {
             </div>
 
             <div className="space-y-2">
+              <ImageUploadField
+                label="Código QR de Nequi"
+                value={paymentQrUrl}
+                onChange={setPaymentQrUrl}
+                helpText="Sube tu QR de Nequi/Daviplata (Nequi: Recibir → Código QR). Los clientes lo escanearán para pagarte en la tienda online."
+              />
+            </div>
+
+            <div className="space-y-2">
               <Label htmlFor="facebook">Facebook</Label>
               <Input
                 id="facebook"
@@ -656,137 +661,37 @@ export default function StoreConfigPage() {
               />
             </div>
           </div>
-        </CardContent>
-      </Card>
 
-      {/* Configuración de Pagos con ePayco */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <svg
-              className="h-5 w-5"
-              fill="none"
-              viewBox="0 0 24 24"
-              stroke="currentColor"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z"
-              />
-            </svg>
-            Pagos Online con ePayco
-          </CardTitle>
-          <CardDescription>
-            Acepta pagos con tarjeta, PSE, Nequi y más. Cada tienda debe tener
-            su propia cuenta de ePayco.
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          {/* Aviso importante */}
-          <div className="p-4 bg-brand-light/50 border border-brand/40 rounded-lg">
-            <h4 className="font-semibold text-brand mb-2">
-              📌 ¿Cómo obtener tus credenciales?
-            </h4>
-            <ol className="text-sm text-brand space-y-1 list-decimal list-inside">
-              <li>Crea una cuenta en ePayco (epayco.co)</li>
-              <li>Verifica tu identidad y datos bancarios</li>
-              <li>
-                Obtén tus credenciales desde el dashboard de ePayco:
-                P_CUST_ID_CLIENTE, Public Key y Private Key
-              </li>
-              <li>Copia y pega las credenciales aquí abajo</li>
-            </ol>
-            <p className="text-xs text-brand mt-2">
-              ⚠️ Los pagos irán directamente a tu cuenta bancaria configurada en
-              ePayco
-            </p>
-          </div>
-
-          {/* Switch para activar ePayco */}
-          <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-            <div>
-              <h4 className="font-medium">Activar Pagos con ePayco</h4>
-              <p className="text-sm text-gray-600">
-                Permite a los clientes pagar online
-              </p>
-            </div>
-            <Switch
-              checked={epaycoEnabled}
-              onCheckedChange={setEpaycoEnabled}
+          <div className="space-y-2">
+            <Label htmlFor="maps">Ubicación en Google Maps</Label>
+            <Input
+              id="maps"
+              value={storeMapsUrl}
+              onChange={(e) => setStoreMapsUrl(e.target.value)}
+              placeholder="https://maps.app.goo.gl/..."
+              type="url"
             />
+            <p className="text-xs text-gray-500">
+              Pega el enlace de tu negocio en Google Maps. Tus clientes verán un
+              botón <strong>&quot;Cómo llegar&quot;</strong> que abre la ruta
+              directa hacia tu tienda.
+            </p>
+            <a
+              href={
+                storeAddress
+                  ? `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(
+                      `${storeAddress} ${storeCity}`.trim(),
+                    )}`
+                  : "https://www.google.com/maps"
+              }
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-1 text-sm text-brand hover:underline"
+            >
+              <MapPin className="h-4 w-4" />
+              Buscar mi negocio en Google Maps y copiar el enlace
+            </a>
           </div>
-
-          {/* Campos de credenciales */}
-          <div className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="epayco-customer-id">P_CUST_ID_CLIENTE</Label>
-              <Input
-                id="epayco-customer-id"
-                value={epaycoCustomerId}
-                onChange={(e) => setEpaycoCustomerId(e.target.value)}
-                placeholder="ID de cliente de ePayco"
-                type="text"
-              />
-              <p className="text-xs text-gray-500">
-                Tu identificador de cliente en ePayco
-              </p>
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="epayco-public">Public Key (Llave Pública)</Label>
-              <Input
-                id="epayco-public"
-                value={epaycoPublicKey}
-                onChange={(e) => setEpaycoPublicKey(e.target.value)}
-                placeholder="Public key de ePayco"
-                type="text"
-              />
-              <p className="text-xs text-gray-500">
-                Esta llave es pública y se usa en el frontend
-              </p>
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="epayco-private">
-                Private Key (Llave Privada)
-              </Label>
-              <Input
-                id="epayco-private"
-                value={epaycoPrivateKey}
-                onChange={(e) => setEpaycoPrivateKey(e.target.value)}
-                placeholder="Private key de ePayco"
-                type="password"
-              />
-              <p className="text-xs text-gray-500">
-                ⚠️ Esta llave es secreta, nunca la compartas
-              </p>
-            </div>
-          </div>
-
-          {/* Información adicional */}
-          {epaycoEnabled &&
-            epaycoPublicKey &&
-            epaycoPrivateKey &&
-            epaycoCustomerId && (
-              <div className="p-3 bg-green-50 border border-green-200 rounded-lg">
-                <p className="text-sm text-green-800">
-                  ✅ ePayco configurado. Los clientes podrán pagar con tarjeta,
-                  PSE, Nequi y más métodos de pago.
-                </p>
-              </div>
-            )}
-
-          {epaycoEnabled &&
-            (!epaycoPublicKey || !epaycoPrivateKey || !epaycoCustomerId) && (
-              <div className="p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
-                <p className="text-sm text-yellow-800">
-                  ⚠️ Para activar ePayco debes ingresar todas las credenciales
-                  (P_CUST_ID_CLIENTE, Public Key y Private Key)
-                </p>
-              </div>
-            )}
         </CardContent>
       </Card>
 
@@ -832,7 +737,7 @@ export default function StoreConfigPage() {
               inputMode="numeric"
               value={storeMinOrder || ""}
               onChange={(e) => setStoreMinOrder(Number(e.target.value) || 0)}
-              placeholder="0"
+              placeholder="5000"
               min="0"
               step="1000"
             />
@@ -848,8 +753,8 @@ export default function StoreConfigPage() {
               )}
             </div>
             <p className="text-xs text-gray-400 italic">
-              💡 Tip: Dejar en 0 para no establecer mínimo. Recomendado: $2,000
-              - $5,000 COP
+              💡 El mínimo obligatorio es $5.000 COP. Puedes subirlo si tu
+              negocio lo necesita, o ponerlo en 0 para no exigir mínimo.
             </p>
           </div>
         </CardContent>

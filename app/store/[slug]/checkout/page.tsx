@@ -11,7 +11,6 @@ import {
   calculateDiscountedPrice,
   getStoreShippingZones,
   ShippingZonePublic,
-  createEPaycoSession,
 } from "@/lib/storefront-api";
 import { formatCurrency } from "@/lib/utils";
 import { buildWhatsAppLink } from "@/lib/whatsapp";
@@ -26,10 +25,11 @@ import {
   User,
   Loader2,
   CheckCircle2,
-  MapPin,
   Store,
   Truck,
   MessageSquare,
+  QrCode,
+  Download,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -47,14 +47,6 @@ import {
 import { toast } from "sonner";
 
 type CartItem = StoreCartItem;
-
-interface EPaycoCheckout {
-  checkout: {
-    configure: (options: { sessionId: string }) => { open: () => void };
-  };
-}
-
-type WindowWithEPayco = Window & { ePayco?: EPaycoCheckout };
 
 export default function CheckoutPage() {
   const params = useParams();
@@ -84,9 +76,10 @@ export default function CheckoutPage() {
   const [orderTotal, setOrderTotal] = useState(0);
   const [storeWhatsApp, setStoreWhatsApp] = useState("");
   const [storeNequiNumber, setStoreNequiNumber] = useState("");
-  const [epaycoEnabled, setEpaycoEnabled] = useState(false);
-  const [epaycoSessionId, setEpaycoSessionId] = useState("");
-  const [creatingPaymentSession, setCreatingPaymentSession] = useState(false);
+  // Items del pedido confirmado, preservados para el PDF (el carrito se vacía)
+  const [orderItems, setOrderItems] = useState<CartItem[]>([]);
+  const [orderShippingCost, setOrderShippingCost] = useState(0);
+  const [downloadingPdf, setDownloadingPdf] = useState(false);
 
   useEffect(() => {
     loadConfigAndCart();
@@ -131,6 +124,36 @@ export default function CheckoutPage() {
     }
   };
 
+  // Datos comunes para generar el comprobante PDF del pedido
+  const buildOrderPdfData = () => ({
+    storeName: config?.store_name || "Tienda",
+    storePhone: config?.store_phone,
+    storeWhatsapp: storeWhatsApp || config?.store_whatsapp,
+    storeAddress: config?.store_address,
+    orderNumber,
+    customerName,
+    customerPhone,
+    deliveryMethod,
+    deliveryAddress: deliveryMethod === "shipping" ? deliveryAddress : undefined,
+    items: orderItems,
+    shippingCost: orderShippingCost,
+    notes: notes.trim() || undefined,
+    primaryColor: config?.store_primary_color,
+  });
+
+  const handleDownloadPdf = async () => {
+    try {
+      setDownloadingPdf(true);
+      const { downloadOrderPDF } = await import("@/lib/storefront-order-pdf");
+      await downloadOrderPDF(buildOrderPdfData());
+    } catch (err) {
+      console.error("Error generando PDF:", err);
+      toast.error("No se pudo generar el comprobante");
+    } finally {
+      setDownloadingPdf(false);
+    }
+  };
+
   const sendOrderByWhatsApp = () => {
     if (!storeWhatsApp) return;
 
@@ -140,7 +163,7 @@ export default function CheckoutPage() {
       deliveryMethod === "pickup"
         ? "Recogeré el pedido en la tienda."
         : `Entrega a domicilio: ${deliveryAddress}.`;
-    message += `\n¿Me confirmas cómo completar el pago?`;
+    message += `\nYa realicé el pago por Nequi y adjunto el comprobante. 📎`;
 
     const url = buildWhatsAppLink(storeWhatsApp, message);
     if (url) window.open(url, "_blank");
@@ -214,14 +237,6 @@ export default function CheckoutPage() {
       return;
     }
 
-    // ePayco exige un monto mínimo de $5.000 COP
-    if (config?.epayco_enabled && total < 5000) {
-      toast.error(
-        "El monto mínimo para pagar con ePayco es de $5.000 COP. Agrega más productos a tu pedido."
-      );
-      return;
-    }
-
     try {
       setSubmitting(true);
 
@@ -260,29 +275,10 @@ export default function CheckoutPage() {
       setOrderTotal(response.total);
       setStoreWhatsApp(response.store_whatsapp || config?.store_whatsapp || "");
       setStoreNequiNumber(config?.store_nequi_number || "");
-      setEpaycoEnabled(response.epayco_enabled || false);
 
-      // Si ePayco está habilitado, crear sesión de checkout
-      if (response.epayco_enabled) {
-        try {
-          setCreatingPaymentSession(true);
-          const session = await createEPaycoSession(slug, {
-            order_id: response.order_id,
-            order_number: response.order_number,
-            amount: response.total,
-            customer_email: customerEmail.trim() || undefined,
-            customer_name: customerName.trim(),
-            customer_phone: customerPhone.trim(),
-            redirect_url: `${window.location.origin}/store/${slug}/payment-confirmation?order=${response.order_number}`,
-          });
-          setEpaycoSessionId(session.session_id);
-        } catch (error) {
-          console.error("Error creating ePayco session:", error);
-          toast.warning("No se pudo crear el link de pago automático");
-        } finally {
-          setCreatingPaymentSession(false);
-        }
-      }
+      // Preservar los items y el envío para el comprobante PDF antes de vaciar
+      setOrderItems(cart);
+      setOrderShippingCost(shippingAmount);
 
       // Limpiar carrito
       writeCart(slug, []);
@@ -340,7 +336,7 @@ export default function CheckoutPage() {
         >
           <div className="max-w-7xl mx-auto px-4 py-4">
             <div className="flex items-center justify-center">
-              <h1 className="text-xl font-bold">Pedido Registrado - Pendiente de Pago</h1>
+              <h1 className="text-xl font-bold">Pedido Registrado - Paga con Nequi</h1>
             </div>
           </div>
         </header>
@@ -377,98 +373,81 @@ export default function CheckoutPage() {
               </div>
 
               <div className="space-y-4">
-                {/* Instrucciones según método de pago */}
-                {epaycoEnabled && epaycoSessionId ? (
-                  <div className="p-4 bg-yellow-50 border border-yellow-500 rounded-lg">
-                    <p className="text-sm text-yellow-900">
-                      ⚠️ <strong>¡IMPORTANTE!</strong> Tu pedido está registrado pero aún NO está pagado. Haz clic en el botón "Pagar" abajo para completar tu pago ahora.
-                    </p>
-                  </div>
-                ) : epaycoEnabled && creatingPaymentSession ? (
-                  <div className="p-4 bg-brand-light/50 rounded-lg">
-                    <p className="text-sm text-gray-700">
-                      <Loader2 className="inline h-4 w-4 mr-2 animate-spin" />
-                      <strong>Preparando pasarela de pago...</strong>
-                    </p>
-                  </div>
-                ) : storeNequiNumber ? (
-                  <>
-                    <div className="p-4 bg-yellow-50 border border-yellow-500 rounded-lg">
-                      <p className="text-sm text-yellow-900">
-                        ⚠️ <strong>¡IMPORTANTE!</strong> Tu pedido está registrado pero aún NO está pagado. Realiza el pago por
-                        Nequi ahora y envía el comprobante por WhatsApp.
-                      </p>
-                    </div>
+                <div className="p-4 bg-yellow-50 border border-yellow-500 rounded-lg text-left">
+                  <p className="text-sm text-yellow-900">
+                    ⚠️ <strong>¡IMPORTANTE!</strong> Tu pedido está registrado
+                    pero aún NO está pagado. Paga con Nequi escaneando el código
+                    de abajo y luego envía tu comprobante por WhatsApp.
+                  </p>
+                </div>
 
-                    <div className="p-4 bg-purple-50 border border-purple-200 rounded-lg">
-                      <p className="text-sm font-semibold text-purple-900 mb-2">
-                        💳 Número de Nequi / Cuenta:
-                      </p>
+                {/* Pago con Nequi: QR de la tienda (preferido) y número */}
+                {(config.payment_qr_url || storeNequiNumber) && (
+                  <div className="p-5 bg-purple-50 border border-purple-200 rounded-lg">
+                    <p className="text-sm font-semibold text-purple-900 mb-3 flex items-center justify-center gap-2">
+                      <QrCode className="h-5 w-5" />
+                      Paga con Nequi
+                    </p>
+
+                    {config.payment_qr_url && (
+                      <div className="flex justify-center mb-3">
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        <img
+                          src={config.payment_qr_url}
+                          alt="Código QR de Nequi para pagar"
+                          className="w-52 h-52 object-contain bg-white rounded-lg p-2 border"
+                        />
+                      </div>
+                    )}
+
+                    {storeNequiNumber && (
                       <div className="flex items-center justify-between bg-white px-4 py-3 rounded-lg">
-                        <p className="text-2xl font-bold text-purple-700">
-                          {storeNequiNumber}
-                        </p>
+                        <div className="text-left">
+                          <p className="text-xs text-purple-700">Número Nequi</p>
+                          <p className="text-xl font-bold text-purple-700">
+                            {storeNequiNumber}
+                          </p>
+                        </div>
                         <Button
                           variant="ghost"
                           size="sm"
                           onClick={() => {
                             navigator.clipboard.writeText(storeNequiNumber);
-                            toast.success("Número copiado al portapapeles");
+                            toast.success("Número copiado");
                           }}
                           className="text-purple-600 hover:text-purple-700 hover:bg-purple-100"
                         >
                           Copiar
                         </Button>
                       </div>
-                      <p className="text-xs text-purple-700 mt-2 text-center">
-                        Monto a transferir:{" "}
-                        <strong>{formatCurrency(orderTotal)}</strong>
-                      </p>
-                    </div>
-                  </>
-                ) : (
-                  <div className="p-4 bg-yellow-50 border border-yellow-500 rounded-lg">
-                    <p className="text-sm text-yellow-900">
-                      ⚠️ <strong>¡IMPORTANTE!</strong> Tu pedido está registrado pero aún NO está pagado. Contacta a la tienda por WhatsApp para coordinar el pago ahora.
+                    )}
+
+                    <p className="text-sm text-purple-700 mt-3 text-center">
+                      Monto a pagar:{" "}
+                      <strong>{formatCurrency(orderTotal)}</strong>
                     </p>
                   </div>
                 )}
 
                 <div className="grid grid-cols-1 gap-3">
-                  {/* Botón de pago con ePayco (prioridad máxima) */}
-                  {epaycoEnabled && epaycoSessionId && (
-                    <Button
-                      size="lg"
-                      className="w-full text-lg"
-                      style={{ backgroundColor: "#0a6db5" }}
-                      onClick={() => {
-                        // Abrir ePayco Smart Checkout
-                        const ePayco = typeof window !== 'undefined'
-                          ? (window as WindowWithEPayco).ePayco
-                          : undefined;
-                        if (ePayco) {
-                          ePayco.checkout.configure({
-                            sessionId: epaycoSessionId,
-                          }).open();
-                        }
-                      }}
-                    >
-                      <svg
-                        className="h-5 w-5 mr-2"
-                        viewBox="0 0 24 24"
-                        fill="none"
-                        stroke="currentColor"
-                        strokeWidth="2"
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                      >
-                        <path d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" />
-                      </svg>
-                      Pagar en línea (Tarjeta, PSE, Nequi)
-                    </Button>
-                  )}
+                  {/* Descargar comprobante del pedido en PDF */}
+                  <Button
+                    type="button"
+                    size="lg"
+                    variant="outline"
+                    className="w-full text-lg"
+                    onClick={handleDownloadPdf}
+                    disabled={downloadingPdf}
+                  >
+                    {downloadingPdf ? (
+                      <Loader2 className="h-5 w-5 mr-2 animate-spin" />
+                    ) : (
+                      <Download className="h-5 w-5 mr-2" />
+                    )}
+                    Descargar comprobante (PDF)
+                  </Button>
 
-                  {/* Enviar el pedido por WhatsApp para coordinar pago/entrega */}
+                  {/* Enviar el pedido por WhatsApp con el comprobante de pago */}
                   {storeWhatsApp && (
                     <Button
                       type="button"
@@ -478,7 +457,7 @@ export default function CheckoutPage() {
                       onClick={sendOrderByWhatsApp}
                     >
                       <MessageSquare className="h-5 w-5 mr-2" />
-                      Enviar pedido por WhatsApp
+                      Enviar comprobante por WhatsApp
                     </Button>
                   )}
 
@@ -492,16 +471,18 @@ export default function CheckoutPage() {
               </div>
 
               <div className="mt-8 p-4 bg-gray-50 rounded-lg text-left text-sm text-black">
-                <p className="font-semibold mb-2">Información importante:</p>
-                <ul className="space-y-1 list-disc list-inside">
-                  <li>Tu pedido está en estado pendiente</li>
+                <p className="font-semibold mb-2">¿Cómo completo mi pedido?</p>
+                <ul className="space-y-1 list-decimal list-inside">
+                  <li>Paga escaneando el código QR de Nequi con tu celular.</li>
+                  <li>Descarga tu comprobante (PDF) con la lista de productos.</li>
                   <li>
-                    Contacta a la tienda por WhatsApp para coordinar el pago
+                    Envía por WhatsApp el comprobante del pago de Nequi para
+                    confirmar tu pedido.
                   </li>
                   <li>
                     {deliveryMethod === "pickup"
-                      ? "Recoge tu pedido en la tienda una vez confirmado el pago"
-                      : "El envío se coordinará una vez confirmado el pago"}
+                      ? "Recoge tu pedido en la tienda una vez confirmado el pago."
+                      : "El envío se coordinará una vez confirmado el pago."}
                   </li>
                 </ul>
               </div>
@@ -831,17 +812,6 @@ export default function CheckoutPage() {
                     </div>
                   )}
 
-                  {config.epayco_enabled && total < 5000 && (
-                    <div className="mt-4 p-3 bg-orange-50 rounded-lg border border-orange-200">
-                      <p className="text-sm font-semibold text-orange-700">
-                        ⚠️ El monto mínimo para pagar con ePayco es de $5.000 COP.
-                      </p>
-                      <p className="text-sm text-orange-600 mt-1">
-                        Faltan {formatCurrency(5000 - total)} para completar el mínimo.
-                      </p>
-                    </div>
-                  )}
-
                   <Button
                     type="submit"
                     size="lg"
@@ -849,8 +819,7 @@ export default function CheckoutPage() {
                     style={{ backgroundColor: primaryColor }}
                     disabled={
                       submitting ||
-                      Boolean(config.store_min_order && config.store_min_order > 0 && subtotal < config.store_min_order) ||
-                      Boolean(config.epayco_enabled && total < 5000)
+                      Boolean(config.store_min_order && config.store_min_order > 0 && subtotal < config.store_min_order)
                     }
                   >
                     {submitting ? (
@@ -867,8 +836,8 @@ export default function CheckoutPage() {
                   </Button>
 
                   <p className="text-xs text-black text-center mt-4">
-                    Al confirmar, se creará tu pedido y podrás enviarlo por
-                    WhatsApp para coordinar el pago
+                    Al confirmar, se creará tu pedido y podrás pagar con Nequi y
+                    enviar tu comprobante por WhatsApp
                   </p>
                 </CardContent>
               </Card>

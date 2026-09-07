@@ -34,6 +34,8 @@ export interface StoreConfig {
   store_pickup_enabled?: number;
   store_min_order?: number;
   store_nequi_number?: string;
+  payment_qr_url?: string;
+  store_maps_url?: string;
   epayco_public_key?: string;
   epayco_customer_id?: string;
   epayco_enabled?: number;

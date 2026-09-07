@@ -33,6 +33,8 @@ interface StoreConfig {
   store_pickup_enabled?: number;
   store_min_order?: number;
   store_nequi_number?: string;
+  payment_qr_url?: string;
+  store_maps_url?: string;
 }
 
 // GET /api/storefront/config/:slug - Obtener configuración pública de una tienda por slug
@@ -51,7 +53,7 @@ app.get('/config/:slug', async (c) => {
        store_address, store_city, store_phone, store_email,
        store_enabled, store_terms,
        store_shipping_enabled, store_pickup_enabled, store_min_order,
-       store_nequi_number`
+       store_nequi_number, payment_qr_url, store_maps_url`
     );
 
     if (!store) {

@@ -58,6 +58,7 @@ export interface UserProfile {
   store_instagram?: string; // URL de Instagram
   store_address?: string; // Dirección física
   store_city?: string; // Ciudad
+  store_maps_url?: string; // Enlace de Google Maps para "Cómo llegar"
   store_phone?: string; // Teléfono de contacto
   store_email?: string; // Email de contacto
   store_enabled?: boolean; // Tienda online activa/inactiva

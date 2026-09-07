@@ -553,6 +553,7 @@ export interface UserProfile {
   store_instagram?: string;
   store_address?: string;
   store_city?: string;
+  store_maps_url?: string;
   store_phone?: string;
   store_email?: string;
   store_enabled?: boolean;

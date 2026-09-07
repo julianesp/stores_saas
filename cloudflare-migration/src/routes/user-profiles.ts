@@ -219,6 +219,7 @@ app.put('/:id', async (c) => {
       'store_pickup_enabled',
       'store_min_order',
       'store_nequi_number',
+      'store_maps_url',
       // Wompi payment configuration
       'wompi_public_key',
       'wompi_private_key',
