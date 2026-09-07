@@ -66,3 +66,45 @@ export function escapeTelegramHtml(text: string): string {
     .replace(/</g, '&lt;')
     .replace(/>/g, '&gt;');
 }
+
+/**
+ * Devuelve todos los chat IDs de un tenant: el del dueño más los destinatarios
+ * adicionales activos (empleada, etc.). Deduplicado.
+ */
+export async function getTenantChatIds(
+  db: D1Database,
+  tenantId: string,
+  ownerChatId: string | null
+): Promise<string[]> {
+  const ids = new Set<string>();
+  if (ownerChatId) ids.add(String(ownerChatId));
+
+  const recipients = await db
+    .prepare(
+      `SELECT chat_id FROM telegram_recipients
+       WHERE tenant_id = ? AND chat_id IS NOT NULL AND enabled = 1`
+    )
+    .bind(tenantId)
+    .all();
+
+  for (const r of (recipients.results as { chat_id?: string }[]) || []) {
+    if (r.chat_id) ids.add(String(r.chat_id));
+  }
+  return Array.from(ids);
+}
+
+/**
+ * Envía un mensaje a varios chats. Devuelve cuántos se enviaron con éxito.
+ */
+export async function sendToChats(
+  chatIds: string[],
+  message: string,
+  botToken?: string
+): Promise<number> {
+  let sent = 0;
+  for (const chatId of chatIds) {
+    const result = await sendTelegramMessage(chatId, message, botToken);
+    if (result.success) sent++;
+  }
+  return sent;
+}

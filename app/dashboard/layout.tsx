@@ -5,6 +5,7 @@ import { useUser, useAuth } from "@clerk/nextjs";
 import { usePathname } from "next/navigation";
 import { Sidebar } from "@/components/dashboard/sidebar";
 import { Header } from "@/components/dashboard/header";
+import { StoreQuickAccess } from "@/components/dashboard/store-quick-access";
 import { TrialBanner } from "@/components/subscription/trial-banner";
 import { SubscriptionExpiredModal } from "@/components/subscription/expired-modal";
 import { ConnectionErrorModal } from "@/components/subscription/connection-error-modal";
@@ -404,6 +405,9 @@ function DashboardLayoutInner({
             {children}
           </main>
         </div>
+
+        {/* Acceso directo flotante a la tienda pública (todas las pantallas) */}
+        {!isSuperAdmin && <StoreQuickAccess />}
       </div>
     </OfflineProvider>
   );

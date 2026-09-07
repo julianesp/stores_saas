@@ -5,6 +5,7 @@
 
 import { Hono } from 'hono';
 import type { Env, APIResponse } from '../types';
+import { findActiveStore, type StoreAccessRow } from '../utils/storefront-access';
 
 const app = new Hono<{ Bindings: Env }>();
 
@@ -24,21 +25,20 @@ app.post('/create-session/:slug', async (c) => {
       }, 400);
     }
 
-    // Obtener credenciales ePayco del comerciante por slug
-    const store = await c.env.DB.prepare(
-      `SELECT id, store_name, epayco_public_key, epayco_private_key, epayco_customer_id, epayco_enabled
-       FROM user_profiles
-       WHERE store_slug = ? AND store_enabled = 1`
-    )
-      .bind(slug)
-      .first<{
-        id: string;
+    // Obtener credenciales ePayco del comerciante por slug (validando suscripción/addon)
+    const store = await findActiveStore<
+      StoreAccessRow & {
         store_name?: string;
         epayco_public_key?: string;
         epayco_private_key?: string;
         epayco_customer_id?: string;
         epayco_enabled: number;
-      }>();
+      }
+    >(
+      c.env.DB,
+      slug,
+      'store_name, epayco_public_key, epayco_private_key, epayco_customer_id, epayco_enabled'
+    );
 
     if (!store) {
       return c.json<APIResponse>({

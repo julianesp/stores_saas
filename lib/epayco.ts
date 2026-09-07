@@ -50,6 +50,22 @@ export const SUBSCRIPTION_PLANS = [
       'Dashboard con insights IA',
     ],
   },
+  {
+    // Único complemento de pago: la Tienda Online. IA y Email Marketing van
+    // incluidos en el plan base. El webhook activa has_store_addon al pagar.
+    id: 'addon-store-monthly',
+    name: 'Tienda Online',
+    price: 14900,
+    isAddon: true,
+    features: [
+      'Tienda online personalizable (vende 24/7)',
+      'Catálogo público con búsqueda y categorías',
+      'Carrito y checkout para tus clientes',
+      'Pago por Nequi (QR) con comprobante en PDF',
+      'Pedidos recibidos por WhatsApp y Telegram',
+      'Zonas de envío configurables',
+    ],
+  },
 ];
 
 // Configuración de ePayco

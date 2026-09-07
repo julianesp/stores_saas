@@ -5,6 +5,9 @@ import type { BusinessTypeId } from './business-types';
 export interface UserProfile {
   id: string;
   clerk_user_id: string;
+  // ID de Clerk del entorno de test/dev. En local el token trae este id en
+  // lugar de clerk_user_id; el Worker acepta ambos al resolver al dueño.
+  clerk_user_id_test?: string;
   email: string;
   role: 'admin' | 'cajero';
   full_name?: string;
@@ -55,6 +58,7 @@ export interface UserProfile {
   store_instagram?: string; // URL de Instagram
   store_address?: string; // Dirección física
   store_city?: string; // Ciudad
+  store_maps_url?: string; // Enlace de Google Maps para "Cómo llegar"
   store_phone?: string; // Teléfono de contacto
   store_email?: string; // Email de contacto
   store_enabled?: boolean; // Tienda online activa/inactiva

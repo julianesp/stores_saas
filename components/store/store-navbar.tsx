@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { useParams, usePathname } from "next/navigation";
@@ -15,6 +15,11 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { StoreConfig } from "@/lib/storefront-api";
+import {
+  CART_UPDATED_EVENT,
+  cartItemCount,
+  readCart,
+} from "@/lib/storefront-cart";
 
 interface StoreNavbarProps {
   config: StoreConfig;
@@ -27,38 +32,39 @@ export function StoreNavbar({ config }: StoreNavbarProps) {
 
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [cartCount, setCartCount] = useState(0);
+  // Sube cada vez que el conteo AUMENTA. Sirve de key para re-montar el badge
+  // y disparar el "pop"; no se anima al quitar productos.
+  const [pop, setPop] = useState(0);
+  const prevCountRef = useRef(0);
 
   useEffect(() => {
+    // La primera lectura solo sincroniza el conteo, sin "pop": un carrito ya
+    // precargado al entrar no es una acción de "agregar".
+    let initialized = false;
+    const updateCartCount = () => {
+      const next = cartItemCount(readCart(slug));
+      if (initialized && next > prevCountRef.current) {
+        setPop((p) => p + 1);
+      }
+      prevCountRef.current = next;
+      initialized = true;
+      setCartCount(next);
+    };
+
     updateCartCount();
 
-    // Actualizar contador cuando cambia el localStorage
-    const handleStorageChange = () => updateCartCount();
-    window.addEventListener("storage", handleStorageChange);
-
-    // También actualizar cuando se hace foco en la ventana
+    // "storage" solo se dispara desde otras pestañas; CART_UPDATED_EVENT
+    // cubre los cambios hechos en esta misma pestaña (agregar/quitar/vaciar)
+    window.addEventListener("storage", updateCartCount);
+    window.addEventListener(CART_UPDATED_EVENT, updateCartCount);
     window.addEventListener("focus", updateCartCount);
 
     return () => {
-      window.removeEventListener("storage", handleStorageChange);
+      window.removeEventListener("storage", updateCartCount);
+      window.removeEventListener(CART_UPDATED_EVENT, updateCartCount);
       window.removeEventListener("focus", updateCartCount);
     };
   }, [slug]);
-
-  const updateCartCount = () => {
-    try {
-      const cartKey = `cart_${slug}`;
-      const savedCart = localStorage.getItem(cartKey);
-      const cart = savedCart ? JSON.parse(savedCart) : [];
-      const totalItems = cart.reduce(
-        (sum: number, item: { quantity: number }) => sum + item.quantity,
-        0
-      );
-      setCartCount(totalItems);
-    } catch (error) {
-      console.error("Error reading cart:", error);
-      setCartCount(0);
-    }
-  };
 
   const primaryColor = config.store_primary_color || "#3B82F6";
   const storeName = config.store_name || "Tienda Online";
@@ -149,10 +155,11 @@ export function StoreNavbar({ config }: StoreNavbarProps) {
                 className="relative"
                 style={{ borderColor: primaryColor, color: primaryColor }}
               >
-                <ShoppingCart className="h-5 w-5" />
+                <ShoppingCart id="store-cart-icon" className="h-5 w-5" />
                 {cartCount > 0 && (
                   <span
-                    className="absolute -top-2 -right-2 h-5 w-5 rounded-full text-white text-xs flex items-center justify-center font-bold"
+                    key={pop}
+                    className="cart-badge-pop absolute -top-2 -right-2 h-5 w-5 rounded-full text-white text-xs flex items-center justify-center font-bold"
                     style={{ backgroundColor: primaryColor }}
                   >
                     {cartCount > 99 ? "99+" : cartCount}

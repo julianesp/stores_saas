@@ -130,6 +130,10 @@ app.put('/:id', async (c) => {
     const id = c.req.param('id');
     const body = await c.req.json();
     const tenant: Tenant = c.get('tenant');
+    const clerkUserId: string = c.get('clerkUserId');
+    // El middleware de auth ya resolvió el perfil del owner (incluyendo el caso
+    // dev donde el id vive en clerk_user_id_test) y lo dejó aquí.
+    const resolvedProfileId: string | undefined = c.get('userProfileId');
 
     // Verificar que el usuario solo pueda actualizar su propio perfil
     // (a menos que sea superadmin)
@@ -150,10 +154,17 @@ app.put('/:id', async (c) => {
     // Verificar si el usuario que hace la petición es superadmin
     const isSuperAdmin = (tenant as any).is_superadmin === true;
 
-    // Solo permitir actualización si:
-    // 1. Es el mismo usuario, O
-    // 2. El usuario que hace la petición es superadmin
-    if (currentProfile.clerk_user_id !== tenant.clerk_user_id && !isSuperAdmin) {
+    // Determinar si el perfil objetivo pertenece al usuario autenticado.
+    // Igual que en GET, aceptamos tanto clerk_user_id como clerk_user_id_test
+    // (el token trae el id de test en local) y el id ya resuelto por el
+    // middleware, para no rechazar al dueño legítimo entre entornos.
+    const isOwnProfile =
+      (resolvedProfileId && currentProfile.id === resolvedProfileId) ||
+      currentProfile.clerk_user_id === clerkUserId ||
+      currentProfile.clerk_user_id_test === clerkUserId;
+
+    // Solo permitir actualización si es el mismo usuario o es superadmin
+    if (!isOwnProfile && !isSuperAdmin) {
       return c.json<APIResponse<null>>({
         success: false,
         error: 'Unauthorized - Solo puedes actualizar tu propio perfil o ser superadmin',
@@ -208,6 +219,7 @@ app.put('/:id', async (c) => {
       'store_pickup_enabled',
       'store_min_order',
       'store_nequi_number',
+      'store_maps_url',
       // Wompi payment configuration
       'wompi_public_key',
       'wompi_private_key',

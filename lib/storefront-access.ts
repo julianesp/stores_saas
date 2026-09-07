@@ -4,10 +4,13 @@ import { hasStoreAccess } from './cloudflare-subscription-helpers';
 /**
  * Verifica si un usuario tiene acceso a la funcionalidad de Tienda Online
  *
+ * La Tienda Online es el único complemento de pago ($14.900/mes). El resto de
+ * funcionalidades (incluidos IA y Email Marketing) van en el plan base.
+ *
  * Reglas:
  * - Durante el período de prueba (15 días): ACCESO COMPLETO ✅
- * - Con Plan Premium activo: ACCESO COMPLETO ✅
- * - Con Plan Básico activo: SIN ACCESO ❌
+ * - Con suscripción activa + complemento de tienda: ACCESO COMPLETO ✅
+ * - Con suscripción activa SIN el complemento: SIN ACCESO ❌
  * - Suscripción expirada: SIN ACCESO ❌
  */
 export function hasStorefrontAccess(userProfile: UserProfile | null): {
@@ -36,11 +39,11 @@ export function hasStorefrontAccess(userProfile: UserProfile | null): {
       };
     }
 
-    if (userProfile.subscription_status === 'active' && userProfile.plan_id === 'plan-basico') {
+    if (userProfile.subscription_status === 'active') {
       return {
         hasAccess: false,
         reason: 'basic_plan',
-        message: 'La Tienda Online solo está disponible con el Plan Premium',
+        message: 'La Tienda Online es un complemento aparte. Actívalo por $14.900/mes.',
       };
     }
 
@@ -92,24 +95,23 @@ export function getStorefrontBlockMessage(reason?: string): {
   switch (reason) {
     case 'basic_plan':
       return {
-        title: '🏪 Tienda Online - Plan Premium',
+        title: '🏪 Activa tu Tienda Online',
         html: `
           <p class="text-lg mb-4">
-            La <strong>Tienda Online</strong> y el <strong>Análisis con IA</strong> solo están disponibles con el <strong>Plan Premium</strong> y durante los <strong>15 días de prueba gratuita</strong>.
+            La <strong>Tienda Online</strong> es un complemento opcional de <strong>$14.900/mes</strong> que se suma a tu plan.
           </p>
           <p class="text-gray-600">
-            Con el Plan Premium obtienes:
+            Al activarla obtienes:
           </p>
           <ul class="text-left text-gray-700 mt-2 space-y-1">
             <li>✅ Tienda online personalizable (vende 24/7)</li>
-            <li>✅ Análisis con Inteligencia Artificial</li>
-            <li>✅ Múltiples métodos de pago (Wompi, Nequi, PSE, tarjetas)</li>
-            <li>✅ Reportes avanzados y exportables</li>
+            <li>✅ Catálogo público con búsqueda y categorías</li>
+            <li>✅ Pago por Nequi (QR) con comprobante en PDF</li>
+            <li>✅ Pedidos recibidos por WhatsApp y Telegram</li>
             <li>✅ Zonas de envío configurables</li>
-            <li>✅ Soporte prioritario</li>
           </ul>
           <p class="mt-4 text-sm text-gray-500">
-            ¿Quieres acceder a estas funcionalidades? Actualiza tu plan ahora.
+            Actívala desde la sección de Suscripción.
           </p>
         `,
       };
@@ -130,13 +132,13 @@ export function getStorefrontBlockMessage(reason?: string): {
     case 'no_subscription':
     default:
       return {
-        title: '🏪 Tienda Online + IA - Premium',
+        title: '🏪 Tienda Online',
         html: `
           <p class="text-lg mb-4">
-            El acceso a la <strong>Tienda Online</strong> y <strong>Análisis con IA</strong> solo está disponible con el <strong>Plan Premium</strong> y durante los <strong>15 días de prueba gratuita</strong>.
+            Necesitas una <strong>suscripción activa</strong> y el complemento de <strong>Tienda Online</strong> ($14.900/mes) para vender en línea. Durante la <strong>prueba gratuita de 15 días</strong> está incluido sin costo.
           </p>
           <p class="text-gray-600">
-            Adquiere el Plan Premium para acceder a todas estas funcionalidades.
+            Activa tu suscripción para empezar.
           </p>
         `,
       };

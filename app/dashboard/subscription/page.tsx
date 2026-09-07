@@ -8,6 +8,7 @@ import {
   CreditCard,
   Sparkles,
   Mail,
+  Store,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -532,6 +533,78 @@ export default function SubscriptionPageWompi() {
             );
           })}
         </div>
+      </div>
+
+      {/* Complemento de pago: Tienda Online (único addon que se cobra aparte) */}
+      <div className="mt-10">
+        <h2 className="text-2xl font-bold mb-4">Complemento Opcional</h2>
+        <p className="text-gray-600 mb-6">
+          La Tienda Online es el único complemento que se paga aparte. Actívala
+          para vender en internet las 24 horas.
+        </p>
+
+        <Card className="max-w-2xl mx-auto relative border-2 border-brand/40">
+          <CardHeader>
+            <div className="flex items-center gap-2">
+              <div className="p-2 rounded-lg bg-brand-light/50">
+                <Store className="h-6 w-6 text-brand" />
+              </div>
+              <CardTitle className="text-xl">Tienda Online</CardTitle>
+            </div>
+            <div className="mt-4 flex items-baseline gap-1">
+              <span className="text-3xl font-bold">{formatCurrency(14900)}</span>
+              <span className="text-sm text-gray-600">/mes</span>
+            </div>
+            <CardDescription>
+              {profile?.subscription_status === "trial"
+                ? "Incluida gratis durante tu prueba. Al terminar, actívala por este valor."
+                : "Se suma a tu plan mensual."}
+            </CardDescription>
+          </CardHeader>
+
+          <CardContent className="space-y-4">
+            <ul className="space-y-2">
+              {[
+                "Tienda online personalizable (vende 24/7)",
+                "Catálogo público con búsqueda y categorías",
+                "Carrito y checkout para tus clientes",
+                "Pago por Nequi (QR) con comprobante en PDF",
+                "Pedidos recibidos por WhatsApp y Telegram",
+                "Zonas de envío configurables",
+              ].map((feature, index) => (
+                <li key={index} className="flex items-start gap-2">
+                  <Check className="h-4 w-4 text-brand mt-0.5 flex-shrink-0" />
+                  <span className="text-sm">{feature}</span>
+                </li>
+              ))}
+            </ul>
+
+            {profile?.has_store_addon ? (
+              <span className="inline-flex items-center gap-1 rounded-full bg-green-100 px-3 py-1 text-sm font-semibold text-green-700">
+                <Check className="h-4 w-4" />
+                Complemento activo
+              </span>
+            ) : (
+              <Button
+                className="w-full"
+                onClick={() => handleSubscribe("addon-store-monthly")}
+                disabled={loading}
+              >
+                {loading && selectedItem === "addon-store-monthly" ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Procesando…
+                  </>
+                ) : (
+                  <>
+                    <Store className="mr-2 h-4 w-4" />
+                    Activar Tienda Online
+                  </>
+                )}
+              </Button>
+            )}
+          </CardContent>
+        </Card>
       </div>
 
       {/* Información adicional */}

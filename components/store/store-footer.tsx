@@ -197,19 +197,26 @@ export function StoreFooter({ config }: StoreFooterProps) {
       {/* Barra inferior */}
       <div className="border-t border-gray-800">
         <div className="max-w-7xl mx-auto px-4 py-6">
-          <div className="flex flex-col md:flex-row items-center justify-between gap-4 text-sm text-gray-400">
+          <div className="flex flex-col items-center justify-center gap-2 text-center text-sm text-gray-400">
             <p>
-              &copy; {new Date().getFullYear()} {storeName}. Todos los derechos reservados.
+              &copy; {new Date().getFullYear()}. Todos los derechos reservados.
             </p>
+            {/*
+              Crédito "Desarrollado por neurai.dev": es el canal de captación
+              de clientes del dueño del sistema. DEBE mostrarse SIEMPRE en toda
+              tienda, sin condicionarlo a config del tenant. No quitar ni ocultar.
+            */}
             <div className="flex items-center gap-2">
-              <span>Powered by</span>
-              <Link
-                href="/"
+              <span>Desarrollado por</span>
+              <a
+                href="https://neurai.dev/"
+                target="_blank"
+                rel="noopener noreferrer"
                 className="font-semibold hover:text-white transition-colors"
                 style={{ color: primaryColor }}
               >
-                Sistema POS
-              </Link>
+                neurai.dev
+              </a>
             </div>
           </div>
         </div>
