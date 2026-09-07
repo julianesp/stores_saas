@@ -18,6 +18,7 @@ import {
   CheckCircle,
   Crown,
   Trash2,
+  Store,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { getUserProfileByClerkId } from '@/lib/subscription-helpers';
@@ -74,6 +75,21 @@ export default function UsersManagementPage() {
     } catch (error) {
       console.error('Error updating role:', error);
       toast.error('Error al actualizar el rol');
+    }
+  };
+
+  const handleToggleStore = async (userId: string, currentEnabled: boolean) => {
+    try {
+      await updateUserProfile(userId, {
+        store_enabled: !currentEnabled,
+      }, getToken);
+      toast.success(
+        !currentEnabled ? 'Tienda online habilitada' : 'Tienda online deshabilitada',
+      );
+      fetchData();
+    } catch (error) {
+      console.error('Error updating store status:', error);
+      toast.error('Error al actualizar la tienda online');
     }
   };
 
@@ -341,6 +357,17 @@ export default function UsersManagementPage() {
                               >
                                 <UserCog className="h-4 w-4 mr-1" />
                                 {usr.role === 'admin' ? 'A Cajero' : 'A Admin'}
+                              </Button>
+                            )}
+                            {!usr.is_superadmin && (
+                              <Button
+                                size="sm"
+                                variant={usr.store_enabled ? 'default' : 'outline'}
+                                onClick={() => handleToggleStore(usr.id, !!usr.store_enabled)}
+                                title={usr.store_enabled ? 'Deshabilitar tienda online' : 'Habilitar tienda online'}
+                              >
+                                <Store className="h-4 w-4 mr-1" />
+                                {usr.store_enabled ? 'Tienda ON' : 'Tienda OFF'}
                               </Button>
                             )}
                             {!usr.is_superadmin && (

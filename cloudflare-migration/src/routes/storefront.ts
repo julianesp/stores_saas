@@ -7,6 +7,7 @@ import { Hono } from 'hono';
 import type { Env, Tenant, APIResponse } from '../types';
 import { TenantDB, generateId } from '../utils/db-helpers';
 import { findActiveStore, type StoreAccessRow } from '../utils/storefront-access';
+import { escapeTelegramHtml, getTenantChatIds, sendToChats } from '../utils/telegram';
 
 const app = new Hono<{ Bindings: Env }>();
 
@@ -257,8 +258,14 @@ app.post('/orders/:slug', async (c) => {
 
     // Verificar que la tienda existe y está activa
     const store = await findActiveStore<
-      StoreAccessRow & { store_name?: string; store_whatsapp?: string; epayco_enabled: number }
-    >(c.env.DB, slug, 'store_name, store_whatsapp, epayco_enabled');
+      StoreAccessRow & {
+        store_name?: string;
+        store_whatsapp?: string;
+        epayco_enabled: number;
+        telegram_chat_id?: string | null;
+        telegram_enabled?: number;
+      }
+    >(c.env.DB, slug, 'store_name, store_whatsapp, epayco_enabled, telegram_chat_id, telegram_enabled');
 
     if (!store) {
       return c.json<APIResponse>({
@@ -330,6 +337,34 @@ app.post('/orders/:slug', async (c) => {
 
     // NO descontar inventario todavía - esperamos confirmación de pago del dueño
     // El inventario se descontará cuando el dueño confirme el pago en el dashboard
+
+    // Avisar al tendero (y destinatarios adicionales) por Telegram del pedido
+    // nuevo. No bloquea la respuesta: si Telegram falla, el pedido igual queda
+    // creado. El pago sigue siendo manual — este aviso solo evita el punto
+    // ciego de no enterarse de que entró un pedido.
+    if (store.telegram_enabled && c.env.TELEGRAM_BOT_TOKEN) {
+      const deliveryText =
+        body.delivery_method === 'pickup'
+          ? '🏪 Recogida en tienda'
+          : `🛵 Envío a domicilio${body.delivery_address ? `\n📍 ${escapeTelegramHtml(body.delivery_address)}` : ''}`;
+
+      const itemsText = body.items
+        .map((it: any) => `• ${escapeTelegramHtml(it.product_name)} x${it.quantity}`)
+        .join('\n');
+
+      const msg =
+        `🛒 <b>Nuevo pedido web</b>\n\n` +
+        `<b>Pedido:</b> ${orderNumber}\n` +
+        `<b>Cliente:</b> ${escapeTelegramHtml(body.customer_name)}\n` +
+        `<b>Teléfono:</b> ${escapeTelegramHtml(body.customer_phone)}\n\n` +
+        `${itemsText}\n\n` +
+        `${deliveryText}\n` +
+        `<b>Total:</b> $${Math.round(total).toLocaleString('es-CO')}\n\n` +
+        `⚠️ Pendiente de pago. El cliente enviará su comprobante de Nequi por WhatsApp.`;
+
+      const chatIds = await getTenantChatIds(c.env.DB, store.id, store.telegram_chat_id ?? null);
+      c.executionCtx.waitUntil(sendToChats(chatIds, msg, c.env.TELEGRAM_BOT_TOKEN));
+    }
 
     // Retornar pedido creado
     return c.json<APIResponse>({

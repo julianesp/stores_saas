@@ -14,7 +14,7 @@
 
 import { Hono } from 'hono';
 import type { Env } from '../types';
-import { sendTelegramMessage, escapeTelegramHtml } from '../utils/telegram';
+import { sendTelegramMessage, escapeTelegramHtml, getTenantChatIds, sendToChats } from '../utils/telegram';
 
 const app = new Hono<{ Bindings: Env }>();
 
@@ -40,43 +40,6 @@ function daysUntil(dateStr: string): number {
  *
  * @param ownerChatId chat_id del dueño (puede venir null si no conectó).
  */
-async function getTenantChatIds(
-  db: D1Database,
-  tenantId: string,
-  ownerChatId: string | null
-): Promise<string[]> {
-  const ids = new Set<string>();
-  if (ownerChatId) ids.add(String(ownerChatId));
-
-  const recipients = await db
-    .prepare(
-      `SELECT chat_id FROM telegram_recipients
-       WHERE tenant_id = ? AND chat_id IS NOT NULL AND enabled = 1`
-    )
-    .bind(tenantId)
-    .all();
-
-  for (const r of (recipients.results as any[]) || []) {
-    if (r.chat_id) ids.add(String(r.chat_id));
-  }
-  return Array.from(ids);
-}
-
-/**
- * Envía un mensaje a varios chats. Devuelve cuántos se enviaron con éxito.
- */
-async function sendToChats(
-  chatIds: string[],
-  message: string,
-  botToken?: string
-): Promise<number> {
-  let sent = 0;
-  for (const chatId of chatIds) {
-    const result = await sendTelegramMessage(chatId, message, botToken);
-    if (result.success) sent++;
-  }
-  return sent;
-}
 
 /**
  * Webhook del bot de Telegram. Procesa el comando /start <código> para
