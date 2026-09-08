@@ -308,14 +308,11 @@ app.delete('/:id', async (c) => {
     const id = c.req.param('id');
     const tenant: Tenant = c.get('tenant');
 
-    // Verificar que el usuario sea superadmin
-    const requestingUser = await c.env.DB.prepare(
-      'SELECT is_superadmin FROM user_profiles WHERE clerk_user_id = ?'
-    )
-      .bind(tenant.clerk_user_id)
-      .first<{ is_superadmin: number }>();
-
-    if (!requestingUser?.is_superadmin) {
+    // Verificar que el usuario sea superadmin.
+    // El authMiddleware ya resolvió el perfil (contemplando clerk_user_id y
+    // clerk_user_id_test) y adjuntó el flag al tenant. Reusarlo evita un lookup
+    // que fallaba en desarrollo, donde el clerk_user_id es el de la instancia test.
+    if (!(tenant as any).is_superadmin) {
       return c.json<APIResponse<null>>({
         success: false,
         error: 'Unauthorized - Solo superadmins pueden eliminar usuarios',

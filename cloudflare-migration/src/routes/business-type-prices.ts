@@ -20,15 +20,11 @@ interface PriceRow {
 /** Verifica que el usuario autenticado sea superadmin. */
 async function ensureSuperAdmin(c: any): Promise<Response | null> {
   const tenant: Tenant = c.get('tenant');
-  const clerkUserId = (tenant as any).clerk_user_id;
 
-  const profile = await c.env.DB.prepare(
-    'SELECT is_superadmin FROM user_profiles WHERE clerk_user_id = ?'
-  )
-    .bind(clerkUserId)
-    .first<{ is_superadmin: number }>();
-
-  if (!profile?.is_superadmin) {
+  // El authMiddleware ya resolvió el perfil (contemplando clerk_user_id y
+  // clerk_user_id_test) y adjuntó el flag al tenant. Reusarlo evita un lookup
+  // que fallaba en desarrollo, donde el clerk_user_id es el de la instancia test.
+  if (!(tenant as any).is_superadmin) {
     return c.json<APIResponse<null>>(
       { success: false, error: 'No tienes permisos para modificar precios', data: null },
       403
