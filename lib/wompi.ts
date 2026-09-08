@@ -37,7 +37,7 @@ export const SUBSCRIPTION_PLANS: SubscriptionPlan[] = [
     currency: 'COP',
     interval: 'monthly',
     features: [
-      '✨ GRATIS durante los 15 días de prueba',
+      '✨ GRATIS durante los 30 días de prueba',
       'Análisis inteligente de ventas',
       'Predicciones de inventario',
       'Recomendaciones automáticas',

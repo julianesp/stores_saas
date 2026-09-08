@@ -15,6 +15,17 @@ interface StoreStats {
     customersCount: number;
     lastSaleDate: string | null;
     isActive: boolean;
+    // Tienda online: los pedidos web se guardan como ventas con sale_number LIKE 'WEB-%'.
+    // webOrdersCount/Total cuentan solo pedidos completados (venta efectiva);
+    // webOrdersReceived cuenta todos los pedidos web recibidos (demanda), sin filtrar estado.
+    webOrdersReceived: number;
+    webOrdersCount: number;
+    webOrdersTotal: number;
+    lastWebOrderDate: string | null;
+    storeEnabled: boolean;
+    hasStoreAddon: boolean;
+    hasStoreSlug: boolean;
+    usesStorefront: boolean;
   };
 }
 
@@ -96,6 +107,43 @@ app.get('/stats', async (c) => {
 
           const lastSaleDate = lastSaleResult?.created_at || null;
 
+          // --- Métricas de la tienda online ---
+          // Los pedidos hechos desde la tienda pública se guardan como ventas
+          // con sale_number que empieza por 'WEB-' (ver routes/storefront.ts).
+          // Demanda: todos los pedidos web recibidos, sin importar el estado.
+          const webReceivedResult = await c.env.DB.prepare(
+            "SELECT COUNT(*) as count FROM sales WHERE tenant_id = ? AND sale_number LIKE 'WEB-%'"
+          )
+            .bind(store.id)
+            .first<{ count: number }>();
+
+          const webOrdersReceived = webReceivedResult?.count || 0;
+
+          // Venta efectiva: solo pedidos web completados.
+          const webCompletedResult = await c.env.DB.prepare(
+            "SELECT COUNT(*) as count, COALESCE(SUM(total), 0) as total FROM sales WHERE tenant_id = ? AND status = ? AND sale_number LIKE 'WEB-%'"
+          )
+            .bind(store.id, 'completada')
+            .first<{ count: number; total: number }>();
+
+          const webOrdersCount = webCompletedResult?.count || 0;
+          const webOrdersTotal = webCompletedResult?.total || 0;
+
+          // Último pedido web (cualquier estado) para ver actividad reciente.
+          const lastWebOrderResult = await c.env.DB.prepare(
+            "SELECT created_at FROM sales WHERE tenant_id = ? AND sale_number LIKE 'WEB-%' ORDER BY created_at DESC LIMIT 1"
+          )
+            .bind(store.id)
+            .first<{ created_at: string }>();
+
+          const lastWebOrderDate = lastWebOrderResult?.created_at || null;
+
+          const storeEnabled = store.store_enabled === 1;
+          const hasStoreAddon = store.has_store_addon === 1;
+          const hasStoreSlug = !!store.store_slug;
+          // "Usa la tienda" = tiene ≥1 pedido web completado (venta efectiva).
+          const usesStorefront = webOrdersCount > 0;
+
           return {
             storeId: store.id,
             storeName: store.full_name || store.email,
@@ -108,6 +156,14 @@ app.get('/stats', async (c) => {
               customersCount,
               lastSaleDate,
               isActive: salesCount > 0 || productsCount > 0,
+              webOrdersReceived,
+              webOrdersCount,
+              webOrdersTotal,
+              lastWebOrderDate,
+              storeEnabled,
+              hasStoreAddon,
+              hasStoreSlug,
+              usesStorefront,
             },
           };
         } catch (error) {
@@ -124,6 +180,14 @@ app.get('/stats', async (c) => {
               customersCount: 0,
               lastSaleDate: null,
               isActive: false,
+              webOrdersReceived: 0,
+              webOrdersCount: 0,
+              webOrdersTotal: 0,
+              lastWebOrderDate: null,
+              storeEnabled: false,
+              hasStoreAddon: false,
+              hasStoreSlug: false,
+              usesStorefront: false,
             },
           };
         }

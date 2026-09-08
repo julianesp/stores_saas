@@ -17,7 +17,7 @@ const geistMono = Geist_Mono({
 });
 
 const SITE_DESCRIPTION =
-  'Sistema POS (punto de venta) en Colombia para tiendas, minimarkets y negocios de barrio. Gestiona ventas, inventario, facturación, clientes y ventas a crédito con pagos en efectivo y Nequi. Pruébalo gratis 15 días.';
+  'Sistema POS (punto de venta) en Colombia para tiendas, minimarkets y negocios de barrio. Gestiona ventas, inventario, facturación, clientes y ventas a crédito con pagos en efectivo y Nequi. Pruébalo gratis 30 días.';
 
 export const metadata: Metadata = {
   title: {
@@ -135,7 +135,7 @@ const jsonLd = {
     '@type': 'Offer',
     price: '24900',
     priceCurrency: 'COP',
-    description: 'Plan Básico mensual. Incluye 15 días de prueba gratis.',
+    description: 'Plan Básico mensual. Incluye 30 días de prueba gratis.',
   },
   featureList: [
     'Punto de venta (POS)',

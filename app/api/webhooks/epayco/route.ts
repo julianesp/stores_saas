@@ -3,6 +3,42 @@ import { verifyEPaycoSignature, type EPaycoConfirmation } from '@/lib/epayco';
 import { getBusinessTypeByPlanId } from '@/lib/business-types';
 
 /**
+ * Avisa al administrador (por Telegram, vía el Worker) que se registró un pago.
+ *
+ * Best-effort: el token del bot y el chat_id del admin viven en el Worker, así
+ * que aquí solo disparamos el endpoint interno. Cualquier fallo se traga en
+ * silencio: NUNCA debe hacer fallar el webhook, porque ePayco reintentaría un
+ * pago que ya fue procesado (doble activación). Si el endpoint del Worker aún
+ * no existe, el aviso simplemente no se envía y el pago se procesa igual.
+ */
+async function notifyAdminPayment(params: {
+  apiUrl: string;
+  userProfileId: string;
+  planId: string;
+  isAddon: boolean;
+  amount: string;
+}): Promise<void> {
+  try {
+    await fetch(`${params.apiUrl}/api/telegram/admin-payment`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-Webhook-Secret': process.env.CRON_SECRET || '',
+      },
+      body: JSON.stringify({
+        userProfileId: params.userProfileId,
+        planId: params.planId,
+        isAddon: params.isAddon,
+        amount: params.amount,
+      }),
+    });
+  } catch (error) {
+    // Best-effort: no propagamos el error para no tumbar el webhook.
+    console.error('notifyAdminPayment (best-effort) falló:', error);
+  }
+}
+
+/**
  * Webhook de confirmación de ePayco
  * ePayco envía una confirmación POST con los datos de la transacción
  */
@@ -151,6 +187,16 @@ export async function POST(req: NextRequest) {
     }
 
     console.log(`✅ Subscription activated for user ${userProfileId}`);
+
+    // Avisar al administrador por Telegram que alguien pagó. Best-effort: nunca
+    // debe hacer fallar el webhook (ePayco reintentaría un pago ya procesado).
+    await notifyAdminPayment({
+      apiUrl,
+      userProfileId,
+      planId,
+      isAddon,
+      amount: confirmation.x_amount,
+    });
 
     return NextResponse.json({
       success: true,

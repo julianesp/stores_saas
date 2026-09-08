@@ -226,10 +226,11 @@ export async function createEPaycoCheckout(
     // Paso 2: Crear sesión de checkout
     console.log('📝 Creando sesión de checkout...');
 
-    // ePayco Smart Checkout v2 espera los montos como string y el desglose de
-    // impuestos explícito. Si falta tax/tax_base o el amount va como número,
-    // el checkout abre pero deja el botón "Pagar" inhabilitado.
-    const amountStr = String(effectivePrice);
+    // ePayco Smart Checkout v2 valida amount/tax/tax_base/tax_ico como NÚMEROS.
+    // Si van como string, la API responde "Amount must be a number" /
+    // "TaxBase must be a number" y no devuelve sessionId. COP no usa decimales,
+    // así que redondeamos a entero. Productos sin IVA → tax 0, base = monto total.
+    const amountNum = Math.round(effectivePrice);
 
     const sessionPayload = {
       // Información básica de la transacción (snake_case según documentación oficial)
@@ -237,12 +238,12 @@ export async function createEPaycoCheckout(
       name: `Suscripción ${plan.name} - Tienda POS`,
       description: `Suscripción ${plan.name}`,
       currency: "COP",
-      amount: amountStr,
+      amount: amountNum,
 
       // Desglose de impuestos (productos sin IVA → tax 0, base = monto total)
-      tax: "0",
-      tax_base: amountStr,
-      tax_ico: "0",
+      tax: 0,
+      tax_base: amountNum,
+      tax_ico: 0,
 
       // Configuración regional
       lang: "ES",

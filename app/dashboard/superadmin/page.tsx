@@ -27,6 +27,8 @@ import {
   Filter,
   Info,
   ShoppingCart,
+  Globe,
+  Package,
 } from "lucide-react";
 import { toast } from "sonner";
 import { formatCurrency } from "@/lib/utils";
@@ -58,6 +60,15 @@ interface StoreStats {
     customersCount: number;
     lastSaleDate: string | null;
     isActive: boolean;
+    // Tienda online (opcionales: pueden faltar si el Worker aún no está desplegado)
+    webOrdersReceived?: number;
+    webOrdersCount?: number;
+    webOrdersTotal?: number;
+    lastWebOrderDate?: string | null;
+    storeEnabled?: boolean;
+    hasStoreAddon?: boolean;
+    hasStoreSlug?: boolean;
+    usesStorefront?: boolean;
     error?: string;
   };
 }
@@ -438,6 +449,71 @@ export default function SuperAdminPage() {
     0,
   );
 
+  // --- Métricas de la Tienda Online ---
+  // Tiendas que activaron la tienda (enabled + tienen slug configurado).
+  const storesWithStorefrontEnabled = storeStats.filter(
+    (s) => s.stats.storeEnabled && s.stats.hasStoreSlug,
+  ).length;
+  // Tiendas que la usan de verdad: recibieron ≥1 pedido web completado.
+  const storesUsingStorefront = storeStats.filter(
+    (s) => s.stats.usesStorefront,
+  ).length;
+  // Tiendas que recibieron algún pedido web (aunque no lo hayan completado).
+  const storesReceivedWebOrders = storeStats.filter(
+    (s) => (s.stats.webOrdersReceived ?? 0) > 0,
+  ).length;
+  // Add-on de tienda pagado: ingreso directo atribuible a la feature.
+  const storesPayingStoreAddon = storeStats.filter(
+    (s) => s.stats.hasStoreAddon,
+  ).length;
+  const totalWebOrdersReceived = storeStats.reduce(
+    (sum, s) => sum + (s.stats.webOrdersReceived ?? 0),
+    0,
+  );
+  const totalWebOrdersCompleted = storeStats.reduce(
+    (sum, s) => sum + (s.stats.webOrdersCount ?? 0),
+    0,
+  );
+  const totalWebRevenue = storeStats.reduce(
+    (sum, s) => sum + (s.stats.webOrdersTotal ?? 0),
+    0,
+  );
+  // % de tiendas que, habiendo activado la tienda, realmente venden por ahí.
+  const storefrontUsageRate =
+    storesWithStorefrontEnabled > 0
+      ? (storesUsingStorefront / storesWithStorefrontEnabled) * 100
+      : 0;
+  // Veredicto automático simple para responder "¿valió la pena la tienda?".
+  const storefrontVerdict = (() => {
+    if (storesWithStorefrontEnabled === 0) {
+      return {
+        tone: "neutral" as const,
+        title: "Aún nadie ha activado la tienda online",
+        detail:
+          "No hay datos suficientes para evaluarla. Considera promocionarla entre tus tiendas activas.",
+      };
+    }
+    if (storesUsingStorefront === 0) {
+      return {
+        tone: "bad" as const,
+        title: "La tienda se activa pero no se vende por ella",
+        detail: `${storesWithStorefrontEnabled} tienda(s) la activaron pero ninguna ha completado un pedido web. Revisa fricción en el flujo de compra o de pago.`,
+      };
+    }
+    if (storefrontUsageRate >= 40) {
+      return {
+        tone: "good" as const,
+        title: "La tienda online está funcionando",
+        detail: `${storefrontUsageRate.toFixed(0)}% de las tiendas que la activaron ya venden por ella (${totalWebOrdersCompleted} pedidos, ${formatCurrency(totalWebRevenue)}).`,
+      };
+    }
+    return {
+      tone: "warn" as const,
+      title: "Adopción parcial de la tienda online",
+      detail: `Solo ${storefrontUsageRate.toFixed(0)}% de quienes la activaron venden por ella. Hay interés (${totalWebOrdersReceived} pedidos recibidos) pero baja conversión a venta completada.`,
+    };
+  })();
+
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -639,6 +715,156 @@ export default function SuperAdminPage() {
         </Card>
       </div>
 
+      {/* ¿Vale la pena la Tienda Online? */}
+      <div className="space-y-4">
+        <div className="flex items-center gap-2">
+          <Globe className="h-6 w-6 text-brand" />
+          <h2 className="text-xl font-bold">Uso de la Tienda Online</h2>
+          <span className="text-sm text-gray-500">
+            ¿Valió la pena implementarla?
+          </span>
+        </div>
+
+        {/* Veredicto automático */}
+        <Card
+          className={
+            storefrontVerdict.tone === "good"
+              ? "border-green-300 bg-green-50"
+              : storefrontVerdict.tone === "warn"
+                ? "border-yellow-300 bg-yellow-50"
+                : storefrontVerdict.tone === "bad"
+                  ? "border-red-300 bg-red-50"
+                  : "border-gray-300 bg-gray-50"
+          }
+        >
+          <CardContent className="pt-6">
+            <div className="flex items-start gap-3">
+              {storefrontVerdict.tone === "good" ? (
+                <CheckCircle className="h-6 w-6 text-green-600 shrink-0 mt-0.5" />
+              ) : storefrontVerdict.tone === "bad" ? (
+                <XCircle className="h-6 w-6 text-red-600 shrink-0 mt-0.5" />
+              ) : (
+                <Info className="h-6 w-6 text-yellow-600 shrink-0 mt-0.5" />
+              )}
+              <div>
+                <p
+                  className={`font-semibold ${
+                    storefrontVerdict.tone === "good"
+                      ? "text-green-900"
+                      : storefrontVerdict.tone === "warn"
+                        ? "text-yellow-900"
+                        : storefrontVerdict.tone === "bad"
+                          ? "text-red-900"
+                          : "text-gray-900"
+                  }`}
+                >
+                  {storefrontVerdict.title}
+                </p>
+                <p className="text-sm text-gray-700 mt-1">
+                  {storefrontVerdict.detail}
+                </p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+          {/* Tiendas que activaron la tienda online */}
+          <Card className="hover:shadow-lg transition-shadow">
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">
+                Tienda Activada
+              </CardTitle>
+              <Globe className="h-4 w-4 text-brand" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold text-brand">
+                {storesWithStorefrontEnabled}
+              </div>
+              <p className="text-xs text-black mt-1">
+                Tiendas con storefront habilitado
+              </p>
+              <div className="flex items-center mt-2 text-xs text-gray-600">
+                <span>
+                  {totalStores > 0
+                    ? (
+                        (storesWithStorefrontEnabled / totalStores) *
+                        100
+                      ).toFixed(0)
+                    : 0}
+                  % del total
+                </span>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Tiendas que venden por la tienda */}
+          <Card className="hover:shadow-lg transition-shadow">
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">
+                Venden por la Tienda
+              </CardTitle>
+              <TrendingUp className="h-4 w-4 text-green-500" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold text-green-600">
+                {storesUsingStorefront}
+              </div>
+              <p className="text-xs text-black mt-1">
+                Con pedidos web completados
+              </p>
+              <div className="flex items-center mt-2 text-xs text-gray-600">
+                <span className="text-green-600">
+                  {storefrontUsageRate.toFixed(0)}% de las que la activaron
+                </span>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Pedidos web */}
+          <Card className="hover:shadow-lg transition-shadow">
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Pedidos Web</CardTitle>
+              <Package className="h-4 w-4 text-brand" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold text-brand">
+                {totalWebOrdersCompleted}
+              </div>
+              <p className="text-xs text-black mt-1">
+                Completados · {formatCurrency(totalWebRevenue)}
+              </p>
+              <div className="flex items-center mt-2 text-xs text-gray-600">
+                <span>
+                  {totalWebOrdersReceived} recibidos en total
+                </span>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Add-on de tienda pagado */}
+          <Card className="hover:shadow-lg transition-shadow">
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">
+                Add-on Pagado
+              </CardTitle>
+              <DollarSign className="h-4 w-4 text-purple-500" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold text-purple-600">
+                {storesPayingStoreAddon}
+              </div>
+              <p className="text-xs text-black mt-1">
+                Tiendas pagando el add-on
+              </p>
+              <div className="flex items-center mt-2 text-xs text-gray-600">
+                <span className="text-purple-600">Ingreso por la feature</span>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      </div>
+
       {/* Métricas Secundarias */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         {/* En Periodo de Prueba */}
@@ -838,6 +1064,7 @@ export default function SuperAdminPage() {
                     <th className="text-left p-4 font-medium bg-white">Días</th>
                     <th className="text-center p-4 font-medium bg-white">Productos</th>
                     <th className="text-center p-4 font-medium bg-white">Ventas</th>
+                    <th className="text-center p-4 font-medium bg-white">Pedidos Web</th>
                     <th className="text-center p-4 font-medium bg-white">Clientes</th>
                     <th className="text-left p-4 font-medium bg-white">Última Venta</th>
                     <th className="text-right p-4 font-medium bg-white">Acciones</th>
@@ -1017,6 +1244,37 @@ export default function SuperAdminPage() {
                             >
                               {stats.stats.salesCount}
                             </span>
+                          ) : (
+                            <span className="text-gray-400">-</span>
+                          )}
+                        </td>
+                        <td className="p-4 text-sm text-center">
+                          {stats ? (
+                            (stats.stats.webOrdersReceived ?? 0) > 0 ? (
+                              <div className="flex flex-col items-center leading-tight">
+                                <span className="font-medium text-green-600">
+                                  {stats.stats.webOrdersCount ?? 0}
+                                </span>
+                                <span className="text-[10px] text-gray-400">
+                                  {stats.stats.webOrdersReceived} recibidos
+                                </span>
+                              </div>
+                            ) : stats.stats.storeEnabled &&
+                              stats.stats.hasStoreSlug ? (
+                              <span
+                                className="text-xs text-yellow-600"
+                                title="Tienda activada pero sin pedidos web"
+                              >
+                                Activada
+                              </span>
+                            ) : (
+                              <span
+                                className="text-gray-300"
+                                title="Sin tienda online"
+                              >
+                                —
+                              </span>
+                            )
                           ) : (
                             <span className="text-gray-400">-</span>
                           )}

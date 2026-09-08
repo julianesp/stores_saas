@@ -18,7 +18,11 @@ import {
   CardTitle,
   CardDescription,
 } from "@/components/ui/card";
-import { getUserProfile, getBusinessTypePrices } from "@/lib/cloudflare-api";
+import {
+  getUserProfile,
+  getBusinessTypePrices,
+  updateUserProfile,
+} from "@/lib/cloudflare-api";
 import { UserProfile } from "@/lib/types";
 import { useTenant } from "@/lib/tenant-context";
 import { toast } from "sonner";
@@ -97,6 +101,10 @@ export default function SubscriptionPageWompi() {
   // Precios editables desde el panel superadmin. Si aún no cargaron (o el
   // tipo no tiene precio vivo), se usa el precio estático de business-types.ts.
   const [livePrices, setLivePrices] = useState<Record<string, number>>({});
+  // Guardando el tipo de negocio elegido como predeterminado del tenant.
+  const [savingBusinessType, setSavingBusinessType] = useState(false);
+  // Permite reabrir el selector de tipo de negocio aunque ya haya uno fijo.
+  const [editingBusinessType, setEditingBusinessType] = useState(false);
 
   useEffect(() => {
     async function fetchProfile() {
@@ -180,6 +188,28 @@ export default function SubscriptionPageWompi() {
     }
   };
 
+  // Fija el tipo de negocio elegido como el predeterminado del tenant. Una vez
+  // guardado, la página oculta los demás tipos y muestra solo su plan.
+  const handleSaveBusinessType = async () => {
+    if (!profile?.id) return;
+    try {
+      setSavingBusinessType(true);
+      await updateUserProfile(
+        profile.id,
+        { business_type: selectedBusinessType },
+        getToken,
+      );
+      setProfile({ ...profile, business_type: selectedBusinessType });
+      setEditingBusinessType(false);
+      toast.success("Tipo de negocio guardado. El sistema se adaptará a él.");
+    } catch (error) {
+      console.error("Error saving business type:", error);
+      toast.error("No se pudo guardar el tipo de negocio. Intenta de nuevo.");
+    } finally {
+      setSavingBusinessType(false);
+    }
+  };
+
   const getDaysLeft = () => {
     if (!profile?.trial_end_date) return 0;
     const endDate = new Date(profile.trial_end_date);
@@ -208,6 +238,10 @@ export default function SubscriptionPageWompi() {
   // En ese caso NO debemos mostrar banners de "prueba gratis" ni presionar
   // para pagar de nuevo: solo confirmar que está al día.
   const hasActiveSubscription = subscriptionStatus?.status === "active";
+
+  // El tipo de negocio queda "fijo" cuando el perfil ya tiene uno guardado y el
+  // usuario no está en modo edición. En ese estado ocultamos los demás tipos.
+  const businessTypeFixed = !!profile?.business_type && !editingBusinessType;
 
   // Formatear la próxima fecha de pago de forma legible en español
   const formattedNextBilling = profile?.next_billing_date
@@ -277,7 +311,7 @@ export default function SubscriptionPageWompi() {
         {!hasActiveSubscription && (
           <div className="mt-4 inline-block bg-gradient-to-r from-purple-100 to-pink-100 border border-purple-300 rounded-lg px-6 py-3">
             <p className="text-sm font-medium text-purple-900">
-              ✨ <strong>Prueba Gratis por 15 Días:</strong> Acceso completo a
+              ✨ <strong>Prueba Gratis por 30 Días:</strong> Acceso completo a
               todos los complementos
             </p>
           </div>
@@ -381,42 +415,98 @@ export default function SubscriptionPageWompi() {
 
       {/* Selección de tipo de negocio + Plan */}
       <div>
-        <h2 className="text-2xl font-bold mb-2">Elige tu tipo de negocio</h2>
-        <p className="text-gray-600 mb-4">
-          Adaptamos el sistema a tu negocio: los módulos, el vocabulario y las
-          funciones se ajustan al tipo que elijas.
-        </p>
-
-        {/* Tarjetas seleccionables de tipo de negocio */}
-        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3 mb-6">
-          {BUSINESS_TYPES.map((bt) => {
-            const isSelected = selectedBusinessType === bt.id;
-            return (
+        {businessTypeFixed ? (
+          <>
+            {/* Tipo de negocio ya fijado: no mostramos los demás tipos, solo
+                el suyo, con la opción de cambiarlo si de verdad lo necesita. */}
+            <div className="flex items-center justify-between mb-4">
+              <div>
+                <h2 className="text-2xl font-bold mb-1">Tu tipo de negocio</h2>
+                <p className="text-gray-600">
+                  {getBusinessType(profile?.business_type).emoji}{" "}
+                  {getBusinessType(profile?.business_type).name} — el sistema ya
+                  está adaptado a este negocio.
+                </p>
+              </div>
               <button
-                key={bt.id}
                 type="button"
-                onClick={() => setSelectedBusinessType(bt.id)}
-                // Si ya tiene suscripción activa, el tipo no debería cambiarse
-                // desde aquí (se cambia junto con un nuevo pago).
-                disabled={hasActiveSubscription}
-                aria-pressed={isSelected}
-                className={`text-left rounded-xl border-2 p-3 transition-all ${
-                  isSelected
-                    ? "border-brand bg-brand-light/50 ring-2 ring-brand/40"
-                    : "border-gray-200 hover:border-brand/50 hover:bg-gray-50"
-                } ${hasActiveSubscription ? "opacity-60 cursor-not-allowed" : ""}`}
+                onClick={() => setEditingBusinessType(true)}
+                className="text-sm text-brand underline underline-offset-2 hover:text-brand-hover whitespace-nowrap"
               >
-                <div className="text-3xl mb-1">{bt.emoji}</div>
-                <div className="font-semibold text-sm leading-tight">
-                  {bt.name}
-                </div>
-                <div className="text-xs text-gray-500 mt-1">
-                  {formatCurrency(getPrice(bt.id))}/mes
-                </div>
+                Cambiar tipo de negocio
               </button>
-            );
-          })}
-        </div>
+            </div>
+          </>
+        ) : (
+          <>
+            <h2 className="text-2xl font-bold mb-2">Elige tu tipo de negocio</h2>
+            <p className="text-gray-600 mb-4">
+              Adaptamos el sistema a tu negocio: los módulos, el vocabulario y
+              las funciones se ajustan al tipo que elijas. Una vez lo
+              establezcas, quedará fijo y no volverás a ver los demás tipos.
+            </p>
+
+            {/* Tarjetas seleccionables de tipo de negocio */}
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3 mb-4">
+              {BUSINESS_TYPES.map((bt) => {
+                const isSelected = selectedBusinessType === bt.id;
+                return (
+                  <button
+                    key={bt.id}
+                    type="button"
+                    onClick={() => setSelectedBusinessType(bt.id)}
+                    aria-pressed={isSelected}
+                    className={`text-left rounded-xl border-2 p-3 transition-all ${
+                      isSelected
+                        ? "border-brand bg-brand-light/50 ring-2 ring-brand/40"
+                        : "border-gray-200 hover:border-brand/50 hover:bg-gray-50"
+                    }`}
+                  >
+                    <div className="text-3xl mb-1">{bt.emoji}</div>
+                    <div className="font-semibold text-sm leading-tight">
+                      {bt.name}
+                    </div>
+                    <div className="text-xs text-gray-500 mt-1">
+                      {formatCurrency(getPrice(bt.id))}/mes
+                    </div>
+                  </button>
+                );
+              })}
+            </div>
+
+            {/* Botón para fijar el tipo elegido como el predeterminado */}
+            <div className="mb-6 flex items-center gap-3">
+              <Button
+                variant="outline"
+                onClick={handleSaveBusinessType}
+                disabled={savingBusinessType || !profile?.id}
+              >
+                {savingBusinessType ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Guardando…
+                  </>
+                ) : (
+                  `Establecer ${getBusinessType(selectedBusinessType).name} como mi negocio`
+                )}
+              </Button>
+              {editingBusinessType && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setEditingBusinessType(false);
+                    if (profile?.business_type) {
+                      setSelectedBusinessType(profile.business_type);
+                    }
+                  }}
+                  className="text-sm text-gray-500 underline underline-offset-2"
+                >
+                  Cancelar
+                </button>
+              )}
+            </div>
+          </>
+        )}
 
         {(() => {
           const selectedType = getBusinessType(selectedBusinessType);
@@ -580,10 +670,22 @@ export default function SubscriptionPageWompi() {
             </ul>
 
             {profile?.has_store_addon ? (
-              <span className="inline-flex items-center gap-1 rounded-full bg-green-100 px-3 py-1 text-sm font-semibold text-green-700">
-                <Check className="h-4 w-4" />
-                Complemento activo
-              </span>
+              <div className="space-y-1">
+                <span className="inline-flex items-center gap-1 rounded-full bg-green-100 px-3 py-1 text-sm font-semibold text-green-700">
+                  <Check className="h-4 w-4" />
+                  Complemento activo
+                </span>
+                {profile?.store_addon_expires_at && (
+                  <p className="text-xs text-gray-500">
+                    Activo hasta el{" "}
+                    {new Date(profile.store_addon_expires_at).toLocaleDateString(
+                      "es-CO",
+                      { year: "numeric", month: "long", day: "numeric" },
+                    )}
+                    .
+                  </p>
+                )}
+              </div>
             ) : (
               <Button
                 className="w-full"

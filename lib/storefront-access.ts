@@ -8,7 +8,7 @@ import { hasStoreAccess } from './cloudflare-subscription-helpers';
  * funcionalidades (incluidos IA y Email Marketing) van en el plan base.
  *
  * Reglas:
- * - Durante el período de prueba (15 días): ACCESO COMPLETO ✅
+ * - Durante el período de prueba (30 días): ACCESO COMPLETO ✅
  * - Con suscripción activa + complemento de tienda: ACCESO COMPLETO ✅
  * - Con suscripción activa SIN el complemento: SIN ACCESO ❌
  * - Suscripción expirada: SIN ACCESO ❌
@@ -66,7 +66,7 @@ export function hasStorefrontAccess(userProfile: UserProfile | null): {
     return {
       hasAccess: true,
       reason: 'trial',
-      message: 'Acceso incluido en tu prueba gratuita de 15 días',
+      message: 'Acceso incluido en tu prueba gratuita de 30 días',
     };
   }
 
@@ -135,7 +135,7 @@ export function getStorefrontBlockMessage(reason?: string): {
         title: '🏪 Tienda Online',
         html: `
           <p class="text-lg mb-4">
-            Necesitas una <strong>suscripción activa</strong> y el complemento de <strong>Tienda Online</strong> ($14.900/mes) para vender en línea. Durante la <strong>prueba gratuita de 15 días</strong> está incluido sin costo.
+            Necesitas una <strong>suscripción activa</strong> y el complemento de <strong>Tienda Online</strong> ($14.900/mes) para vender en línea. Durante la <strong>prueba gratuita de 30 días</strong> está incluido sin costo.
           </p>
           <p class="text-gray-600">
             Activa tu suscripción para empezar.

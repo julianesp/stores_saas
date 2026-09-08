@@ -314,14 +314,26 @@ export async function authMiddleware(c: Context<{ Bindings: Env }>, next: Next) 
 
           const profileId = `usr_${Date.now()}_${Math.random().toString(36).substring(7)}`;
           const now = new Date().toISOString();
+          // Prueba gratis de 30 días para el sistema POS (tiempo suficiente
+          // para que el tendero cargue todo su inventario antes de pagar).
           const trialEnd = new Date();
           trialEnd.setDate(trialEnd.getDate() + 30);
+
+          // Tienda Online gratis durante la prueba (30 días) para todo cliente
+          // nuevo: activamos el add-on desde el registro con el mismo
+          // vencimiento que el trial. Al vencer, hasStoreAccess() lo apaga solo
+          // si el usuario ya paga y no lo renovó (durante el trial sigue
+          // accesible por la regla del trial).
+          const storeAddonEnd = new Date();
+          storeAddonEnd.setDate(storeAddonEnd.getDate() + 30);
 
           await c.env.DB.prepare(
             `INSERT INTO user_profiles (
               id, clerk_user_id, email, role, full_name, is_superadmin,
-              subscription_status, trial_start_date, trial_end_date, created_at, updated_at
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+              subscription_status, trial_start_date, trial_end_date,
+              has_store_addon, store_addon_expires_at, store_enabled,
+              created_at, updated_at
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
           ).bind(
             profileId,
             clerkUserId,
@@ -332,6 +344,10 @@ export async function authMiddleware(c: Context<{ Bindings: Env }>, next: Next) 
             isSuperAdmin ? 'active' : 'trial',
             isSuperAdmin ? null : now,
             isSuperAdmin ? null : trialEnd.toISOString(),
+            // Superadmin no necesita el regalo del add-on; el resto sí.
+            isSuperAdmin ? 0 : 1,
+            isSuperAdmin ? null : storeAddonEnd.toISOString(),
+            isSuperAdmin ? 0 : 1,
             now,
             now
           ).run();

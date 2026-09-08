@@ -272,6 +272,120 @@ function formatCOP(n: number): string {
 }
 
 /**
+ * Nombre legible de un plan a partir de su planId (para los avisos al admin).
+ * Los ids son estables (ver lib/business-types.ts y lib/epayco.ts en el front).
+ */
+function planLabel(planId: string): string {
+  const map: Record<string, string> = {
+    'plan-abarrotes-monthly': 'Plan Abarrotes / Minimercado',
+    'plan-papeleria-monthly': 'Plan Papelería',
+    'plan-comidas-rapidas-monthly': 'Plan Comidas rápidas / Pizzería',
+    'plan-licorera-monthly': 'Plan Licorera / Estanco',
+    'plan-farmacia-monthly': 'Plan Farmacia / Droguería',
+    'basic-monthly': 'Plan Básico',
+    'ai-addon-monthly': 'Complemento: Análisis con IA',
+    'addon-store-monthly': 'Complemento: Tienda Online',
+    'store-addon-monthly': 'Complemento: Tienda Online',
+    'email-addon-monthly': 'Complemento: Email Marketing',
+  };
+  return map[planId] || planId;
+}
+
+/**
+ * POST /api/telegram/admin-payment — aviso al administrador de que un cliente
+ * pagó. Lo dispara el webhook de ePayco del front (best-effort) tras activar la
+ * suscripción. Se envía a los superadmins que tengan Telegram conectado.
+ *
+ * Es una ruta pública (montada antes del authMiddleware, igual que las demás de
+ * este archivo) protegida por el secret del webhook. El front la llama con la
+ * cabecera X-Webhook-Secret: CRON_SECRET (mismo secret que ya usa para el PUT
+ * de user-profiles). Responde 200 aun ante errores para no provocar reintentos.
+ */
+app.post('/admin-payment', async (c) => {
+  const db = c.env.DB;
+  const botToken = c.env.TELEGRAM_BOT_TOKEN;
+
+  // Protección: exigir el secret del webhook si está configurado. Aceptamos
+  // tanto X-Webhook-Secret (lo que manda el webhook de ePayco) como
+  // X-Cron-Secret (convención de las tareas internas), ambos contra CRON_SECRET.
+  if (c.env.CRON_SECRET) {
+    const provided =
+      c.req.header('X-Webhook-Secret') || c.req.header('X-Cron-Secret');
+    if (provided !== c.env.CRON_SECRET) {
+      return c.json({ success: false, error: 'Unauthorized' }, 401);
+    }
+  }
+
+  if (!botToken) {
+    return c.json({ success: false, error: 'TELEGRAM_BOT_TOKEN not configured' }, 200);
+  }
+
+  try {
+    const body = await c.req.json<{
+      userProfileId?: string;
+      planId?: string;
+      isAddon?: boolean;
+      amount?: string | number;
+    }>();
+
+    const { userProfileId, planId, isAddon } = body;
+    const amountNum =
+      typeof body.amount === 'number' ? body.amount : parseFloat(String(body.amount ?? '0'));
+
+    // Datos del cliente que pagó (para dar contexto en el aviso).
+    let buyerLine = '';
+    if (userProfileId) {
+      const buyer = await db
+        .prepare('SELECT email, full_name, store_name FROM user_profiles WHERE id = ?')
+        .bind(userProfileId)
+        .first<{ email: string; full_name: string | null; store_name: string | null }>();
+      if (buyer) {
+        const who = buyer.store_name || buyer.full_name || buyer.email;
+        buyerLine = `\n👤 <b>${escapeTelegramHtml(who)}</b>\n✉️ ${escapeTelegramHtml(buyer.email)}`;
+      }
+    }
+
+    const concepto = planId ? planLabel(planId) : isAddon ? 'Complemento' : 'Suscripción';
+
+    const message =
+      `💰 <b>¡Nuevo pago recibido!</b>\n` +
+      `\n🧾 ${escapeTelegramHtml(concepto)}` +
+      (amountNum > 0 ? `\n💵 ${formatCOP(amountNum)}` : '') +
+      buyerLine +
+      `\n\nLa cuenta ya quedó activa automáticamente.`;
+
+    // Destinatarios: superadmins con Telegram conectado y activo.
+    const admins = await db
+      .prepare(
+        `SELECT telegram_chat_id
+         FROM user_profiles
+         WHERE is_superadmin = 1
+           AND telegram_chat_id IS NOT NULL
+           AND telegram_enabled = 1`
+      )
+      .all();
+
+    const chatIds = ((admins.results as any[]) || [])
+      .map((r) => r.telegram_chat_id as string)
+      .filter(Boolean);
+
+    if (chatIds.length === 0) {
+      return c.json({ success: true, messagesSent: 0, note: 'No hay superadmin con Telegram conectado' });
+    }
+
+    const sent = await sendToChats(chatIds, message, botToken);
+    return c.json({ success: true, messagesSent: sent });
+  } catch (error) {
+    console.error('Error en admin-payment de Telegram:', error);
+    // 200 para que el webhook del front no lo trate como fallo.
+    return c.json(
+      { success: false, error: error instanceof Error ? error.message : 'Unknown error' },
+      200
+    );
+  }
+});
+
+/**
  * CRON: resumen diario por Telegram. Agrupa en UN solo mensaje por tenant:
  *  - Ventas del día anterior (total y # de órdenes) + top productos
  *  - Productos con stock bajo / agotados
