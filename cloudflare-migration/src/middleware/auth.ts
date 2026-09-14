@@ -22,6 +22,29 @@ function getJWKS(issuer: string): ReturnType<typeof createRemoteJWKSet> {
   return jwks;
 }
 
+// Rutas que un usuario con suscripción vencida/cancelada DEBE poder usar de
+// todos modos: leer/actualizar su propio perfil, resolver sus tiendas, y todo
+// el flujo de pago/renovación. Si el 402 bloqueara estas rutas, el front no
+// podría siquiera saber que la cuenta está expirada ni ofrecer un enlace para
+// pagar: el usuario queda varado sin salida. El gate 402 solo debe proteger los
+// datos del negocio (ventas, productos, clientes, etc.), nunca la identidad ni
+// el pago. Se compara por prefijo contra el pathname de la petición.
+const SUBSCRIPTION_EXEMPT_PREFIXES = [
+  '/api/user-profiles',
+  '/api/user-stores',
+  '/api/subscriptions',
+  '/api/payment-transactions',
+  // Precios de planes por tipo de negocio: el flujo de pago los consulta para
+  // armar el enlace de renovación, así que deben leerse aun estando vencido.
+  '/api/business-type-prices',
+];
+
+function isSubscriptionExemptPath(pathname: string): boolean {
+  return SUBSCRIPTION_EXEMPT_PREFIXES.some(
+    (prefix) => pathname === prefix || pathname.startsWith(prefix + '/')
+  );
+}
+
 // Solo se aceptan issuers de Clerk para evitar que un atacante apunte a un JWKS
 // arbitrario controlado por él.
 function isAllowedClerkIssuer(issuer: string, env: Env): boolean {
@@ -378,7 +401,11 @@ export async function authMiddleware(c: Context<{ Bindings: Env }>, next: Next) 
 
     // Check subscription status (skip for superadmin and team members)
     // Team members don't need their own subscription - they use the owner's subscription
-    if (userProfile.is_superadmin !== 1 && !isTeamMember) {
+    // También se saltan las rutas de identidad/pago (ver SUBSCRIPTION_EXEMPT_PREFIXES):
+    // un usuario expirado tiene que poder leer su perfil y pagar para reactivarse.
+    const pathname = new URL(c.req.url).pathname;
+    const isExemptPath = isSubscriptionExemptPath(pathname);
+    if (userProfile.is_superadmin !== 1 && !isTeamMember && !isExemptPath) {
       const userSubscriptionStatus = userProfile.subscription_status;
       if (userSubscriptionStatus === 'expired' || userSubscriptionStatus === 'canceled') {
         return c.json({
@@ -390,7 +417,7 @@ export async function authMiddleware(c: Context<{ Bindings: Env }>, next: Next) 
     }
 
     // If user is a team member, verify the OWNER's subscription instead
-    if (isTeamMember && userProfileId) {
+    if (isTeamMember && userProfileId && !isExemptPath) {
       const ownerProfile = await c.env.DB
         .prepare('SELECT subscription_status FROM user_profiles WHERE id = ?')
         .bind(userProfileId)

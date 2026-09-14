@@ -1,5 +1,5 @@
 import { UserProfile, SubscriptionStatus } from './types';
-import { getUserProfile, updateUserProfile, type GetTokenFn } from './cloudflare-api';
+import { ApiError, getUserProfile, updateUserProfile, type GetTokenFn } from './cloudflare-api';
 
 /**
  * Verifica el estado de suscripción de un usuario usando Cloudflare API
@@ -135,7 +135,20 @@ export async function checkSubscriptionStatus(
       status: userProfile.subscription_status,
     };
   } catch (error) {
-    // Un fallo de red o de autenticación (p. ej. el Worker devuelve
+    // Un 402 SÍ es una suscripción vencida/cancelada: aunque las rutas de
+    // identidad y pago están exentas del gate en el Worker, si por cualquier
+    // motivo la lectura del perfil devuelve 402 debemos llevar al usuario al
+    // modal de suscripción (con enlace a pagar), no dejarlo varado en la
+    // pantalla de "error de conexión".
+    if (error instanceof ApiError && error.status === 402) {
+      return {
+        canAccess: false,
+        status: 'expired',
+        daysLeft: 0,
+      };
+    }
+
+    // Cualquier otro fallo de red o de autenticación (p. ej. el Worker devuelve
     // Unauthorized) NO significa que la suscripción haya expirado. Devolvemos
     // 'unknown' para que la UI muestre un error de conexión reintentable en
     // lugar del modal de "suscripción expirada" que empuja a pagar de nuevo.

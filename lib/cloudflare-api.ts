@@ -32,6 +32,20 @@ interface APIResponse<T = unknown> {
 }
 
 /**
+ * Error de la API que conserva el código de estado HTTP. Permite a quien llama
+ * distinguir, por ejemplo, un 402 (suscripción requerida) de un fallo de red o
+ * de autenticación, en lugar de tratar toda excepción por igual.
+ */
+export class ApiError extends Error {
+  status: number;
+  constructor(message: string, status: number) {
+    super(message);
+    this.name = 'ApiError';
+    this.status = status;
+  }
+}
+
+/**
  * Get the selected tenant ID from localStorage
  */
 export function getSelectedTenantId(): string | null {
@@ -95,7 +109,7 @@ async function fetchAPI<T = unknown>(
       // respuesta no JSON (p. ej. vacío), construir un mensaje legible
       const text = await response.text().catch(() => '');
       if (!response.ok) {
-        throw new Error(text || `Error ${response.status}: ${response.statusText || response.status}`);
+        throw new ApiError(text || `Error ${response.status}: ${response.statusText || response.status}`, response.status);
       }
       // Si está todo ok pero no hay JSON (común en DELETE), retornar vacío
       // Para operaciones como DELETE que devuelven void
@@ -107,7 +121,7 @@ async function fetchAPI<T = unknown>(
     if (!response.ok) {
       // Si no hay data pero falló, construir error
       if (!data) {
-        throw new Error(`Error ${response.status}: ${response.statusText || response.status}`);
+        throw new ApiError(`Error ${response.status}: ${response.statusText || response.status}`, response.status);
       }
     }
 
@@ -123,7 +137,7 @@ async function fetchAPI<T = unknown>(
       else if (data && typeof data.message === 'string' && data.message.trim()) msg = data.message;
       else if (data) msg = JSON.stringify(data);
       msg = msg || `Error ${response.status}: ${response.statusText || response.status}`;
-      throw new Error(msg);
+      throw new ApiError(msg, response.status);
     }
 
     return data?.data as T;
