@@ -86,6 +86,20 @@ export async function POST(req: NextRequest) {
       );
     }
 
+    // La Tienda Online es un complemento del plan base: no tiene sentido (ni
+    // funciona) sin una suscripción activa que provea el POS y los productos.
+    // Bloqueamos su compra en el servidor si la cuenta no está activa, para que
+    // ningún cliente pague $14.900 por algo inservible aunque manipule la UI.
+    // (El add-on solo es gratis durante el trial, donde ya viene incluido.)
+    if (planId === 'addon-store-monthly' && userProfile.subscription_status !== 'active') {
+      return NextResponse.json(
+        {
+          error: 'Primero debes activar tu Plan Básico. La Tienda Online es un complemento que requiere una suscripción activa.',
+        },
+        { status: 409 }
+      );
+    }
+
     // Precio en vivo editado desde el panel superadmin (si el plan corresponde
     // a un tipo de negocio). Si falla o no hay override, se usa plan.price.
     let livePrice: number | undefined;

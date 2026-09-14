@@ -1,54 +1,44 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { updateUserProfile } from '@/lib/cloudflare-api';
 import { getTransactionStatus } from '@/lib/epayco';
 import { requireSuperAdmin } from '@/lib/api-auth';
-import type { UserProfile } from '@/lib/types';
 
 export const runtime = 'nodejs';
 
 /**
- * Endpoint para activar manualmente un addon basándose en un ID de transacción.
- * Herramienta administrativa: solo accesible por super admin.
+ * Reconciliación de pagos de ePayco. Herramienta administrativa (solo superadmin).
+ *
+ * Dado un identificador de transacción de ePayco (ref_payco o transaction_id),
+ * verifica el estado REAL en ePayco y, si el pago fue aprobado, activa el
+ * add-on correspondiente sobre el CLIENTE que pagó (identificado por x_extra1,
+ * el userProfileId embebido en la transacción) — no sobre el superadmin.
+ *
+ * Nace de un incidente real: el webhook comparaba el planId del add-on de
+ * tienda con un ID equivocado ('store-addon-monthly' en vez de
+ * 'addon-store-monthly'), así que ningún pago de $14.900 se activaba ni se
+ * registraba. Este endpoint permite recuperar esos pagos caso por caso.
+ *
+ * Regla de negocio: el add-on de Tienda Online solo se activa si el cliente
+ * tiene el plan base activo (sin POS/productos, la tienda no sirve).
  */
 export async function POST(request: NextRequest) {
   try {
     const admin = await requireSuperAdmin();
-
     if (!admin) {
-      return NextResponse.json(
-        { error: 'No autorizado' },
-        { status: 403 }
-      );
+      return NextResponse.json({ error: 'No autorizado' }, { status: 403 });
     }
 
-    const { getToken } = admin;
-
-    // Obtener el transaction ID del body
     const body = await request.json();
-    const { transactionId } = body;
+    const transactionId = body.transactionId || body.refPayco || body.ref_payco;
 
     if (!transactionId) {
       return NextResponse.json(
-        { error: 'transactionId es requerido' },
+        { error: 'transactionId (o ref_payco) es requerido' },
         { status: 400 }
       );
     }
 
-    // El addon se activa sobre el perfil del propio super admin que ejecuta la acción
-    const currentUserProfile = admin.profile;
-
-    if (!currentUserProfile) {
-      return NextResponse.json(
-        { error: 'Perfil de usuario no encontrado' },
-        { status: 404 }
-      );
-    }
-
-    // Consultar la transacción en ePayco
-    console.log(`[activate-addon-manually] Checking transaction: ${transactionId}`);
-
+    // Verificar la transacción en ePayco (fuente de verdad)
     const transaction = await getTransactionStatus(transactionId);
-
     if (!transaction || !transaction.data) {
       return NextResponse.json(
         { error: 'Transacción no encontrada en ePayco' },
@@ -56,111 +46,146 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const txData = transaction.data;
-    const txState = txData.x_transaction_state || txData.estado;
-    const amountCOP = parseFloat(txData.x_amount || txData.valor || '0');
-    const reference = txData.x_id_invoice || txData.referencia || '';
+    const tx = transaction.data;
+    const txState = tx.x_transaction_state || tx.estado;
+    const codResponse = Number(tx.x_cod_response ?? tx.x_cod_respuesta);
+    const amountCOP = parseFloat(tx.x_amount || tx.valor || '0');
+    const targetUserId: string | undefined = tx.x_extra1; // userProfileId del cliente
+    const planId: string | undefined = tx.x_extra2; // p.ej. addon-store-monthly
 
-    console.log('[activate-addon-manually] Transaction data:', {
-      id: txData.x_ref_payco,
-      status: txState,
-      reference,
-      amount: amountCOP,
-    });
-
-    // Verificar que el pago esté aprobado (ePayco usa 'Aceptada')
-    if (txState !== 'Aceptada') {
+    // Solo activamos pagos aprobados
+    if (codResponse !== 1 && txState !== 'Aceptada') {
       return NextResponse.json(
-        {
-          error: `La transacción no está aprobada. Estado actual: ${txState}`,
-          status: txState
-        },
+        { error: `La transacción no está aprobada. Estado: ${txState}`, status: txState },
         { status: 400 }
       );
     }
 
-    console.log('[activate-addon-manually] Processing:', {
-      reference,
-      amountCOP
-    });
-
-    // Determinar qué addon activar basado en el monto y la referencia
-    let addonType = '';
-    const updates: Record<string, unknown> = {};
-
-    // Identificar el addon por la referencia o el monto
-    if (reference.includes('addon-ai') || amountCOP === 4900 || (amountCOP === 5000 && !reference.includes('addon-email'))) {
-      addonType = 'AI';
-      updates.has_ai_addon = true;
-    } else if (reference.includes('addon-store') || amountCOP === 9900) {
-      addonType = 'Store';
-      updates.has_store_addon = true;
-    } else if (reference.includes('addon-email') || (amountCOP === 5000 && reference.includes('addon-email'))) {
-      addonType = 'Email';
-      updates.has_email_addon = true;
-    } else if (reference.includes('plan-basico') || amountCOP === 24900) {
-      // Es el plan básico, no un addon
+    if (!targetUserId) {
       return NextResponse.json(
-        {
-          error: 'Esta transacción corresponde al Plan Básico, no a un addon. Use el endpoint de suscripciones.'
-        },
+        { error: 'La transacción no trae x_extra1 (userProfileId). No se puede identificar al cliente.' },
         { status: 400 }
       );
+    }
+
+    const apiUrl = process.env.NEXT_PUBLIC_CLOUDFLARE_API_URL || 'https://tienda-pos-api.julii1295.workers.dev';
+    const token = await admin.getToken();
+    const authHeaders = {
+      'Authorization': `Bearer ${token}`,
+      'Content-Type': 'application/json',
+      // El superadmin actúa sobre otro tenant: el Worker lee is_superadmin y permite.
+      'X-Tenant-ID': targetUserId,
+    };
+
+    // Traer el perfil del CLIENTE que pagó
+    const profileRes = await fetch(`${apiUrl}/api/user-profiles/${targetUserId}`, {
+      headers: authHeaders,
+    });
+    if (!profileRes.ok) {
+      return NextResponse.json(
+        { error: `No se encontró el perfil del cliente ${targetUserId} (status ${profileRes.status})` },
+        { status: 404 }
+      );
+    }
+    const profileJson = await profileRes.json();
+    const clientProfile = profileJson.data || profileJson;
+
+    // Identificar el add-on por el planId de la transacción (fiable), con
+    // respaldo por monto para pagos antiguos.
+    const updates: Record<string, unknown> = {};
+    let addonType = '';
+
+    if (planId === 'addon-store-monthly' || amountCOP === 14900) {
+      addonType = 'Store';
+    } else if (planId === 'ai-addon-monthly') {
+      addonType = 'AI';
+    } else if (planId === 'email-addon-monthly') {
+      addonType = 'Email';
     } else {
       return NextResponse.json(
-        {
-          error: `No se pudo identificar el addon. Referencia: ${reference}, Monto: ${amountCOP}`
-        },
+        { error: `No se pudo identificar el add-on. planId: ${planId}, monto: ${amountCOP}` },
         { status: 400 }
       );
     }
 
-    // Calcular fecha de expiración del addon (30 días desde hoy)
-    const now = new Date();
-    const expiresAt = new Date(now);
-    expiresAt.setDate(expiresAt.getDate() + 30);
+    // Regla: la Tienda Online requiere plan base activo.
+    if (addonType === 'Store' && clientProfile.subscription_status !== 'active') {
+      return NextResponse.json(
+        {
+          error: `El cliente ${clientProfile.email} no tiene el Plan Básico activo (estado: ${clientProfile.subscription_status}). El add-on de Tienda requiere plan base activo. Activa primero el plan.`,
+          clientStatus: clientProfile.subscription_status,
+        },
+        { status: 409 }
+      );
+    }
 
-    // Agregar fecha de expiración específica del addon
-    if (addonType === 'AI') {
-      updates.ai_addon_expires_at = expiresAt.toISOString();
-    } else if (addonType === 'Store') {
+    // Expiración: 1 mes desde la fecha del pago.
+    const paymentDate = new Date(tx.x_transaction_date || Date.now());
+    const expiresAt = new Date(paymentDate);
+    expiresAt.setMonth(expiresAt.getMonth() + 1);
+
+    if (addonType === 'Store') {
+      updates.has_store_addon = 1;
       updates.store_addon_expires_at = expiresAt.toISOString();
+    } else if (addonType === 'AI') {
+      updates.has_ai_addon = 1;
+      updates.ai_addon_expires_at = expiresAt.toISOString();
     } else if (addonType === 'Email') {
+      updates.has_email_addon = 1;
       updates.email_addon_expires_at = expiresAt.toISOString();
     }
+    updates.last_payment_date = paymentDate.toISOString();
 
-    // Actualizar también las fechas de pago generales
-    updates.last_payment_date = new Date(txData.x_transaction_date || now).toISOString();
-
-    // Si no tiene next_billing_date, usar la fecha de expiración del addon
-    if (!currentUserProfile.next_billing_date) {
-      updates.next_billing_date = expiresAt.toISOString();
+    // Actualizar el perfil del cliente (vía Worker, como superadmin)
+    const updateRes = await fetch(`${apiUrl}/api/user-profiles/${targetUserId}`, {
+      method: 'PUT',
+      headers: authHeaders,
+      body: JSON.stringify(updates),
+    });
+    if (!updateRes.ok) {
+      return NextResponse.json(
+        { error: `Error al actualizar el perfil del cliente: ${await updateRes.text()}` },
+        { status: 500 }
+      );
     }
 
-    console.log('[activate-addon-manually] Updating user profile with:', updates);
-
-    // Actualizar el perfil del usuario
-    await updateUserProfile(currentUserProfile.id, updates as Partial<UserProfile>, getToken);
-
-    console.log(`✅ Addon ${addonType} activated for user: ${currentUserProfile.email}`);
+    // Registrar la transacción (idempotencia básica: si ya existe, el Worker
+    // debería rechazarla; aquí no fallamos si el registro falla).
+    try {
+      await fetch(`${apiUrl}/api/payment-transactions`, {
+        method: 'POST',
+        headers: authHeaders,
+        body: JSON.stringify({
+          user_profile_id: targetUserId,
+          epayco_transaction_id: tx.x_transaction_id,
+          epayco_ref_payco: tx.x_ref_payco,
+          amount: amountCOP,
+          currency: tx.x_currency_code || 'COP',
+          status: 'Aceptada',
+          reference: tx.x_id_invoice || `RECON-${transactionId}`,
+          approval_code: tx.x_approval_code || '',
+        }),
+      });
+    } catch (err) {
+      console.error('[activate-addon-manually] no se pudo registrar la transacción:', err);
+    }
 
     return NextResponse.json({
       success: true,
-      message: `Addon ${addonType} activado correctamente`,
+      message: `Add-on ${addonType} activado para ${clientProfile.email}`,
       data: {
-        userEmail: currentUserProfile.email,
+        clientEmail: clientProfile.email,
+        clientId: targetUserId,
         addonType,
         expiresAt: expiresAt.toISOString(),
-        transactionId: txData.x_ref_payco || transactionId,
+        refPayco: tx.x_ref_payco,
         amount: amountCOP,
-        updates,
       },
     });
-
   } catch (error) {
     console.error('[activate-addon-manually] Error:', error);
     return NextResponse.json(
-      { error: error instanceof Error ? error.message : 'Error al activar addon manualmente' },
+      { error: error instanceof Error ? error.message : 'Error al activar add-on' },
       { status: 500 }
     );
   }

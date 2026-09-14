@@ -108,10 +108,14 @@ export async function POST(req: NextRequest) {
     const nextBillingDate = new Date(now);
     nextBillingDate.setMonth(nextBillingDate.getMonth() + 1);
 
-    // Si es un addon, no sobreescribir el plan_id existente
+    // Si es un addon, no sobreescribir el plan_id existente.
+    // IMPORTANTE: estos IDs deben coincidir EXACTAMENTE con los definidos en
+    // lib/epayco.ts (SUBSCRIPTION_PLANS). Un desajuste hace que el webhook no
+    // active el addon aunque el pago se apruebe (el cliente paga y no recibe
+    // nada). El addon de tienda es 'addon-store-monthly', no 'store-addon-monthly'.
     const isAiAddon = planId === 'ai-addon-monthly';
     const isEmailAddon = planId === 'email-addon-monthly';
-    const isStoreAddon = planId === 'store-addon-monthly';
+    const isStoreAddon = planId === 'addon-store-monthly';
     const isMainPlan = !isAiAddon && !isEmailAddon && !isStoreAddon;
 
     const updatePayload: Record<string, unknown> = {

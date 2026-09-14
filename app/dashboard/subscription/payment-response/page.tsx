@@ -10,31 +10,61 @@ function PaymentResponseContent() {
   const searchParams = useSearchParams();
 
   useEffect(() => {
-    // Obtener parámetros de respuesta de ePayco
-    const transactionState = searchParams.get('x_transaction_state');
-    const refPayco = searchParams.get('x_ref_payco');
-    const response = searchParams.get('x_response');
-
-    console.log('ePayco response:', { transactionState, refPayco, response });
-
-    // Crear query string con todos los parámetros para pasarlos a la página de destino
+    // Conservar todos los params de ePayco para la página de destino.
     const params = new URLSearchParams();
     searchParams.forEach((value, key) => {
       params.append(key, value);
     });
 
-    // Redirigir según el estado
-    if (transactionState === 'Aceptada' || response === 'Aceptada') {
-      router.push(`/dashboard/subscription/success?${params.toString()}`);
-    } else if (transactionState === 'Rechazada' || response === 'Rechazada') {
-      router.push(`/dashboard/subscription/failed?${params.toString()}`);
-    } else if (transactionState === 'Pendiente' || response === 'Pendiente') {
-      // Caso pendiente - mostrar página de pendiente o redirigir al dashboard
-      router.push('/dashboard?payment=pending');
-    } else {
-      // Estado desconocido o cancelado
-      router.push(`/dashboard/subscription/failed?${params.toString()}`);
+    // ref_payco es el identificador que ePayco SIEMPRE incluye en la
+    // redirección (a diferencia de x_transaction_state, que Smart Checkout v2
+    // omite a menudo). Con él consultamos el estado REAL en ePayco en lugar de
+    // adivinar por los query params: así un pago aprobado nunca se muestra como
+    // "rechazado" por un param ausente.
+    const refPayco =
+      searchParams.get('ref_payco') || searchParams.get('x_ref_payco');
+
+    async function decideDestination() {
+      // Sin ref_payco no podemos verificar. Caemos al estado que venga en la
+      // URL (mejor que nada) y, si tampoco, a pendiente (nunca "rechazado" a
+      // ciegas: eso asusta al cliente que sí pagó).
+      if (!refPayco) {
+        const urlState =
+          searchParams.get('x_transaction_state') ||
+          searchParams.get('x_response');
+        if (urlState === 'Aceptada') {
+          router.push(`/dashboard/subscription/success?${params.toString()}`);
+        } else if (urlState === 'Rechazada') {
+          router.push(`/dashboard/subscription/failed?${params.toString()}`);
+        } else {
+          router.push('/dashboard?payment=pending');
+        }
+        return;
+      }
+
+      try {
+        const res = await fetch(
+          `/api/subscription/payment-status?ref_payco=${encodeURIComponent(refPayco)}`
+        );
+        const data = await res.json();
+
+        if (data.state === 'approved') {
+          router.push(`/dashboard/subscription/success?${params.toString()}`);
+        } else if (data.state === 'rejected') {
+          router.push(`/dashboard/subscription/failed?${params.toString()}`);
+        } else {
+          // pending / unknown: el pago puede seguir procesándose. No afirmamos
+          // rechazo; llevamos al dashboard con aviso de pendiente. El webhook
+          // activará la suscripción cuando ePayco confirme.
+          router.push('/dashboard?payment=pending');
+        }
+      } catch (error) {
+        console.error('Error verificando estado del pago:', error);
+        router.push('/dashboard?payment=pending');
+      }
     }
+
+    decideDestination();
   }, [router, searchParams]);
 
   return (

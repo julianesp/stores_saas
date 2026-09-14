@@ -9,6 +9,7 @@ import {
   Sparkles,
   Mail,
   Store,
+  AlertCircle,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -279,6 +280,16 @@ export default function SubscriptionPageWompi() {
     return colors[color] || colors.purple;
   };
 
+  // La Tienda Online es un complemento del plan base. Solo se puede comprar si la
+  // suscripción está activa, o gratis durante el trial (donde ya viene incluida).
+  // Si la cuenta está expirada/cancelada, el plan base no funciona (no hay POS ni
+  // productos que mostrar), así que bloqueamos la compra del add-on hasta que el
+  // Plan Básico esté activo. Evita que el cliente pague por algo inservible.
+  const storeAddonRequiresBasePlan =
+    profile != null &&
+    profile.subscription_status !== "active" &&
+    profile.subscription_status !== "trial";
+
   return (
     <div className="">
       {/* Botón de WhatsApp flotante */}
@@ -511,7 +522,7 @@ export default function SubscriptionPageWompi() {
         {(() => {
           const selectedType = getBusinessType(selectedBusinessType);
           return (
-            <Card className="border-brand/40 border-2">
+            <Card id="plan-basico" className="border-brand/40 border-2 scroll-mt-24">
               <CardHeader>
                 <CardTitle className="text-2xl flex items-center gap-2">
                   <span>{selectedType.emoji}</span>
@@ -685,6 +696,31 @@ export default function SubscriptionPageWompi() {
                     .
                   </p>
                 )}
+              </div>
+            ) : storeAddonRequiresBasePlan ? (
+              // La Tienda Online es un complemento del plan base: solo funciona si
+              // la suscripción está activa (o gratis durante el trial). Si la
+              // cuenta está expirada/cancelada, NO dejamos comprar el add-on solo
+              // — de lo contrario el cliente paga $14.900 por algo que no puede
+              // usar (fue exactamente el problema que motivó este bloqueo).
+              <div className="space-y-3">
+                <div className="flex items-start gap-2 rounded-lg border border-amber-200 bg-amber-50 p-3">
+                  <AlertCircle className="h-5 w-5 flex-shrink-0 text-amber-600 mt-0.5" />
+                  <p className="text-sm text-amber-800">
+                    La Tienda Online es un complemento de tu plan. Primero activa
+                    tu <strong>Plan Básico</strong> y luego podrás agregarla.
+                  </p>
+                </div>
+                <Button
+                  variant="outline"
+                  className="w-full"
+                  onClick={() => {
+                    const el = document.getElementById("plan-basico");
+                    if (el) el.scrollIntoView({ behavior: "smooth", block: "center" });
+                  }}
+                >
+                  Ver Plan Básico
+                </Button>
               </div>
             ) : (
               <Button
