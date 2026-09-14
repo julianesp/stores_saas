@@ -83,6 +83,11 @@ const superAdminMenuItems = [
     icon: CheckCircle,
   },
   {
+    title: "Reconciliar Pagos ePayco",
+    href: "/dashboard/admin/reconciliar-pagos",
+    icon: Receipt,
+  },
+  {
     title: "Analytics del Sistema",
     href: "/dashboard/admin/analytics",
     icon: TrendingUp,

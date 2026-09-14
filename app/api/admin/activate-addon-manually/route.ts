@@ -29,6 +29,10 @@ export async function POST(request: NextRequest) {
 
     const body = await request.json();
     const transactionId = body.transactionId || body.refPayco || body.ref_payco;
+    // dryRun: solo verifica en ePayco y devuelve la info (pago + cliente + add-on
+    // que se activaría), sin escribir nada. Lo usa la página de reconciliación
+    // para mostrar una previsualización antes de que el admin confirme.
+    const dryRun = body.dryRun === true;
 
     if (!transactionId) {
       return NextResponse.json(
@@ -73,22 +77,32 @@ export async function POST(request: NextRequest) {
     const authHeaders = {
       'Authorization': `Bearer ${token}`,
       'Content-Type': 'application/json',
-      // El superadmin actúa sobre otro tenant: el Worker lee is_superadmin y permite.
-      'X-Tenant-ID': targetUserId,
     };
 
-    // Traer el perfil del CLIENTE que pagó
-    const profileRes = await fetch(`${apiUrl}/api/user-profiles/${targetUserId}`, {
+    // Traer el perfil del CLIENTE que pagó. user_profiles es una tabla global y
+    // el Worker no expone GET /:id, así que listamos todos (ruta de superadmin) y
+    // filtramos por id. El PUT sí acepta /:id para actualizar.
+    const allRes = await fetch(`${apiUrl}/api/user-profiles/all`, {
       headers: authHeaders,
     });
-    if (!profileRes.ok) {
+    if (!allRes.ok) {
       return NextResponse.json(
-        { error: `No se encontró el perfil del cliente ${targetUserId} (status ${profileRes.status})` },
+        { error: `No se pudieron cargar los perfiles (status ${allRes.status})` },
+        { status: 500 }
+      );
+    }
+    const allJson = await allRes.json();
+    const allProfiles = allJson.data || allJson.results || allJson || [];
+    const clientProfile = Array.isArray(allProfiles)
+      ? allProfiles.find((p: { id: string }) => p.id === targetUserId)
+      : null;
+
+    if (!clientProfile) {
+      return NextResponse.json(
+        { error: `No se encontró el perfil del cliente ${targetUserId}` },
         { status: 404 }
       );
     }
-    const profileJson = await profileRes.json();
-    const clientProfile = profileJson.data || profileJson;
 
     // Identificar el add-on por el planId de la transacción (fiable), con
     // respaldo por monto para pagos antiguos.
@@ -123,6 +137,29 @@ export async function POST(request: NextRequest) {
     const paymentDate = new Date(tx.x_transaction_date || Date.now());
     const expiresAt = new Date(paymentDate);
     expiresAt.setMonth(expiresAt.getMonth() + 1);
+
+    // Modo previsualización: devolvemos lo que se activaría, sin escribir nada.
+    if (dryRun) {
+      return NextResponse.json({
+        success: true,
+        dryRun: true,
+        data: {
+          clientEmail: clientProfile.email,
+          clientId: targetUserId,
+          clientStoreName: clientProfile.store_name || null,
+          clientStatus: clientProfile.subscription_status,
+          addonType,
+          amount: amountCOP,
+          refPayco: tx.x_ref_payco,
+          transactionDate: tx.x_transaction_date,
+          expiresAt: expiresAt.toISOString(),
+          alreadyActive:
+            (addonType === 'Store' && !!clientProfile.has_store_addon) ||
+            (addonType === 'AI' && !!clientProfile.has_ai_addon) ||
+            (addonType === 'Email' && !!clientProfile.has_email_addon),
+        },
+      });
+    }
 
     if (addonType === 'Store') {
       updates.has_store_addon = 1;
