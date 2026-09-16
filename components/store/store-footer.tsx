@@ -55,7 +55,7 @@ export function StoreFooter({ config }: StoreFooterProps) {
     <footer className="bg-gray-900 text-gray-300 mt-auto">
       {/* Sección principal del footer */}
       <div className="max-w-7xl mx-auto px-4 py-12">
-        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-8">
+        <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-8">
           {/* Columna 1: Información de la tienda */}
           <div className="space-y-4">
             <div className="flex items-center gap-2">
