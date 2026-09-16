@@ -76,7 +76,7 @@ export function ImageUploadField({
             alt={label}
             width={80}
             height={80}
-            className="h-20 w-20 rounded-lg border object-contain bg-white"
+            className="h-20 w-20 rounded-full border object-cover bg-white"
           />
           <div className="flex gap-2">
             <Button
