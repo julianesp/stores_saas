@@ -7,6 +7,7 @@ import Link from "next/link";
 import {
   getStoreConfig,
   getStoreProduct,
+  getStoreProducts,
   StoreConfig,
   StoreProduct,
   calculateDiscountedPrice,
@@ -35,6 +36,7 @@ export default function ProductDetailPage() {
 
   const [config, setConfig] = useState<StoreConfig | null>(null);
   const [product, setProduct] = useState<StoreProduct | null>(null);
+  const [relatedProducts, setRelatedProducts] = useState<StoreProduct[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [quantity, setQuantity] = useState(1);
@@ -56,6 +58,16 @@ export default function ProductDetailPage() {
 
       setConfig(configData);
       setProduct(productData);
+
+      // Cargar productos de la misma categoría
+      if (productData.category_id) {
+        const allProducts = await getStoreProducts(slug, productData.category_id);
+        // Filtrar el producto actual y limitar a 4 productos relacionados
+        const related = allProducts
+          .filter((p) => p.id !== productData.id)
+          .slice(0, 4);
+        setRelatedProducts(related);
+      }
     } catch (err: unknown) {
       console.error("Error loading product:", err);
       if (err instanceof Error) {
@@ -402,6 +414,90 @@ export default function ProductDetailPage() {
             )}
           </div>
         </div>
+
+        {/* Productos relacionados de la misma categoría */}
+        {relatedProducts.length > 0 && (
+          <div className="mt-16 pt-8 border-t">
+            <h2 className="text-3xl font-bold text-black mb-8">
+              Más de {product?.category_name || "esta categoría"}
+            </h2>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+              {relatedProducts.map((relatedProduct) => {
+                const relatedImages = parseProductImages(relatedProduct.images);
+                const hasOffer = Boolean(
+                  relatedProduct.discount_percentage && relatedProduct.discount_percentage > 0
+                );
+                const relatedFinalPrice = hasOffer
+                  ? calculateDiscountedPrice(
+                      relatedProduct.sale_price,
+                      relatedProduct.discount_percentage!
+                    )
+                  : relatedProduct.sale_price;
+
+                return (
+                  <Link
+                    key={relatedProduct.id}
+                    href={`/store/${slug}/product/${relatedProduct.id}`}
+                  >
+                    <Card className="h-full hover:shadow-lg transition-shadow cursor-pointer">
+                      <CardContent className="p-0">
+                        {/* Imagen */}
+                        <div className="relative aspect-square bg-gray-100 overflow-hidden rounded-t-lg">
+                          {relatedImages.length > 0 ? (
+                            <Image
+                              src={relatedImages[0]}
+                              alt={relatedProduct.name}
+                              fill
+                              className="object-contain p-4"
+                            />
+                          ) : (
+                            <div className="w-full h-full flex items-center justify-center">
+                              <Package className="h-16 w-16 text-gray-300" />
+                            </div>
+                          )}
+                          {hasOffer && (
+                            <div
+                              className="absolute top-2 right-2 text-white px-2 py-1 rounded text-sm font-bold"
+                              style={{
+                                backgroundColor: config?.store_secondary_color || "#10B981",
+                              }}
+                            >
+                              -{relatedProduct.discount_percentage}%
+                            </div>
+                          )}
+                        </div>
+
+                        {/* Contenido */}
+                        <div className="p-4">
+                          <h3 className="font-semibold text-black line-clamp-2 mb-2">
+                            {relatedProduct.name}
+                          </h3>
+                          <div className="space-y-2">
+                            {hasOffer && (
+                              <p className="text-sm text-gray-400 line-through">
+                                {formatCurrency(relatedProduct.sale_price)}
+                              </p>
+                            )}
+                            <p
+                              className="text-lg font-bold"
+                              style={{
+                                color: hasOffer
+                                  ? config?.store_secondary_color
+                                  : config?.store_primary_color,
+                              }}
+                            >
+                              {formatCurrency(relatedFinalPrice)}
+                            </p>
+                          </div>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  </Link>
+                );
+              })}
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );
