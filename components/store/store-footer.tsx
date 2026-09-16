@@ -58,8 +58,8 @@ export function StoreFooter({ config }: StoreFooterProps) {
       <div className="max-w-7xl mx-auto px-4 py-12">
         <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-8">
           {/* Columna 1: Información de la tienda - ocupa 2 columnas en mobile */}
-          <div className="col-span-2 sm:col-span-2 md:col-span-1 space-y-4">
-            <div className="flex items-center gap-3">
+          <div className="col-span-2 sm:col-span-2 md:col-span-1 space-y-4 flex flex-col items-center text-center">
+            <div className="flex flex-col items-center gap-3">
               {config.store_logo_url ? (
                 <div className="relative w-16 h-16 rounded-full overflow-hidden flex-shrink-0">
                   <Image
@@ -83,8 +83,8 @@ export function StoreFooter({ config }: StoreFooterProps) {
               {storeDescription}
             </p>
             {config.store_address && (
-              <div className="flex items-start gap-2 text-sm">
-                <MapPin className="h-4 w-4 mt-0.5 flex-shrink-0" style={{ color: primaryColor }} />
+              <div className="flex items-center justify-center gap-2 text-sm">
+                <MapPin className="h-4 w-4 flex-shrink-0" style={{ color: primaryColor }} />
                 <span>{config.store_address}</span>
               </div>
             )}
