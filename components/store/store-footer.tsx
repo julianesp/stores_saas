@@ -115,17 +115,6 @@ export function StoreFooter({ config }: StoreFooterProps) {
           <div>
             <h4 className="text-lg font-semibold text-white mb-4">Contacto</h4>
             <ul className="space-y-3">
-              {config.store_phone && (
-                <li>
-                  <a
-                    href={`tel:${config.store_phone}`}
-                    className="flex items-center gap-2 text-sm hover:text-white transition-colors group"
-                  >
-                    <Phone className="h-4 w-4 group-hover:scale-110 transition-transform" style={{ color: primaryColor }} />
-                    {config.store_phone}
-                  </a>
-                </li>
-              )}
               {config.store_whatsapp && (
                 <li>
                   <a
