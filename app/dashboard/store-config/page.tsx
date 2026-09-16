@@ -31,6 +31,7 @@ import {
 
 import { ShippingZonesManager } from "@/components/store-config/shipping-zones-manager";
 import { ImageUploadField } from "@/components/store-config/image-upload-field";
+import { StoreQRGenerator } from "@/components/store-config/store-qr-generator";
 import {
   hasStorefrontAccess,
   getStorefrontBlockMessage,
@@ -753,6 +754,9 @@ export default function StoreConfigPage() {
 
         </CardContent>
       </Card>
+
+      {/* Código QR de la tienda */}
+      {storeSlug && <StoreQRGenerator storeSlug={storeSlug} storeName={storeName} />}
 
       {/* Términos y condiciones */}
       <Card>
