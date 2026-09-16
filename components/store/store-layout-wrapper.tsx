@@ -5,6 +5,7 @@ import { useParams } from 'next/navigation';
 import { getStoreConfig, StoreConfig } from '@/lib/storefront-api';
 import { StoreNavbar } from './store-navbar';
 import { StoreFooter } from './store-footer';
+import { StorefrontUserProvider } from '@/lib/storefront-user-context';
 
 interface StoreLayoutWrapperProps {
   children: React.ReactNode;
@@ -54,10 +55,12 @@ export function StoreLayoutWrapper({ children }: StoreLayoutWrapperProps) {
   }
 
   return (
-    <div className="min-h-screen flex flex-col">
-      <StoreNavbar config={config} />
-      <main className="flex-1">{children}</main>
-      <StoreFooter config={config} />
-    </div>
+    <StorefrontUserProvider slug={slug}>
+      <div className="min-h-screen flex flex-col">
+        <StoreNavbar config={config} />
+        <main className="flex-1">{children}</main>
+        <StoreFooter config={config} />
+      </div>
+    </StorefrontUserProvider>
   );
 }

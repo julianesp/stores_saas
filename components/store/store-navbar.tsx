@@ -4,6 +4,8 @@ import { useState, useEffect, useRef } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { useParams, usePathname } from "next/navigation";
+import { useStorefrontUser } from "@/lib/storefront-user-context";
+import { StorefrontAuthModal } from "./storefront-auth-modal";
 import {
   ShoppingCart,
   Menu,
@@ -12,6 +14,8 @@ import {
   Home,
   Package,
   Info,
+  User,
+  LogOut,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { StoreConfig } from "@/lib/storefront-api";
@@ -31,11 +35,14 @@ export function StoreNavbar({ config }: StoreNavbarProps) {
   const slug = params.slug as string;
 
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const [authModalOpen, setAuthModalOpen] = useState(false);
   const [cartCount, setCartCount] = useState(0);
   // Sube cada vez que el conteo AUMENTA. Sirve de key para re-montar el badge
   // y disparar el "pop"; no se anima al quitar productos.
   const [pop, setPop] = useState(0);
   const prevCountRef = useRef(0);
+
+  const { user, logout, isAuthenticated } = useStorefrontUser();
 
   useEffect(() => {
     // La primera lectura solo sincroniza el conteo, sin "pop": un carrito ya
@@ -147,6 +154,42 @@ export function StoreNavbar({ config }: StoreNavbarProps) {
 
           {/* Botones de acción */}
           <div className="flex items-center gap-2">
+            {/* Usuario / Login */}
+            {isAuthenticated ? (
+              <div className="relative group">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  style={{ borderColor: primaryColor, color: primaryColor }}
+                >
+                  <User className="h-5 w-5" />
+                  <span className="hidden sm:inline ml-2">{user?.name}</span>
+                </Button>
+                <div className="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-300 z-50">
+                  <div className="p-3 border-b text-sm text-gray-600">
+                    {user?.email}
+                  </div>
+                  <button
+                    onClick={logout}
+                    className="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-50 flex items-center gap-2 rounded-b-lg"
+                  >
+                    <LogOut className="h-4 w-4" />
+                    Cerrar sesión
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setAuthModalOpen(true)}
+                style={{ borderColor: primaryColor, color: primaryColor }}
+              >
+                <User className="h-5 w-5" />
+                <span className="hidden sm:inline ml-2">Entrar</span>
+              </Button>
+            )}
+
             {/* Carrito */}
             <Link href={`/store/${slug}/cart`}>
               <Button
@@ -229,6 +272,9 @@ export function StoreNavbar({ config }: StoreNavbarProps) {
             </div>
           </>
         )}
+
+        {/* Modal de autenticación */}
+        <StorefrontAuthModal open={authModalOpen} onOpenChange={setAuthModalOpen} />
       </div>
     </nav>
   );
