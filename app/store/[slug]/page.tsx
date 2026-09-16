@@ -15,12 +15,10 @@ import {
   parseProductImages,
 } from '@/lib/storefront-api';
 import { formatCurrency } from '@/lib/utils';
-import { buildWhatsAppLink } from '@/lib/whatsapp';
 import { readCart, writeCart } from '@/lib/storefront-cart';
 import { flyToCart } from '@/lib/fly-to-cart';
 import {
   Search,
-  Phone,
   MapPin,
   Mail,
   Facebook,
@@ -222,18 +220,6 @@ export default function StorefrontPage() {
     }
   };
 
-  const openWhatsApp = () => {
-    if (config?.store_whatsapp) {
-      // buildWhatsAppLink normaliza el número (agrega el 57 a celulares de
-      // 10 dígitos); sin indicativo de país WhatsApp rechaza el enlace.
-      const url = buildWhatsAppLink(
-        config.store_whatsapp,
-        `Hola! Estoy interesado en productos de ${config.store_name}`
-      );
-      if (url) window.open(url, '_blank');
-    }
-  };
-
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-50">
@@ -410,12 +396,6 @@ export default function StorefrontPage() {
                   <CardContent className="pt-6">
                     <h2 className="font-bold text-lg mb-4">Información de la tienda</h2>
                     <div className="space-y-3 text-sm">
-                      {config.store_phone && (
-                        <div className="flex items-start gap-2">
-                          <Phone className="h-4 w-4 mt-0.5" style={{ color: primaryColor }} />
-                          <span>{config.store_phone}</span>
-                        </div>
-                      )}
                       {config.store_email && (
                         <div className="flex items-start gap-2">
                           <Mail className="h-4 w-4 mt-0.5" style={{ color: primaryColor }} />
@@ -667,17 +647,6 @@ export default function StorefrontPage() {
         </div>
       </div>
 
-      {/* Botón flotante de WhatsApp */}
-      {config.store_whatsapp && (
-        <button
-          onClick={openWhatsApp}
-          aria-label="Contactar por WhatsApp"
-          className="fixed bottom-6 right-6 z-50 flex items-center justify-center h-14 w-14 rounded-full shadow-lg hover:scale-110 transition-transform"
-          style={{ backgroundColor: '#25D366' }}
-        >
-          <Phone className="h-7 w-7 text-white" />
-        </button>
-      )}
     </div>
   );
 }
