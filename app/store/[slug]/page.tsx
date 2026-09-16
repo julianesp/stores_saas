@@ -98,9 +98,8 @@ export default function StorefrontPage() {
       setVisibleCount(PRODUCTS_PER_PAGE);
       // En móvil, cerrar el panel de categorías y llevar al usuario a la lista
       setShowFilters(false);
-      if (window.innerWidth < 1024) {
-        document.getElementById('productos')?.scrollIntoView({ behavior: 'smooth' });
-      }
+      // Scroll a la sección de productos con offset
+      setTimeout(() => scrollToProducts(), 100);
     } catch (err) {
       console.error('Error loading products:', err);
     }
