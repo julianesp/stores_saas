@@ -421,13 +421,13 @@ export default function ProductDetailPage() {
           </div>
         </div>
 
-        {/* Productos relacionados de la misma categoría */}
+        {/* Productos relacionados de la misma categoría - Miniaturas */}
         {relatedProducts.length > 0 && (
           <div className="mt-16 pt-8 border-t">
             <h2 className="text-3xl font-bold text-black mb-8">
               Más de {product?.category_name || "esta categoría"}
             </h2>
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
               {relatedProducts.map((relatedProduct) => {
                 const relatedImages = parseProductImages(relatedProduct.images);
                 const hasOffer = Boolean(
@@ -444,61 +444,55 @@ export default function ProductDetailPage() {
                   <Link
                     key={relatedProduct.id}
                     href={`/store/${slug}/product/${relatedProduct.id}`}
-                    className="cursor-pointer"
+                    className="cursor-pointer flex flex-col gap-2"
                   >
-                    <Card className="h-full hover:shadow-xl hover:scale-105 transition-all duration-300 cursor-pointer">
-                      <CardContent className="p-0">
-                        {/* Imagen */}
-                        <div className="relative aspect-square bg-gray-100 overflow-hidden rounded-t-lg">
-                          {relatedImages.length > 0 ? (
-                            <Image
-                              src={relatedImages[0]}
-                              alt={relatedProduct.name}
-                              fill
-                              className="object-contain p-4"
-                            />
-                          ) : (
-                            <div className="w-full h-full flex items-center justify-center">
-                              <Package className="h-16 w-16 text-gray-300" />
-                            </div>
-                          )}
-                          {hasOffer && (
-                            <div
-                              className="absolute top-2 right-2 text-white px-2 py-1 rounded text-sm font-bold"
-                              style={{
-                                backgroundColor: config?.store_secondary_color || "#10B981",
-                              }}
-                            >
-                              -{relatedProduct.discount_percentage}%
-                            </div>
-                          )}
+                    {/* Imagen */}
+                    <div className="relative aspect-square bg-gray-100 overflow-hidden rounded-lg group hover:shadow-lg transition-shadow">
+                      {relatedImages.length > 0 ? (
+                        <Image
+                          src={relatedImages[0]}
+                          alt={relatedProduct.name}
+                          fill
+                          className="object-contain p-2 group-hover:scale-105 transition-transform"
+                        />
+                      ) : (
+                        <div className="w-full h-full flex items-center justify-center">
+                          <Package className="h-8 w-8 text-gray-300" />
                         </div>
+                      )}
+                      {hasOffer && (
+                        <div
+                          className="absolute top-1 right-1 text-white px-1.5 py-0.5 rounded text-xs font-bold"
+                          style={{
+                            backgroundColor: config?.store_secondary_color || "#10B981",
+                          }}
+                        >
+                          -{relatedProduct.discount_percentage}%
+                        </div>
+                      )}
+                    </div>
 
-                        {/* Contenido */}
-                        <div className="p-4">
-                          <h3 className="font-semibold text-black line-clamp-2 mb-2">
-                            {relatedProduct.name}
-                          </h3>
-                          <div className="space-y-2">
-                            {hasOffer && (
-                              <p className="text-sm text-gray-400 line-through">
-                                {formatCurrency(relatedProduct.sale_price)}
-                              </p>
-                            )}
-                            <p
-                              className="text-lg font-bold"
-                              style={{
-                                color: hasOffer
-                                  ? config?.store_secondary_color
-                                  : config?.store_primary_color,
-                              }}
-                            >
-                              {formatCurrency(relatedFinalPrice)}
-                            </p>
-                          </div>
-                        </div>
-                      </CardContent>
-                    </Card>
+                    {/* Precio y Botón */}
+                    <div className="flex flex-col gap-1">
+                      <p
+                        className="text-sm font-bold"
+                        style={{
+                          color: hasOffer
+                            ? config?.store_secondary_color
+                            : config?.store_primary_color,
+                        }}
+                      >
+                        {formatCurrency(relatedFinalPrice)}
+                      </p>
+                      <Button
+                        type="button"
+                        size="sm"
+                        className="w-full text-xs"
+                        style={{ backgroundColor: primaryColor }}
+                      >
+                        Ver
+                      </Button>
+                    </div>
                   </Link>
                 );
               })}
