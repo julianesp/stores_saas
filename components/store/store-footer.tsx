@@ -1,6 +1,7 @@
 'use client';
 
 import Link from 'next/link';
+import Image from 'next/image';
 import { useParams } from 'next/navigation';
 import {
   Store,
@@ -56,15 +57,26 @@ export function StoreFooter({ config }: StoreFooterProps) {
       {/* Sección principal del footer */}
       <div className="max-w-7xl mx-auto px-4 py-12">
         <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-8">
-          {/* Columna 1: Información de la tienda */}
-          <div className="space-y-4">
-            <div className="flex items-center gap-2">
-              <div
-                className="p-2 rounded-lg"
-                style={{ backgroundColor: `${primaryColor}30` }}
-              >
-                <Store className="h-6 w-6" style={{ color: primaryColor }} />
-              </div>
+          {/* Columna 1: Información de la tienda - ocupa 2 columnas en mobile */}
+          <div className="col-span-2 sm:col-span-2 md:col-span-1 space-y-4">
+            <div className="flex items-center gap-3">
+              {config.store_logo_url ? (
+                <div className="relative w-16 h-16 rounded-full overflow-hidden flex-shrink-0">
+                  <Image
+                    src={config.store_logo_url}
+                    alt={storeName}
+                    fill
+                    className="object-cover"
+                  />
+                </div>
+              ) : (
+                <div
+                  className="p-3 rounded-full flex-shrink-0"
+                  style={{ backgroundColor: `${primaryColor}30` }}
+                >
+                  <Store className="h-8 w-8" style={{ color: primaryColor }} />
+                </div>
+              )}
               <h3 className="text-xl font-bold text-white">{storeName}</h3>
             </div>
             <p className="text-sm text-gray-400">
