@@ -347,44 +347,6 @@ export default function StorefrontPage() {
       </div>
 
       {/* Sección de confianza */}
-      <div className="bg-white border-y">
-        <div className="max-w-7xl mx-auto px-4 py-8">
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
-            <div className="flex flex-col items-center text-center gap-2">
-              <div className="p-3 rounded-full" style={{ backgroundColor: `${primaryColor}15` }}>
-                <Truck className="h-6 w-6" style={{ color: primaryColor }} />
-              </div>
-              <h3 className="font-semibold text-sm md:text-base">Envío {config.store_shipping_enabled ? 'disponible' : 'rápido'}</h3>
-              <p className="text-xs text-gray-600">A todo el país</p>
-            </div>
-
-            <div className="flex flex-col items-center text-center gap-2">
-              <div className="p-3 rounded-full" style={{ backgroundColor: `${primaryColor}15` }}>
-                <Shield className="h-6 w-6" style={{ color: primaryColor }} />
-              </div>
-              <h3 className="font-semibold text-sm md:text-base">Compra segura</h3>
-              <p className="text-xs text-gray-600">Protección garantizada</p>
-            </div>
-
-            <div className="flex flex-col items-center text-center gap-2">
-              <div className="p-3 rounded-full" style={{ backgroundColor: `${primaryColor}15` }}>
-                <CreditCard className="h-6 w-6" style={{ color: primaryColor }} />
-              </div>
-              <h3 className="font-semibold text-sm md:text-base">Pago fácil</h3>
-              <p className="text-xs text-gray-600">Múltiples opciones</p>
-            </div>
-
-            <div className="flex flex-col items-center text-center gap-2">
-              <div className="p-3 rounded-full" style={{ backgroundColor: `${primaryColor}15` }}>
-                <Clock className="h-6 w-6" style={{ color: primaryColor }} />
-              </div>
-              <h3 className="font-semibold text-sm md:text-base">Atención 24/7</h3>
-              <p className="text-xs text-gray-600">Siempre disponibles</p>
-            </div>
-          </div>
-        </div>
-      </div>
-
       <div className="max-w-7xl mx-auto px-4 py-6">
         <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
           {/* Sidebar - Categorías y filtros */}
