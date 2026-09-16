@@ -812,13 +812,15 @@ export default function CheckoutPage() {
                           <span>Subtotal:</span>
                           <span>{formatCurrency(subtotalOriginal)}</span>
                         </div>
-                        <div
-                          className="flex justify-between font-semibold"
-                          style={{ color: secondaryColor }}
-                        >
-                          <span>Descuentos:</span>
-                          <span>-{formatCurrency(totalDiscount)}</span>
-                        </div>
+                        {totalDiscount > 0 && (
+                          <div
+                            className="flex justify-between font-semibold"
+                            style={{ color: secondaryColor }}
+                          >
+                            <span>Descuentos:</span>
+                            <span>-{formatCurrency(totalDiscount)}</span>
+                          </div>
+                        )}
                         <div className="flex justify-between text-black font-medium">
                           <span>Subtotal con descuentos:</span>
                           <span>{formatCurrency(subtotal)}</span>
