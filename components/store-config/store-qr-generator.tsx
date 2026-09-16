@@ -1,7 +1,7 @@
 'use client';
 
-import { useRef } from 'react';
-import QRCode from 'qrcode.react';
+import { useRef, useEffect, useState } from 'react';
+import QRCode from 'qrcode';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Download, Copy } from 'lucide-react';
@@ -13,12 +13,31 @@ interface StoreQRGeneratorProps {
 }
 
 export function StoreQRGenerator({ storeSlug, storeName }: StoreQRGeneratorProps) {
-  const qrRef = useRef<HTMLDivElement>(null);
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const [qrGenerated, setQrGenerated] = useState(false);
 
   const storeUrl = `https://posib.dev/store/${storeSlug}`;
 
+  useEffect(() => {
+    if (canvasRef.current) {
+      QRCode.toCanvas(canvasRef.current, storeUrl, {
+        width: 256,
+        margin: 2,
+        color: {
+          dark: '#000000',
+          light: '#FFFFFF',
+        },
+      }).then(() => {
+        setQrGenerated(true);
+      }).catch((err) => {
+        console.error('Error generating QR:', err);
+        toast.error('Error al generar el QR');
+      });
+    }
+  }, [storeUrl]);
+
   const downloadQR = () => {
-    const canvas = qrRef.current?.querySelector('canvas');
+    const canvas = canvasRef.current;
     if (!canvas) {
       toast.error('No se pudo generar el QR');
       return;
@@ -47,16 +66,10 @@ export function StoreQRGenerator({ storeSlug, storeName }: StoreQRGeneratorProps
       <CardContent className="space-y-6">
         <div className="flex flex-col items-center gap-4">
           {/* QR Code */}
-          <div
-            ref={qrRef}
-            className="p-4 bg-white border-2 border-gray-200 rounded-lg"
-          >
-            <QRCode
-              value={storeUrl}
-              size={256}
-              level="H"
-              includeMargin={true}
-              renderAs="canvas"
+          <div className="p-4 bg-white border-2 border-gray-200 rounded-lg">
+            <canvas
+              ref={canvasRef}
+              className="w-64 h-64"
             />
           </div>
 
