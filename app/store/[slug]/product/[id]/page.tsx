@@ -59,14 +59,20 @@ export default function ProductDetailPage() {
       setConfig(configData);
       setProduct(productData);
 
-      // Cargar productos de la misma categoría
-      if (productData.category_id) {
-        const allProducts = await getStoreProducts(slug, productData.category_id);
+      // Cargar productos de la misma categoría o todos los productos
+      try {
+        const allProducts = productData.category_id
+          ? await getStoreProducts(slug, productData.category_id)
+          : await getStoreProducts(slug);
+
         // Filtrar el producto actual y limitar a 4 productos relacionados
         const related = allProducts
           .filter((p) => p.id !== productData.id)
           .slice(0, 4);
         setRelatedProducts(related);
+      } catch (err) {
+        console.error("Error loading related products:", err);
+        // No fallar si no se pueden cargar productos relacionados
       }
     } catch (err: unknown) {
       console.error("Error loading product:", err);
