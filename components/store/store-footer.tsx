@@ -55,7 +55,7 @@ export function StoreFooter({ config }: StoreFooterProps) {
     <footer className="bg-gray-900 text-gray-300 mt-auto">
       {/* Sección principal del footer */}
       <div className="max-w-7xl mx-auto px-4 py-12">
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-6 gap-8">
           {/* Columna 1: Información de la tienda */}
           <div className="space-y-4">
             <div className="flex items-center gap-2">
@@ -141,7 +141,7 @@ export function StoreFooter({ config }: StoreFooterProps) {
             </ul>
           </div>
 
-          {/* Columna 4: Redes sociales y opciones de entrega */}
+          {/* Columna 4: Redes sociales */}
           <div>
             <h4 className="text-lg font-semibold text-white mb-4">Síguenos</h4>
             {socialLinks.length > 0 ? (
@@ -168,9 +168,67 @@ export function StoreFooter({ config }: StoreFooterProps) {
                 Próximamente en redes sociales
               </p>
             )}
+          </div>
+
+          {/* Columna 5: Políticas */}
+          <div>
+            <h4 className="text-lg font-semibold text-white mb-4">Políticas</h4>
+            <ul className="space-y-3">
+              <li>
+                <Link
+                  href={`/store/${slug}#terms`}
+                  className="text-sm hover:text-white transition-colors"
+                >
+                  Términos y condiciones
+                </Link>
+              </li>
+              <li>
+                <Link
+                  href={`/store/${slug}#privacy`}
+                  className="text-sm hover:text-white transition-colors"
+                >
+                  Política de privacidad
+                </Link>
+              </li>
+              <li>
+                <Link
+                  href={`/store/${slug}#shipping`}
+                  className="text-sm hover:text-white transition-colors"
+                >
+                  Política de envíos
+                </Link>
+              </li>
+              <li>
+                <Link
+                  href={`/store/${slug}#returns`}
+                  className="text-sm hover:text-white transition-colors"
+                >
+                  Devoluciones
+                </Link>
+              </li>
+            </ul>
+          </div>
+
+          {/* Columna 6: Horario de atención */}
+          <div>
+            <h4 className="text-lg font-semibold text-white mb-4">Horario</h4>
+            <div className="space-y-3 text-sm text-gray-400">
+              <div>
+                <p className="font-semibold text-white">Lunes a Viernes</p>
+                <p>9:00 AM - 6:00 PM</p>
+              </div>
+              <div>
+                <p className="font-semibold text-white">Sábado</p>
+                <p>10:00 AM - 4:00 PM</p>
+              </div>
+              <div>
+                <p className="font-semibold text-white">Domingo</p>
+                <p>Cerrado</p>
+              </div>
+            </div>
 
             {/* Métodos de entrega */}
-            <div className="space-y-2">
+            <div className="space-y-2 mt-6">
               <h5 className="text-sm font-semibold text-white">Métodos de entrega</h5>
               <div className="space-y-1.5 text-sm text-gray-400">
                 {config.store_pickup_enabled && (
