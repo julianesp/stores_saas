@@ -29,14 +29,19 @@ import {
   ImageIcon,
 } from "lucide-react";
 
+import dynamic from "next/dynamic";
 import { ShippingZonesManager } from "@/components/store-config/shipping-zones-manager";
 import { ImageUploadField } from "@/components/store-config/image-upload-field";
-import { StoreQRGenerator } from "@/components/store-config/store-qr-generator";
 import {
   hasStorefrontAccess,
   getStorefrontBlockMessage,
 } from "@/lib/storefront-access";
 import Swal from "sweetalert2";
+
+const StoreQRGenerator = dynamic(
+  () => import("@/components/store-config/store-qr-generator").then(mod => ({ default: mod.StoreQRGenerator })),
+  { ssr: false }
+);
 
 export default function StoreConfigPage() {
   const { getToken } = useAuth();
