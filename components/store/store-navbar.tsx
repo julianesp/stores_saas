@@ -185,36 +185,46 @@ export function StoreNavbar({ config }: StoreNavbarProps) {
           </div>
         </div>
 
-        {/* Menú móvil */}
+        {/* Menú móvil - Overlay */}
         {isMenuOpen && (
-          <div className="md:hidden border-t py-4 space-y-2">
-            {navigation.map((item) => {
-              const Icon = item.icon;
-              const active = isActive(item.href);
+          <>
+            {/* Backdrop con blur */}
+            <div
+              className="fixed inset-0 backdrop-blur-sm bg-black/20 md:hidden z-40"
+              onClick={() => setIsMenuOpen(false)}
+            />
+            {/* Menú desplegable */}
+            <div className="fixed top-16 left-0 right-0 md:hidden bg-white shadow-lg z-50 max-h-[calc(100vh-64px)] overflow-y-auto">
+              <div className="px-4 py-4 space-y-2">
+                {navigation.map((item) => {
+                  const Icon = item.icon;
+                  const active = isActive(item.href);
 
-              return (
-                <Link
-                  key={item.name}
-                  href={item.href}
-                  onClick={() => setIsMenuOpen(false)}
-                  className={`flex items-center gap-3 px-4 py-3 rounded-lg transition-all ${
-                    active ? "font-semibold" : "text-gray-600 hover:bg-gray-100"
-                  }`}
-                  style={
-                    active
-                      ? {
-                          color: primaryColor,
-                          backgroundColor: `${primaryColor}10`,
-                        }
-                      : {}
-                  }
-                >
-                  <Icon className="h-5 w-5" />
-                  {item.name}
-                </Link>
-              );
-            })}
-          </div>
+                  return (
+                    <Link
+                      key={item.name}
+                      href={item.href}
+                      onClick={() => setIsMenuOpen(false)}
+                      className={`flex items-center gap-3 px-4 py-3 rounded-lg transition-all ${
+                        active ? "font-semibold" : "text-gray-600 hover:bg-gray-100"
+                      }`}
+                      style={
+                        active
+                          ? {
+                              color: primaryColor,
+                              backgroundColor: `${primaryColor}10`,
+                            }
+                          : {}
+                      }
+                    >
+                      <Icon className="h-5 w-5" />
+                      {item.name}
+                    </Link>
+                  );
+                })}
+              </div>
+            </div>
+          </>
         )}
       </div>
     </nav>
