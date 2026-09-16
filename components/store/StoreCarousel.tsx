@@ -40,7 +40,7 @@ export function StoreCarousel({
   if (images.length === 0) return null;
 
   return (
-    <div className="relative w-full h-64 md:h-96 lg:h-[450px] overflow-hidden">
+    <div className="relative w-full h-80 md:h-[480px] lg:h-[560px] overflow-hidden">
       {images.map((src, index) => (
         <div
           key={src}

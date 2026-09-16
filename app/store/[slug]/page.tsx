@@ -60,6 +60,11 @@ export default function StorefrontPage() {
   // Se limpia con un timeout tras la duración de la animación (140ms).
   const [pulsingProductId, setPulsingProductId] = useState<string | null>(null);
 
+  // Cuántos productos se muestran de golpe. El botón "Ver más" agrega otro
+  // bloque. Se reinicia al buscar o cambiar de categoría.
+  const PRODUCTS_PER_PAGE = 12;
+  const [visibleCount, setVisibleCount] = useState(PRODUCTS_PER_PAGE);
+
   useEffect(() => {
     loadStore();
   }, [slug]);
@@ -92,6 +97,7 @@ export default function StorefrontPage() {
       const productsData = await getStoreProducts(slug, categoryId || undefined);
       setProducts(productsData);
       setSelectedCategory(categoryId);
+      setVisibleCount(PRODUCTS_PER_PAGE);
       // En móvil, cerrar el panel de categorías y llevar al usuario a la lista
       setShowFilters(false);
       if (window.innerWidth < 1024) {
@@ -147,16 +153,26 @@ export default function StorefrontPage() {
   // Al escribir en la búsqueda: actualiza el término y, al empezar a escribir
   // (la barra flota sobre el hero), baja a la grilla para que los resultados
   // filtrados queden a la vista.
+  // Baja suavemente hacia la sección de productos. Deja un margen arriba para
+  // que el buscador fijo del header no tape los primeros resultados.
+  const scrollToProducts = () => {
+    requestAnimationFrame(() => {
+      const section = document.getElementById('productos');
+      if (!section) return;
+      const headerOffset = 80; // alto aprox. del buscador fijo
+      const top =
+        section.getBoundingClientRect().top + window.scrollY - headerOffset;
+      window.scrollTo({ top, behavior: 'smooth' });
+    });
+  };
+
   const handleSearchChange = (value: string) => {
     const wasEmpty = searchTerm.length === 0;
     setSearchTerm(value);
+    // Cada búsqueda nueva vuelve a mostrar solo el primer bloque de resultados.
+    setVisibleCount(PRODUCTS_PER_PAGE);
     if (wasEmpty && value.length > 0) {
-      // Deja renderizar el filtro antes de desplazar.
-      requestAnimationFrame(() => {
-        document
-          .getElementById('productos')
-          ?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-      });
+      scrollToProducts();
     }
   };
 
@@ -172,6 +188,10 @@ export default function StorefrontPage() {
     .filter((product, index, self) =>
       index === self.findIndex((p) => p.id === product.id)
     );
+
+  // Lo que realmente se pinta en el grid (el tope actual).
+  const visibleProducts = filteredProducts.slice(0, visibleCount);
+  const hasMoreProducts = visibleCount < filteredProducts.length;
 
   // Función para formatear stock de huevos
   const formatEggStock = (stock: number, productName: string) => {
@@ -247,15 +267,10 @@ export default function StorefrontPage() {
 
   return (
     <div className="relative bg-gray-50">
-      {/* Búsqueda: sin texto flota centrada sobre el hero; al escribir se vuelve
-          sticky bajo el navbar para seguir visible junto a los resultados. */}
-      <div
-        className={
-          searchTerm
-            ? 'sticky top-16 z-40 px-4 py-3 bg-white/80 backdrop-blur-sm border-b'
-            : 'absolute inset-x-0 top-4 z-40 px-4'
-        }
-      >
+      {/* Búsqueda en el header: siempre visible y fija arriba. Al recibir
+          enfoque baja suavemente hacia los productos para que el cliente vea
+          los resultados filtrados mientras escribe. */}
+      <div className="sticky top-0 z-40 px-4 py-3 bg-white/90 backdrop-blur-sm border-b shadow-sm">
         <div className="relative mx-auto w-full max-w-md">
           <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500 h-5 w-5 z-10 pointer-events-none" />
           <Input
@@ -263,6 +278,7 @@ export default function StorefrontPage() {
             placeholder="Buscar productos..."
             value={searchTerm}
             onChange={(e) => handleSearchChange(e.target.value)}
+            onFocus={scrollToProducts}
             className="pl-10 text-gray-700 bg-white/95 shadow-lg backdrop-blur-sm"
           />
         </div>
@@ -299,7 +315,7 @@ export default function StorefrontPage() {
 
         return (
           <div
-            className="relative w-full py-16 md:py-24 overflow-hidden"
+            className="relative w-full py-28 md:py-40 lg:py-48 overflow-hidden"
             style={{ background: `linear-gradient(135deg, ${primaryColor}15 0%, ${secondaryColor}15 100%)` }}
           >
             <div className="absolute inset-0 opacity-10">
@@ -375,12 +391,12 @@ export default function StorefrontPage() {
           <div className="lg:col-span-1">
             
             <Button
-              variant="outline"
-              className="w-full lg:hidden mb-4 text-black"
+              size="lg"
+              className="w-full lg:hidden mb-4 bg-blue-600 hover:bg-blue-700 text-white font-semibold shadow-md text-base"
               onClick={() => setShowFilters(!showFilters)}
             >
-              <Filter className="h-4 w-4 mr-2 text-black" />
-              {showFilters ? 'Ocultar categorías' : 'Mostrar categorías'}
+              <Filter className="h-5 w-5 mr-2" />
+              {showFilters ? 'Ocultar categorías' : 'Filtrar por categorías'}
             </Button>
 
             <div className={`${showFilters ? 'block' : 'hidden'} lg:block space-y-4`}>
@@ -540,7 +556,7 @@ export default function StorefrontPage() {
               </div>
             ) : (
               <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 md:gap-6">
-                {filteredProducts.map((product) => {
+                {visibleProducts.map((product) => {
                   const images = parseProductImages(product.images);
                   const hasOffer = Boolean(product.discount_percentage && product.discount_percentage > 0);
                   const originalPrice = product.sale_price;
@@ -664,6 +680,25 @@ export default function StorefrontPage() {
                     </Link>
                   );
                 })}
+              </div>
+            )}
+
+            {/* Ver más: revela otro bloque de productos sin recargar */}
+            {hasMoreProducts && (
+              <div className="mt-8 flex flex-col items-center gap-2">
+                <Button
+                  variant="outline"
+                  size="lg"
+                  className="px-8 text-gray-900"
+                  onClick={() =>
+                    setVisibleCount((prev) => prev + PRODUCTS_PER_PAGE)
+                  }
+                >
+                  Ver más productos
+                </Button>
+                <p className="text-sm text-gray-500">
+                  Mostrando {visibleProducts.length} de {filteredProducts.length}
+                </p>
               </div>
             )}
           </div>

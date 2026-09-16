@@ -1,5 +1,6 @@
 /**
- * Genera el comprobante PDF de un pedido de la tienda pública, con el mismo
+ * Genera el resumen PDF de un pedido de la tienda pública (lista de productos,
+ * no es un comprobante de pago), con el mismo
  * estilo que el recibo del POS local (lib/invoice-helpers.ts) pero a partir de
  * los datos que tiene el checkout del cliente (sin tipos internos del POS).
  */
@@ -209,10 +210,10 @@ export async function generateOrderPDF(data: OrderPdfData) {
 
   doc.setFont('helvetica', 'normal');
   doc.setFontSize(8);
-  doc.text('Comprobante de pedido — envíalo junto a tu pago de Nequi', pageWidth / 2, yPos, { align: 'center' });
+  doc.text('Resumen de tu pedido — envíalo junto a tu pago de Nequi', pageWidth / 2, yPos, { align: 'center' });
   yPos += 4;
   if (data.deliveryMethod === 'shipping') {
-    doc.text('Presenta este comprobante para coordinar la entrega a domicilio', pageWidth / 2, yPos, { align: 'center' });
+    doc.text('Presenta este resumen para coordinar la entrega a domicilio', pageWidth / 2, yPos, { align: 'center' });
     yPos += 4;
   }
   if (data.storeWhatsapp) {

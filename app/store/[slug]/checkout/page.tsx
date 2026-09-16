@@ -158,7 +158,21 @@ export default function CheckoutPage() {
     if (!storeWhatsApp) return;
 
     let message = `Hola! Acabo de realizar el pedido *${orderNumber}* por ${formatCurrency(orderTotal)}.\n`;
-    message += `Mi nombre es ${customerName}.\n`;
+    message += `Mi nombre es ${customerName}.\n\n`;
+
+    // Detalle de los productos pedidos, para que el tendero tenga la lista
+    // también por WhatsApp (además del aviso de Telegram).
+    message += `*Productos:*\n`;
+    orderItems.forEach((item) => {
+      const hasOffer =
+        item.discount_percentage && item.discount_percentage > 0;
+      const finalPrice = hasOffer
+        ? calculateDiscountedPrice(item.price, item.discount_percentage!)
+        : item.price;
+      message += `• ${item.name} x${item.quantity} - ${formatCurrency(finalPrice * item.quantity)}\n`;
+    });
+    message += `\n`;
+
     message +=
       deliveryMethod === "pickup"
         ? "Recogeré el pedido en la tienda."
@@ -167,6 +181,27 @@ export default function CheckoutPage() {
 
     const url = buildWhatsAppLink(storeWhatsApp, message);
     if (url) window.open(url, "_blank");
+  };
+
+  // Descarga la imagen del QR de Nequi de la tienda, útil para quien paga
+  // desde el mismo celular y no puede escanear su propia pantalla.
+  const handleDownloadQr = async () => {
+    if (!config?.payment_qr_url) return;
+    try {
+      const res = await fetch(config.payment_qr_url);
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `QR-Nequi-${config.store_name || "tienda"}.png`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(url);
+    } catch (err) {
+      console.error("Error descargando el QR:", err);
+      toast.error("No se pudo descargar el QR");
+    }
   };
 
   const calculateItemTotal = (item: CartItem): number => {
@@ -390,13 +425,23 @@ export default function CheckoutPage() {
                     </p>
 
                     {config.payment_qr_url && (
-                      <div className="flex justify-center mb-3">
+                      <div className="flex flex-col items-center mb-3">
                         {/* eslint-disable-next-line @next/next/no-img-element */}
                         <img
                           src={config.payment_qr_url}
                           alt="Código QR de Nequi para pagar"
                           className="w-52 h-52 object-contain bg-white rounded-lg p-2 border"
                         />
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          onClick={handleDownloadQr}
+                          className="mt-2 text-purple-600 hover:text-purple-700 hover:bg-purple-100"
+                        >
+                          <Download className="h-4 w-4 mr-1.5" />
+                          Descargar QR
+                        </Button>
                       </div>
                     )}
 
@@ -430,7 +475,8 @@ export default function CheckoutPage() {
                 )}
 
                 <div className="grid grid-cols-1 gap-3">
-                  {/* Descargar comprobante del pedido en PDF */}
+                  {/* Descargar el resumen del pedido en PDF (lista de
+                      productos, NO es un comprobante de pago) */}
                   <Button
                     type="button"
                     size="lg"
@@ -444,7 +490,7 @@ export default function CheckoutPage() {
                     ) : (
                       <Download className="h-5 w-5 mr-2" />
                     )}
-                    Descargar comprobante (PDF)
+                    Descargar mi pedido (PDF)
                   </Button>
 
                   {/* Enviar el pedido por WhatsApp con el comprobante de pago */}
@@ -474,7 +520,10 @@ export default function CheckoutPage() {
                 <p className="font-semibold mb-2">¿Cómo completo mi pedido?</p>
                 <ul className="space-y-1 list-decimal list-inside">
                   <li>Paga escaneando el código QR de Nequi con tu celular.</li>
-                  <li>Descarga tu comprobante (PDF) con la lista de productos.</li>
+                  <li>
+                    Descarga el resumen de tu pedido (PDF) con la lista de
+                    productos.
+                  </li>
                   <li>
                     Envía por WhatsApp el comprobante del pago de Nequi para
                     confirmar tu pedido.
