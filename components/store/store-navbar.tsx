@@ -190,7 +190,7 @@ export function StoreNavbar({ config }: StoreNavbarProps) {
           <>
             {/* Backdrop con blur */}
             <div
-              className="fixed inset-0 backdrop-blur-sm bg-black/20 md:hidden z-40"
+              className="fixed inset-0 top-16 backdrop-blur-sm bg-black/20 md:hidden z-40"
               onClick={() => setIsMenuOpen(false)}
             />
             {/* Menú desplegable */}
@@ -205,7 +205,7 @@ export function StoreNavbar({ config }: StoreNavbarProps) {
                       key={item.name}
                       href={item.href}
                       onClick={() => setIsMenuOpen(false)}
-                      className={`flex items-center gap-3 px-4 py-3 rounded-lg transition-all ${
+                      className={`flex flex-col items-center justify-center gap-3 px-4 py-3 rounded-lg transition-all ${
                         active ? "font-semibold" : "text-gray-600 hover:bg-gray-100"
                       }`}
                       style={
