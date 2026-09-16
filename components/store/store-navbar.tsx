@@ -95,17 +95,17 @@ export function StoreNavbar({ config }: StoreNavbarProps) {
             className="flex items-center gap-3 group"
           >
             {config.store_logo_url ? (
-              <div className="relative w-12 h-12 rounded-lg overflow-hidden transition-transform group-hover:scale-105">
+              <div className="relative w-12 h-12 rounded-full overflow-hidden transition-transform group-hover:scale-105">
                 <Image
                   src={config.store_logo_url}
                   alt={storeName}
                   fill
-                  className="object-contain"
+                  className="object-cover"
                 />
               </div>
             ) : (
               <div
-                className="p-2 rounded-lg transition-transform group-hover:scale-110"
+                className="p-2 rounded-full transition-transform group-hover:scale-110"
                 style={{ backgroundColor: `${primaryColor}20` }}
               >
                 <Store className="h-6 w-6" style={{ color: primaryColor }} />
