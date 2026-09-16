@@ -438,8 +438,9 @@ export default function ProductDetailPage() {
                   <Link
                     key={relatedProduct.id}
                     href={`/store/${slug}/product/${relatedProduct.id}`}
+                    className="cursor-pointer"
                   >
-                    <Card className="h-full hover:shadow-lg transition-shadow cursor-pointer">
+                    <Card className="h-full hover:shadow-xl hover:scale-105 transition-all duration-300 cursor-pointer">
                       <CardContent className="p-0">
                         {/* Imagen */}
                         <div className="relative aspect-square bg-gray-100 overflow-hidden rounded-t-lg">
