@@ -599,4 +599,290 @@ app.get('/:slug/order/:orderNumber/status', async (c) => {
   }
 });
 
+// POST /api/storefront/auth/register/:slug - Registrar usuario en tienda
+app.post('/auth/register/:slug', async (c) => {
+  const slug = c.req.param('slug');
+
+  try {
+    const body = await c.req.json<{
+      name: string;
+      email: string;
+      password: string;
+      phone?: string;
+    }>();
+
+    const { name, email, password, phone } = body;
+
+    // Validar campos requeridos
+    if (!slug || !name || !email || !password) {
+      return c.json<APIResponse>({
+        success: false,
+        error: 'Faltan campos requeridos',
+      }, 400);
+    }
+
+    // Validar email
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email)) {
+      return c.json<APIResponse>({
+        success: false,
+        error: 'Correo electrónico inválido',
+      }, 400);
+    }
+
+    // Validar contraseña
+    if (password.length < 6) {
+      return c.json<APIResponse>({
+        success: false,
+        error: 'La contraseña debe tener al menos 6 caracteres',
+      }, 400);
+    }
+
+    // Verificar que la tienda existe y está activa
+    const store = await findActiveStore(c.env.DB, slug);
+    if (!store) {
+      return c.json<APIResponse>({
+        success: false,
+        error: 'Tienda no encontrada',
+      }, 404);
+    }
+
+    // Verificar que el email no esté ya registrado en esta tienda
+    const existing = await c.env.DB.prepare(
+      `SELECT id FROM storefront_users WHERE tenant_id = ? AND email = ?`
+    )
+      .bind(store.id, email)
+      .first();
+
+    if (existing) {
+      return c.json<APIResponse>({
+        success: false,
+        error: 'Este correo ya está registrado en la tienda',
+      }, 400);
+    }
+
+    // Hash de la contraseña usando SubtleCrypto (Web Crypto API)
+    const encoder = new TextEncoder();
+    const salt = crypto.getRandomValues(new Uint8Array(16));
+    const saltHex = Array.from(salt).map(b => b.toString(16).padStart(2, '0')).join('');
+
+    const keyMaterial = await crypto.subtle.importKey(
+      'raw',
+      encoder.encode(password),
+      { name: 'PBKDF2' },
+      false,
+      ['deriveBits']
+    );
+
+    const derivedBits = await crypto.subtle.deriveBits(
+      {
+        name: 'PBKDF2',
+        salt: salt,
+        iterations: 10000,
+        hash: 'SHA-256',
+      },
+      keyMaterial,
+      256
+    );
+
+    const hashArray = Array.from(new Uint8Array(derivedBits));
+    const hashHex = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+    const passwordHash = `${saltHex}:${hashHex}`;
+
+    const userId = generateId('storefront_user');
+
+    // Insertar usuario
+    await c.env.DB.prepare(
+      `INSERT INTO storefront_users (id, tenant_id, email, name, phone, password_hash, created_at, updated_at)
+       VALUES (?, ?, ?, ?, ?, ?, datetime('now'), datetime('now'))`
+    )
+      .bind(userId, store.id, email, name, phone || null, passwordHash)
+      .run();
+
+    return c.json<APIResponse>({
+      success: true,
+      data: {
+        id: userId,
+        email,
+        name,
+        createdAt: new Date().toISOString(),
+      },
+    }, 201);
+  } catch (error: any) {
+    console.error('Register error:', error);
+    return c.json<APIResponse>({
+      success: false,
+      error: 'Error al registrarse',
+    }, 500);
+  }
+});
+
+// POST /api/storefront/auth/login/:slug - Iniciar sesión en tienda
+app.post('/auth/login/:slug', async (c) => {
+  const slug = c.req.param('slug');
+
+  try {
+    const body = await c.req.json<{
+      email: string;
+      password: string;
+    }>();
+
+    const { email, password } = body;
+
+    // Validar campos requeridos
+    if (!slug || !email || !password) {
+      return c.json<APIResponse>({
+        success: false,
+        error: 'Faltan campos requeridos',
+      }, 400);
+    }
+
+    // Verificar que la tienda existe y está activa
+    const store = await findActiveStore(c.env.DB, slug);
+    if (!store) {
+      return c.json<APIResponse>({
+        success: false,
+        error: 'Tienda no encontrada',
+      }, 404);
+    }
+
+    // Buscar usuario
+    const user = await c.env.DB.prepare(
+      `SELECT id, email, name, phone, password_hash, created_at FROM storefront_users WHERE tenant_id = ? AND email = ?`
+    )
+      .bind(store.id, email)
+      .first<{
+        id: string;
+        email: string;
+        name: string;
+        phone?: string;
+        password_hash: string;
+        created_at: string;
+      }>();
+
+    if (!user) {
+      return c.json<APIResponse>({
+        success: false,
+        error: 'Correo o contraseña incorrectos',
+      }, 401);
+    }
+
+    // Verificar contraseña
+    const [saltHex, hash] = user.password_hash.split(':');
+    const salt = new Uint8Array(
+      saltHex.match(/.{1,2}/g)!.map(byte => parseInt(byte, 16))
+    );
+
+    const encoder = new TextEncoder();
+    const keyMaterial = await crypto.subtle.importKey(
+      'raw',
+      encoder.encode(password),
+      { name: 'PBKDF2' },
+      false,
+      ['deriveBits']
+    );
+
+    const derivedBits = await crypto.subtle.deriveBits(
+      {
+        name: 'PBKDF2',
+        salt: salt,
+        iterations: 10000,
+        hash: 'SHA-256',
+      },
+      keyMaterial,
+      256
+    );
+
+    const hashArray = Array.from(new Uint8Array(derivedBits));
+    const verifyHash = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+
+    if (hash !== verifyHash) {
+      return c.json<APIResponse>({
+        success: false,
+        error: 'Correo o contraseña incorrectos',
+      }, 401);
+    }
+
+    return c.json<APIResponse>({
+      success: true,
+      data: {
+        id: user.id,
+        email: user.email,
+        name: user.name,
+        createdAt: user.created_at,
+      },
+    });
+  } catch (error: any) {
+    console.error('Login error:', error);
+    return c.json<APIResponse>({
+      success: false,
+      error: 'Error al iniciar sesión',
+    }, 500);
+  }
+});
+
+// GET /api/storefront/stats/:slug/users - Obtener estadísticas de usuarios registrados
+app.get('/stats/:slug/users', async (c) => {
+  const slug = c.req.param('slug');
+
+  try {
+    // Verificar que la tienda existe y está activa
+    const store = await findActiveStore(c.env.DB, slug);
+    if (!store) {
+      return c.json<APIResponse>({
+        success: false,
+        error: 'Tienda no encontrada',
+      }, 404);
+    }
+
+    // Obtener estadísticas de usuarios
+    const stats = await c.env.DB.prepare(
+      `SELECT
+        COUNT(*) as total_users,
+        COUNT(CASE WHEN DATE(created_at) = DATE('now') THEN 1 END) as today_users,
+        COUNT(CASE WHEN DATE(created_at) >= DATE('now', '-7 days') THEN 1 END) as week_users,
+        COUNT(CASE WHEN DATE(created_at) >= DATE('now', '-30 days') THEN 1 END) as month_users
+       FROM storefront_users
+       WHERE tenant_id = ?`
+    )
+      .bind(store.id)
+      .first<{
+        total_users: number;
+        today_users: number;
+        week_users: number;
+        month_users: number;
+      }>();
+
+    // Obtener registros por día en los últimos 30 días
+    const registrationsByDay = await c.env.DB.prepare(
+      `SELECT
+        DATE(created_at) as date,
+        COUNT(*) as count
+       FROM storefront_users
+       WHERE tenant_id = ? AND DATE(created_at) >= DATE('now', '-30 days')
+       GROUP BY DATE(created_at)
+       ORDER BY date ASC`
+    )
+      .bind(store.id)
+      .all<{ date: string; count: number }>();
+
+    return c.json<APIResponse>({
+      success: true,
+      data: {
+        total_users: stats?.total_users || 0,
+        today_users: stats?.today_users || 0,
+        week_users: stats?.week_users || 0,
+        month_users: stats?.month_users || 0,
+        registrations_by_day: registrationsByDay.results || [],
+      },
+    });
+  } catch (error: any) {
+    console.error('Error fetching user stats:', error);
+    return c.json<APIResponse>({
+      success: false,
+      error: 'Error al obtener estadísticas',
+    }, 500);
+  }
+});
+
 export default app;

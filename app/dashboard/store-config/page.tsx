@@ -36,6 +36,7 @@ import {
   hasStorefrontAccess,
   getStorefrontBlockMessage,
 } from "@/lib/storefront-access";
+import { StorefrontUserStats } from "@/components/store/storefront-user-stats";
 import Swal from "sweetalert2";
 
 const StoreQRGenerator = dynamic(
@@ -762,6 +763,21 @@ export default function StoreConfigPage() {
 
       {/* Código QR de la tienda */}
       {storeSlug && <StoreQRGenerator storeSlug={storeSlug} storeName={storeName} />}
+
+      {/* Estadísticas de clientes registrados */}
+      {storeSlug && profile && (
+        <Card>
+          <CardHeader>
+            <CardTitle>Estadísticas de Clientes</CardTitle>
+            <CardDescription>
+              Número de clientes registrados en tu tienda
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <StorefrontUserStats slug={storeSlug} storeId={profile.id} />
+          </CardContent>
+        </Card>
+      )}
 
       {/* Términos y condiciones */}
       <Card>
