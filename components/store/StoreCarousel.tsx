@@ -3,7 +3,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import Image from 'next/image';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
-import { Button } from '@/components/ui/button';
 
 interface StoreCarouselProps {
   images: string[];
@@ -68,13 +67,6 @@ export function StoreCarousel({
                 {storeDescription}
               </p>
             )}
-            <Button
-              size="lg"
-              className="bg-white hover:bg-gray-100 text-gray-900 font-semibold shadow-xl"
-              onClick={onExploreClick}
-            >
-              Ver Productos
-            </Button>
           </div>
         </div>
       </div>
