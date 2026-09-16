@@ -406,6 +406,30 @@ export default function StoreConfigPage() {
               rows={3}
             />
           </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="minOrder">
+              Pedido Mínimo en Tienda Online (COP)
+            </Label>
+            <Input
+              id="minOrder"
+              type="number"
+              inputMode="numeric"
+              value={storeMinOrder || ""}
+              onChange={(e) => setStoreMinOrder(Number(e.target.value) || 0)}
+              placeholder="5000"
+              min="0"
+              step="1000"
+            />
+            <p className="text-xs text-gray-500">
+              Monto mínimo que los clientes deben gastar para completar un
+              pedido en la tienda online.
+            </p>
+            <p className="text-xs text-gray-400 italic">
+              💡 El mínimo obligatorio es $5.000 COP. Puedes subirlo si tu
+              negocio lo necesita, o ponerlo en 0 para no exigir mínimo.
+            </p>
+          </div>
         </CardContent>
       </Card>
 
@@ -727,36 +751,6 @@ export default function StoreConfigPage() {
             />
           </div>
 
-          <div className="space-y-2">
-            <Label htmlFor="minOrder">
-              Pedido Mínimo en Tienda Online (COP)
-            </Label>
-            <Input
-              id="minOrder"
-              type="number"
-              inputMode="numeric"
-              value={storeMinOrder || ""}
-              onChange={(e) => setStoreMinOrder(Number(e.target.value) || 0)}
-              placeholder="5000"
-              min="0"
-              step="1000"
-            />
-            <div className="flex items-center justify-between">
-              <p className="text-xs text-gray-500">
-                Monto mínimo que los clientes deben gastar para completar un
-                pedido en la tienda online.
-              </p>
-              {storeMinOrder > 0 && (
-                <p className="text-sm font-semibold text-brand">
-                  ${storeMinOrder.toLocaleString("es-CO")}
-                </p>
-              )}
-            </div>
-            <p className="text-xs text-gray-400 italic">
-              💡 El mínimo obligatorio es $5.000 COP. Puedes subirlo si tu
-              negocio lo necesita, o ponerlo en 0 para no exigir mínimo.
-            </p>
-          </div>
         </CardContent>
       </Card>
 
