@@ -196,7 +196,7 @@ export function StoreNavbar({ config }: StoreNavbarProps) {
             {/* Menú desplegable */}
             <div className="fixed top-16 left-0 right-0 md:hidden bg-white shadow-lg z-50 max-h-[calc(100vh-64px)] overflow-y-auto">
               <div className="px-4 py-4 space-y-2">
-                {navigation.map((item) => {
+                {navigation.map((item, index) => {
                   const Icon = item.icon;
                   const active = isActive(item.href);
 
@@ -205,17 +205,20 @@ export function StoreNavbar({ config }: StoreNavbarProps) {
                       key={item.name}
                       href={item.href}
                       onClick={() => setIsMenuOpen(false)}
-                      className={`flex flex-col items-center justify-center gap-3 px-4 py-3 rounded-lg transition-all ${
+                      className={`flex flex-col items-center justify-center gap-3 px-4 py-3 rounded-lg transition-all animate-in fade-in slide-in-from-top-4 ${
                         active ? "font-semibold" : "text-gray-600 hover:bg-gray-100"
                       }`}
-                      style={
-                        active
+                      style={{
+                        ...{
+                          animationDelay: `${index * 75}ms`,
+                        },
+                        ...(active
                           ? {
                               color: primaryColor,
                               backgroundColor: `${primaryColor}10`,
                             }
-                          : {}
-                      }
+                          : {}),
+                      }}
                     >
                       <Icon className="h-5 w-5" />
                       {item.name}
