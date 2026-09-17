@@ -238,6 +238,23 @@ export default function CheckoutPage() {
       : 0;
   const total = subtotal + shippingAmount;
 
+  // ¿Están todos los datos obligatorios listos para confirmar el pedido?
+  // Mientras esto sea false, el botón "Confirmar Pedido" queda deshabilitado
+  // (gris); cuando se completa todo, se habilita (azul).
+  const meetsMinOrder = !(
+    config?.store_min_order &&
+    config.store_min_order > 0 &&
+    subtotal < config.store_min_order
+  );
+  const shippingDataReady =
+    deliveryMethod === "pickup" ||
+    (deliveryAddress.trim().length > 0 && Boolean(selectedZoneId));
+  const isFormValid =
+    customerName.trim().length > 0 &&
+    customerPhone.trim().length > 0 &&
+    shippingDataReady &&
+    meetsMinOrder;
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
@@ -864,29 +881,6 @@ export default function CheckoutPage() {
                     </div>
                   )}
 
-                  <Button
-                    type="submit"
-                    size="lg"
-                    className="w-full mt-6 text-lg"
-                    style={{ backgroundColor: primaryColor }}
-                    disabled={
-                      submitting ||
-                      Boolean(config.store_min_order && config.store_min_order > 0 && subtotal < config.store_min_order)
-                    }
-                  >
-                    {submitting ? (
-                      <>
-                        <Loader2 className="h-5 w-5 mr-2 animate-spin" />
-                        Procesando...
-                      </>
-                    ) : (
-                      <>
-                        <ShoppingCart className="h-5 w-5 mr-2" />
-                        Confirmar Pedido
-                      </>
-                    )}
-                  </Button>
-
                   <p className="text-xs text-black text-center mt-4">
                     Al confirmar, se creará tu pedido y podrás pagar con Nequi y
                     enviar tu comprobante por WhatsApp
@@ -894,6 +888,38 @@ export default function CheckoutPage() {
                 </CardContent>
               </Card>
             </div>
+          </div>
+        </div>
+
+        {/* Barra fija inferior con el botón de confirmar. Queda deshabilitado
+            (gris) mientras falten datos y se habilita (azul) al completarlos.
+            El padding inferior del contenido evita que la barra tape el resumen. */}
+        <div className="h-24" aria-hidden="true" />
+        <div className="fixed bottom-0 inset-x-0 z-50 bg-white border-t shadow-[0_-2px_10px_rgba(0,0,0,0.08)]">
+          <div className="max-w-7xl mx-auto px-4 py-3">
+            <Button
+              type="submit"
+              size="lg"
+              className="w-full text-lg transition-colors disabled:opacity-100 disabled:bg-gray-300 disabled:text-gray-500 disabled:cursor-not-allowed"
+              style={
+                isFormValid && !submitting
+                  ? { backgroundColor: primaryColor }
+                  : undefined
+              }
+              disabled={submitting || !isFormValid}
+            >
+              {submitting ? (
+                <>
+                  <Loader2 className="h-5 w-5 mr-2 animate-spin" />
+                  Procesando...
+                </>
+              ) : (
+                <>
+                  <ShoppingCart className="h-5 w-5 mr-2" />
+                  {isFormValid ? "Confirmar Pedido" : "Completa tus datos"}
+                </>
+              )}
+            </Button>
           </div>
         </div>
       </form>
