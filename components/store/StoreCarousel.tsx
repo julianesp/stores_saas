@@ -39,7 +39,7 @@ export function StoreCarousel({
   if (images.length === 0) return null;
 
   return (
-    <div className="relative w-full h-80 md:h-[480px] lg:h-[560px] overflow-hidden">
+    <div className="relative w-full h-56 md:h-72 lg:h-80 overflow-hidden">
       {images.map((src, index) => (
         <div
           key={src}
@@ -59,11 +59,11 @@ export function StoreCarousel({
 
       {/* Overlay con texto */}
       <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/30 to-transparent">
-        <div className="max-w-7xl mx-auto px-4 h-full flex items-end pb-12 md:pb-16">
+        <div className="max-w-7xl mx-auto px-4 h-full flex items-end pb-6 md:pb-10">
           <div className="text-white">
-            <h1 className="text-4xl md:text-6xl font-bold mb-3">{storeName}</h1>
+            <h1 className="text-3xl md:text-5xl font-bold mb-2">{storeName}</h1>
             {storeDescription && (
-              <p className="text-lg md:text-2xl text-white/90 max-w-2xl mb-6">
+              <p className="text-base md:text-xl text-white/90 max-w-2xl mb-2">
                 {storeDescription}
               </p>
             )}

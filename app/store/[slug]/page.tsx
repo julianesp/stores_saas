@@ -300,7 +300,7 @@ export default function StorefrontPage() {
 
         return (
           <div
-            className="relative w-full py-28 md:py-40 lg:py-48 overflow-hidden"
+            className="relative w-full py-14 md:py-20 lg:py-24 overflow-hidden"
             style={{ background: `linear-gradient(135deg, ${primaryColor}15 0%, ${secondaryColor}15 100%)` }}
           >
             <div className="absolute inset-0 opacity-10">
