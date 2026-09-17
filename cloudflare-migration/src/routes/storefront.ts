@@ -121,7 +121,16 @@ app.get('/products/:slug', async (c) => {
 
     const bindings: any[] = [store.id];
 
-    if (category) {
+    if (category === '__uncategorized__') {
+      // Productos sin categoría real (nula o apuntando a una inexistente).
+      query += ` AND (
+        p.category_id IS NULL
+        OR NOT EXISTS (
+          SELECT 1 FROM categories c2
+          WHERE c2.id = p.category_id AND c2.tenant_id = p.tenant_id
+        )
+      )`;
+    } else if (category) {
       query += ' AND p.category_id = ?';
       bindings.push(category);
     }
@@ -228,9 +237,41 @@ app.get('/categories/:slug', async (c) => {
       .bind(store.id)
       .all();
 
+    const categories = (result.results || []) as any[];
+
+    // Categoría virtual "Sin categoría": agrupa los productos disponibles que
+    // no tienen category_id (o apuntan a una categoría inexistente). Sin esto,
+    // esos productos aparecen en "Todos los productos" pero no suman en ninguna
+    // categoría, dejando el conteo total incoherente con la barra lateral.
+    const uncategorized = await c.env.DB.prepare(
+      `SELECT COUNT(*) as product_count
+       FROM products p
+       WHERE p.tenant_id = ?
+         AND p.stock > 0
+         AND (
+           p.category_id IS NULL
+           OR NOT EXISTS (
+             SELECT 1 FROM categories c
+             WHERE c.id = p.category_id AND c.tenant_id = p.tenant_id
+           )
+         )`
+    )
+      .bind(store.id)
+      .first<{ product_count: number }>();
+
+    const uncategorizedCount = uncategorized?.product_count ?? 0;
+    if (uncategorizedCount > 0) {
+      categories.push({
+        id: '__uncategorized__',
+        name: 'Sin categoría',
+        description: null,
+        product_count: uncategorizedCount,
+      });
+    }
+
     return c.json<APIResponse>({
       success: true,
-      data: result.results,
+      data: categories,
     });
   } catch (error) {
     console.error('Error fetching categories:', error);
