@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import Link from "next/link";
 import { useAuth, useUser } from "@clerk/nextjs";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
@@ -13,6 +14,7 @@ import {
   FileText,
   Printer,
   Trash2,
+  Upload,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -551,8 +553,15 @@ export default function SalesPage() {
           </p>
         </div>
 
-        {/* Botones de Exportación */}
+        {/* Botones de Exportación e Importación */}
         <div className="flex flex-col sm:flex-row gap-2">
+          <Link href="/dashboard/sales/import">
+            <Button variant="outline" className="text-sm w-full">
+              <Upload className="mr-2 h-4 w-4" />
+              Importar de Siigo
+            </Button>
+          </Link>
+
           <Button
             variant="outline"
             onClick={handleExportAll}

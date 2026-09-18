@@ -602,6 +602,29 @@ export async function createSale(data: Partial<Sale>, getToken: GetTokenFn): Pro
   });
 }
 
+// Resultado de una importación en lote de ventas (ej. facturas de Siigo).
+export interface ImportSalesResult {
+  imported: number;
+  skipped: number;
+  productsCreated: number;
+  customersCreated: number;
+  errors: Array<{ document: string; error: string }>;
+}
+
+/**
+ * Importa ventas históricas en lote. Las facturas deben venir ya normalizadas
+ * (ver lib/siigo-import.ts). Crea productos/clientes faltantes y NO toca stock.
+ */
+export async function importSales(
+  invoices: unknown[],
+  getToken: GetTokenFn,
+): Promise<ImportSalesResult> {
+  return fetchAPI<ImportSalesResult>('/api/sales/import', getToken, {
+    method: 'POST',
+    body: JSON.stringify({ invoices }),
+  });
+}
+
 export async function updateSale(id: string, data: Partial<Sale>, getToken: GetTokenFn): Promise<Sale> {
   return fetchAPI<Sale>(`/api/sales/${id}`, getToken, {
     method: 'PUT',

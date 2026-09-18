@@ -295,6 +295,218 @@ app.post('/', async (c) => {
   }
 });
 
+// POST /api/sales/import - Importar ventas históricas en lote (ej. facturas de Siigo)
+//
+// A diferencia de POST /, este endpoint:
+//   - Recibe VARIAS facturas ya normalizadas en `invoices[]`.
+//   - Resuelve productos/clientes por match (código/NIT) y los CREA si no existen.
+//   - NO descuenta stock: son ventas pasadas, el inventario ya está cuadrado.
+//   - Deduplica por `document_number` (guardado en notes) para poder reimportar
+//     el mismo archivo sin duplicar ventas.
+app.post('/import', async (c) => {
+  const tenant: Tenant = c.get('tenant');
+
+  try {
+    const body = await c.req.json();
+    const invoices: any[] = body.invoices;
+
+    if (!Array.isArray(invoices) || invoices.length === 0) {
+      return c.json<APIResponse>({
+        success: false,
+        error: 'Missing required field: invoices (non-empty array)',
+      }, 400);
+    }
+
+    const tenantDB = new TenantDB(c.env.DB, tenant.id);
+
+    // Precargar productos y clientes existentes para resolver matches en memoria.
+    const existingProducts = await tenantDB.getAll<any>('products');
+    const existingCustomers = await tenantDB.getAll<any>('customers');
+
+    const productByCode = new Map<string, any>();
+    const productByName = new Map<string, any>();
+    for (const p of existingProducts) {
+      if (p.barcode) productByCode.set(String(p.barcode).trim().toLowerCase(), p);
+      if (p.name) productByName.set(String(p.name).trim().toLowerCase(), p);
+    }
+    const customerByIdNumber = new Map<string, any>();
+    const customerByName = new Map<string, any>();
+    for (const cu of existingCustomers) {
+      if (cu.id_number) customerByIdNumber.set(String(cu.id_number).trim().toLowerCase(), cu);
+      if (cu.name) customerByName.set(String(cu.name).trim().toLowerCase(), cu);
+    }
+
+    // Documentos ya importados (evita duplicados al reimportar el mismo archivo).
+    const importedDocs = new Set<string>();
+    const priorSales = await tenantDB.query<any>(
+      'sales',
+      "notes LIKE ?",
+      ['%[siigo:%'],
+    );
+    for (const s of priorSales) {
+      const m = String(s.notes || '').match(/\[siigo:([^\]]+)\]/);
+      if (m) importedDocs.add(m[1]);
+    }
+
+    const result = {
+      imported: 0,
+      skipped: 0,
+      productsCreated: 0,
+      customersCreated: 0,
+      errors: [] as Array<{ document: string; error: string }>,
+    };
+
+    let saleCount = await tenantDB.count('sales');
+
+    for (const inv of invoices) {
+      const docNumber: string = String(inv.document_number || '').trim();
+      try {
+        if (!docNumber) {
+          result.errors.push({ document: '(sin número)', error: 'Factura sin número de documento' });
+          continue;
+        }
+        if (importedDocs.has(docNumber)) {
+          result.skipped++;
+          continue;
+        }
+        if (!Array.isArray(inv.items) || inv.items.length === 0) {
+          result.errors.push({ document: docNumber, error: 'Factura sin items' });
+          continue;
+        }
+
+        // --- Resolver / crear cliente ---
+        let customerId: string | null = null;
+        const idNumber = inv.customer_id_number ? String(inv.customer_id_number).trim() : '';
+        const custName = inv.customer_name ? String(inv.customer_name).trim() : '';
+        if (idNumber || custName) {
+          let customer =
+            (idNumber && customerByIdNumber.get(idNumber.toLowerCase())) ||
+            (custName && customerByName.get(custName.toLowerCase())) ||
+            null;
+          if (!customer) {
+            const newCustomer: any = {
+              id: generateId('cust'),
+              name: custName || `Cliente ${idNumber}`,
+              id_number: idNumber || null,
+              loyalty_points: 0,
+              credit_limit: 0,
+              current_debt: 0,
+            };
+            await tenantDB.insert('customers', newCustomer);
+            if (idNumber) customerByIdNumber.set(idNumber.toLowerCase(), newCustomer);
+            if (custName) customerByName.set(custName.toLowerCase(), newCustomer);
+            customer = newCustomer;
+            result.customersCreated++;
+          }
+          customerId = customer.id;
+        }
+
+        // --- Resolver / crear productos de cada item ---
+        const saleItems: any[] = [];
+        for (const item of inv.items) {
+          const code = item.code ? String(item.code).trim() : '';
+          const name = item.name ? String(item.name).trim() : '';
+          let product =
+            (code && productByCode.get(code.toLowerCase())) ||
+            (name && productByName.get(name.toLowerCase())) ||
+            null;
+          if (!product) {
+            const newProduct: any = {
+              id: generateId('prod'),
+              barcode: code || null,
+              name: name || `Producto ${code || 'importado'}`,
+              description: 'Importado desde Siigo',
+              cost_price: 0,
+              // Precio de venta de referencia = precio unitario de la factura.
+              sale_price: Number(item.unit_price) || 0,
+              stock: 0,
+              min_stock: 0,
+            };
+            await tenantDB.insert('products', newProduct);
+            if (code) productByCode.set(code.toLowerCase(), newProduct);
+            if (name) productByName.set(name.toLowerCase(), newProduct);
+            product = newProduct;
+            result.productsCreated++;
+          }
+          saleItems.push({
+            id: generateId('item'),
+            product_id: product.id,
+            quantity: Math.max(1, Math.round(Number(item.quantity) || 1)),
+            unit_price: Number(item.unit_price) || 0,
+            discount: Number(item.discount) || 0,
+            subtotal: Number(item.subtotal) || 0,
+          });
+        }
+
+        // --- Crear la venta ---
+        saleCount++;
+        const importDate: string = inv.date && /^\d{4}-\d{2}-\d{2}$/.test(inv.date)
+          ? `${inv.date} 12:00:00`
+          : new Date().toISOString();
+        const dateStr = (inv.date || new Date().toISOString().split('T')[0]).replace(/-/g, '');
+        const saleNumber = `IMP-${dateStr}-${String(saleCount).padStart(6, '0')}`;
+        const paymentMethod: string = inv.payment_method || 'efectivo';
+        const total = Number(inv.total) || 0;
+
+        // Marca de origen para dedupe + nota original del usuario.
+        const notes = `${inv.notes ? String(inv.notes) + ' ' : ''}[siigo:${docNumber}]`.trim();
+
+        const saleData: any = {
+          id: generateId('sale'),
+          sale_number: saleNumber,
+          cashier_id: tenant.id,
+          customer_id: customerId,
+          subtotal: Number(inv.subtotal) || 0,
+          tax: Number(inv.tax) || 0,
+          discount: Number(inv.discount) || 0,
+          total,
+          payment_method: paymentMethod,
+          status: paymentMethod === 'credito' ? 'pendiente' : 'completada',
+          points_earned: 0,
+          notes,
+          created_at: importDate,
+        };
+
+        if (paymentMethod === 'credito') {
+          saleData.payment_status = 'pendiente';
+          saleData.amount_paid = 0;
+          saleData.amount_pending = total;
+          saleData.due_date = inv.date || null;
+        } else {
+          saleData.payment_status = null;
+          saleData.amount_paid = null;
+          saleData.amount_pending = null;
+          saleData.due_date = null;
+        }
+
+        await tenantDB.insert('sales', saleData);
+        await tenantDB.batchInsert(
+          'sale_items',
+          saleItems.map((it) => ({ ...it, sale_id: saleData.id })),
+        );
+        // NOTA: NO se actualiza stock — son ventas históricas.
+
+        importedDocs.add(docNumber);
+        result.imported++;
+      } catch (itemErr: any) {
+        result.errors.push({ document: docNumber || '(desconocido)', error: itemErr.message || 'Error desconocido' });
+      }
+    }
+
+    return c.json<APIResponse<typeof result>>({
+      success: true,
+      data: result,
+      message: `Importación completada: ${result.imported} ventas, ${result.skipped} omitidas (duplicadas)`,
+    });
+  } catch (error: any) {
+    console.error('Error importing sales:', error);
+    return c.json<APIResponse>({
+      success: false,
+      error: error.message || 'Failed to import sales',
+    }, 500);
+  }
+});
+
 // PUT /api/sales/:id - Update sale (mainly for confirming web orders)
 app.put('/:id', async (c) => {
   const tenant: Tenant = c.get('tenant');
