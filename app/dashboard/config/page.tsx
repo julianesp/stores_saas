@@ -502,8 +502,9 @@ export default function ConfigPage() {
               <li className="flex gap-3 text-sm text-purple-900">
                 <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-purple-600 text-xs font-bold text-white">2</span>
                 <span>
-                  Presiona el botón azul que dice <strong>"Crear clave de API"</strong>
-                  {" "}(o <strong>"Create API key"</strong>). Google la genera al instante.
+                  Arriba a la derecha verás el botón <strong>"Crear clave de API"</strong>
+                  {" "}(o <strong>"Create API key"</strong>). Tiene el fondo blanco, igual que
+                  la página. Presiónalo y Google la genera al instante.
                 </span>
               </li>
               <li className="flex gap-3 text-sm text-purple-900">
