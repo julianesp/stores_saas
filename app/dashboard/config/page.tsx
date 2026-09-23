@@ -26,6 +26,9 @@ import {
   Eye,
   EyeOff,
   ExternalLink,
+  Gift,
+  ShieldCheck,
+  CheckCircle2,
 } from "lucide-react";
 import { LoyaltySettings, LoyaltyTier } from "@/lib/types";
 import { formatCurrency } from "@/lib/utils";
@@ -470,35 +473,59 @@ export default function ConfigPage() {
             Conecta tu propia cuenta de Google AI para usar el análisis inteligente
           </CardDescription>
         </CardHeader>
-        <CardContent className="space-y-4">
-          {/* Guía paso a paso */}
+        <CardContent className="space-y-5">
+          {/* Botón grande: abre Google directo en la página de crear la clave */}
+          <a
+            href="https://aistudio.google.com/apikey"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="flex items-center justify-center gap-2 w-full rounded-lg bg-purple-600 px-4 py-4 text-base font-semibold text-white shadow-sm transition-colors hover:bg-purple-700"
+          >
+            <Gift className="h-5 w-5" />
+            Abrir Google y crear mi clave gratis
+            <ExternalLink className="h-4 w-4" />
+          </a>
+
+          {/* Guía paso a paso, en lenguaje simple */}
           <div className="p-4 bg-purple-50 border border-purple-200 rounded-lg space-y-3">
-            <p className="font-semibold text-purple-900 text-sm">¿Cómo obtener tu API Key gratuita?</p>
-            <ol className="text-sm text-purple-800 space-y-2 list-decimal list-inside">
-              <li>
-                Ve a{" "}
-                <a
-                  href="https://aistudio.google.com/app/apikey"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="underline font-medium inline-flex items-center gap-1"
-                >
-                  Google AI Studio <ExternalLink className="h-3 w-3" />
-                </a>{" "}
-                e inicia sesión con tu cuenta de Google
-              </li>
-              <li>Haz clic en <strong>"Create API Key"</strong></li>
-              <li>Selecciona <strong>"Create API key in new project"</strong></li>
-              <li>Copia la clave generada y pégala aquí abajo</li>
-            </ol>
-            <p className="text-xs text-purple-700">
-              El plan gratuito de Gemini incluye suficientes consultas para uso normal. Tu clave es privada y solo se usa para generar tus análisis.
+            <p className="font-semibold text-purple-900 text-sm">
+              Sigue estos 3 pasos (una sola vez):
             </p>
+            <ol className="space-y-3">
+              <li className="flex gap-3 text-sm text-purple-900">
+                <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-purple-600 text-xs font-bold text-white">1</span>
+                <span>
+                  Toca el botón morado de arriba. Se abrirá Google y te pedirá
+                  <strong> iniciar sesión con tu correo de Gmail</strong> (el tuyo de siempre).
+                </span>
+              </li>
+              <li className="flex gap-3 text-sm text-purple-900">
+                <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-purple-600 text-xs font-bold text-white">2</span>
+                <span>
+                  Presiona el botón azul que dice <strong>"Crear clave de API"</strong>
+                  {" "}(o <strong>"Create API key"</strong>). Google la genera al instante.
+                </span>
+              </li>
+              <li className="flex gap-3 text-sm text-purple-900">
+                <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-purple-600 text-xs font-bold text-white">3</span>
+                <span>
+                  <strong>Copia</strong> el código que aparece (empieza con <code>AIza</code>) y
+                  <strong> pégalo aquí abajo</strong>. Luego toca <strong>Guardar</strong>.
+                </span>
+              </li>
+            </ol>
+            <div className="flex items-start gap-2 pt-1 text-xs text-purple-700">
+              <ShieldCheck className="h-4 w-4 shrink-0 mt-0.5" />
+              <span>
+                Es <strong>totalmente gratis</strong> y suficiente para el uso diario. Tu clave es
+                privada, se guarda en tu cuenta y solo se usa para tus propios análisis.
+              </span>
+            </div>
           </div>
 
           {/* Campo de la key */}
           <div className="space-y-2">
-            <label className="text-sm font-medium">Tu API Key de Gemini</label>
+            <label className="text-sm font-medium">Pega aquí tu clave</label>
             <div className="flex gap-2">
               <div className="relative flex-1">
                 <Input
@@ -520,14 +547,20 @@ export default function ConfigPage() {
                 {savingGeminiKey ? "Guardando..." : "Guardar"}
               </Button>
             </div>
-            {geminiApiKey && (
-              <p className="text-xs text-green-600 font-medium">
-                ✓ API Key configurada — el análisis IA usará tu cuenta de Google
+            {geminiApiKey && geminiApiKey.startsWith("AIza") && (
+              <p className="flex items-center gap-1 text-xs text-green-600 font-medium">
+                <CheckCircle2 className="h-4 w-4" />
+                ¡Listo! El análisis con IA ya usa tu cuenta de Google.
+              </p>
+            )}
+            {geminiApiKey && !geminiApiKey.startsWith("AIza") && (
+              <p className="text-xs text-amber-600">
+                La clave suele empezar con <code>AIza</code>. Revisa que la copiaste completa.
               </p>
             )}
             {!geminiApiKey && (
               <p className="text-xs text-gray-500">
-                Sin API Key configurada. Agrega la tuya para activar el análisis con IA.
+                Aún no has puesto tu clave. Sigue los 3 pasos de arriba para activar la IA.
               </p>
             )}
           </div>
