@@ -33,6 +33,7 @@ import { toast } from "sonner";
 import { AutoReportsConfig } from "@/components/config/auto-reports-config";
 import { PaymentQrConfig } from "@/components/config/payment-qr-config";
 import { TelegramConfig } from "@/components/config/telegram-config";
+import { GoogleDriveBackupConfig } from "@/components/config/google-drive-backup-config";
 import PosReviewCard from "@/components/dashboard/PosReviewCard";
 import { landingConfig } from "@/lib/landing-config";
 import { useAuth } from "@clerk/nextjs";
@@ -284,6 +285,11 @@ export default function ConfigPage() {
 
       {/* Alertas por Telegram (productos próximos a vencer) */}
       <TelegramConfig />
+
+      {/* Copia de seguridad de ventas a Google Drive */}
+      <div id="google-drive">
+        <GoogleDriveBackupConfig />
+      </div>
 
       {/* Estado del Sistema - Temporalmente oculto */}
       <Card>

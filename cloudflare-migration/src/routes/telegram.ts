@@ -418,10 +418,18 @@ app.post('/daily-summary', async (c) => {
       )
       .all();
 
-    // Fecha de "ayer" (el resumen corre en la mañana sobre el día que cerró)
-    const yesterday = new Date();
-    yesterday.setDate(yesterday.getDate() - 1);
-    const yesterdayStr = yesterday.toISOString().split('T')[0];
+    // Fecha de "ayer" en zona horaria de Colombia (UTC-5). created_at se guarda
+    // en UTC, así que un día Colombia [00:00, 24:00) UTC-5 equivale al rango
+    // [date 05:00 UTC, date+1 05:00 UTC). Usamos ese rango para que el resumen
+    // coincida con las "Ventas de Hoy" del dashboard (que corta a medianoche
+    // hora Colombia), en vez de DATE(created_at) que agrupa por fecha UTC.
+    const nowBogota = new Date(Date.now() - 5 * 60 * 60 * 1000);
+    const yesterdayStr = new Date(nowBogota.getTime() - 24 * 60 * 60 * 1000)
+      .toISOString()
+      .split('T')[0];
+    const dayStartUtc = `${yesterdayStr}T05:00:00.000Z`;
+    const dayEndUtc = new Date(new Date(`${yesterdayStr}T05:00:00.000Z`).getTime() + 24 * 60 * 60 * 1000)
+      .toISOString();
 
     let messagesSent = 0;
 
@@ -433,9 +441,9 @@ app.post('/daily-summary', async (c) => {
         .prepare(
           `SELECT COUNT(*) as total_sales, COALESCE(SUM(total), 0) as total_revenue
            FROM sales
-           WHERE tenant_id = ? AND DATE(created_at) = ? AND status = 'completada'`
+           WHERE tenant_id = ? AND created_at >= ? AND created_at < ? AND status = 'completada'`
         )
-        .bind(tenant.id, yesterdayStr)
+        .bind(tenant.id, dayStartUtc, dayEndUtc)
         .first<any>();
 
       if (salesData && salesData.total_sales > 0) {
@@ -445,12 +453,12 @@ app.post('/daily-summary', async (c) => {
              FROM sale_items si
              JOIN sales s ON si.sale_id = s.id
              JOIN products p ON si.product_id = p.id
-             WHERE s.tenant_id = ? AND DATE(s.created_at) = ? AND s.status = 'completada'
+             WHERE s.tenant_id = ? AND s.created_at >= ? AND s.created_at < ? AND s.status = 'completada'
              GROUP BY p.id, p.name
              ORDER BY qty DESC
              LIMIT 3`
           )
-          .bind(tenant.id, yesterdayStr)
+          .bind(tenant.id, dayStartUtc, dayEndUtc)
           .all();
 
         let ventas = `📊 <b>Ventas de ayer</b>\n${formatCOP(salesData.total_revenue)} en ${salesData.total_sales} ${salesData.total_sales === 1 ? 'venta' : 'ventas'}`;

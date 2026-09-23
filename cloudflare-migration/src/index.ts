@@ -40,6 +40,7 @@ import posReviewsRoutes from './routes/pos-reviews';
 import telegramRoutes from './routes/telegram';
 import telegramRecipientsRoutes from './routes/telegram-recipients';
 import businessTypePricesRoutes from './routes/business-type-prices';
+import { backupAuth, backupPublic } from './routes/backup';
 
 const app = new Hono<{ Bindings: Env }>();
 
@@ -238,6 +239,10 @@ app.post('/api/email/subscription-reminders', emailCronHandler);
 app.post('/api/email/stock-alerts', emailCronHandler);
 app.post('/api/email/abandoned-carts', emailCronHandler);
 
+// Rutas internas de respaldo a Drive (NO auth de Clerk; validan X-Cron-Secret).
+// Las llaman el flujo OAuth de Next.js y el cron del Worker.
+app.route('/api/backup-internal', backupPublic);
+
 // Team invitations public endpoint (NO auth - para usuarios no autenticados)
 app.get('/api/team-invitations/validate', async (c) => {
   const token = c.req.query('token');
@@ -338,6 +343,8 @@ app.route('/api/market', marketTrendsRoutes);
 app.route('/api/pos-reviews', posReviewsRoutes);
 app.route('/api/telegram-recipients', telegramRecipientsRoutes);
 app.route('/api/business-type-prices', businessTypePricesRoutes);
+// Respaldo a Drive - rutas del tendero (autenticadas)
+app.route('/api/backup', backupAuth);
 
 // 404 handler
 app.notFound((c) => {
@@ -424,6 +431,11 @@ async function scheduled(event: ScheduledEvent, env: Env, ctx: ExecutionContext)
     console.log('Debt reminders result:', debtResult);
   }
 
+  // Copia de seguridad de ventas a Google Drive.
+  // El trabajo pesado (Excel + subida a Drive) lo hace Next.js; aquí solo
+  // decidimos a quién disparar y llamamos a su endpoint /api/backup/run.
+  await runDriveBackups(env, ctx, hour);
+
   // A las 13h UTC (8 AM Colombia) - Alertas por Telegram.
   if (hour === 13) {
     // Vencimiento: solo notifica productos que entran por primera vez en el
@@ -440,6 +452,79 @@ async function scheduled(event: ScheduledEvent, env: Env, ctx: ExecutionContext)
   }
 
   console.log('Cron jobs completed');
+}
+
+/**
+ * Copia de seguridad de ventas del día a Google Drive.
+ *
+ * @param utcHour hora UTC actual (el cron dispara cada hora en punto).
+ *
+ * Dos fases, ambas independientes de que el tendero tenga el sistema abierto:
+ *   1. Disparo puntual: por cada tienda cuya backup_time (hora Colombia) coincide
+ *      con la hora actual, respalda las ventas de HOY.
+ *   2. Verificación matutina (7 AM Colombia = 12h UTC): busca copias de AYER que
+ *      no quedaron 'uploaded' y las reintenta.
+ *
+ * El Worker no genera el Excel ni habla con Google (ExcelJS y el SDK OAuth viven
+ * en Next.js): delega en POST {APP_URL}/api/backup/run, protegido por CRON_SECRET.
+ */
+async function runDriveBackups(env: Env, ctx: ExecutionContext, utcHour: number) {
+  if (!env.APP_URL) {
+    console.log('[backup] APP_URL no configurado; se omite el respaldo a Drive');
+    return;
+  }
+
+  // Fecha en zona Colombia (UTC-5) para "hoy" y "ayer".
+  const nowCo = new Date(Date.now() - 5 * 60 * 60 * 1000);
+  const colombiaHour = nowCo.getUTCHours();
+  const todayStr = nowCo.toISOString().split('T')[0];
+  const yesterday = new Date(nowCo.getTime() - 24 * 60 * 60 * 1000);
+  const yesterdayStr = yesterday.toISOString().split('T')[0];
+
+  const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+  if (env.CRON_SECRET) headers['X-Cron-Secret'] = env.CRON_SECRET;
+
+  // Llama al Worker (rutas internas) sin salir a la red.
+  const internal = async (path: string) => {
+    const req = new Request(`https://internal/api/backup-internal${path}`, { headers });
+    const res = await app.fetch(req, env, ctx);
+    return (await res.json()) as { success: boolean; data?: any[] };
+  };
+
+  // Dispara el respaldo de un día concreto para un tenant, en Next.js.
+  const triggerRun = async (userProfileId: string, date: string) => {
+    try {
+      const res = await fetch(`${env.APP_URL}/api/backup/run`, {
+        method: 'POST',
+        headers,
+        body: JSON.stringify({ user_profile_id: userProfileId, date }),
+      });
+      const json = await res.json().catch(() => ({}));
+      console.log(`[backup] run ${userProfileId} ${date}:`, JSON.stringify(json));
+    } catch (err) {
+      console.error(`[backup] error al disparar ${userProfileId} ${date}:`, err);
+    }
+  };
+
+  try {
+    // Fase 1 - disparo puntual según la hora elegida por cada tienda.
+    const hourStr = colombiaHour.toString().padStart(2, '0');
+    const due = await internal(`/due?hour=${hourStr}`);
+    for (const row of due.data || []) {
+      await triggerRun(row.user_profile_id, todayStr);
+    }
+
+    // Fase 2 - verificación matutina (7 AM Colombia): reintenta las de ayer.
+    if (colombiaHour === 7) {
+      const pending = await internal(`/pending-yesterday?date=${yesterdayStr}`);
+      for (const row of pending.data || []) {
+        console.log(`[backup] reintento matutino de ${row.user_profile_id} para ${yesterdayStr}`);
+        await triggerRun(row.user_profile_id, yesterdayStr);
+      }
+    }
+  } catch (err) {
+    console.error('[backup] error en runDriveBackups:', err);
+  }
 }
 
 // Export default compatible con ambos fetch y scheduled
