@@ -350,11 +350,13 @@ function DashboardLayoutInner({
         )}
 
         <div className="flex flex-col flex-1 overflow-hidden text-black">
-          {/* Mostrar banner para trial o suscripciones activas próximas a vencer */}
+          {/* Mostrar banner solo cuando queden 3 días o menos (trial o suscripción activa) */}
           {!loading &&
             !isSuperAdmin &&
             !isTeamMember &&
             subscriptionInfo?.daysLeft !== undefined &&
+            subscriptionInfo.daysLeft <= 3 &&
+            subscriptionInfo.daysLeft >= 0 &&
             (subscriptionInfo.status === "trial" || subscriptionInfo.status === "active") &&
             // Ocultar para la cuenta de demostración (julii1295@gmail.com)
             user?.emailAddresses[0]?.emailAddress !== "julii1295@gmail.com" && (

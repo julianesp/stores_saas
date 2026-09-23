@@ -31,6 +31,11 @@ export interface Env {
   // recomendado): se configura al registrar el webhook con setWebhook.
   TELEGRAM_WEBHOOK_SECRET?: string;
 
+  // URL base de la app Next.js (p. ej. https://posib.dev). El cron llama a su
+  // endpoint /api/backup/run para generar el Excel del día y subirlo a Google
+  // Drive (ExcelJS y el SDK OAuth de Google viven en Next.js, no en el Worker).
+  APP_URL?: string;
+
   // D1 shared database
   DB: D1Database;
 
