@@ -6,6 +6,12 @@ compatibility_date = "2024-01-01"
 # Account details
 account_id = "b85347650ec6de9ad5b2873c3389d0e6"
 
+# Variables de nivel superior (el deploy usa --env="", así que aplican estas).
+# APP_URL: base del front Next.js al que el cron del respaldo a Drive llama
+# POST {APP_URL}/api/backup/run. Sin esto, runDriveBackups() se omite.
+[vars]
+APP_URL = "https://posib.dev"
+
 # Environment variables
 [env.production]
 vars = { ENVIRONMENT = "production" }
