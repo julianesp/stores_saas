@@ -10,7 +10,6 @@ import {
   CardDescription,
 } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
 import { HardDriveUpload, ExternalLink, CheckCircle2, AlertCircle } from "lucide-react";
 import { toast } from "sonner";
@@ -61,7 +60,8 @@ export function GoogleDriveBackupConfig() {
         const data = await res.json();
         const s: DriveSettings = data.data;
         setSettings(s);
-        setTime(s.backup_time || "22:00");
+        // Solo la hora cuenta (el cron ignora los minutos): normalizamos a HH:00.
+        setTime(`${(s.backup_time || "22:00").slice(0, 2)}:00`);
       }
     } catch {
       // silencioso; se muestra el estado por defecto
@@ -187,16 +187,24 @@ export function GoogleDriveBackupConfig() {
               <div>
                 <p className="text-sm font-medium">Hora de la copia</p>
                 <p className="text-xs text-muted-foreground">
-                  Cada noche a esta hora (Colombia).
+                  Cada día a esta hora (Colombia).
                 </p>
               </div>
               <div className="flex items-center gap-2">
-                <Input
-                  type="time"
-                  value={time}
-                  className="w-32"
-                  onChange={(e) => setTime(e.target.value)}
-                />
+                <select
+                  value={time.slice(0, 2)}
+                  className="flex h-9 w-32 rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
+                  onChange={(e) => setTime(`${e.target.value}:00`)}
+                >
+                  {Array.from({ length: 24 }, (_, h) => {
+                    const hh = h.toString().padStart(2, "0");
+                    return (
+                      <option key={hh} value={hh}>
+                        {hh}:00
+                      </option>
+                    );
+                  })}
+                </select>
                 <Button
                   variant="outline"
                   size="sm"

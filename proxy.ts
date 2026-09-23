@@ -6,6 +6,10 @@ const isPublicRoute = createRouteMatcher([
   '/',
   '/api/webhooks(.*)',
   '/api/public(.*)',
+  // Ruta interna del cron de respaldo a Drive: la llama el Worker con
+  // X-Cron-Secret (no hay sesión de Clerk). Se protege a sí misma con
+  // CRON_SECRET. Solo /run — los de OAuth (connect/callback) sí usan sesión.
+  '/api/backup/run',
   '/store(.*)',
   '/tienda(.*)',
   '/terminos(.*)',
