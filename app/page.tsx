@@ -34,11 +34,12 @@ import ClientStores from "@/components/landing/ClientStores";
 import PosReviews from "@/components/landing/PosReviews";
 import FAQ from "@/components/landing/FAQ";
 import Footer from "@/components/landing/Footer";
+import LandingShell from "@/components/landing/LandingShell";
 import { landingConfig } from "@/lib/landing-config";
 
 export default function Home() {
   return (
-    <div className="min-h-screen" style={{ background: "#0f1117" }}>
+    <LandingShell>
       {/* Header */}
       <NavbarRueda />
 
@@ -53,21 +54,21 @@ export default function Home() {
           className="pointer-events-none absolute inset-0"
           style={{
             background:
-              "radial-gradient(ellipse 80% 60% at 50% -10%, rgba(0,124,128,0.28) 0%, transparent 70%)",
+              "radial-gradient(ellipse 80% 60% at 50% -10%, var(--landing-glow) 0%, transparent 70%)",
           }}
         />
-        <div className="container relative mx-auto px-4 pt-32 md:pt-44 pb-16 md:pb-24 text-center">
+        <div className="container relative mx-auto px-4 pt-28 md:pt-44 pb-16 md:pb-24 text-center">
           {/* Etiqueta de confianza */}
-          <div className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-4 py-1.5 text-xs font-medium text-white/60 mb-8 backdrop-blur-sm">
+          <div className="lp-badge inline-flex items-center gap-2 rounded-full border px-4 py-1.5 text-xs font-medium mb-8 backdrop-blur-sm">
             <span className="h-1.5 w-1.5 rounded-full bg-brand animate-pulse" />
             Sistema POS para tiendas colombianas
           </div>
 
-          <h1 className="text-4xl sm:text-5xl md:text-7xl font-extrabold text-white tracking-tight mb-5 leading-[1.05]">
+          <h1 className="lp-text text-4xl sm:text-5xl md:text-7xl font-extrabold tracking-tight mb-5 leading-[1.05]">
             Tu tienda,{" "}
             <span className="text-brand">bajo control</span>
           </h1>
-          <p className="text-base sm:text-lg md:text-xl text-white/60 mb-10 max-w-xl mx-auto leading-relaxed px-2">
+          <p className="lp-muted text-base sm:text-lg md:text-xl mb-10 max-w-xl mx-auto leading-relaxed px-2">
             Punto de venta, inventario, fiados y reportes — todo desde el celular que ya tienes. Sin cajas registradoras ni equipos costosos.
           </p>
           <div className="flex flex-row gap-3 justify-center">
@@ -84,7 +85,7 @@ export default function Home() {
               <Button
                 size="lg"
                 variant="ghost"
-                className="h-12 px-7 text-sm font-medium text-white/70 hover:text-white hover:bg-white/8 cursor-pointer border border-white/10"
+                className="lp-ghost-btn h-12 px-7 text-sm font-medium cursor-pointer border"
               >
                 Ya tengo cuenta
               </Button>
@@ -92,7 +93,7 @@ export default function Home() {
           </div>
 
           {/* Social proof mínimo */}
-          <p className="mt-8 text-xs text-white/35">
+          <p className="lp-subtle mt-8 text-xs">
             Sin tarjeta de crédito · Cancela cuando quieras · Soporte en español
           </p>
         </div>
@@ -100,22 +101,22 @@ export default function Home() {
 
       {/* Del caos al control */}
       <FadeInSection>
-      <section className="border-t border-white/5">
+      <section className="lp-section-sep border-t">
         <div className="container mx-auto px-4 py-16 md:py-24">
           <div className="text-center mb-12 md:mb-16">
             <p className="text-xs font-semibold uppercase tracking-widest text-brand mb-3">
               Para la tienda de barrio
             </p>
-            <h2 className="text-2xl sm:text-3xl md:text-4xl font-bold text-white mb-4">
+            <h2 className="lp-text text-2xl sm:text-3xl md:text-4xl font-bold mb-4">
               Del cuaderno al control total
             </h2>
-            <p className="text-base text-white/50 max-w-lg mx-auto">
+            <p className="lp-muted text-base max-w-lg mx-auto">
               Mira cómo posib.dev transforma el día a día de tu negocio
             </p>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6 md:gap-8 max-w-5xl mx-auto">
-            <div className="group relative overflow-hidden rounded-2xl ring-1 ring-white/8 bg-white/3">
+            <div className="lp-card lp-border group relative overflow-hidden rounded-2xl ring-1">
               <div className="relative aspect-[4/5] overflow-hidden">
                 <Image
                   src="https://pub-ea40242d92ce470fbb6e43d46f01cefe.r2.dev/images/homepage_1.jpg"
@@ -139,7 +140,7 @@ export default function Home() {
               </div>
             </div>
 
-            <div className="group relative overflow-hidden rounded-2xl ring-1 ring-brand/20 bg-white/3">
+            <div className="lp-card group relative overflow-hidden rounded-2xl ring-1 ring-brand/20">
               <div className="relative aspect-[4/5] overflow-hidden">
                 <Image
                   src="https://pub-ea40242d92ce470fbb6e43d46f01cefe.r2.dev/images/homepage_2.jpg"
@@ -183,18 +184,18 @@ export default function Home() {
 
       {/* Videos */}
       <FadeInSection>
-      <section className="border-t border-white/5">
+      <section className="lp-section-sep border-t">
         <div className="container mx-auto px-4 py-16 md:py-20">
           <div className="text-center mb-10">
             <p className="text-xs font-semibold uppercase tracking-widest text-brand mb-3">
               Vélo en acción
             </p>
-            <h2 className="text-2xl md:text-3xl font-bold text-white">
+            <h2 className="lp-text text-2xl md:text-3xl font-bold">
               El sistema en 2 minutos
             </h2>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-5 max-w-4xl mx-auto">
-            <div className="rounded-2xl overflow-hidden ring-1 ring-white/8 bg-white/3">
+            <div className="lp-card lp-border rounded-2xl overflow-hidden ring-1">
               <div className="aspect-video">
                 <iframe
                   className="w-full h-full"
@@ -205,11 +206,11 @@ export default function Home() {
                 />
               </div>
               <div className="p-4">
-                <p className="font-semibold text-white text-sm">Punto de Venta Rápido</p>
-                <p className="text-white/50 text-xs mt-0.5">Escanea, cobra y registra en segundos</p>
+                <p className="lp-text font-semibold text-sm">Punto de Venta Rápido</p>
+                <p className="lp-muted text-xs mt-0.5">Escanea, cobra y registra en segundos</p>
               </div>
             </div>
-            <div className="rounded-2xl overflow-hidden ring-1 ring-white/8 bg-white/3">
+            <div className="lp-card lp-border rounded-2xl overflow-hidden ring-1">
               <div className="aspect-video">
                 <iframe
                   className="w-full h-full"
@@ -220,8 +221,8 @@ export default function Home() {
                 />
               </div>
               <div className="p-4">
-                <p className="font-semibold text-white text-sm">Registra una venta</p>
-                <p className="text-white/50 text-xs mt-0.5">Lleva el historial de cada transacción</p>
+                <p className="lp-text font-semibold text-sm">Registra una venta</p>
+                <p className="lp-muted text-xs mt-0.5">Lleva el historial de cada transacción</p>
               </div>
             </div>
           </div>
@@ -231,16 +232,16 @@ export default function Home() {
 
       {/* Funcionalidades principales — bento oscuro */}
       <FadeInSection>
-      <section className="border-t border-white/5">
+      <section className="lp-section-sep border-t">
         <div className="container mx-auto px-4 py-16 md:py-24">
           <div className="text-center mb-12">
             <p className="text-xs font-semibold uppercase tracking-widest text-brand mb-3">
               Todo en uno
             </p>
-            <h2 className="text-2xl sm:text-3xl md:text-4xl font-bold text-white">
+            <h2 className="lp-text text-2xl sm:text-3xl md:text-4xl font-bold">
               Funcionalidades principales
             </h2>
-            <p className="text-white/50 mt-3 max-w-lg mx-auto text-sm">
+            <p className="lp-muted mt-3 max-w-lg mx-auto text-sm">
               Todo lo que necesitas para administrar tu tienda de manera profesional
             </p>
           </div>
@@ -276,16 +277,14 @@ export default function Home() {
               <div
                 key={title}
                 className={`group rounded-2xl p-6 ring-1 transition-all duration-200 hover:ring-brand/40 ${
-                  accent
-                    ? "bg-brand/10 ring-brand/20"
-                    : "bg-white/3 ring-white/8"
+                  accent ? "bg-brand/10 ring-brand/20" : "lp-card lp-border"
                 }`}
               >
-                <div className={`inline-flex rounded-xl p-2.5 mb-4 ${accent ? "bg-brand/20" : "bg-white/6"}`}>
-                  <Icon className={`h-5 w-5 ${accent ? "text-brand" : "text-white/60"}`} />
+                <div className={`inline-flex rounded-xl p-2.5 mb-4 ${accent ? "bg-brand/20" : "lp-icon-bg"}`}>
+                  <Icon className={`h-5 w-5 ${accent ? "text-brand" : "text-brand"}`} />
                 </div>
-                <h3 className="font-semibold text-white mb-1.5">{title}</h3>
-                <p className="text-sm text-white/50 leading-relaxed">{desc}</p>
+                <h3 className="lp-text font-semibold mb-1.5">{title}</h3>
+                <p className="lp-muted text-sm leading-relaxed">{desc}</p>
               </div>
             ))}
           </div>
@@ -302,10 +301,10 @@ export default function Home() {
             ].map(({ icon: Icon, label }) => (
               <div
                 key={label}
-                className="flex items-center gap-3 rounded-xl bg-white/3 px-4 py-3 ring-1 ring-white/6"
+                className="lp-card lp-border flex items-center gap-3 rounded-xl px-4 py-3 ring-1"
               >
                 <Icon className="h-4 w-4 text-brand shrink-0" />
-                <span className="text-sm text-white/70">{label}</span>
+                <span className="lp-muted text-sm">{label}</span>
               </div>
             ))}
           </div>
@@ -355,30 +354,18 @@ export default function Home() {
 
       {/* CTA final */}
       <FadeInSection>
-      <section className="border-t border-white/5">
+      <section className="lp-section-sep border-t">
         <div className="container mx-auto px-4 py-20 md:py-28 text-center">
-          {/* Glow tenue detrás del bloque */}
-          <div
-            aria-hidden
-            className="pointer-events-none absolute left-1/2 -translate-x-1/2"
-            style={{
-              width: "600px",
-              height: "300px",
-              background:
-                "radial-gradient(ellipse, rgba(0,124,128,0.18) 0%, transparent 70%)",
-              filter: "blur(40px)",
-            }}
-          />
-          <p className="relative text-xs font-semibold uppercase tracking-widest text-brand mb-4">
+          <p className="text-xs font-semibold uppercase tracking-widest text-brand mb-4">
             Empieza hoy
           </p>
-          <h2 className="relative text-3xl sm:text-4xl md:text-5xl font-extrabold text-white mb-4 tracking-tight">
+          <h2 className="lp-text text-3xl sm:text-4xl md:text-5xl font-extrabold mb-4 tracking-tight">
             Tu tienda, bajo control
           </h2>
-          <p className="relative text-base text-white/50 max-w-md mx-auto mb-10">
+          <p className="lp-muted text-base max-w-md mx-auto mb-10">
             30 días gratis sin tarjeta. Configura en minutos y empieza a vender hoy mismo.
           </p>
-          <div className="relative flex flex-row gap-3 justify-center">
+          <div className="flex flex-row gap-3 justify-center">
             <Link href="/sign-up">
               <Button
                 size="lg"
@@ -392,13 +379,13 @@ export default function Home() {
               <Button
                 size="lg"
                 variant="ghost"
-                className="h-12 px-7 text-sm font-medium text-white/60 hover:text-white hover:bg-white/8 cursor-pointer border border-white/10"
+                className="lp-ghost-btn h-12 px-7 text-sm font-medium cursor-pointer border"
               >
                 Ya tengo cuenta
               </Button>
             </Link>
           </div>
-          <p className="relative mt-6 text-xs text-white/30">
+          <p className="lp-subtle mt-6 text-xs">
             Sin tarjeta de crédito · Cancela cuando quieras · Soporte en español
           </p>
         </div>
@@ -413,6 +400,6 @@ export default function Home() {
         propertyId={landingConfig.contact.tawkTo.propertyId}
         widgetId={landingConfig.contact.tawkTo.widgetId}
       /> */}
-    </div>
+    </LandingShell>
   );
 }

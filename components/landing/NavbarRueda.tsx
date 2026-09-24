@@ -3,7 +3,23 @@
 import { useState, useEffect, useRef } from "react";
 import { createPortal } from "react-dom";
 import Link from "next/link";
+import { Moon, Sun } from "lucide-react";
 import styles from "./NavbarRueda.module.scss";
+
+const THEME_KEY = "posib-landing-theme";
+
+function isDarkHour(): boolean {
+  const h = new Date().getHours();
+  return h >= 19 || h < 7;
+}
+
+function readStoredTheme(): boolean {
+  if (typeof window === "undefined") return isDarkHour();
+  const stored = localStorage.getItem(THEME_KEY);
+  if (stored === "dark") return true;
+  if (stored === "light") return false;
+  return isDarkHour();
+}
 
 // label2 (opcional) fuerza una segunda línea, para textos largos que no caben
 // en una sola en el panel angosto (p. ej. "Preguntas frecuentes").
@@ -38,19 +54,24 @@ const navLinksCurva = ordenarPorLongitud(navigationLinks);
 
 export default function NavbarRueda() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
-  // Hover de la marca: al activarse, se muestra ampliada en el centro del viewport.
   const [marcaHover, setMarcaHover] = useState(false);
-  // El contenido con portal a document.body solo se renderiza tras montar.
   const [montado, setMontado] = useState(false);
-  // Índice del enlace que está en el centro de la rueda (el activo).
   const [ruedaActiva, setRuedaActiva] = useState(0);
-  // Acumulador del scroll para no saltar de enlace con cada tic mínimo.
+  const [dark, setDark] = useState(false);
   const acumScroll = useRef(0);
 
-  // Marca el montaje en cliente para poder usar portales a document.body.
-  // Se difiere con rAF para no llamar a setState síncronamente en el efecto.
+  const toggleTheme = () => {
+    const next = !dark;
+    setDark(next);
+    localStorage.setItem(THEME_KEY, next ? "dark" : "light");
+    window.dispatchEvent(new CustomEvent("posib-theme-change", { detail: next }));
+  };
+
   useEffect(() => {
-    const id = requestAnimationFrame(() => setMontado(true));
+    const id = requestAnimationFrame(() => {
+      setMontado(true);
+      setDark(readStoredTheme());
+    });
     return () => cancelAnimationFrame(id);
   }, []);
 
@@ -143,8 +164,15 @@ export default function NavbarRueda() {
     <nav className={`top-0 z-50 ${styles.navbar}`}>
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="relative flex items-center justify-center h-16">
-          {/* Marca centrada. Mientras el cursor está sobre ella, se muestra una
-              copia ampliada en el centro del viewport (vía portal). */}
+          {/* Logo a la izquierda */}
+          <div className="absolute left-0 z-[70]">
+            <Link href="/" className="flex items-center gap-1.5">
+              <span className="text-lg font-bold text-brand" translate="no">posib</span>
+              <span className="text-lg font-bold text-white text-outline-dark" translate="no">.dev</span>
+            </Link>
+          </div>
+
+          {/* Marca centrada (efecto hover ampliado vía portal) */}
           <Link
             href="/"
             className={styles.logoLink}
@@ -154,16 +182,29 @@ export default function NavbarRueda() {
             <span
               className="text-xl md:text-2xl font-bold text-white text-outline-dark"
               translate="no"
-              style={{ visibility: marcaHover ? "hidden" : "visible" }}
+              style={{ visibility: "hidden" }}
             >
               posib.dev
             </span>
           </Link>
 
-          {/* Botón hamburguesa a la derecha. z-index propio y touch-action para
-              que reciba el toque de forma fiable en móvil (el backdrop-filter
-              del nav puede interferir con el hit-testing táctil de los hijos). */}
-          <div className="absolute right-0 z-[70] flex items-center">
+          {/* Botones a la derecha: tema + hamburguesa */}
+          <div className="absolute right-0 z-[70] flex items-center gap-2">
+            {/* Botón alternar tema */}
+            <button
+              type="button"
+              onClick={toggleTheme}
+              aria-label={dark ? "Cambiar a modo claro" : "Cambiar a modo oscuro"}
+              style={{ touchAction: "manipulation" }}
+              className="p-2 bg-white rounded-full hover:bg-gray-100 transition-colors duration-200 shadow-md border-2 border-gray-300 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand"
+            >
+              {dark
+                ? <Sun className="h-5 w-5 text-amber-500" />
+                : <Moon className="h-5 w-5 text-gray-700" />
+              }
+            </button>
+
+            {/* Botón hamburguesa */}
             <button
               type="button"
               onClick={toggleMenu}

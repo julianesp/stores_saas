@@ -36,6 +36,40 @@
   --brand: #007c80;
   --brand-hover: #006467;
   --brand-light: #e6f4f4;
+
+  /* Landing page — tokens de tema controlados por hora (HourTheme.tsx) */
+  --landing-bg: #f8fafb;
+  --landing-card-bg: #ffffff;
+  --landing-card-ring: rgba(0, 0, 0, 0.07);
+  --landing-text: #0f172a;
+  --landing-text-muted: rgba(15, 23, 42, 0.55);
+  --landing-border: rgba(0, 0, 0, 0.06);
+  --landing-section-border: rgba(0, 0, 0, 0.06);
+  --landing-glow: rgba(0, 124, 128, 0.15);
+}
+
+/* Modo oscuro de landing (hora >= 19 o < 7) */
+[data-theme="dark"] {
+  --landing-bg: #0f1117;
+  --landing-card-bg: rgba(255, 255, 255, 0.03);
+  --landing-card-ring: rgba(255, 255, 255, 0.08);
+  --landing-text: #ffffff;
+  --landing-text-muted: rgba(255, 255, 255, 0.55);
+  --landing-border: rgba(255, 255, 255, 0.06);
+  --landing-section-border: rgba(255, 255, 255, 0.05);
+  --landing-glow: rgba(0, 124, 128, 0.28);
+}
+
+/* Modo claro de landing (hora 7-18) — igual que :root para completitud */
+[data-theme="light"] {
+  --landing-bg: #f8fafb;
+  --landing-card-bg: #ffffff;
+  --landing-card-ring: rgba(0, 0, 0, 0.07);
+  --landing-text: #0f172a;
+  --landing-text-muted: rgba(15, 23, 42, 0.55);
+  --landing-border: rgba(0, 0, 0, 0.06);
+  --landing-section-border: rgba(0, 0, 0, 0.06);
+  --landing-glow: rgba(0, 124, 128, 0.15);
 }
 
 @theme inline {
@@ -124,6 +158,97 @@ body {
 
 .custom-scrollbar::-webkit-scrollbar-thumb:active {
   background: #6b7280;
+}
+
+/* ── Landing page — modo claro ────────────────────────────────────────────────
+   Cuando [data-landing-theme="light"] está en el div raíz de la landing,
+   sobrescribimos los colores que Tailwind emite para white/black.
+   Estrategia: usamos `color-scheme` y filtros de inversión selectivos en
+   los colores de texto/fondo de la landing. Las clases Tailwind siguen
+   generando sus valores; aquí los corregimos con mayor especificidad. */
+
+/* Textos blancos → oscuros en modo claro */
+[data-landing-theme="light"] .text-white {
+  color: #0f172a !important;
+}
+[data-landing-theme="light"] .text-white\/60,
+[data-landing-theme="light"] .text-white\/50,
+[data-landing-theme="light"] .text-white\/70 {
+  color: rgba(15, 23, 42, 0.6) !important;
+}
+[data-landing-theme="light"] .text-white\/35,
+[data-landing-theme="light"] .text-white\/30 {
+  color: rgba(15, 23, 42, 0.4) !important;
+}
+[data-landing-theme="light"] .text-white\/80 {
+  color: rgba(15, 23, 42, 0.8) !important;
+}
+[data-landing-theme="light"] .text-white\/40 {
+  color: rgba(15, 23, 42, 0.45) !important;
+}
+
+/* Fondos blancos translúcidos → superficie clara */
+[data-landing-theme="light"] .bg-white\/3 {
+  background-color: rgba(15, 23, 42, 0.04) !important;
+}
+[data-landing-theme="light"] .bg-white\/5 {
+  background-color: rgba(15, 23, 42, 0.06) !important;
+}
+[data-landing-theme="light"] .bg-white\/6 {
+  background-color: rgba(15, 23, 42, 0.07) !important;
+}
+[data-landing-theme="light"] .bg-white\/8 {
+  background-color: rgba(15, 23, 42, 0.08) !important;
+}
+
+/* Bordes blancos translúcidos → oscuros en modo claro */
+[data-landing-theme="light"] .border-white\/5 {
+  border-color: rgba(15, 23, 42, 0.07) !important;
+}
+[data-landing-theme="light"] .border-white\/8 {
+  border-color: rgba(15, 23, 42, 0.1) !important;
+}
+[data-landing-theme="light"] .border-white\/10 {
+  border-color: rgba(15, 23, 42, 0.12) !important;
+}
+[data-landing-theme="light"] .border-white\/16 {
+  border-color: rgba(15, 23, 42, 0.16) !important;
+}
+
+/* Ring blancos translúcidos */
+[data-landing-theme="light"] .ring-white\/6 {
+  --tw-ring-color: rgba(15, 23, 42, 0.08);
+}
+[data-landing-theme="light"] .ring-white\/8 {
+  --tw-ring-color: rgba(15, 23, 42, 0.1);
+}
+[data-landing-theme="light"] .ring-white\/16 {
+  --tw-ring-color: rgba(15, 23, 42, 0.16);
+}
+
+/* Hover: texto blanco → oscuro */
+[data-landing-theme="light"] .hover\:text-white:hover {
+  color: #0f172a !important;
+}
+[data-landing-theme="light"] .hover\:bg-white\/8:hover {
+  background-color: rgba(15, 23, 42, 0.08) !important;
+}
+[data-landing-theme="light"] .hover\:ring-white\/16:hover {
+  --tw-ring-color: rgba(15, 23, 42, 0.16);
+}
+
+/* Botón fantasma en modo claro */
+[data-landing-theme="light"] .border-white\/10 {
+  border-color: rgba(15, 23, 42, 0.15) !important;
+}
+
+/* Fondo del modal inline (WhyPosib) */
+[data-landing-theme="light"] [style*="rgba(0,0,0,0.75)"] {
+  background: rgba(0, 0, 0, 0.45) !important;
+}
+[data-landing-theme="light"] .bg-\[\#161b22\] {
+  background-color: #ffffff !important;
+  color: #0f172a;
 }
 
 /*

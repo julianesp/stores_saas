@@ -89,7 +89,7 @@ export default function WhyPosib() {
   const [openHelp, setOpenHelp] = useState<HelpModal | null>(null);
 
   return (
-    <section className="border-t border-white/5">
+    <section className="lp-section-sep border-t">
       <div className="container mx-auto px-4 py-16 md:py-24">
 
         {/* Bloque 1: sin comprar equipos */}
@@ -97,10 +97,10 @@ export default function WhyPosib() {
           <p className="text-xs font-semibold uppercase tracking-widest text-brand mb-3">
             Sin costos extras
           </p>
-          <h2 className="text-2xl sm:text-3xl md:text-4xl font-bold text-white mb-3">
+          <h2 className="lp-text text-2xl sm:text-3xl md:text-4xl font-bold mb-3">
             No necesitas comprar equipos
           </h2>
-          <p className="text-base text-white/50 max-w-xl mx-auto">
+          <p className="lp-muted text-base max-w-xl mx-auto">
             posib.dev corre en el navegador — celular, tablet o computador que ya tienes. Sin cajas registradoras costosas.
           </p>
         </div>
@@ -113,12 +113,12 @@ export default function WhyPosib() {
           ].map(({ icon: Icon, label }) => (
             <div
               key={label}
-              className="flex flex-col items-center gap-3 rounded-2xl bg-white/3 ring-1 ring-white/8 px-8 py-6 min-w-[120px]"
+              className="lp-card lp-border flex flex-col items-center gap-3 rounded-2xl ring-1 px-8 py-6 min-w-[120px]"
             >
               <div className="rounded-xl bg-brand/15 p-3">
                 <Icon className="h-7 w-7 text-brand" />
               </div>
-              <span className="text-white/80 font-medium text-sm">{label}</span>
+              <span className="lp-text font-medium text-sm">{label}</span>
             </div>
           ))}
         </div>
@@ -128,11 +128,11 @@ export default function WhyPosib() {
           <p className="text-xs font-semibold uppercase tracking-widest text-brand mb-3">
             Pensado para la tienda de barrio
           </p>
-          <h2 className="text-2xl sm:text-3xl md:text-4xl font-bold text-white mb-3">
+          <h2 className="lp-text text-2xl sm:text-3xl md:text-4xl font-bold mb-3">
             Resuelve lo que sí importa
           </h2>
-          <p className="text-base text-white/50 max-w-xl mx-auto">
-            Toca <span className="text-white/80">¿Cómo funciona?</span> en cada uno para verlo por dentro.
+          <p className="lp-muted text-base max-w-xl mx-auto">
+            Toca <span className="lp-text font-medium">¿Cómo funciona?</span> en cada uno para verlo por dentro.
           </p>
         </div>
 
@@ -140,13 +140,13 @@ export default function WhyPosib() {
           {FEATURES.map(({ icon: Icon, title, text, accent, help }) => (
             <div
               key={title}
-              className="group flex flex-col rounded-2xl bg-white/3 ring-1 ring-white/8 p-6 hover:ring-white/16 transition-all duration-200"
+              className="lp-card lp-border group flex flex-col rounded-2xl ring-1 p-6 transition-all duration-200"
             >
-              <div className="mb-4 inline-flex w-fit rounded-xl bg-white/6 p-2.5">
+              <div className="lp-icon-bg mb-4 inline-flex w-fit rounded-xl p-2.5">
                 <Icon className={`h-6 w-6 ${accent}`} />
               </div>
-              <h4 className="text-base font-semibold text-white mb-2">{title}</h4>
-              <p className="text-sm text-white/50 leading-relaxed grow">{text}</p>
+              <h4 className="lp-text text-base font-semibold mb-2">{title}</h4>
+              <p className="lp-muted text-sm leading-relaxed grow">{text}</p>
               <button
                 type="button"
                 onClick={() => setOpenHelp(help)}
@@ -164,10 +164,10 @@ export default function WhyPosib() {
           <div className="mx-auto mb-5 inline-flex rounded-2xl bg-brand/15 p-4">
             <Gift className="h-8 w-8 text-brand" />
           </div>
-          <h3 className="text-2xl sm:text-3xl font-bold text-white mb-3">
+          <h3 className="lp-text text-2xl sm:text-3xl font-bold mb-3">
             Invita a otro tendero y ganan los dos
           </h3>
-          <p className="text-base text-white/50 max-w-2xl mx-auto mb-7">
+          <p className="lp-muted text-base max-w-2xl mx-auto mb-7">
             ¿Conoces a otro negocio que anda con cuadernos? Recomiéndale posib.dev.
             Cuando empiece a usarlo, ustedes dos reciben un beneficio en su suscripción.
           </p>
@@ -178,10 +178,10 @@ export default function WhyPosib() {
               "Cuando activa su plan, ambos reciben su recompensa.",
             ].map((item) => (
               <li key={item} className="flex items-start gap-2.5">
-                <span className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-brand/20">
+                <span className="lp-check-bg mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full">
                   <Check className="h-3 w-3 text-brand" />
                 </span>
-                <span className="text-sm text-white/70">{item}</span>
+                <span className="lp-muted text-sm">{item}</span>
               </li>
             ))}
           </ul>
@@ -205,7 +205,7 @@ export default function WhyPosib() {
           onClick={() => setOpenHelp(null)}
         >
           <div
-            className="relative w-full max-w-lg rounded-2xl bg-[#161b22] ring-1 ring-white/10 p-7"
+            className="lp-modal-bg relative w-full max-w-lg rounded-2xl ring-1 ring-white/10 p-7"
             onClick={(e) => e.stopPropagation()}
           >
             <button
@@ -216,14 +216,14 @@ export default function WhyPosib() {
               <X className="h-5 w-5" />
             </button>
             <div className="mb-1 text-brand font-bold text-lg">{openHelp.title}</div>
-            <p className="text-sm text-white/50 mb-5">{openHelp.description}</p>
+            <p className="lp-muted text-sm mb-5">{openHelp.description}</p>
             <ol className="space-y-3">
               {openHelp.steps.map((step, i) => (
                 <li key={i} className="flex items-start gap-3">
                   <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-brand/20 text-xs font-bold text-brand">
                     {i + 1}
                   </span>
-                  <span className="text-sm text-white/70 pt-0.5">{step}</span>
+                  <span className="lp-muted text-sm pt-0.5">{step}</span>
                 </li>
               ))}
             </ol>
