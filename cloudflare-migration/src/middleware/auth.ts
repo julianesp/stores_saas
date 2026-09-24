@@ -62,6 +62,39 @@ function isAllowedClerkIssuer(issuer: string, env: Env): boolean {
 }
 
 export async function authMiddleware(c: Context<{ Bindings: Env }>, next: Next) {
+  // Peticiones internas del servidor (webhooks de ePayco, crons) autenticadas
+  // con X-Webhook-Secret en lugar de un token de Clerk. Solo se acepta si
+  // CRON_SECRET está configurado y coincide exactamente.
+  const webhookSecret = c.req.header('X-Webhook-Secret');
+  if (webhookSecret) {
+    const expectedSecret = c.env.CRON_SECRET;
+    if (expectedSecret && webhookSecret === expectedSecret) {
+      // Petición interna válida: poner contexto mínimo y continuar.
+      c.set('clerkUserId', 'internal-webhook');
+      c.set('userProfileId', undefined as any);
+      // Tenant mínimo para que las rutas no exploten al leerlo.
+      c.set('tenant', {
+        id: '',
+        clerkUserId: 'internal-webhook',
+        email: '',
+        databaseName: 'shared',
+        databaseId: 'shared',
+        subscriptionStatus: 'active',
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+        is_superadmin: true,
+      } as any);
+      await next();
+      return;
+    }
+    // X-Webhook-Secret presente pero incorrecto → rechazar de inmediato.
+    return c.json({
+      success: false,
+      error: 'Unauthorized',
+      message: 'Invalid webhook secret'
+    }, 401);
+  }
+
   const authHeader = c.req.header('Authorization');
 
   if (!authHeader || !authHeader.startsWith('Bearer ')) {
@@ -443,6 +476,30 @@ export async function authMiddleware(c: Context<{ Bindings: Env }>, next: Next) 
     await next();
   } catch (error) {
     console.error('Auth error:', error);
+
+    // Distinguir un fallo de infraestructura (D1 caído o sin cupo) de un token
+    // realmente inválido. Si D1 no responde, el token puede ser perfectamente
+    // válido: devolver 401 "Unauthorized" empujaría al usuario a re-loguearse en
+    // vano y a ver "sesión inválida" cuando el problema es del servidor. En ese
+    // caso respondemos 503 para que el front muestre el error de conexión
+    // reintentable (ConnectionErrorModal), no el de suscripción/sesión.
+    const message = error instanceof Error ? error.message : String(error);
+    const isInfraError =
+      message.includes('D1_ERROR') ||
+      message.includes('exceeded') ||
+      message.includes('row read limit') ||
+      message.includes('Network connection lost') ||
+      message.includes('storage') ||
+      message.includes('Too many API requests');
+
+    if (isInfraError) {
+      return c.json({
+        success: false,
+        error: 'Service unavailable',
+        message: 'El servicio no está disponible temporalmente. Intenta de nuevo en un momento.'
+      }, 503);
+    }
+
     return c.json({
       success: false,
       error: 'Unauthorized',

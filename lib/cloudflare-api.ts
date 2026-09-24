@@ -58,10 +58,15 @@ export function getSelectedTenantId(): string | null {
  */
 export function setSelectedTenantId(tenantId: string | null) {
   if (typeof window === 'undefined') return;
+  const previous = localStorage.getItem('selected_tenant_id');
   if (tenantId) {
     localStorage.setItem('selected_tenant_id', tenantId);
   } else {
     localStorage.removeItem('selected_tenant_id');
+  }
+  // Al cambiar de tenant, el perfil cacheado ya no aplica.
+  if (previous !== tenantId) {
+    invalidateUserProfileCache();
   }
 }
 
@@ -662,8 +667,60 @@ export async function deleteSale(id: string, getToken: GetTokenFn): Promise<void
 // USER PROFILES
 // ============================================
 
-export async function getUserProfile(getToken: GetTokenFn): Promise<UserProfile> {
-  return fetchAPI<UserProfile>('/api/user-profiles', getToken);
+// Caché en memoria del perfil del usuario. El dashboard monta muchos componentes
+// que piden el perfil por su cuenta (sidebar, header, banners, POS, etc.); sin
+// caché, una sola carga dispara 10+ lecturas a /api/user-profiles y agota el cupo
+// diario de D1 (que se manifiesta como falsos "Unauthorized"). Cacheamos el
+// resultado por TENANT durante un tiempo corto y deduplicamos las peticiones en
+// vuelo para que las llamadas concurrentes compartan una sola ida al Worker.
+const PROFILE_CACHE_TTL_MS = 60_000; // 1 minuto: suficiente para una carga de página
+let _profileCache: { tenantId: string | null; data: UserProfile; at: number } | null = null;
+let _profileInflight: { tenantId: string | null; promise: Promise<UserProfile> } | null = null;
+
+/**
+ * Invalida la caché del perfil. Llamar tras actualizar el perfil (updateUserProfile
+ * ya lo hace) o al cambiar de tenant, para que la próxima lectura sea fresca.
+ */
+export function invalidateUserProfileCache() {
+  _profileCache = null;
+  _profileInflight = null;
+}
+
+export async function getUserProfile(
+  getToken: GetTokenFn,
+  options: { force?: boolean } = {}
+): Promise<UserProfile> {
+  const tenantId = getSelectedTenantId();
+  const now = Date.now();
+
+  // Servir de caché si es fresca y del mismo tenant.
+  if (
+    !options.force &&
+    _profileCache &&
+    _profileCache.tenantId === tenantId &&
+    now - _profileCache.at < PROFILE_CACHE_TTL_MS
+  ) {
+    return _profileCache.data;
+  }
+
+  // Deduplicar peticiones concurrentes del mismo tenant.
+  if (!options.force && _profileInflight && _profileInflight.tenantId === tenantId) {
+    return _profileInflight.promise;
+  }
+
+  const promise = fetchAPI<UserProfile>('/api/user-profiles', getToken)
+    .then((data) => {
+      _profileCache = { tenantId, data, at: Date.now() };
+      return data;
+    })
+    .finally(() => {
+      if (_profileInflight && _profileInflight.tenantId === tenantId) {
+        _profileInflight = null;
+      }
+    });
+
+  _profileInflight = { tenantId, promise };
+  return promise;
 }
 
 export async function getAllUserProfiles(getToken: GetTokenFn): Promise<UserProfile[]> {
@@ -690,10 +747,13 @@ export async function createUserProfile(data: Partial<UserProfile>, getToken: Ge
 }
 
 export async function updateUserProfile(id: string, data: Partial<UserProfile>, getToken: GetTokenFn): Promise<UserProfile> {
-  return fetchAPI<UserProfile>(`/api/user-profiles/${id}`, getToken, {
+  const result = await fetchAPI<UserProfile>(`/api/user-profiles/${id}`, getToken, {
     method: 'PUT',
     body: JSON.stringify(data),
   });
+  // El perfil cambió: invalidar la caché para que la próxima lectura sea fresca.
+  invalidateUserProfileCache();
+  return result;
 }
 
 // ============================================
