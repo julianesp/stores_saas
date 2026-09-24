@@ -225,3 +225,31 @@ body {
     animation: none;
   }
 }
+
+/* ── PWA Window Controls Overlay ──────────────────────────────────────────────
+   Cuando la app está instalada con display "window-controls-overlay", la barra
+   de título del sistema se vuelve mínima y le cede su espacio al header de la
+   app. El header se posiciona en la "titlebar-area" (evita los botones
+   cerrar/minimizar/maximizar del SO, que quedan a la derecha) y se puede
+   arrastrar para mover la ventana. En navegador normal esto no aplica. */
+@media (display-mode: window-controls-overlay) {
+  /* El header queda en su sitio (sticky), pero reservamos a su DERECHA el ancho
+     de los controles del SO (cerrar/minimizar/maximizar) para no taparlos. El
+     área libre del header es arrastrable para mover la ventana. */
+  .app-titlebar {
+    /* margin derecho = espacio a la derecha de la titlebar-area (los controles). */
+    margin-right: calc(100vw - env(titlebar-area-width, 100vw) - env(titlebar-area-x, 0px));
+    -webkit-app-region: drag;
+    app-region: drag;
+  }
+
+  /* Elementos interactivos del header: no deben arrastrar la ventana. */
+  .app-titlebar button,
+  .app-titlebar a,
+  .app-titlebar input,
+  .app-titlebar [role="button"],
+  .app-no-drag {
+    -webkit-app-region: no-drag;
+    app-region: no-drag;
+  }
+}

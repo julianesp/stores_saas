@@ -4,8 +4,9 @@
   "description": "Sistema completo de punto de venta y gestión de inventario",
   "start_url": "/",
   "display": "standalone",
+  "display_override": ["window-controls-overlay"],
   "background_color": "#ffffff",
-  "theme_color": "#2563eb",
+  "theme_color": "#1f2937",
   "orientation": "portrait",
   "icons": [
     {

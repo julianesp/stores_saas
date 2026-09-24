@@ -205,16 +205,12 @@ export function NotificationPanel() {
         onClick={() => setIsOpen(!isOpen)}
       >
         <Bell className={`h-5 w-5 ${ringing ? 'bell-ring' : ''}`} />
-        {notifications.length > 0 && (
-          <>
-            <span
-              className={`absolute -top-1 -right-1 bg-red-600 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center font-semibold ${
-                hasUnseen ? 'ring-2 ring-red-400/60' : ''
-              }`}
-            >
-              {notifications.length > 9 ? '9+' : notifications.length}
-            </span>
-          </>
+        {/* El badge cuenta solo las notificaciones SIN VER; desaparece cuando el
+            tendero ya las vio todas (abrió el panel). */}
+        {unseenNotifications.length > 0 && (
+          <span className="absolute -top-1 -right-1 bg-red-600 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center font-semibold ring-2 ring-red-400/60">
+            {unseenNotifications.length > 9 ? '9+' : unseenNotifications.length}
+          </span>
         )}
       </Button>
 
