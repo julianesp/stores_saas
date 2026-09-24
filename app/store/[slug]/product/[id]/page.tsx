@@ -26,6 +26,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
+import { ShareProductButton } from "@/components/store/share-product-button";
 import { toast } from "sonner";
 
 export default function ProductDetailPage() {
@@ -383,6 +384,14 @@ export default function ProductDetailPage() {
                 </Button>
               )}
 
+              {/* Compartir producto (canal de captación de posib.dev) */}
+              <ShareProductButton
+                productName={product.name}
+                price={finalPrice}
+                storeName={config.store_name}
+                primaryColor={primaryColor}
+                className="w-full text-lg"
+              />
             </div>
 
             {/* Información de entrega */}
