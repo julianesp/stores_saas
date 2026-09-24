@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { driver, DriveStep, Config } from 'driver.js';
 import 'driver.js/dist/driver.css';
 import '@/app/tour-styles.css';
+import { isAutoHelpEnabled } from '@/lib/help-preferences';
 
 export interface TourConfig {
   tourId: string;
@@ -39,9 +40,11 @@ export function useTour(tourConfig: TourConfig, enabled: boolean = true, userId?
     return () => clearTimeout(timer);
   }, [tourConfig.tourId, userId]);
 
-  // Iniciar el tour automáticamente si no se ha visto
+  // Iniciar el tour automáticamente si no se ha visto Y el tendero no desactivó
+  // las ayudas automáticas en este dispositivo. startTour() manual (desde el
+  // botón de ayuda) NO pasa por aquí, así que siempre se puede lanzar a mano.
   useEffect(() => {
-    if (!hasSeenTour && enabled && isReady) {
+    if (!hasSeenTour && enabled && isReady && isAutoHelpEnabled()) {
       startTour();
     }
   }, [hasSeenTour, enabled, isReady]);

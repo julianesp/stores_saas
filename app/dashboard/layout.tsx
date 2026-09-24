@@ -6,6 +6,7 @@ import { usePathname } from "next/navigation";
 import { Sidebar } from "@/components/dashboard/sidebar";
 import { Header } from "@/components/dashboard/header";
 import { StoreQuickAccess } from "@/components/dashboard/store-quick-access";
+import { PWAInstallPrompt } from "@/components/dashboard/pwa-install-prompt";
 import { TrialBanner } from "@/components/subscription/trial-banner";
 import { SubscriptionExpiredModal } from "@/components/subscription/expired-modal";
 import { ConnectionErrorModal } from "@/components/subscription/connection-error-modal";
@@ -410,6 +411,9 @@ function DashboardLayoutInner({
 
         {/* Acceso directo flotante a la tienda pública (todas las pantallas) */}
         {!isSuperAdmin && <StoreQuickAccess />}
+
+        {/* Invitación a instalar la PWA + bienvenida tras instalar. */}
+        {!isSuperAdmin && <PWAInstallPrompt />}
       </div>
     </OfflineProvider>
   );

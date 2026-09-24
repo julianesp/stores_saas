@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { verifyEPaycoSignature, type EPaycoConfirmation } from '@/lib/epayco';
-import { getBusinessTypeByPlanId } from '@/lib/business-types';
+import { activateEPaycoPayment } from '@/lib/epayco-activation';
 
 /**
  * Avisa al administrador (por Telegram, vía el Worker) que se registró un pago.
@@ -101,93 +101,31 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // Actualizar la suscripción en Cloudflare
+    // Actualizar la suscripción en Cloudflare mediante el helper compartido
+    // (misma lógica que usa la red de seguridad en payment-status). Es
+    // idempotente: activar de nuevo solo reescribe los mismos campos.
     const apiUrl = process.env.NEXT_PUBLIC_CLOUDFLARE_API_URL || 'https://tienda-pos-api.julii1295.workers.dev';
 
-    const now = new Date();
-    const nextBillingDate = new Date(now);
-    nextBillingDate.setMonth(nextBillingDate.getMonth() + 1);
-
-    // Si es un addon, no sobreescribir el plan_id existente.
-    // IMPORTANTE: estos IDs deben coincidir EXACTAMENTE con los definidos en
-    // lib/epayco.ts (SUBSCRIPTION_PLANS). Un desajuste hace que el webhook no
-    // active el addon aunque el pago se apruebe (el cliente paga y no recibe
-    // nada). El addon de tienda es 'addon-store-monthly', no 'store-addon-monthly'.
-    const isAiAddon = planId === 'ai-addon-monthly';
-    const isEmailAddon = planId === 'email-addon-monthly';
-    const isStoreAddon = planId === 'addon-store-monthly';
-    const isMainPlan = !isAiAddon && !isEmailAddon && !isStoreAddon;
-
-    const updatePayload: Record<string, unknown> = {
-      subscription_status: 'active',
-      last_payment_date: now.toISOString(),
-      next_billing_date: nextBillingDate.toISOString(),
-      trial_start_date: null,
-      trial_end_date: null,
-    };
-
-    if (isMainPlan) {
-      updatePayload.plan_id = planId;
-
-      // Si el plan corresponde a un tipo de negocio (abarrotes, papelería,
-      // pizzería, licorera, farmacia), guardar también el business_type para
-      // adaptar la interfaz. Los planes legacy (basic-monthly) no lo tienen y
-      // el perfil queda con el valor por defecto (abarrotes).
-      const businessType = getBusinessTypeByPlanId(planId);
-      if (businessType) {
-        updatePayload.business_type = businessType.id;
-      }
-    }
-    if (isAiAddon) {
-      updatePayload.has_ai_addon = 1;
-    }
-    if (isEmailAddon) {
-      updatePayload.has_email_addon = 1;
-    }
-    if (isStoreAddon) {
-      updatePayload.has_store_addon = 1;
-    }
-
-    // Actualizar el perfil del usuario
-    const updateResponse = await fetch(`${apiUrl}/api/user-profiles/${userProfileId}`, {
-      method: 'PUT',
-      headers: {
-        'Content-Type': 'application/json',
-        'X-Webhook-Secret': process.env.CRON_SECRET || '',
-      },
-      body: JSON.stringify(updatePayload),
-    });
-
-    if (!updateResponse.ok) {
-      console.error('Error updating user profile:', await updateResponse.text());
+    try {
+      await activateEPaycoPayment({
+        apiUrl,
+        userProfileId,
+        planId,
+        transactionId: confirmation.x_transaction_id,
+        refPayco: confirmation.x_ref_payco,
+        amount: confirmation.x_amount,
+        currency: confirmation.x_currency_code,
+        invoice: confirmation.x_id_invoice,
+      });
+    } catch (error) {
+      // Falla dura: el perfil no se actualizó. Respondemos 500 para que ePayco
+      // reintente el webhook (el registro de transacción, en cambio, es
+      // best-effort dentro del helper y nunca llega aquí).
+      console.error('Error updating user profile:', error);
       return NextResponse.json(
         { error: 'Error al actualizar el perfil' },
         { status: 500 }
       );
-    }
-
-    // Crear registro de transacción
-    try {
-      await fetch(`${apiUrl}/api/payment-transactions`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'X-Webhook-Secret': process.env.CRON_SECRET || '',
-        },
-        body: JSON.stringify({
-          user_profile_id: userProfileId,
-          epayco_transaction_id: confirmation.x_transaction_id,
-          epayco_ref_payco: confirmation.x_ref_payco,
-          amount: parseFloat(confirmation.x_amount),
-          currency: confirmation.x_currency_code,
-          status: confirmation.x_transaction_state,
-          reference: confirmation.x_id_invoice,
-          approval_code: confirmation.x_approval_code,
-        }),
-      });
-    } catch (error) {
-      console.error('Error creating transaction record:', error);
-      // No falla si no se puede crear el registro
     }
 
     console.log(`✅ Subscription activated for user ${userProfileId}`);

@@ -1,27 +1,104 @@
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@clerk/nextjs';
-import { Bell, Package, Award, TrendingUp, AlertCircle, Calendar, DollarSign, X } from 'lucide-react';
+import { Bell, BellOff, Package, Award, TrendingUp, AlertCircle, Calendar, DollarSign, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Notification } from '@/lib/types';
 import { getAllNotifications } from '@/lib/notification-helpers';
+import {
+  playBellSound,
+  isNotificationSoundEnabled,
+  setNotificationSoundEnabled,
+} from '@/lib/notification-sound';
+import {
+  getSeenNotificationIds,
+  markNotificationSeen,
+  markNotificationsSeen,
+} from '@/lib/seen-notifications';
 
 export function NotificationPanel() {
   const [isOpen, setIsOpen] = useState(false);
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [loading, setLoading] = useState(false);
+  // Ids de notificaciones que el tendero ya abrió (vio individualmente). Se
+  // persiste por dispositivo. El campaneo sigue mientras quede alguna sin ver;
+  // abrir el panel NO marca nada: hay que hacer clic en cada notificación.
+  const [seenIds, setSeenIds] = useState<Set<string>>(() => getSeenNotificationIds());
+  // Clase de animación activa durante el campaneo (~900ms) y luego se limpia.
+  const [ringing, setRinging] = useState(false);
+  // Preferencia de sonido (por dispositivo). Lazy init: en SSR devuelve true.
+  const [soundOn, setSoundOn] = useState(() => isNotificationSoundEnabled());
   const dropdownRef = useRef<HTMLDivElement>(null);
+  const hasLoadedOnceRef = useRef(false);
   const router = useRouter();
   const { getToken } = useAuth();
 
-  // Cargar notificaciones al abrir el panel
+  // Hay avisos sin ver si existe alguna notificación cuyo id no esté marcado.
+  const unseenNotifications = notifications.filter((n) => !seenIds.has(n.id));
+  const hasUnseen = unseenNotifications.length > 0;
+
+  const loadNotifications = useCallback(async () => {
+    if (!getToken) return;
+
+    // Solo mostrar el spinner en la primera carga. Las recargas en segundo plano
+    // (montaje, intervalo) son silenciosas para no parpadear el panel.
+    if (!hasLoadedOnceRef.current) setLoading(true);
+    try {
+      const notifs = await getAllNotifications(getToken);
+      setNotifications(notifs);
+    } catch (error) {
+      console.error('Error loading notifications:', error);
+    } finally {
+      hasLoadedOnceRef.current = true;
+      setLoading(false);
+    }
+  }, [getToken]);
+
+  // Cargar notificaciones al montar (para que el badge de conteo aparezca sin
+  // necesidad de abrir el panel) y refrescar cada 90 segundos. El refresco corto
+  // hace que los pedidos de la tienda online aparezcan pronto en la campana
+  // (el aviso instantáneo sigue siendo Telegram). loadNotifications hace setState
+  // de forma asíncrona (fetch), que es un uso legítimo de efecto.
   useEffect(() => {
-    if (isOpen && notifications.length === 0) {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    loadNotifications();
+    const interval = setInterval(loadNotifications, 90 * 1000);
+    return () => clearInterval(interval);
+  }, [loadNotifications]);
+
+  // Recargar al abrir, para tener el dato más fresco. Abrir el panel NO marca
+  // las notificaciones como vistas: eso ocurre al hacer clic en cada una.
+  useEffect(() => {
+    if (isOpen) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       loadNotifications();
     }
-  }, [isOpen]);
+  }, [isOpen, loadNotifications]);
+
+  // Campaneo periódico: cada 10 segundos, mientras quede AL MENOS UNA
+  // notificación sin ver, la campana "suena" (animación ~900ms) y reproduce el
+  // tono. Sigue aunque el panel esté abierto: solo para cuando el tendero abre
+  // (hace clic en) todas las notificaciones. Vuelve a sonar si llegan nuevas.
+  useEffect(() => {
+    if (!hasUnseen) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setRinging(false);
+      return;
+    }
+
+    // Sonar una vez de inmediato al detectar avisos sin ver, y luego cada 10s.
+    // NO suena al hacer clic en la campana, solo con el pulso periódico.
+    const ring = () => {
+      setRinging(true);
+      playBellSound();
+      setTimeout(() => setRinging(false), 950);
+    };
+    ring();
+    const interval = setInterval(ring, 10 * 1000);
+    return () => clearInterval(interval);
+  }, [hasUnseen]);
 
   // Cerrar dropdown al hacer clic fuera
   useEffect(() => {
@@ -37,25 +114,29 @@ export function NotificationPanel() {
     }
   }, [isOpen]);
 
-  const loadNotifications = async () => {
-    if (!getToken) return;
-
-    setLoading(true);
-    try {
-      const notifs = await getAllNotifications(getToken);
-      setNotifications(notifs);
-    } catch (error) {
-      console.error('Error loading notifications:', error);
-    } finally {
-      setLoading(false);
-    }
+  const markSeen = (id: string) => {
+    markNotificationSeen(id);
+    setSeenIds((prev) => new Set(prev).add(id));
   };
 
   const handleNotificationClick = (notification: Notification) => {
+    // Abrir una notificación la marca como vista → detiene el campaneo si era
+    // la última pendiente.
+    markSeen(notification.id);
     if (notification.link) {
       router.push(notification.link);
       setIsOpen(false);
     }
+  };
+
+  const handleMarkAllSeen = () => {
+    const ids = notifications.map((n) => n.id);
+    markNotificationsSeen(ids);
+    setSeenIds((prev) => {
+      const next = new Set(prev);
+      ids.forEach((id) => next.add(id));
+      return next;
+    });
   };
 
   const getNotificationIcon = (type: Notification['type']) => {
@@ -105,11 +186,14 @@ export function NotificationPanel() {
         className="relative"
         onClick={() => setIsOpen(!isOpen)}
       >
-        <Bell className="h-5 w-5" />
+        <Bell className={`h-5 w-5 ${ringing ? 'bell-ring' : ''}`} />
         {notifications.length > 0 && (
           <>
-            <span className="absolute top-1 right-1 h-2 w-2 rounded-full bg-red-600" />
-            <span className="absolute -top-1 -right-1 bg-red-600 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center font-semibold">
+            <span
+              className={`absolute -top-1 -right-1 bg-red-600 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center font-semibold ${
+                hasUnseen ? 'ring-2 ring-red-400/60' : ''
+              }`}
+            >
               {notifications.length > 9 ? '9+' : notifications.length}
             </span>
           </>
@@ -122,14 +206,32 @@ export function NotificationPanel() {
           {/* Header */}
           <div className="flex items-center justify-between p-4 border-b">
             <h3 className="font-semibold text-gray-900">Notificaciones</h3>
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => setIsOpen(false)}
-              className="h-6 w-6 p-0"
-            >
-              <X className="h-4 w-4" />
-            </Button>
+            <div className="flex items-center gap-1">
+              {/* Silenciar/activar el tono de campana (por dispositivo). */}
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => {
+                  const next = !soundOn;
+                  setSoundOn(next);
+                  setNotificationSoundEnabled(next);
+                  if (next) playBellSound(); // muestra cómo suena al activarlo
+                }}
+                className="h-6 w-6 p-0 text-gray-600"
+                aria-label={soundOn ? 'Silenciar sonido' : 'Activar sonido'}
+                title={soundOn ? 'Silenciar sonido de avisos' : 'Activar sonido de avisos'}
+              >
+                {soundOn ? <Bell className="h-4 w-4" /> : <BellOff className="h-4 w-4" />}
+              </Button>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setIsOpen(false)}
+                className="h-6 w-6 p-0"
+              >
+                <X className="h-4 w-4" />
+              </Button>
+            </div>
           </div>
 
           {/* Notifications List */}
@@ -159,7 +261,13 @@ export function NotificationPanel() {
                       </div>
                       <div className="flex-1 min-w-0">
                         <div className="flex items-start justify-between gap-2">
-                          <p className="font-medium text-sm text-gray-900">
+                          <p className="font-medium text-sm text-gray-900 flex items-center gap-1.5">
+                            {!seenIds.has(notification.id) && (
+                              <span
+                                className="inline-block h-2 w-2 shrink-0 rounded-full bg-red-600"
+                                aria-label="Sin ver"
+                              />
+                            )}
                             {notification.title}
                           </p>
                           {notification.count !== undefined && (
@@ -186,14 +294,24 @@ export function NotificationPanel() {
 
           {/* Footer */}
           {notifications.length > 0 && (
-            <div className="p-3 border-t bg-gray-50">
+            <div className="flex items-center gap-2 p-3 border-t bg-gray-50">
+              {hasUnseen && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={handleMarkAllSeen}
+                  className="flex-1 text-sm text-brand hover:text-brand-hover"
+                >
+                  Marcar todas como vistas
+                </Button>
+              )}
               <Button
                 variant="ghost"
                 size="sm"
                 onClick={() => loadNotifications()}
-                className="w-full text-sm"
+                className="flex-1 text-sm"
               >
-                Actualizar notificaciones
+                Actualizar
               </Button>
             </div>
           )}

@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { activateEPaycoPayment } from '@/lib/epayco-activation';
 
 /**
  * Consulta el estado REAL de una transacción en ePayco a partir del ref_payco.
@@ -12,9 +13,11 @@ import { NextRequest, NextResponse } from 'next/server';
  * Endpoint de validación público de ePayco (no requiere credenciales):
  *   GET https://secure.epayco.co/validation/v1/reference/{ref_payco}
  *
- * NO activa nada: la activación de la suscripción la hace el webhook de
- * confirmación (/api/webhooks/epayco). Esto es solo para mostrar la pantalla
- * correcta al usuario que regresa del checkout.
+ * RED DE SEGURIDAD: además de informar el estado, si el pago está APROBADO
+ * activamos la suscripción aquí mismo (idempotente). Así el tendero queda
+ * habilitado al instante aunque el webhook de confirmación no haya llegado
+ * (ePayco no lo mandó, timeout, etc.). El userProfileId y el planId vienen en
+ * los extras (x_extra1 / x_extra2) que ePayco devuelve en esta validación.
  */
 export async function GET(req: NextRequest) {
   const refPayco = req.nextUrl.searchParams.get('ref_payco');
@@ -55,6 +58,37 @@ export async function GET(req: NextRequest) {
       state = 'rejected';
     } else {
       state = 'unknown';
+    }
+
+    // Red de seguridad: pago aprobado → activar suscripción aquí también.
+    // Idempotente con el webhook. Solo si ePayco devolvió los extras necesarios.
+    if (state === 'approved') {
+      const userProfileId = data?.x_extra1;
+      const planId = data?.x_extra2;
+      if (userProfileId && planId) {
+        const apiUrl =
+          process.env.NEXT_PUBLIC_CLOUDFLARE_API_URL ||
+          'https://tienda-pos-api.julii1295.workers.dev';
+        try {
+          await activateEPaycoPayment({
+            apiUrl,
+            userProfileId,
+            planId,
+            transactionId: data?.x_transaction_id,
+            refPayco: data?.x_ref_payco ?? refPayco,
+            amount: data?.x_amount,
+            currency: data?.x_currency_code,
+            invoice: data?.x_id_invoice,
+          });
+          console.log(`[payment-status] Red de seguridad: suscripción activada para ${userProfileId}`);
+        } catch (activationError) {
+          // No hacemos fallar la respuesta al usuario: el webhook es el camino
+          // primario y puede activar por su cuenta. Solo dejamos rastro.
+          console.error('[payment-status] Red de seguridad no pudo activar:', activationError);
+        }
+      } else {
+        console.warn('[payment-status] Pago aprobado pero sin extras (x_extra1/x_extra2); no se pudo activar como red de seguridad. El webhook debe encargarse.');
+      }
     }
 
     return NextResponse.json({

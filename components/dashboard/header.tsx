@@ -6,6 +6,8 @@ import { Menu } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { RefreshProfileButton } from './refresh-profile-button';
 import { NotificationPanel } from './notification-panel';
+import { OpenWindowButton } from './open-window-button';
+import HelpButton from '@/components/help/HelpButton';
 import StoreSwitcher from '@/components/layout/StoreSwitcher';
 
 const UserButtonClient = dynamic(
@@ -45,6 +47,11 @@ export function Header({ onMenuClick }: HeaderProps) {
         <div className="hidden sm:block">
           <NotificationPanel />
         </div>
+
+        {/* Solo visible cuando corre como PWA instalada (standalone). */}
+        <OpenWindowButton />
+
+        <HelpButton />
 
         <div className="hidden sm:block">
           <RefreshProfileButton />

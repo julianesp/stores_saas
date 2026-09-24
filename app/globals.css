@@ -197,10 +197,31 @@ body {
   }
 }
 
+/* Campaneo de la notificación: la campana "suena" (se inclina) para llamar la
+   atención cuando hay avisos sin ver. Se dispara periódicamente desde el
+   componente NotificationPanel. */
+.bell-ring {
+  animation: bell-ring 900ms cubic-bezier(0.36, 0.07, 0.19, 0.97);
+  transform-origin: top center;
+}
+
+@keyframes bell-ring {
+  0% { transform: rotate(0); }
+  10% { transform: rotate(18deg); }
+  20% { transform: rotate(-15deg); }
+  30% { transform: rotate(12deg); }
+  40% { transform: rotate(-9deg); }
+  50% { transform: rotate(6deg); }
+  60% { transform: rotate(-3deg); }
+  70% { transform: rotate(1deg); }
+  100% { transform: rotate(0); }
+}
+
 /* Reduced motion: sin escalado/pulso; el toast y el número ya dan feedback. */
 @media (prefers-reduced-motion: reduce) {
   .cart-add-pulse,
-  .cart-badge-pop {
+  .cart-badge-pop,
+  .bell-ring {
     animation: none;
   }
 }

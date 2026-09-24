@@ -144,3 +144,28 @@ export function getStorefrontBlockMessage(reason?: string): {
       };
   }
 }
+
+/**
+ * Tiendas propias / de demostración que NO deben mostrarse al público como una
+ * tienda real. Si alguien entra a su URL pública, ve un aviso de "no disponible"
+ * en vez del catálogo. Es la cuenta del desarrollador (neurai / julii1295).
+ *
+ * Se compara por slug (de la URL /store/[slug]) y por email del dueño
+ * (store_email de la config), en minúsculas.
+ */
+const DISABLED_STOREFRONT_SLUGS = ['neurai'];
+const DISABLED_STOREFRONT_EMAILS = ['julii1295@gmail.com'];
+
+/**
+ * ¿Esta tienda pública está deshabilitada para el público (es demo/propia)?
+ * @param slug  slug de la URL de la tienda
+ * @param email store_email del dueño (opcional; si la config lo trae)
+ */
+export function isStorefrontDisabled(slug?: string | null, email?: string | null): boolean {
+  const s = slug?.trim().toLowerCase();
+  const e = email?.trim().toLowerCase();
+  return (
+    (!!s && DISABLED_STOREFRONT_SLUGS.includes(s)) ||
+    (!!e && DISABLED_STOREFRONT_EMAILS.includes(e))
+  );
+}
