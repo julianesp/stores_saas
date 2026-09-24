@@ -68,14 +68,32 @@ export function NotificationPanel() {
     return () => clearInterval(interval);
   }, [loadNotifications]);
 
-  // Recargar al abrir, para tener el dato más fresco. Abrir el panel NO marca
-  // las notificaciones como vistas: eso ocurre al hacer clic en cada una.
+  // Recargar al abrir, para tener el dato más fresco.
   useEffect(() => {
     if (isOpen) {
       // eslint-disable-next-line react-hooks/set-state-in-effect
       loadNotifications();
     }
   }, [isOpen, loadNotifications]);
+
+  // Al abrir el panel, el tendero está VIENDO las notificaciones: marcamos todas
+  // las actuales como vistas para que el campaneo y el sonido paren. Si más tarde
+  // llega una notificación nueva (id distinto), volverá a sonar. Esto es lo que
+  // el tendero espera: mirar el panel → dejar de sonar. (Antes había que hacer
+  // clic en cada una, pero el clic navega fuera de la página, así que era
+  // imposible marcarlas todas y el sonido nunca paraba.)
+  useEffect(() => {
+    if (isOpen && notifications.length > 0) {
+      const ids = notifications.map((n) => n.id);
+      markNotificationsSeen(ids);
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setSeenIds((prev) => {
+        const next = new Set(prev);
+        ids.forEach((id) => next.add(id));
+        return next;
+      });
+    }
+  }, [isOpen, notifications]);
 
   // Campaneo periódico: cada 10 segundos, mientras quede AL MENOS UNA
   // notificación sin ver, la campana "suena" (animación ~900ms) y reproduce el
