@@ -437,162 +437,59 @@ export default function SubscriptionPageWompi() {
         </CardContent>
       </Card>
 
-      {/* Selección de tipo de negocio + Plan */}
-      <div>
-        {businessTypeFixed ? (
-          <>
-            {/* Tipo de negocio ya fijado: no mostramos los demás tipos, solo
-                el suyo, con la opción de cambiarlo si de verdad lo necesita. */}
-            <div className="flex items-center justify-between mb-4">
-              <div>
-                <h2 className="text-2xl font-bold mb-1">Tu tipo de negocio</h2>
-                <p className="text-gray-600">
-                  {getBusinessType(profile?.business_type).emoji}{" "}
-                  {getBusinessType(profile?.business_type).name} — el sistema ya
-                  está adaptado a este negocio.
-                </p>
-              </div>
-              <button
-                type="button"
-                onClick={() => setEditingBusinessType(true)}
-                className="text-sm text-brand underline underline-offset-2 hover:text-brand-hover whitespace-nowrap"
-              >
-                Cambiar tipo de negocio
-              </button>
+      {/* Plan */}
+      <Card id="plan-basico" className="border-brand/40 border-2 scroll-mt-24">
+        <CardHeader className="pb-3">
+          <div className="flex items-center justify-between">
+            <CardTitle className="text-xl flex items-center gap-2">
+              🛒 Plan Tienda / Minimercado
+            </CardTitle>
+            <div className="text-right">
+              <span className="text-3xl font-bold">
+                {formatCurrency(getPrice('abarrotes'))}
+              </span>
+              <span className="text-gray-500 text-sm ml-1">/mes</span>
             </div>
-          </>
-        ) : (
-          <>
-            <h2 className="text-2xl font-bold mb-2">Elige tu tipo de negocio</h2>
-            <p className="text-gray-600 mb-4">
-              Adaptamos el sistema a tu negocio: los módulos, el vocabulario y
-              las funciones se ajustan al tipo que elijas. Una vez lo
-              establezcas, quedará fijo y no volverás a ver los demás tipos.
-            </p>
-
-            {/* Tarjetas seleccionables de tipo de negocio */}
-            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3 mb-4">
-              {BUSINESS_TYPES.map((bt) => {
-                const isSelected = selectedBusinessType === bt.id;
-                return (
-                  <button
-                    key={bt.id}
-                    type="button"
-                    onClick={() => setSelectedBusinessType(bt.id)}
-                    aria-pressed={isSelected}
-                    className={`text-left rounded-xl border-2 p-3 transition-all ${
-                      isSelected
-                        ? "border-brand bg-brand-light/50 ring-2 ring-brand/40"
-                        : "border-gray-200 hover:border-brand/50 hover:bg-gray-50"
-                    }`}
-                  >
-                    <div className="text-3xl mb-1">{bt.emoji}</div>
-                    <div className="font-semibold text-sm leading-tight">
-                      {bt.name}
-                    </div>
-                    <div className="text-xs text-gray-500 mt-1">
-                      {formatCurrency(getPrice(bt.id))}/mes
-                    </div>
-                  </button>
-                );
-              })}
-            </div>
-
-            {/* Botón para fijar el tipo elegido como el predeterminado */}
-            <div className="mb-6 flex items-center gap-3">
-              <Button
-                variant="outline"
-                onClick={handleSaveBusinessType}
-                disabled={savingBusinessType || !profile?.id}
-              >
-                {savingBusinessType ? (
-                  <>
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Guardando…
-                  </>
-                ) : (
-                  `Establecer ${getBusinessType(selectedBusinessType).name} como mi negocio`
-                )}
-              </Button>
-              {editingBusinessType && (
-                <button
-                  type="button"
-                  onClick={() => {
-                    setEditingBusinessType(false);
-                    if (profile?.business_type) {
-                      setSelectedBusinessType(profile.business_type);
-                    }
-                  }}
-                  className="text-sm text-gray-500 underline underline-offset-2"
-                >
-                  Cancelar
-                </button>
-              )}
-            </div>
-          </>
-        )}
-
-        {(() => {
-          const selectedType = getBusinessType(selectedBusinessType);
-          return (
-            <Card id="plan-basico" className="border-brand/40 border-2 scroll-mt-24">
-              <CardHeader>
-                <CardTitle className="text-2xl flex items-center gap-2">
-                  <span>{selectedType.emoji}</span>
-                  Plan {selectedType.name}
-                </CardTitle>
-                <CardDescription>{selectedType.description}</CardDescription>
-                <div className="mt-4">
-                  <span className="text-4xl font-bold">
-                    {formatCurrency(getPrice(selectedType.id))}
-                  </span>
-                  <span className="text-gray-500 ml-2">/mes</span>
-                </div>
-              </CardHeader>
-
-              <CardContent className="space-y-4">
-                <ul className="space-y-3">
-                  {PLAN_FEATURES.map((feature, index) => (
-                    <li key={index} className="flex items-start gap-2">
-                      <Check className="h-5 w-5 text-green-600 mt-0.5 flex-shrink-0" />
-                      <span className="text-sm">{feature}</span>
-                    </li>
-                  ))}
-                </ul>
-
-                <Button
-                  className={`w-full ${
-                    hasActiveSubscription
-                      ? "bg-green-600 hover:bg-green-600"
-                      : "bg-gray-800 hover:bg-gray-900"
-                  }`}
-                  size="lg"
-                  onClick={() => handleSubscribe(selectedType.planId)}
-                  // Si ya está activo no debe poder pagar de nuevo por accidente
-                  disabled={
-                    hasActiveSubscription ||
-                    (loading && selectedItem === selectedType.planId)
-                  }
-                >
-                  {loading && selectedItem === selectedType.planId ? (
-                    <>
-                      <Loader2 className="mr-2 h-5 w-5 animate-spin" />
-                      Creando link de pago...
-                    </>
-                  ) : hasActiveSubscription ? (
-                    <>
-                      <Check className="mr-2 h-5 w-5" />
-                      Plan Activo
-                    </>
-                  ) : (
-                    `Suscribirse al Plan ${selectedType.name}`
-                  )}
-                </Button>
-              </CardContent>
-            </Card>
-          );
-        })()}
-      </div>
+          </div>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <ul className="grid sm:grid-cols-2 gap-x-6 gap-y-2">
+            {PLAN_FEATURES.map((feature, index) => (
+              <li key={index} className="flex items-start gap-2">
+                <Check className="h-4 w-4 text-green-600 mt-0.5 flex-shrink-0" />
+                <span className="text-sm">{feature}</span>
+              </li>
+            ))}
+          </ul>
+          <Button
+            className={`w-full ${
+              hasActiveSubscription
+                ? "bg-green-600 hover:bg-green-600"
+                : "bg-gray-800 hover:bg-gray-900"
+            }`}
+            size="lg"
+            onClick={() => handleSubscribe('plan-abarrotes-monthly')}
+            disabled={
+              hasActiveSubscription ||
+              (loading && selectedItem === 'plan-abarrotes-monthly')
+            }
+          >
+            {loading && selectedItem === 'plan-abarrotes-monthly' ? (
+              <>
+                <Loader2 className="mr-2 h-5 w-5 animate-spin" />
+                Creando link de pago...
+              </>
+            ) : hasActiveSubscription ? (
+              <>
+                <Check className="mr-2 h-5 w-5" />
+                Plan Activo
+              </>
+            ) : (
+              "Activar plan — $24.900/mes"
+            )}
+          </Button>
+        </CardContent>
+      </Card>
 
       {/* Funcionalidades incluidas (antes eran addons de pago) */}
       <div>

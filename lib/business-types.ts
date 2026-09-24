@@ -22,11 +22,11 @@
 
 /** Identificadores estables de tipo de negocio. No renombrar (se guardan en BD). */
 export type BusinessTypeId =
-  | 'abarrotes'
-  | 'papeleria'
-  | 'comidas_rapidas'
-  | 'licorera'
-  | 'farmacia';
+  | 'abarrotes';
+  // | 'papeleria'       // próximamente
+  // | 'comidas_rapidas' // próximamente
+  // | 'licorera'        // próximamente
+  // | 'farmacia'        // próximamente
 
 /** IDs de módulos del sidebar que un tipo de negocio puede ocultar. */
 export type StoreModuleId =
@@ -85,9 +85,8 @@ export const DEFAULT_BUSINESS_TYPE: BusinessTypeId = 'abarrotes';
 export const BUSINESS_TYPES: BusinessType[] = [
   {
     id: 'abarrotes',
-    name: 'Abarrotes / Minimercado',
-    description:
-      'Tienda de barrio completa: control de vencimientos, fiado, código de barras y proveedores.',
+    name: 'Tienda / Minimercado',
+    description: 'Tienda de barrio completa: control de vencimientos, fiado, código de barras y proveedores.',
     emoji: '🛒',
     planId: 'plan-abarrotes-monthly',
     price: 24900,
@@ -100,74 +99,51 @@ export const BUSINESS_TYPES: BusinessType[] = [
       showSuppliers: true,
     },
   },
-  {
-    id: 'papeleria',
-    name: 'Papelería',
-    description:
-      'Útiles escolares y de oficina. Sin vencimientos, foco en variedad de artículos.',
-    emoji: '✏️',
-    planId: 'plan-papeleria-monthly',
-    price: 19900,
-    vocabulary: { itemSingular: 'Artículo', itemPlural: 'Artículos' },
-    hiddenModules: [],
-    features: {
-      showExpiration: false,
-      showBarcode: true,
-      showFiado: true,
-      showSuppliers: true,
-    },
-  },
-  {
-    id: 'comidas_rapidas',
-    name: 'Comidas rápidas / Pizzería',
-    description:
-      'Platos y combos preparados. Sin código de barras ni inventario perecedero clásico.',
-    emoji: '🍕',
-    planId: 'plan-comidas-rapidas-monthly',
-    price: 19900,
-    vocabulary: { itemSingular: 'Plato', itemPlural: 'Platos y combos' },
-    hiddenModules: ['inventory'],
-    features: {
-      showExpiration: false,
-      showBarcode: false,
-      showFiado: true,
-      showSuppliers: false,
-    },
-  },
-  {
-    id: 'licorera',
-    name: 'Licorera / Estanco',
-    description:
-      'Licores y cigarrillos. Ticket promedio alto, sin fecha de vencimiento.',
-    emoji: '🍾',
-    planId: 'plan-licorera-monthly',
-    price: 24900,
-    vocabulary: { itemSingular: 'Producto', itemPlural: 'Productos' },
-    hiddenModules: [],
-    features: {
-      showExpiration: false,
-      showBarcode: true,
-      showFiado: true,
-      showSuppliers: true,
-    },
-  },
-  {
-    id: 'farmacia',
-    name: 'Farmacia / Droguería',
-    description:
-      'Medicamentos y productos de salud. Control estricto de vencimientos.',
-    emoji: '💊',
-    planId: 'plan-farmacia-monthly',
-    price: 29900,
-    vocabulary: { itemSingular: 'Medicamento', itemPlural: 'Medicamentos' },
-    hiddenModules: [],
-    features: {
-      showExpiration: true,
-      showBarcode: true,
-      showFiado: true,
-      showSuppliers: true,
-    },
-  },
+  // Próximamente — descomentar cuando estén listos:
+  // {
+  //   id: 'papeleria',
+  //   name: 'Papelería',
+  //   description: 'Útiles escolares y de oficina. Sin vencimientos, foco en variedad de artículos.',
+  //   emoji: '✏️',
+  //   planId: 'plan-papeleria-monthly',
+  //   price: 19900,
+  //   vocabulary: { itemSingular: 'Artículo', itemPlural: 'Artículos' },
+  //   hiddenModules: [],
+  //   features: { showExpiration: false, showBarcode: true, showFiado: true, showSuppliers: true },
+  // },
+  // {
+  //   id: 'comidas_rapidas',
+  //   name: 'Comidas rápidas / Pizzería',
+  //   description: 'Platos y combos preparados. Sin código de barras ni inventario perecedero clásico.',
+  //   emoji: '🍕',
+  //   planId: 'plan-comidas-rapidas-monthly',
+  //   price: 19900,
+  //   vocabulary: { itemSingular: 'Plato', itemPlural: 'Platos y combos' },
+  //   hiddenModules: ['inventory'],
+  //   features: { showExpiration: false, showBarcode: false, showFiado: true, showSuppliers: false },
+  // },
+  // {
+  //   id: 'licorera',
+  //   name: 'Licorera / Estanco',
+  //   description: 'Licores y cigarrillos. Ticket promedio alto, sin fecha de vencimiento.',
+  //   emoji: '🍾',
+  //   planId: 'plan-licorera-monthly',
+  //   price: 24900,
+  //   vocabulary: { itemSingular: 'Producto', itemPlural: 'Productos' },
+  //   hiddenModules: [],
+  //   features: { showExpiration: false, showBarcode: true, showFiado: true, showSuppliers: true },
+  // },
+  // {
+  //   id: 'farmacia',
+  //   name: 'Farmacia / Droguería',
+  //   description: 'Medicamentos y productos de salud. Control estricto de vencimientos.',
+  //   emoji: '💊',
+  //   planId: 'plan-farmacia-monthly',
+  //   price: 29900,
+  //   vocabulary: { itemSingular: 'Medicamento', itemPlural: 'Medicamentos' },
+  //   hiddenModules: [],
+  //   features: { showExpiration: true, showBarcode: true, showFiado: true, showSuppliers: true },
+  // },
 ];
 
 /** Devuelve el tipo de negocio por su id, o el por defecto (abarrotes) si no existe. */
