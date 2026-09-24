@@ -38,7 +38,7 @@ import { landingConfig } from "@/lib/landing-config";
 
 export default function Home() {
   return (
-    <div className="min-h-screen bg-linear-to-br from-gray-600 to-gray-200">
+    <div className="min-h-screen" style={{ background: "#0f1117" }}>
       {/* Header */}
       <NavbarRueda />
 
@@ -46,104 +46,132 @@ export default function Home() {
       <WhatsAppButton />
 
       {/* Hero Section */}
-      <section className="container mx-auto px-4 pt-28 md:pt-36 pb-12 md:pb-20 text-center">
-        <h2 className="text-3xl sm:text-4xl md:text-5xl font-bold text-white mb-4 md:mb-6">
-          Gestión Completa para tu Tienda
-        </h2>
-        <p className="text-base sm:text-lg md:text-xl text-white mb-6 md:mb-8 max-w-2xl mx-auto px-2">
-          Sistema integral de punto de venta, inventario, facturación y gestión
-          de clientes. Todo lo que necesitas para administrar y hacer crecer tu
-          negocio.
-        </p>
-        <div className="flex flex-row gap-3 md:gap-4 justify-center max-w-md sm:max-w-none mx-auto">
-          <Link href="/sign-in" className="flex-1 sm:flex-none">
-            <Button
-              size="lg"
-              variant="ghost"
-              className="text-base md:text-lg w-full sm:w-auto h-20 sm:h-auto py-4 bg-gray-800 cursor-pointer text-white hover:bg-white hover:text-gray-800 transition-colors hover:border hover:border-black"
-            >
-              Entrar
-            </Button>
-          </Link>
-          <Link href="/sign-up" className="flex-1 sm:flex-none">
-            <Button
-              size="lg"
-              className="text-base md:text-lg w-full sm:w-auto h-20 sm:h-auto py-4 cursor-pointer"
-            >
-              Registro <ArrowRight className="ml-2 h-4 w-4 md:h-5 md:w-5" />
-            </Button>
-          </Link>
+      <section className="relative overflow-hidden">
+        {/* Glow de fondo centrado */}
+        <div
+          aria-hidden
+          className="pointer-events-none absolute inset-0"
+          style={{
+            background:
+              "radial-gradient(ellipse 80% 60% at 50% -10%, rgba(0,124,128,0.28) 0%, transparent 70%)",
+          }}
+        />
+        <div className="container relative mx-auto px-4 pt-32 md:pt-44 pb-16 md:pb-24 text-center">
+          {/* Etiqueta de confianza */}
+          <div className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-4 py-1.5 text-xs font-medium text-white/60 mb-8 backdrop-blur-sm">
+            <span className="h-1.5 w-1.5 rounded-full bg-brand animate-pulse" />
+            Sistema POS para tiendas colombianas
+          </div>
+
+          <h1 className="text-4xl sm:text-5xl md:text-7xl font-extrabold text-white tracking-tight mb-5 leading-[1.05]">
+            Tu tienda,{" "}
+            <span className="text-brand">bajo control</span>
+          </h1>
+          <p className="text-base sm:text-lg md:text-xl text-white/60 mb-10 max-w-xl mx-auto leading-relaxed px-2">
+            Punto de venta, inventario, fiados y reportes — todo desde el celular que ya tienes. Sin cajas registradoras ni equipos costosos.
+          </p>
+          <div className="flex flex-row gap-3 justify-center">
+            <Link href="/sign-up">
+              <Button
+                size="lg"
+                className="h-12 px-7 text-sm font-semibold bg-brand hover:bg-brand-hover text-white cursor-pointer shadow-lg shadow-brand/20"
+              >
+                Empezar gratis 30 días
+                <ArrowRight className="ml-2 h-4 w-4" />
+              </Button>
+            </Link>
+            <Link href="/sign-in">
+              <Button
+                size="lg"
+                variant="ghost"
+                className="h-12 px-7 text-sm font-medium text-white/70 hover:text-white hover:bg-white/8 cursor-pointer border border-white/10"
+              >
+                Ya tengo cuenta
+              </Button>
+            </Link>
+          </div>
+
+          {/* Social proof mínimo */}
+          <p className="mt-8 text-xs text-white/35">
+            Sin tarjeta de crédito · Cancela cuando quieras · Soporte en español
+          </p>
         </div>
       </section>
 
-      {/* Del caos al control - Storytelling con imágenes */}
+      {/* Del caos al control */}
       <FadeInSection>
-      <section className="container mx-auto px-4 py-12 md:py-20">
-        <div className="text-center mb-10 md:mb-14">
-          <h3 className="text-2xl sm:text-3xl md:text-4xl font-bold text-white mb-3">
-            De las montañas de papeles a tener el control
-          </h3>
-          <p className="text-base md:text-lg text-white/90 max-w-2xl mx-auto">
-            Mira cómo posib.dev transforma el día a día de tu negocio. ¿Te
-            identificas con alguna de estas escenas?
-          </p>
-        </div>
-
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-8 md:gap-10 max-w-5xl mx-auto">
-          {/* Imagen 1 - El caos */}
-          <div className="group flex flex-col items-center text-center">
-            <div className="relative w-full max-w-sm aspect-[3/5] overflow-hidden rounded-2xl shadow-2xl ring-1 ring-white/10 transition-transform duration-300 group-hover:scale-[1.02]">
-              <Image
-                src="https://pub-ea40242d92ce470fbb6e43d46f01cefe.r2.dev/images/homepage_1.jpg"
-                alt="Tendero abrumado entre montañas de ventas y recibos en papel"
-                fill
-                sizes="(max-width: 768px) 100vw, 400px"
-                className="object-cover"
-              />
-            </div>
-            <h4 className="mt-5 text-xl md:text-2xl font-bold text-white">
-              ¿Tus cuentas viven en papeles y cuadernos?
-            </h4>
-            <p className="mt-2 text-sm md:text-base text-white/85 max-w-sm">
-              Olvídate de buscar entre recibos y libretas. Registra cada venta
-              en segundos y ten todo ordenado en un solo lugar.{" "}
-              <span className="font-semibold text-white">
-                Descubre lo fácil que es.
-              </span>
+      <section className="border-t border-white/5">
+        <div className="container mx-auto px-4 py-16 md:py-24">
+          <div className="text-center mb-12 md:mb-16">
+            <p className="text-xs font-semibold uppercase tracking-widest text-brand mb-3">
+              Para la tienda de barrio
+            </p>
+            <h2 className="text-2xl sm:text-3xl md:text-4xl font-bold text-white mb-4">
+              Del cuaderno al control total
+            </h2>
+            <p className="text-base text-white/50 max-w-lg mx-auto">
+              Mira cómo posib.dev transforma el día a día de tu negocio
             </p>
           </div>
 
-          {/* Imagen 2 - El control con IA */}
-          <div className="group flex flex-col items-center text-center">
-            <div className="relative w-full max-w-sm aspect-[3/5] overflow-hidden rounded-2xl shadow-2xl ring-1 ring-white/10 transition-transform duration-300 group-hover:scale-[1.02]">
-              <Image
-                src="https://pub-ea40242d92ce470fbb6e43d46f01cefe.r2.dev/images/homepage_2.jpg"
-                alt="Panel de inteligencia artificial mostrando productos y tendencias de la tienda"
-                fill
-                sizes="(max-width: 768px) 100vw, 400px"
-                className="object-cover"
-              />
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 md:gap-8 max-w-5xl mx-auto">
+            <div className="group relative overflow-hidden rounded-2xl ring-1 ring-white/8 bg-white/3">
+              <div className="relative aspect-[4/5] overflow-hidden">
+                <Image
+                  src="https://pub-ea40242d92ce470fbb6e43d46f01cefe.r2.dev/images/homepage_1.jpg"
+                  alt="Tendero abrumado entre montañas de ventas y recibos en papel"
+                  fill
+                  sizes="(max-width: 768px) 100vw, 480px"
+                  className="object-cover transition-transform duration-500 group-hover:scale-[1.03]"
+                />
+                <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
+                <div className="absolute bottom-0 left-0 right-0 p-6">
+                  <span className="inline-block rounded-full bg-red-500/20 border border-red-500/30 text-red-400 text-xs font-semibold px-3 py-1 mb-3">
+                    Antes
+                  </span>
+                  <h3 className="text-xl font-bold text-white">
+                    Papeles, cuadernos y cuentas perdidas
+                  </h3>
+                  <p className="text-sm text-white/70 mt-1">
+                    Sin saber cuánto vendiste hoy ni cuánto te deben
+                  </p>
+                </div>
+              </div>
             </div>
-            <h4 className="mt-5 text-xl md:text-2xl font-bold text-white">
-              Conoce tu tienda y vende lo que tus clientes buscan
-            </h4>
-            <p className="mt-2 text-sm md:text-base text-white/85 max-w-sm">
-              La inteligencia artificial te muestra qué se vende más, qué
-              reponer y cómo crecer.{" "}
-              <span className="font-semibold text-white">
-                Mira cómo funciona en tu negocio.
-              </span>
-            </p>
-          </div>
-        </div>
 
-        <div className="text-center mt-10 md:mt-12">
-          <Link href="/sign-up" className="inline-block">
-            <Button size="lg" className="text-base md:text-lg cursor-pointer">
-              Quiero verlo en mi tienda{" "}
-              <ArrowRight className="ml-2 h-4 w-4 md:h-5 md:w-5" />
-            </Button>
-          </Link>
+            <div className="group relative overflow-hidden rounded-2xl ring-1 ring-brand/20 bg-white/3">
+              <div className="relative aspect-[4/5] overflow-hidden">
+                <Image
+                  src="https://pub-ea40242d92ce470fbb6e43d46f01cefe.r2.dev/images/homepage_2.jpg"
+                  alt="Panel de control mostrando ventas y tendencias de la tienda"
+                  fill
+                  sizes="(max-width: 768px) 100vw, 480px"
+                  className="object-cover transition-transform duration-500 group-hover:scale-[1.03]"
+                />
+                <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
+                <div className="absolute bottom-0 left-0 right-0 p-6">
+                  <span className="inline-block rounded-full bg-brand/20 border border-brand/30 text-brand text-xs font-semibold px-3 py-1 mb-3">
+                    Con posib
+                  </span>
+                  <h3 className="text-xl font-bold text-white">
+                    Ventas, inventario y fiados en tu celular
+                  </h3>
+                  <p className="text-sm text-white/70 mt-1">
+                    La IA te muestra qué vender más y qué reponer
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div className="text-center mt-10">
+            <Link href="/sign-up">
+              <Button size="lg" className="bg-brand hover:bg-brand-hover text-white cursor-pointer shadow-lg shadow-brand/20">
+                Quiero verlo en mi tienda
+                <ArrowRight className="ml-2 h-4 w-4" />
+              </Button>
+            </Link>
+          </div>
         </div>
       </section>
       </FadeInSection>
@@ -153,279 +181,134 @@ export default function Home() {
         <WhyPosib />
       </FadeInSection>
 
-      {/* Demo Videos Section */}
+      {/* Videos */}
       <FadeInSection>
-      <section className="bg-white/5 backdrop-blur-sm py-12 md:py-16">
-        <div className="container mx-auto px-4">
-          <h3 className="text-2xl md:text-3xl font-bold text-center mb-4 text-white">
-            Ve el Sistema en Acción
-          </h3>
-          <p className="text-center text-white mb-8 md:mb-12 max-w-2xl mx-auto">
-            Videos cortos que muestran cómo usar las funcionalidades principales
-          </p>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 md:gap-8">
-            {/* Video 1 - Punto de Venta */}
-            <Card className="bg-gray-800/50 border-gray-600 overflow-hidden">
-              <CardHeader className="p-4">
-                <div className="aspect-video bg-gray-700 rounded-lg mb-3 overflow-hidden">
-                  <iframe
-                    className="w-full h-full rounded-lg"
-                    src="https://www.youtube.com/embed/I6qJtQ1t2rQ"
-                    title="Demo: Punto de Venta Rápido - posib.dev"
-                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                    allowFullScreen
-                  ></iframe>
-                </div>
-                <CardTitle className="text-lg text-white">
-                  Punto de Venta Rápido
-                </CardTitle>
-                <CardDescription className="text-gray-300">
-                  Escanea productos, aplica descuentos y cobra en segundos
-                </CardDescription>
-              </CardHeader>
-            </Card>
-
-            {/* Video 2 - Vender Producto */}
-            <Card className="bg-gray-800/50 border-gray-600 overflow-hidden">
-              <CardHeader className="p-4">
-                <div className="aspect-video bg-gray-700 rounded-lg mb-3 overflow-hidden">
-                  <iframe
-                    className="w-full h-full rounded-lg"
-                    src="https://www.youtube.com/embed/b-yYlIAqopM"
-                    title="Demo: Vende un producto - posib.dev"
-                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                    allowFullScreen
-                  ></iframe>
-                </div>
-                <CardTitle className="text-lg text-white">
-                  Vende un producto
-                </CardTitle>
-                <CardDescription className="text-gray-300">
-                  Lleva registro de tus ventas
-                </CardDescription>
-              </CardHeader>
-            </Card>
-
-            {/* Video 3 - Tienda Online */}
-            {/* <Card className="bg-gray-800/50 border-gray-600 overflow-hidden">
-              <CardHeader className="p-4">
-                <div className="aspect-video bg-gray-700 rounded-lg mb-3 flex items-center justify-center">
-                  <Store className="h-12 w-12 text-gray-400" />
-                  
-                </div>
-                <CardTitle className="text-lg text-white">
-                  Tienda Online
-                </CardTitle>
-                <CardDescription className="text-gray-300">
-                  Vende en línea y recibe pedidos desde tu propia tienda web
-                </CardDescription>
-              </CardHeader>
-            </Card> */}
+      <section className="border-t border-white/5">
+        <div className="container mx-auto px-4 py-16 md:py-20">
+          <div className="text-center mb-10">
+            <p className="text-xs font-semibold uppercase tracking-widest text-brand mb-3">
+              Vélo en acción
+            </p>
+            <h2 className="text-2xl md:text-3xl font-bold text-white">
+              El sistema en 2 minutos
+            </h2>
           </div>
-        </div>
-      </section>
-      </FadeInSection>
-
-      {/* Features */}
-      <FadeInSection>
-      <section className="container mx-auto px-4 py-12 md:py-16">
-        <h3 className="text-2xl md:text-3xl font-bold text-center mb-3 text-white">
-          Funcionalidades Principales
-        </h3>
-        <p className="text-center text-white/80 mb-8 md:mb-12 max-w-3xl mx-auto">
-          Todo lo que necesitas para administrar tu tienda de manera profesional
-        </p>
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6">
-          <Card className="border-2 hover:border-brand/80 transition-all hover:shadow-lg bg-gray-300">
-            <CardHeader className="p-4 md:p-6">
-              <ShoppingCart className="h-8 w-8 md:h-10 md:w-10 text-brand mb-2" />
-              <CardTitle className="text-base md:text-lg">
-                Punto de Venta
-              </CardTitle>
-              <CardDescription className="text-sm">
-                Sistema POS rápido con escaneo de códigos de barras, múltiples
-                métodos de pago y recibos de venta
-              </CardDescription>
-            </CardHeader>
-          </Card>
-
-          <Card className="border-2 hover:border-brand/80 transition-all hover:shadow-lg bg-gray-300">
-            <CardHeader className="p-4 md:p-6">
-              <Package className="h-8 w-8 md:h-10 md:w-10 text-brand mb-2" />
-              <CardTitle className="text-base md:text-lg">
-                Control de Inventario
-              </CardTitle>
-              <CardDescription className="text-sm">
-                Gestión completa de productos, stock, proveedores, compras y
-                alertas de inventario bajo
-              </CardDescription>
-            </CardHeader>
-          </Card>
-
-          <Card className="border-2 hover:border-brand/80 transition-all hover:shadow-lg bg-gray-300">
-            <CardHeader className="p-4 md:p-6">
-              <BarChart3 className="h-8 w-8 md:h-10 md:w-10 text-brand mb-2" />
-              <CardTitle className="text-base md:text-lg">
-                Reportes y Analytics
-              </CardTitle>
-              <CardDescription className="text-sm">
-                Análisis de ventas, productos más vendidos, ganancias y reportes
-                personalizados por período
-              </CardDescription>
-            </CardHeader>
-          </Card>
-
-          <Card className="border-2 hover:border-brand/80 transition-all hover:shadow-lg bg-gray-300">
-            <CardHeader className="p-4 md:p-6">
-              <Users className="h-8 w-8 md:h-10 md:w-10 text-brand mb-2" />
-              <CardTitle className="text-base md:text-lg">
-                Gestión de Clientes
-              </CardTitle>
-              <CardDescription className="text-sm">
-                Base de datos de clientes, historial de compras, cuentas por
-                cobrar y sistema de puntos de lealtad
-              </CardDescription>
-            </CardHeader>
-          </Card>
-        </div>
-      </section>
-      </FadeInSection>
-
-      {/* More Features */}
-      <FadeInSection>
-      <section className="bg-white/5 backdrop-blur-sm py-12 md:py-16">
-        <div className="container mx-auto px-4">
-          <h3 className="text-2xl md:text-3xl font-bold text-center mb-3 text-white">
-            Funcionalidades Adicionales
-          </h3>
-          <p className="text-center text-white/80 mb-8 md:mb-12">
-            Herramientas poderosas que hacen la diferencia
-          </p>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 md:gap-8">
-            {/* <div className="text-center p-4">
-              <div className="bg-gradient-to-br from-brand to-brand-hover rounded-full w-14 h-14 md:w-16 md:h-16 flex items-center justify-center mx-auto mb-3 md:mb-4 shadow-lg">
-                <Store className="h-7 w-7 md:h-8 md:w-8 text-white" />
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-5 max-w-4xl mx-auto">
+            <div className="rounded-2xl overflow-hidden ring-1 ring-white/8 bg-white/3">
+              <div className="aspect-video">
+                <iframe
+                  className="w-full h-full"
+                  src="https://www.youtube.com/embed/I6qJtQ1t2rQ"
+                  title="Demo: Punto de Venta Rápido"
+                  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                  allowFullScreen
+                />
               </div>
-              <h4 className="font-semibold text-base md:text-lg mb-2 text-white">
-                Tienda Online
-              </h4>
-              <p className="text-white/90 text-sm md:text-base px-2">
-                Crea tu tienda web personalizada y vende 24/7. Los clientes
-                pueden ver catálogo, añadir al carrito y pagar en línea
-              </p>
-            </div> */}
-
-            <div className="text-center p-4">
-              <div className="bg-gradient-to-br from-brand to-brand-hover rounded-full w-14 h-14 md:w-16 md:h-16 flex items-center justify-center mx-auto mb-3 md:mb-4 shadow-lg">
-                <Gift className="h-7 w-7 md:h-8 md:w-8 text-white" />
+              <div className="p-4">
+                <p className="font-semibold text-white text-sm">Punto de Venta Rápido</p>
+                <p className="text-white/50 text-xs mt-0.5">Escanea, cobra y registra en segundos</p>
               </div>
-              <h4 className="font-semibold text-base md:text-lg mb-2 text-white">
-                Ofertas y Descuentos
-              </h4>
-              <p className="text-white/90 text-sm md:text-base px-2">
-                Crea ofertas automáticas por fecha de vencimiento, descuentos
-                por cantidad y promociones especiales
-              </p>
             </div>
-
-            <div className="text-center p-4">
-              <div className="bg-gradient-to-br from-brand to-brand-hover rounded-full w-14 h-14 md:w-16 md:h-16 flex items-center justify-center mx-auto mb-3 md:mb-4 shadow-lg">
-                <Bell className="h-7 w-7 md:h-8 md:w-8 text-white" />
+            <div className="rounded-2xl overflow-hidden ring-1 ring-white/8 bg-white/3">
+              <div className="aspect-video">
+                <iframe
+                  className="w-full h-full"
+                  src="https://www.youtube.com/embed/b-yYlIAqopM"
+                  title="Demo: Vende un producto"
+                  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                  allowFullScreen
+                />
               </div>
-              <h4 className="font-semibold text-base md:text-lg mb-2 text-white">
-                Alertas Inteligentes
-              </h4>
-              <p className="text-white/90 text-sm md:text-base px-2">
-                Notificaciones de stock bajo, productos por vencer y
-                recordatorios de cuentas por cobrar
-              </p>
-            </div>
-
-            <div className="text-center p-4">
-              <div className="bg-gradient-to-br from-brand to-brand-hover rounded-full w-14 h-14 md:w-16 md:h-16 flex items-center justify-center mx-auto mb-3 md:mb-4 shadow-lg">
-                <Users className="h-7 w-7 md:h-8 md:w-8 text-white" />
+              <div className="p-4">
+                <p className="font-semibold text-white text-sm">Registra una venta</p>
+                <p className="text-white/50 text-xs mt-0.5">Lleva el historial de cada transacción</p>
               </div>
-              <h4 className="font-semibold text-base md:text-lg mb-2 text-white">
-                Multi-Usuario
-              </h4>
-              <p className="text-white/90 text-sm md:text-base px-2">
-                Roles diferenciados para administradores y cajeros con permisos
-                personalizados
-              </p>
-            </div>
-
-            <div className="text-center p-4">
-              <div className="bg-gradient-to-br from-brand to-brand-hover rounded-full w-14 h-14 md:w-16 md:h-16 flex items-center justify-center mx-auto mb-3 md:mb-4 shadow-lg">
-                <CreditCard className="h-7 w-7 md:h-8 md:w-8 text-white" />
-              </div>
-              <h4 className="font-semibold text-base md:text-lg mb-2 text-white">
-                Múltiples Pagos
-              </h4>
-              <p className="text-white/90 text-sm md:text-base px-2">
-                Registra ventas en efectivo, Nequi y crédito a clientes, con
-                control de cuentas por cobrar
-              </p>
-            </div>
-
-            <div className="text-center p-4">
-              <div className="bg-gradient-to-br from-brand to-brand-hover rounded-full w-14 h-14 md:w-16 md:h-16 flex items-center justify-center mx-auto mb-3 md:mb-4 shadow-lg">
-                <Smartphone className="h-7 w-7 md:h-8 md:w-8 text-white" />
-              </div>
-              <h4 className="font-semibold text-base md:text-lg mb-2 text-white">
-                100% Responsive
-              </h4>
-              <p className="text-white/90 text-sm md:text-base px-2">
-                Funciona perfectamente en celular, tablet y computador.
-                Administra desde cualquier dispositivo
-              </p>
             </div>
           </div>
         </div>
       </section>
       </FadeInSection>
 
-      {/* Benefits */}
+      {/* Funcionalidades principales — bento oscuro */}
       <FadeInSection>
-      <section className="container mx-auto px-4 py-12 md:py-16">
-        <h3 className="text-2xl md:text-3xl font-bold text-center mb-3 text-white">
-          ¿Por qué elegir este sistema?
-        </h3>
-        <p className="text-center text-white/80 mb-8 md:mb-12">
-          Ventajas que transformarán tu negocio
-        </p>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 max-w-5xl mx-auto">
-          <Card className="bg-gradient-to-br from-brand to-brand-hover border-0 text-white">
-            <CardHeader className="p-6">
-              <TrendingUp className="h-10 w-10 mb-3" />
-              <CardTitle className="text-xl mb-2">Ahorra Tiempo</CardTitle>
-              <CardDescription className="text-white/80">
-                Procesa ventas en segundos, genera reportes automáticos y
-                automatiza tareas repetitivas
-              </CardDescription>
-            </CardHeader>
-          </Card>
+      <section className="border-t border-white/5">
+        <div className="container mx-auto px-4 py-16 md:py-24">
+          <div className="text-center mb-12">
+            <p className="text-xs font-semibold uppercase tracking-widest text-brand mb-3">
+              Todo en uno
+            </p>
+            <h2 className="text-2xl sm:text-3xl md:text-4xl font-bold text-white">
+              Funcionalidades principales
+            </h2>
+            <p className="text-white/50 mt-3 max-w-lg mx-auto text-sm">
+              Todo lo que necesitas para administrar tu tienda de manera profesional
+            </p>
+          </div>
 
-          <Card className="bg-gradient-to-br from-brand to-brand-hover border-0 text-white">
-            <CardHeader className="p-6">
-              <Package className="h-10 w-10 mb-3" />
-              <CardTitle className="text-xl mb-2">Control Total</CardTitle>
-              <CardDescription className="text-white/80">
-                Sabe exactamente qué tienes en stock, qué debes comprar y qué
-                productos te generan más ganancia
-              </CardDescription>
-            </CardHeader>
-          </Card>
+          {/* Bento 2×2 grande + items listados */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 max-w-5xl mx-auto mb-6">
+            {[
+              {
+                icon: ShoppingCart,
+                title: "Punto de Venta",
+                desc: "POS rápido con escaneo de código de barras, múltiples métodos de pago y recibos digitales.",
+                accent: true,
+              },
+              {
+                icon: Package,
+                title: "Control de Inventario",
+                desc: "Stock en tiempo real, alertas de agotamiento y control de vencimientos.",
+                accent: false,
+              },
+              {
+                icon: BarChart3,
+                title: "Reportes y Ganancias",
+                desc: "Ventas del día, productos más rentables y comparativos por período.",
+                accent: false,
+              },
+              {
+                icon: Users,
+                title: "Gestión de Clientes",
+                desc: "Historial de compras, cuentas por cobrar (fiados) y puntos de lealtad.",
+                accent: false,
+              },
+            ].map(({ icon: Icon, title, desc, accent }) => (
+              <div
+                key={title}
+                className={`group rounded-2xl p-6 ring-1 transition-all duration-200 hover:ring-brand/40 ${
+                  accent
+                    ? "bg-brand/10 ring-brand/20"
+                    : "bg-white/3 ring-white/8"
+                }`}
+              >
+                <div className={`inline-flex rounded-xl p-2.5 mb-4 ${accent ? "bg-brand/20" : "bg-white/6"}`}>
+                  <Icon className={`h-5 w-5 ${accent ? "text-brand" : "text-white/60"}`} />
+                </div>
+                <h3 className="font-semibold text-white mb-1.5">{title}</h3>
+                <p className="text-sm text-white/50 leading-relaxed">{desc}</p>
+              </div>
+            ))}
+          </div>
 
-          <Card className="bg-gradient-to-br from-brand to-brand-hover border-0 text-white">
-            <CardHeader className="p-6">
-              <Users className="h-10 w-10 mb-3" />
-              <CardTitle className="text-xl mb-2">Fideliza Clientes</CardTitle>
-              <CardDescription className="text-white/80">
-                Lleva el historial de compras, ventas a crédito y puntos de
-                lealtad para que tus clientes vuelvan
-              </CardDescription>
-            </CardHeader>
-          </Card>
+          {/* Features secundarias en fila compacta */}
+          <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 max-w-5xl mx-auto">
+            {[
+              { icon: Gift, label: "Ofertas y descuentos" },
+              { icon: Bell, label: "Alertas de stock y vencimientos" },
+              { icon: Users, label: "Multi-usuario con roles" },
+              { icon: CreditCard, label: "Efectivo, Nequi y crédito" },
+              { icon: Smartphone, label: "Celular, tablet y PC" },
+              { icon: TrendingUp, label: "Reportes diarios automáticos" },
+            ].map(({ icon: Icon, label }) => (
+              <div
+                key={label}
+                className="flex items-center gap-3 rounded-xl bg-white/3 px-4 py-3 ring-1 ring-white/6"
+              >
+                <Icon className="h-4 w-4 text-brand shrink-0" />
+                <span className="text-sm text-white/70">{label}</span>
+              </div>
+            ))}
+          </div>
         </div>
       </section>
       </FadeInSection>
@@ -470,39 +353,54 @@ export default function Home() {
         </div>
       </FadeInSection>
 
-      {/* CTA */}
+      {/* CTA final */}
       <FadeInSection>
-      <section className="container mx-auto px-4 py-12 md:py-20 text-center">
-        <h3 className="text-2xl sm:text-3xl md:text-4xl font-bold mb-4 md:mb-6 text-white">
-          ¿Listo para Empezar?
-        </h3>
-        <p className="text-base sm:text-lg md:text-xl text-white mb-6 md:mb-8 px-2">
-          Prueba gratis por 30 días. No requiere tarjeta de crédito.
-        </p>
-        <div className="flex flex-col sm:flex-row gap-3 md:gap-4 justify-center max-w-md sm:max-w-none mx-auto">
-          <Link href="/sign-up" className="inline-block">
-            <Button
-              size="lg"
-              className="text-base md:text-lg bg-white text-gray-900 hover:bg-gray-100"
-            >
-              Crear Cuenta Gratis{" "}
-              <ArrowRight className="ml-2 h-4 w-4 md:h-5 md:w-5" />
-            </Button>
-          </Link>
-          {/* <a
-            href={landingConfig.contact.calendly.url}
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Button
-              size="lg"
-              variant="outline"
-              className="text-base md:text-lg bg-yellow-400 text-gray-900 hover:bg-yellow-500 border-yellow-400"
-            >
-              <Calendar className="mr-2 h-4 w-4 md:h-5 md:w-5" />
-              Agendar Demostración
-            </Button>
-          </a> */}
+      <section className="border-t border-white/5">
+        <div className="container mx-auto px-4 py-20 md:py-28 text-center">
+          {/* Glow tenue detrás del bloque */}
+          <div
+            aria-hidden
+            className="pointer-events-none absolute left-1/2 -translate-x-1/2"
+            style={{
+              width: "600px",
+              height: "300px",
+              background:
+                "radial-gradient(ellipse, rgba(0,124,128,0.18) 0%, transparent 70%)",
+              filter: "blur(40px)",
+            }}
+          />
+          <p className="relative text-xs font-semibold uppercase tracking-widest text-brand mb-4">
+            Empieza hoy
+          </p>
+          <h2 className="relative text-3xl sm:text-4xl md:text-5xl font-extrabold text-white mb-4 tracking-tight">
+            Tu tienda, bajo control
+          </h2>
+          <p className="relative text-base text-white/50 max-w-md mx-auto mb-10">
+            30 días gratis sin tarjeta. Configura en minutos y empieza a vender hoy mismo.
+          </p>
+          <div className="relative flex flex-row gap-3 justify-center">
+            <Link href="/sign-up">
+              <Button
+                size="lg"
+                className="h-12 px-8 text-sm font-semibold bg-brand hover:bg-brand-hover text-white cursor-pointer shadow-xl shadow-brand/25"
+              >
+                Crear cuenta gratis
+                <ArrowRight className="ml-2 h-4 w-4" />
+              </Button>
+            </Link>
+            <Link href="/sign-in">
+              <Button
+                size="lg"
+                variant="ghost"
+                className="h-12 px-7 text-sm font-medium text-white/60 hover:text-white hover:bg-white/8 cursor-pointer border border-white/10"
+              >
+                Ya tengo cuenta
+              </Button>
+            </Link>
+          </div>
+          <p className="relative mt-6 text-xs text-white/30">
+            Sin tarjeta de crédito · Cancela cuando quieras · Soporte en español
+          </p>
         </div>
       </section>
       </FadeInSection>
