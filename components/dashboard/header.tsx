@@ -44,9 +44,10 @@ export function Header({ onMenuClick }: HeaderProps) {
           <StoreSwitcher />
         </div>
 
-        <div className="hidden sm:block">
-          <NotificationPanel />
-        </div>
+        {/* La campana es visible también en móvil: si no, el tendero no puede
+            abrir el panel para ver/marcar sus notificaciones (y el aviso seguiría
+            activo sin forma de atenderlo). */}
+        <NotificationPanel />
 
         {/* Solo visible cuando corre como PWA instalada (standalone). */}
         <OpenWindowButton />

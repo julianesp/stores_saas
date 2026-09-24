@@ -12,10 +12,15 @@
 
 const SOUND_KEY = 'notification_sound_enabled';
 
-/** ¿El sonido de notificaciones está habilitado en este dispositivo? (por defecto sí) */
+/**
+ * ¿El sonido de notificaciones está habilitado en este dispositivo?
+ * Por defecto APAGADO: el pulso visual y el badge ya informan sin molestar. El
+ * tendero activa el sonido explícitamente si lo quiere. Así no hay "ding"
+ * inesperado en un dispositivo nuevo (p. ej. el celular).
+ */
 export function isNotificationSoundEnabled(): boolean {
-  if (typeof window === 'undefined') return true;
-  return localStorage.getItem(SOUND_KEY) !== 'false';
+  if (typeof window === 'undefined') return false;
+  return localStorage.getItem(SOUND_KEY) === 'true';
 }
 
 /** Activa o desactiva el sonido de notificaciones en este dispositivo. */
