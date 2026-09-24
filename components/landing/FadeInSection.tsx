@@ -41,14 +41,37 @@ export default function FadeInSection({
           observer.disconnect(); // una sola vez
         }
       },
-      // threshold 0 + margen inferior negativo: se activa apenas la sección
-      // asoma ~12% dentro del viewport, sin exigir un % de una sección que
-      // puede ser más alta que la pantalla.
-      { threshold: 0, rootMargin: "0px 0px -12% 0px" },
+      // threshold 0 + margen inferior negativo grande: la animación no se
+      // dispara al asomar apenas por el borde inferior (donde el usuario ni la
+      // ve porque termina antes de llegar), sino cuando la sección ya subió
+      // ~25% dentro del viewport, bien a la vista. Así se alcanza a ver el
+      // fade-in completo.
+      { threshold: 0, rootMargin: "0px 0px -25% 0px" },
     );
 
     observer.observe(el);
-    return () => observer.disconnect();
+
+    // Red de seguridad: una sección al final de la página (sin scroll suficiente
+    // debajo) podría no llegar nunca a subir el 25% y quedaría invisible. Un
+    // segundo observer, sin margen inferior, la revela si de plano ya está
+    // enteramente dentro del viewport (llegó al fondo). No compite con la
+    // animación normal: solo cubre el borde de la última sección.
+    const fallback = new IntersectionObserver(
+      (entries) => {
+        if (entries[0].isIntersecting) {
+          setVisible(true);
+          fallback.disconnect();
+          observer.disconnect();
+        }
+      },
+      { threshold: 0.9 },
+    );
+    fallback.observe(el);
+
+    return () => {
+      observer.disconnect();
+      fallback.disconnect();
+    };
   }, []);
 
   return (
