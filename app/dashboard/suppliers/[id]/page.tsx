@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { useAuth } from '@clerk/nextjs';
-import { ShoppingCart, History } from 'lucide-react';
+import { ShoppingCart, History, Sparkles } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { SupplierForm } from '@/components/suppliers/supplier-form';
@@ -114,12 +114,20 @@ export default function EditSupplierPage() {
               <History className="h-5 w-5" />
               Productos Comprados a este Proveedor ({purchasedProducts.size})
             </CardTitle>
-            <Link href={`/dashboard/suppliers/${params.id}/new-purchase`}>
-              <Button size="sm" variant="outline">
-                <ShoppingCart className="mr-2 h-4 w-4" />
-                Nueva Orden de Compra
-              </Button>
-            </Link>
+            <div className="flex flex-wrap gap-2">
+              <Link href={`/dashboard/suppliers/${params.id}/scan-invoice`}>
+                <Button size="sm" className="bg-brand hover:bg-brand-hover text-white">
+                  <Sparkles className="mr-2 h-4 w-4" />
+                  Subir compra por foto
+                </Button>
+              </Link>
+              <Link href={`/dashboard/suppliers/${params.id}/new-purchase`}>
+                <Button size="sm" variant="outline">
+                  <ShoppingCart className="mr-2 h-4 w-4" />
+                  Nueva Orden de Compra
+                </Button>
+              </Link>
+            </div>
           </div>
           <p className="text-sm text-gray-500 mt-2">
             Historial de productos que has comprado a este proveedor a través de órdenes de compra

@@ -6,7 +6,8 @@ import { useAuth } from "@clerk/nextjs";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { ArrowLeft, Plus, Trash2, ShoppingCart, Search, Scan } from "lucide-react";
+import Link from "next/link";
+import { ArrowLeft, Plus, Trash2, ShoppingCart, Search, Scan, Sparkles } from "lucide-react";
 import { getSupplierById } from "@/lib/cloudflare-api";
 import {
   getProducts,
@@ -393,6 +394,13 @@ export default function NewPurchaseOrderPage() {
             <p className="text-gray-500">Proveedor: {supplier.name}</p>
           </div>
         </div>
+        {/* Atajo: subir la compra por foto de factura (IA) en vez de a mano. */}
+        <Link href={`/dashboard/suppliers/${supplierId}/scan-invoice`}>
+          <Button className="bg-brand hover:bg-brand-hover text-white">
+            <Sparkles className="mr-2 h-4 w-4" />
+            Subir por foto
+          </Button>
+        </Link>
       </div>
 
       <form onSubmit={handleSubmit} className="space-y-6">
