@@ -19,6 +19,7 @@ import { CategoryManagerModal } from '@/components/products/category-manager-mod
 import { DuplicatesReviewModal } from '@/components/products/duplicates-review-modal';
 import { findDuplicateGroups } from '@/lib/duplicate-helpers';
 import { exportProductsToExcel, exportProductsToCSV } from '@/lib/excel-export';
+import { useBusinessType } from '@/hooks/useBusinessType';
 // COMENTADO: Tour deshabilitado
 // import { useTour } from '@/hooks/useTour';
 // import { productsTourConfig } from '@/lib/tour-configs';
@@ -58,6 +59,7 @@ function normalizeImages(
 
 export default function ProductsPage() {
   const { getToken, userId } = useAuth();
+  const bt = useBusinessType();
   const [products, setProducts] = useState<ProductWithRelations[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
   const [loading, setLoading] = useState(true);
@@ -281,8 +283,8 @@ export default function ProductsPage() {
       <div className="space-y-6">
         <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4">
         <div>
-          <h1 className="text-2xl md:text-3xl font-bold">Productos</h1>
-          <p className="text-gray-500 text-sm md:text-base">Gestiona el inventario de productos</p>
+          <h1 className="text-2xl md:text-3xl font-bold">{bt.vocabulary.itemPlural}</h1>
+          <p className="text-gray-500 text-sm md:text-base">Gestiona el inventario de {bt.vocabulary.itemPlural.toLowerCase()}</p>
         </div>
         <div className="flex flex-wrap gap-2">
           <Button variant="outline" onClick={handleExportExcel} className="flex-1 sm:flex-none" title="Exportar productos a Excel">
@@ -355,7 +357,7 @@ export default function ProductsPage() {
           <Link href="/dashboard/products/new" className="flex-1 sm:flex-none">
             <Button className="w-full">
               <Plus className="mr-2 h-4 w-4" />
-              Nuevo
+              {bt.vocabulary.itemSingular} nuevo
             </Button>
           </Link>
         </div>
