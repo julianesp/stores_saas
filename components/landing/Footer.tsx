@@ -15,6 +15,14 @@ const accessLinks = [
   { name: "Crear cuenta", href: "/sign-up" },
 ];
 
+// Páginas informativas del producto/empresa.
+const empresaLinks = [
+  { name: "Acerca de", href: "/acerca" },
+  { name: "Funcionalidades", href: "/funcionalidades" },
+  { name: "Cómo empezar", href: "/como-empezar" },
+  { name: "Contacto y soporte", href: "/contacto" },
+];
+
 const legalLinks = [
   { name: "Términos y condiciones", href: "/terminos" },
   { name: "Política de privacidad", href: "/privacidad" },
@@ -26,7 +34,7 @@ export default function Footer() {
   return (
     <footer className="border-t border-gray-700 bg-gray-800 text-gray-300">
       <div className="container mx-auto px-4 py-12 md:py-16">
-        <div className="grid grid-cols-1 gap-8 md:grid-cols-3">
+        <div className="grid grid-cols-1 gap-8 sm:grid-cols-2 md:grid-cols-4">
           {/* Marca + descripción */}
           <div className="space-y-3">
             <h3 className="text-2xl font-bold text-white" translate="no">
@@ -64,6 +72,23 @@ export default function Footer() {
                   >
                     {link.name}
                     <ArrowRight className="h-3.5 w-3.5" aria-hidden="true" />
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          </div>
+
+          {/* Empresa / producto */}
+          <div>
+            <h4 className="mb-4 text-lg font-semibold text-white">posib</h4>
+            <ul className="space-y-3">
+              {empresaLinks.map((link) => (
+                <li key={link.name}>
+                  <Link
+                    href={link.href}
+                    className="rounded-sm text-sm text-gray-400 transition-colors hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-2 focus-visible:ring-offset-gray-800"
+                  >
+                    {link.name}
                   </Link>
                 </li>
               ))}
