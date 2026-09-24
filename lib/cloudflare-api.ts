@@ -210,6 +210,26 @@ export async function checkProductHasSales(id: string, getToken: GetTokenFn): Pr
   return fetchAPI<{ hasSales: boolean; salesCount: number }>(`/api/products/${id}/has-sales`, getToken);
 }
 
+/**
+ * Fusiona productos repetidos: suma el stock de los duplicados al principal,
+ * reasigna el historial (ventas, movimientos, órdenes) hacia el principal y
+ * elimina los duplicados. Ver `POST /api/products/merge` en el Worker.
+ */
+export async function mergeProducts(
+  primaryId: string,
+  duplicateIds: string[],
+  getToken: GetTokenFn
+): Promise<{ product: Product | null; mergedCount: number }> {
+  return fetchAPI<{ product: Product | null; mergedCount: number }>(
+    '/api/products/merge',
+    getToken,
+    {
+      method: 'POST',
+      body: JSON.stringify({ primaryId, duplicateIds }),
+    }
+  );
+}
+
 export async function searchProducts(query: string, getToken: GetTokenFn): Promise<Product[]> {
   return fetchAPI<Product[]>(`/api/products/search?q=${encodeURIComponent(query)}`, getToken);
 }

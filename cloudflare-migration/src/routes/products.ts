@@ -200,6 +200,129 @@ app.put('/:id', async (c) => {
 });
 
 // DELETE /api/products/:id - Delete product
+// POST /api/products/merge - Fusionar productos repetidos en uno solo (principal)
+// Suma el stock de los duplicados al principal, reasigna el historial
+// (ventas, movimientos de inventario, órdenes de compra) hacia el principal
+// para NO perder integridad, y borra los productos duplicados.
+app.post('/merge', async (c) => {
+  const tenant: Tenant = c.get('tenant');
+
+  try {
+    const body = await c.req.json<{ primaryId?: string; duplicateIds?: string[] }>();
+    const primaryId = body.primaryId;
+    const duplicateIds = (body.duplicateIds || []).filter(id => id && id !== primaryId);
+
+    if (!primaryId || duplicateIds.length === 0) {
+      return c.json<APIResponse>({
+        success: false,
+        error: 'Debes indicar un producto principal y al menos un duplicado.',
+      }, 400);
+    }
+
+    const tenantDB = new TenantDB(c.env.DB, tenant.id);
+
+    // Validar que el principal existe y pertenece al tenant
+    const primary = await tenantDB.getById<Product>('products', primaryId);
+    if (!primary) {
+      return c.json<APIResponse>({
+        success: false,
+        error: 'El producto principal no existe.',
+      }, 404);
+    }
+
+    // Validar que todos los duplicados existen y pertenecen al tenant
+    const duplicates: Product[] = [];
+    for (const dupId of duplicateIds) {
+      const dup = await tenantDB.getById<Product>('products', dupId);
+      if (!dup) {
+        return c.json<APIResponse>({
+          success: false,
+          error: `Uno de los productos a fusionar no existe (${dupId}).`,
+        }, 404);
+      }
+      duplicates.push(dup);
+    }
+
+    // Stock total resultante (principal + duplicados)
+    const totalStock =
+      Number(primary.stock || 0) +
+      duplicates.reduce((sum, d) => sum + Number(d.stock || 0), 0);
+
+    const now = new Date().toISOString();
+    const statements: D1PreparedStatement[] = [];
+
+    for (const dupId of duplicateIds) {
+      // Reasignar historial hacia el principal (conservar integridad)
+      statements.push(
+        c.env.DB
+          .prepare('UPDATE sale_items SET product_id = ? WHERE tenant_id = ? AND product_id = ?')
+          .bind(primaryId, tenant.id, dupId)
+      );
+      statements.push(
+        c.env.DB
+          .prepare('UPDATE inventory_movements SET product_id = ? WHERE tenant_id = ? AND product_id = ?')
+          .bind(primaryId, tenant.id, dupId)
+      );
+      statements.push(
+        c.env.DB
+          .prepare('UPDATE purchase_order_items SET product_id = ? WHERE tenant_id = ? AND product_id = ?')
+          .bind(primaryId, tenant.id, dupId)
+      );
+
+      // Borrar datos efímeros/regenerables del duplicado
+      statements.push(
+        c.env.DB
+          .prepare('DELETE FROM offers WHERE tenant_id = ? AND product_id = ?')
+          .bind(tenant.id, dupId)
+      );
+      statements.push(
+        c.env.DB
+          .prepare('DELETE FROM cart_items WHERE tenant_id = ? AND product_id = ?')
+          .bind(tenant.id, dupId)
+      );
+      statements.push(
+        c.env.DB
+          .prepare('DELETE FROM stock_alert_subscriptions WHERE product_id = ?')
+          .bind(dupId)
+      );
+
+      // Finalmente borrar el producto duplicado
+      statements.push(
+        c.env.DB
+          .prepare('DELETE FROM products WHERE tenant_id = ? AND id = ?')
+          .bind(tenant.id, dupId)
+      );
+    }
+
+    // Actualizar el stock del principal con la suma total
+    statements.push(
+      c.env.DB
+        .prepare('UPDATE products SET stock = ?, updated_at = ? WHERE tenant_id = ? AND id = ?')
+        .bind(totalStock, now, tenant.id, primaryId)
+    );
+
+    // Ejecutar todo de forma atómica
+    await c.env.DB.batch(statements);
+
+    const merged = await tenantDB.getById<Product>('products', primaryId);
+
+    return c.json<APIResponse<{ product: Product | null; mergedCount: number }>>({
+      success: true,
+      data: {
+        product: merged,
+        mergedCount: duplicateIds.length,
+      },
+      message: `${duplicateIds.length} producto(s) fusionado(s) en "${primary.name}".`,
+    });
+  } catch (error: any) {
+    console.error('Error merging products:', error);
+    return c.json<APIResponse>({
+      success: false,
+      error: error.message || 'No se pudieron fusionar los productos.',
+    }, 500);
+  }
+});
+
 app.delete('/:id', async (c) => {
   const tenant: Tenant = c.get('tenant');
   const productId = c.req.param('id');

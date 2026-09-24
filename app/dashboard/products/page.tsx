@@ -1,9 +1,9 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
-import { Plus, Search, Edit, Trash2, Package, Tag, Camera, AlertTriangle, Download } from 'lucide-react';
+import { Plus, Search, Edit, Trash2, Package, Tag, Camera, AlertTriangle, Download, Layers } from 'lucide-react';
 import { toast } from 'sonner';
 // import { HelpCircle } from 'lucide-react'; // COMENTADO: Tour deshabilitado
 import { Button } from '@/components/ui/button';
@@ -16,6 +16,8 @@ import { formatCurrency } from '@/lib/utils';
 import Swal from '@/lib/sweetalert';
 import SwalOriginal from 'sweetalert2';
 import { CategoryManagerModal } from '@/components/products/category-manager-modal';
+import { DuplicatesReviewModal } from '@/components/products/duplicates-review-modal';
+import { findDuplicateGroups } from '@/lib/duplicate-helpers';
 import { exportProductsToExcel, exportProductsToCSV } from '@/lib/excel-export';
 // COMENTADO: Tour deshabilitado
 // import { useTour } from '@/hooks/useTour';
@@ -63,6 +65,10 @@ export default function ProductsPage() {
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
   const [showOutOfStock, setShowOutOfStock] = useState(false);
   const [showCategoryModal, setShowCategoryModal] = useState(false);
+  const [showDuplicatesModal, setShowDuplicatesModal] = useState(false);
+
+  // Grupos de productos repetidos (para el badge y el modal de revisión)
+  const duplicateGroups = useMemo(() => findDuplicateGroups(products), [products]);
 
   // COMENTADO: Tour deshabilitado
   // const { startTour, hasSeenTour } = useTour(productsTourConfig, true, userId || undefined);
@@ -265,6 +271,13 @@ export default function ProductsPage() {
         onUpdate={fetchProducts}
       />
 
+      <DuplicatesReviewModal
+        isOpen={showDuplicatesModal}
+        onClose={() => setShowDuplicatesModal(false)}
+        products={products}
+        onUpdate={fetchProducts}
+      />
+
       <div className="space-y-6">
         <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4">
         <div>
@@ -286,6 +299,21 @@ export default function ProductsPage() {
             <Tag className="mr-2 h-4 w-4" />
             <span className="hidden sm:inline">Categorías</span>
             <span className="sm:hidden">Cat.</span>
+          </Button>
+          <Button
+            variant={duplicateGroups.length > 0 ? "default" : "outline"}
+            onClick={() => setShowDuplicatesModal(true)}
+            className="flex-1 sm:flex-none"
+            title="Revisar y agrupar productos repetidos"
+          >
+            <Layers className="mr-2 h-4 w-4" />
+            <span className="hidden sm:inline">Repetidos</span>
+            <span className="sm:hidden">Rep.</span>
+            {duplicateGroups.length > 0 && (
+              <span className="ml-1.5 bg-amber-500 text-white text-xs rounded-full px-2 py-0.5">
+                {duplicateGroups.length}
+              </span>
+            )}
           </Button>
           {/* COMENTADO: Botón de ayuda/tour deshabilitado
           <Button
