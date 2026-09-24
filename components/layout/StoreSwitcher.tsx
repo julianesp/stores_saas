@@ -98,10 +98,10 @@ export default function StoreSwitcher() {
 
   return (
     <div className="flex items-center gap-2">
-      <Store className="h-4 w-4 text-muted-foreground" />
+      <Store className="hidden sm:block h-4 w-4 text-muted-foreground" />
       <Select value={selectedStore} onValueChange={handleStoreChange}>
-        <SelectTrigger className="w-[200px]">
-          <SelectValue placeholder="Seleccionar tienda" />
+        <SelectTrigger className="w-[120px] sm:w-[200px]">
+          <SelectValue placeholder="Tienda" />
         </SelectTrigger>
         <SelectContent>
           {stores.map((store) => (

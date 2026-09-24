@@ -33,16 +33,18 @@ export function Header({ onMenuClick }: HeaderProps) {
         <Menu className="h-6 w-6" />
       </Button>
 
-      <div className="flex-1 min-w-0">
+      {/* Saludo: oculto en móvil para dar espacio a los íconos de acción. */}
+      <div className="hidden sm:block flex-1 min-w-0">
         <h2 className="text-sm md:text-lg font-semibold truncate">
           Bienvenido, {user?.firstName || user?.emailAddresses[0]?.emailAddress?.split('@')[0]}
         </h2>
       </div>
 
-      <div className="flex items-center gap-2 shrink-0">
-        <div className="hidden md:block">
-          <StoreSwitcher />
-        </div>
+      {/* En móvil, empujar los íconos a la derecha (el saludo está oculto). */}
+      <div className="flex-1 sm:hidden" />
+
+      <div className="flex items-center gap-1 sm:gap-2 shrink-0">
+        <StoreSwitcher />
 
         {/* La campana es visible también en móvil: si no, el tendero no puede
             abrir el panel para ver/marcar sus notificaciones (y el aviso seguiría
@@ -54,9 +56,7 @@ export function Header({ onMenuClick }: HeaderProps) {
 
         <HelpButton />
 
-        <div className="hidden sm:block">
-          <RefreshProfileButton />
-        </div>
+        <RefreshProfileButton />
 
         <UserButtonClient afterSignOutUrl="/" />
       </div>

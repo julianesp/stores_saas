@@ -214,9 +214,12 @@ export function NotificationPanel() {
         )}
       </Button>
 
-      {/* Dropdown Panel */}
+      {/* Dropdown Panel.
+          En móvil se fija al viewport (left/right con margen) para que quepa
+          completo y no se salga por la izquierda. En desktop (sm+) se ancla a la
+          campana como un dropdown normal. */}
       {isOpen && (
-        <div className="absolute right-0 mt-2 w-[calc(100vw-2rem)] max-w-sm sm:w-96 bg-white rounded-lg shadow-lg border border-gray-200 z-50">
+        <div className="fixed left-2 right-2 top-16 sm:absolute sm:left-auto sm:right-0 sm:top-auto sm:mt-2 sm:w-96 bg-white rounded-lg shadow-lg border border-gray-200 z-50">
           {/* Header */}
           <div className="flex items-center justify-between p-4 border-b">
             <h3 className="font-semibold text-gray-900">Notificaciones</h3>
