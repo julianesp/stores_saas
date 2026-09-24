@@ -608,7 +608,7 @@ export function Sidebar({ isMobile = false, onLinkClick }: SidebarProps) {
       </div>
 
       {/* Layout Desktop - Lista vertical */}
-      <nav className="hidden md:flex flex-1 flex-col space-y-1 px-3 py-4 overflow-y-auto custom-scrollbar">
+      <nav className="hidden md:flex flex-1 flex-col space-y-1 px-3 py-4 overflow-y-auto overflow-x-hidden custom-scrollbar">
         {menuItems.map((item, index) => {
           const Icon = item.icon;
           const isActive =
@@ -710,7 +710,7 @@ export function Sidebar({ isMobile = false, onLinkClick }: SidebarProps) {
       </nav>
 
       {/* Layout Móvil - Grid de 2 columnas con cuadrados */}
-      <nav className="md:hidden flex-1 overflow-y-auto px-2 custom-scrollbar">
+      <nav className="md:hidden flex-1 overflow-y-auto overflow-x-hidden px-2 custom-scrollbar">
         <div className="grid grid-cols-2 gap-2 w-full">
           {allMenuItemsForMobile.map((item) => {
             const Icon = item.icon;

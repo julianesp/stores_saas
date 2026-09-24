@@ -350,7 +350,7 @@ function DashboardLayoutInner({
           </div>
         )}
 
-        <div className="flex flex-col flex-1 overflow-hidden text-black">
+        <div className="flex flex-col flex-1 min-w-0 overflow-hidden text-black">
           {/* Mostrar banner solo cuando queden 3 días o menos (trial o suscripción activa) */}
           {!loading &&
             !isSuperAdmin &&
@@ -384,7 +384,7 @@ function DashboardLayoutInner({
             }}
           />
 
-          <main className="flex-1 overflow-y-auto bg-gray-50 p-4 md:p-6">
+          <main className="flex-1 min-w-0 overflow-y-auto overflow-x-hidden bg-gray-50 p-4 md:p-6">
             {/* Alerta de expiración cuando faltan 3 días o menos (no para team members) */}
             {!loading &&
               !isSuperAdmin &&
