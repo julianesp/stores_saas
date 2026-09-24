@@ -4,6 +4,7 @@ import { useState, useEffect, useRef } from "react";
 import { createPortal } from "react-dom";
 import Link from "next/link";
 import { Moon, Sun } from "lucide-react";
+import Image from "next/image";
 import styles from "./NavbarRueda.module.scss";
 
 const THEME_KEY = "posib-landing-theme";
@@ -166,9 +167,15 @@ export default function NavbarRueda() {
         <div className="relative flex items-center justify-center h-16">
           {/* Logo a la izquierda */}
           <div className="absolute left-0 z-[70]">
-            <Link href="/" className="flex items-center gap-1.5">
-              <span className="text-lg font-bold text-brand" translate="no">posib</span>
-              <span className="text-lg font-bold text-white text-outline-dark" translate="no">.dev</span>
+            <Link href="/" aria-label="posib.dev — inicio">
+              <Image
+                src="https://pub-ea40242d92ce470fbb6e43d46f01cefe.r2.dev/images/logo.png"
+                alt="posib.dev logo"
+                width={40}
+                height={40}
+                className="rounded-lg"
+                style={{ mixBlendMode: dark ? "screen" : "multiply" }}
+              />
             </Link>
           </div>
 
@@ -182,7 +189,7 @@ export default function NavbarRueda() {
             <span
               className="text-xl md:text-2xl font-bold text-white text-outline-dark"
               translate="no"
-              style={{ visibility: "hidden" }}
+              style={{ visibility: marcaHover ? "hidden" : "visible" }}
             >
               posib.dev
             </span>
