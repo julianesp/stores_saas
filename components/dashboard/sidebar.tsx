@@ -439,6 +439,23 @@ export function Sidebar({ isMobile = false, onLinkClick }: SidebarProps) {
     checkSuperAdmin();
   }, [user]);
 
+  // Escuchar cambios en el caché del perfil (ej: cuando el usuario cambia
+  // el tipo de negocio desde la página de suscripción sin recargar).
+  useEffect(() => {
+    const onStorage = (e: StorageEvent) => {
+      if (e.key !== PROFILE_CACHE_KEY || !e.newValue) return;
+      try {
+        const profile = JSON.parse(e.newValue);
+        setUserProfile(profile);
+        setHasAI(hasAIAccess(profile));
+        setHasEmail(hasEmailMarketingAccess(profile));
+        setHasStore(hasStoreAccess(profile));
+      } catch { /* valor corrupto */ }
+    };
+    window.addEventListener("storage", onStorage);
+    return () => window.removeEventListener("storage", onStorage);
+  }, []);
+
   // Filtrar items del menú según permisos
   const getFilteredMenuItems = () => {
     // IMPORTANTE: No filtrar hasta que termine de cargar los permisos

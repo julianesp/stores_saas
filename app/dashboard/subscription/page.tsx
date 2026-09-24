@@ -200,7 +200,20 @@ export default function SubscriptionPageWompi() {
         { business_type: selectedBusinessType },
         getToken,
       );
-      setProfile({ ...profile, business_type: selectedBusinessType });
+      const updatedProfile = { ...profile, business_type: selectedBusinessType };
+      setProfile(updatedProfile);
+      // Actualizar el caché del sidebar para que el menú se adapte sin recargar.
+      // Se usa StorageEvent manual porque storage nativo no se dispara en la misma pestaña.
+      try {
+        const cached = localStorage.getItem("posib-profile-cache");
+        const updated = cached
+          ? JSON.stringify({ ...JSON.parse(cached), business_type: selectedBusinessType })
+          : JSON.stringify({ business_type: selectedBusinessType });
+        localStorage.setItem("posib-profile-cache", updated);
+        window.dispatchEvent(
+          new StorageEvent("storage", { key: "posib-profile-cache", newValue: updated }),
+        );
+      } catch { /* caché no crítico */ }
       setEditingBusinessType(false);
       toast.success("Tipo de negocio guardado. El sistema se adaptará a él.");
     } catch (error) {
