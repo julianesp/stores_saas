@@ -196,6 +196,20 @@ function DashboardLayoutInner({
           // independientemente de lo que diga la BD (protección contra resets)
           const profile = await getUserProfileByClerkId(getToken);
 
+          // Poblar la caché de perfil que lee el Sidebar (PROFILE_CACHE_KEY),
+          // para que NO tenga que llamar de nuevo a /api/user/init-profile en el
+          // mismo montaje. Formato {profile, at} con timestamp para TTL.
+          if (profile) {
+            try {
+              localStorage.setItem(
+                "posib-profile-cache",
+                JSON.stringify({ profile, at: Date.now() })
+              );
+            } catch {
+              // Cuota de localStorage llena: no es crítico.
+            }
+          }
+
           // Fallback: si user-stores no devolvió tenant, usar el profile.id
           if (profile?.id && !localStorage.getItem("selected_tenant_id")) {
             localStorage.setItem("selected_tenant_id", profile.id);

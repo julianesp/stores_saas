@@ -386,53 +386,71 @@ export function Sidebar({ isMobile = false, onLinkClick }: SidebarProps) {
   };
 
   useEffect(() => {
+    // Aplica un perfil a todos los estados del menú.
+    const applyProfile = (profile: UserProfile) => {
+      setIsSuperAdmin(profile.is_superadmin || false);
+      setUserProfile(profile);
+      setHasAI(hasAIAccess(profile));
+      setHasEmail(hasEmailMarketingAccess(profile));
+      setHasStore(hasStoreAccess(profile));
+    };
+
     async function checkSuperAdmin() {
-      if (user) {
-        // Usar auth para obtener el token
-        const getToken = async () => {
-          // En el cliente, no podemos usar auth() de @clerk/nextjs/server
-          // Debemos importar desde @clerk/nextjs
-          return null; // Temporalmente null, el getToken se manejará en el componente
-        };
+      if (!user) return;
 
-        try {
-          // Hacer una llamada al API para obtener el perfil
-          const response = await fetch("/api/user/init-profile", {
-            method: "POST",
-          });
-          const data = await response.json();
-
-          if (data.success && data.profile) {
-            setIsSuperAdmin(data.profile.is_superadmin || false);
-            setUserProfile(data.profile);
-            if (data.profile) {
-              setHasAI(hasAIAccess(data.profile));
-              setHasEmail(hasEmailMarketingAccess(data.profile));
-              setHasStore(hasStoreAccess(data.profile));
-            }
-            try {
-              localStorage.setItem(PROFILE_CACHE_KEY, JSON.stringify(data.profile));
-            } catch {
-              // Cuota de localStorage llena u otro error: no es crítico.
-            }
+      // El layout del dashboard ya llama a /api/user/init-profile al montar y
+      // guarda el perfil en PROFILE_CACHE_KEY. Si esa caché es fresca, la
+      // reusamos y evitamos una SEGUNDA llamada idéntica al servidor (que a su
+      // vez lee la tabla user_profiles en D1). Esto duplicaba el consumo de D1
+      // en cada carga del dashboard.
+      try {
+        const cached = localStorage.getItem(PROFILE_CACHE_KEY);
+        if (cached) {
+          const parsed = JSON.parse(cached);
+          // Soportar tanto el formato nuevo {profile, at} como el viejo (perfil
+          // plano) por compatibilidad con cachés ya guardadas.
+          const profile = parsed?.profile ?? parsed;
+          const at = parsed?.at ?? 0;
+          if (profile && Date.now() - at < 60_000) {
+            applyProfile(profile);
+            return; // Caché fresca: no llamamos al API.
           }
-        } catch (error) {
-          console.error("Error fetching profile:", error);
-          // Sin conexión: usar el último perfil cacheado para no dejar el
-          // menú sin opciones.
+        }
+      } catch {
+        // Caché corrupta: seguimos al fetch.
+      }
+
+      try {
+        // Sin caché fresca: pedir el perfil al servidor.
+        const response = await fetch("/api/user/init-profile", {
+          method: "POST",
+        });
+        const data = await response.json();
+
+        if (data.success && data.profile) {
+          applyProfile(data.profile);
           try {
-            const cached = localStorage.getItem(PROFILE_CACHE_KEY);
-            if (cached) {
-              const profile = JSON.parse(cached);
-              setIsSuperAdmin(profile.is_superadmin || false);
-              setUserProfile(profile);
-              setHasAI(hasAIAccess(profile));
-              setHasEmail(hasEmailMarketingAccess(profile));
-              setHasStore(hasStoreAccess(profile));
-            }
+            localStorage.setItem(
+              PROFILE_CACHE_KEY,
+              JSON.stringify({ profile: data.profile, at: Date.now() })
+            );
           } catch {
-            // Sin caché disponible: se deja el estado por defecto.
+            // Cuota de localStorage llena u otro error: no es crítico.
           }
+        }
+      } catch (error) {
+        console.error("Error fetching profile:", error);
+        // Sin conexión: usar el último perfil cacheado (aunque esté viejo) para
+        // no dejar el menú sin opciones.
+        try {
+          const cached = localStorage.getItem(PROFILE_CACHE_KEY);
+          if (cached) {
+            const parsed = JSON.parse(cached);
+            const profile = parsed?.profile ?? parsed;
+            if (profile) applyProfile(profile);
+          }
+        } catch {
+          // Sin caché disponible: se deja el estado por defecto.
         }
       }
     }

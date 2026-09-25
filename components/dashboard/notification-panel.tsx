@@ -57,14 +57,16 @@ export function NotificationPanel() {
   }, [getToken]);
 
   // Cargar notificaciones al montar (para que el badge de conteo aparezca sin
-  // necesidad de abrir el panel) y refrescar cada 90 segundos. El refresco corto
-  // hace que los pedidos de la tienda online aparezcan pronto en la campana
-  // (el aviso instantáneo sigue siendo Telegram). loadNotifications hace setState
-  // de forma asíncrona (fetch), que es un uso legítimo de efecto.
+  // necesidad de abrir el panel) y refrescar periódicamente. Cada recarga hace
+  // ~6 consultas a D1 (ventas, productos, clientes, etc.), así que un intervalo
+  // corto multiplica el consumo de la base todo el día aunque nadie toque nada.
+  // El aviso INSTANTÁNEO de pedidos web ya llega por Telegram; esta campana es un
+  // respaldo dentro de la app, así que 5 minutos es más que suficiente. Además
+  // recargamos al abrir el panel (efecto de abajo) para tener el dato fresco.
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect
     loadNotifications();
-    const interval = setInterval(loadNotifications, 90 * 1000);
+    const interval = setInterval(loadNotifications, 5 * 60 * 1000);
     return () => clearInterval(interval);
   }, [loadNotifications]);
 

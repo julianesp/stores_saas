@@ -153,6 +153,75 @@ async function fetchAPI<T = unknown>(
 }
 
 // ============================================
+// CACHÉ DE LECTURAS (reduce consumo de D1)
+// ============================================
+//
+// Varias pantallas y el panel de notificaciones piden las MISMAS listas
+// (productos, ventas, clientes) varias veces en la misma carga o dentro de una
+// misma tanda de notificaciones. Sin caché, cada llamada lee la tabla completa
+// en D1 y agota el cupo diario del plan gratuito. Cacheamos por TENANT con un
+// TTL corto y deduplicamos las peticiones en vuelo, así las llamadas casi
+// simultáneas comparten una sola ida al Worker. El TTL es corto a propósito:
+// tras crear/editar/borrar se invalida la caché correspondiente (ver más abajo),
+// y aun sin invalidar, los datos se refrescan en segundos.
+const LIST_CACHE_TTL_MS = 30_000;
+
+interface ListCacheEntry<T> {
+  tenantId: string | null;
+  data: T;
+  at: number;
+}
+
+function createCachedList<T>(endpoint: string, ttlMs = LIST_CACHE_TTL_MS) {
+  let cache: ListCacheEntry<T> | null = null;
+  let inflight: { tenantId: string | null; promise: Promise<T> } | null = null;
+
+  const load = async (
+    getToken: GetTokenFn,
+    options: { force?: boolean } = {}
+  ): Promise<T> => {
+    const tenantId = getSelectedTenantId();
+    const now = Date.now();
+
+    if (
+      !options.force &&
+      cache &&
+      cache.tenantId === tenantId &&
+      now - cache.at < ttlMs
+    ) {
+      return cache.data;
+    }
+
+    if (!options.force && inflight && inflight.tenantId === tenantId) {
+      return inflight.promise;
+    }
+
+    const promise = fetchAPI<T>(endpoint, getToken)
+      .then((data) => {
+        cache = { tenantId, data, at: Date.now() };
+        return data;
+      })
+      .finally(() => {
+        if (inflight && inflight.tenantId === tenantId) inflight = null;
+      });
+
+    inflight = { tenantId, promise };
+    return promise;
+  };
+
+  const invalidate = () => {
+    cache = null;
+    inflight = null;
+  };
+
+  return { load, invalidate };
+}
+
+const _productsCache = createCachedList<Product[]>('/api/products');
+const _salesCache = createCachedList<Sale[]>('/api/sales');
+const _customersCache = createCachedList<Customer[]>('/api/customers');
+
+// ============================================
 // PRODUCTOS
 // ============================================
 
@@ -183,8 +252,16 @@ export interface Product {
   updated_at: string;
 }
 
-export async function getProducts(getToken: GetTokenFn): Promise<Product[]> {
-  return fetchAPI<Product[]>('/api/products', getToken);
+export async function getProducts(
+  getToken: GetTokenFn,
+  options: { force?: boolean } = {}
+): Promise<Product[]> {
+  return _productsCache.load(getToken, options);
+}
+
+/** Invalida la caché de productos (llamar tras crear/editar/borrar/mover stock). */
+export function invalidateProductsCache() {
+  _productsCache.invalidate();
 }
 
 export async function getProductById(id: string, getToken: GetTokenFn): Promise<Product> {
@@ -192,23 +269,28 @@ export async function getProductById(id: string, getToken: GetTokenFn): Promise<
 }
 
 export async function createProduct(data: Partial<Product>, getToken: GetTokenFn): Promise<Product> {
-  return fetchAPI<Product>('/api/products', getToken, {
+  const result = await fetchAPI<Product>('/api/products', getToken, {
     method: 'POST',
     body: JSON.stringify(data),
   });
+  invalidateProductsCache();
+  return result;
 }
 
 export async function updateProduct(id: string, data: Partial<Product>, getToken: GetTokenFn): Promise<Product> {
-  return fetchAPI<Product>(`/api/products/${id}`, getToken, {
+  const result = await fetchAPI<Product>(`/api/products/${id}`, getToken, {
     method: 'PUT',
     body: JSON.stringify(data),
   });
+  invalidateProductsCache();
+  return result;
 }
 
 export async function deleteProduct(id: string, getToken: GetTokenFn): Promise<void> {
-  return fetchAPI<void>(`/api/products/${id}`, getToken, {
+  await fetchAPI<void>(`/api/products/${id}`, getToken, {
     method: 'DELETE',
   });
+  invalidateProductsCache();
 }
 
 export async function checkProductHasSales(id: string, getToken: GetTokenFn): Promise<{ hasSales: boolean; salesCount: number }> {
@@ -263,8 +345,16 @@ export interface Customer {
   updated_at: string;
 }
 
-export async function getCustomers(getToken: GetTokenFn): Promise<Customer[]> {
-  return fetchAPI<Customer[]>('/api/customers', getToken);
+export async function getCustomers(
+  getToken: GetTokenFn,
+  options: { force?: boolean } = {}
+): Promise<Customer[]> {
+  return _customersCache.load(getToken, options);
+}
+
+/** Invalida la caché de clientes (llamar tras crear/editar/borrar cliente o al cambiar su deuda). */
+export function invalidateCustomersCache() {
+  _customersCache.invalidate();
 }
 
 export async function getCustomerById(id: string, getToken: GetTokenFn): Promise<Customer> {
@@ -272,23 +362,28 @@ export async function getCustomerById(id: string, getToken: GetTokenFn): Promise
 }
 
 export async function createCustomer(data: Partial<Customer>, getToken: GetTokenFn): Promise<Customer> {
-  return fetchAPI<Customer>('/api/customers', getToken, {
+  const result = await fetchAPI<Customer>('/api/customers', getToken, {
     method: 'POST',
     body: JSON.stringify(data),
   });
+  invalidateCustomersCache();
+  return result;
 }
 
 export async function updateCustomer(id: string, data: Partial<Customer>, getToken: GetTokenFn): Promise<Customer> {
-  return fetchAPI<Customer>(`/api/customers/${id}`, getToken, {
+  const result = await fetchAPI<Customer>(`/api/customers/${id}`, getToken, {
     method: 'PUT',
     body: JSON.stringify(data),
   });
+  invalidateCustomersCache();
+  return result;
 }
 
 export async function deleteCustomer(id: string, getToken: GetTokenFn): Promise<void> {
-  return fetchAPI<void>(`/api/customers/${id}`, getToken, {
+  await fetchAPI<void>(`/api/customers/${id}`, getToken, {
     method: 'DELETE',
   });
+  invalidateCustomersCache();
 }
 
 // ============================================
@@ -612,8 +707,16 @@ export interface UserProfile {
   updated_at: string;
 }
 
-export async function getSales(getToken: GetTokenFn): Promise<Sale[]> {
-  return fetchAPI<Sale[]>('/api/sales', getToken);
+export async function getSales(
+  getToken: GetTokenFn,
+  options: { force?: boolean } = {}
+): Promise<Sale[]> {
+  return _salesCache.load(getToken, options);
+}
+
+/** Invalida la caché de ventas (llamar tras registrar una venta o un abono). */
+export function invalidateSalesCache() {
+  _salesCache.invalidate();
 }
 
 export async function getSaleById(id: string, getToken: GetTokenFn): Promise<Sale> {
@@ -621,10 +724,16 @@ export async function getSaleById(id: string, getToken: GetTokenFn): Promise<Sal
 }
 
 export async function createSale(data: Partial<Sale>, getToken: GetTokenFn): Promise<Sale> {
-  return fetchAPI<Sale>('/api/sales', getToken, {
+  const result = await fetchAPI<Sale>('/api/sales', getToken, {
     method: 'POST',
     body: JSON.stringify(data),
   });
+  // Una venta cambia ventas, descuenta stock (productos) y puede crear deuda
+  // (clientes): invalidar las tres cachés.
+  invalidateSalesCache();
+  invalidateProductsCache();
+  invalidateCustomersCache();
+  return result;
 }
 
 // Resultado de una importación en lote de ventas (ej. facturas de Siigo).
@@ -644,23 +753,34 @@ export async function importSales(
   invoices: unknown[],
   getToken: GetTokenFn,
 ): Promise<ImportSalesResult> {
-  return fetchAPI<ImportSalesResult>('/api/sales/import', getToken, {
+  const result = await fetchAPI<ImportSalesResult>('/api/sales/import', getToken, {
     method: 'POST',
     body: JSON.stringify({ invoices }),
   });
+  // Puede crear ventas, productos y clientes.
+  invalidateSalesCache();
+  invalidateProductsCache();
+  invalidateCustomersCache();
+  return result;
 }
 
 export async function updateSale(id: string, data: Partial<Sale>, getToken: GetTokenFn): Promise<Sale> {
-  return fetchAPI<Sale>(`/api/sales/${id}`, getToken, {
+  const result = await fetchAPI<Sale>(`/api/sales/${id}`, getToken, {
     method: 'PUT',
     body: JSON.stringify(data),
   });
+  invalidateSalesCache();
+  return result;
 }
 
 export async function deleteSale(id: string, getToken: GetTokenFn): Promise<void> {
-  return fetchAPI<void>(`/api/sales/${id}`, getToken, {
+  await fetchAPI<void>(`/api/sales/${id}`, getToken, {
     method: 'DELETE',
   });
+  // Borrar una venta puede reponer stock y ajustar deuda.
+  invalidateSalesCache();
+  invalidateProductsCache();
+  invalidateCustomersCache();
 }
 
 // ============================================
@@ -780,10 +900,14 @@ export async function getCustomerCreditPayments(customerId: string, getToken: Ge
 }
 
 export async function registerCreditPayment(data: CreditPaymentData, getToken: GetTokenFn): Promise<{ payment: CreditPaymentData; sale: Sale }> {
-  return fetchAPI<{ payment: CreditPaymentData; sale: Sale }>('/api/credit-payments', getToken, {
+  const result = await fetchAPI<{ payment: CreditPaymentData; sale: Sale }>('/api/credit-payments', getToken, {
     method: 'POST',
     body: JSON.stringify(data),
   });
+  // Un abono reduce el pendiente de la venta y la deuda del cliente.
+  invalidateSalesCache();
+  invalidateCustomersCache();
+  return result;
 }
 
 // ============================================
