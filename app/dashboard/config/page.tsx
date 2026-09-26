@@ -548,15 +548,10 @@ export default function ConfigPage() {
                 {savingGeminiKey ? "Guardando..." : "Guardar"}
               </Button>
             </div>
-            {geminiApiKey && geminiApiKey.startsWith("AIza") && (
+            {geminiApiKey && (
               <p className="flex items-center gap-1 text-xs text-green-600 font-medium">
                 <CheckCircle2 className="h-4 w-4" />
                 ¡Listo! El análisis con IA ya usa tu cuenta de Google.
-              </p>
-            )}
-            {geminiApiKey && !geminiApiKey.startsWith("AIza") && (
-              <p className="text-xs text-amber-600">
-                La clave suele empezar con <code>AIza</code>. Revisa que la copiaste completa.
               </p>
             )}
             {!geminiApiKey && (
