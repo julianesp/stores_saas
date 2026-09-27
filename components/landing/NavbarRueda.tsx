@@ -55,7 +55,6 @@ const navLinksCurva = ordenarPorLongitud(navigationLinks);
 
 export default function NavbarRueda() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
-  const [marcaHover, setMarcaHover] = useState(false);
   const [montado, setMontado] = useState(false);
   const [ruedaActiva, setRuedaActiva] = useState(0);
   const [dark, setDark] = useState(false);
@@ -179,17 +178,13 @@ export default function NavbarRueda() {
             </Link>
           </div>
 
-          {/* Marca centrada (efecto hover ampliado vía portal) */}
-          <Link
-            href="/"
-            className={styles.logoLink}
-            onMouseEnter={() => setMarcaHover(true)}
-            onMouseLeave={() => setMarcaHover(false)}
-          >
+          {/* Marca centrada */}
+          <Link href="/" className={styles.logoLink}>
             <span
-              className="text-xl md:text-2xl font-bold text-white text-outline-dark"
+              className={`text-xl md:text-2xl font-bold ${
+                dark ? "text-white text-outline-dark" : "text-brand"
+              }`}
               translate="no"
-              style={{ visibility: marcaHover ? "hidden" : "visible" }}
             >
               posib.dev
             </span>
@@ -380,47 +375,6 @@ export default function NavbarRueda() {
                 })}
               </div>
             </div>
-          </div>,
-          document.body
-        )}
-
-      {/* Marca ampliada en el centro del viewport (portal a body).
-          Se muestra mientras el cursor está sobre la marca del navbar. */}
-      {montado &&
-        createPortal(
-          <div
-            aria-hidden="true"
-            style={{
-              position: "fixed",
-              top: "50%",
-              left: "50%",
-              transform: `translate(-50%, -50%) scale(${marcaHover ? 1 : 0.6})`,
-              opacity: marcaHover ? 1 : 0,
-              transition: "opacity 0.35s ease, transform 0.35s ease",
-              pointerEvents: "none",
-              zIndex: 100,
-              display: "grid",
-              placeItems: "center",
-            }}
-          >
-            <div
-              className="backdrop-blur-sm"
-              style={{
-                gridArea: "1 / 1",
-                width: 420,
-                height: 420,
-                borderRadius: "50%",
-                backgroundColor: "rgba(0, 0, 0, 0.35)",
-                zIndex: 1,
-              }}
-            />
-            <span
-              className="text-5xl md:text-6xl font-bold text-white drop-shadow-2xl"
-              translate="no"
-              style={{ gridArea: "1 / 1", position: "relative", zIndex: 2 }}
-            >
-              posib.dev
-            </span>
           </div>,
           document.body
         )}
