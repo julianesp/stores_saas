@@ -127,9 +127,8 @@ export default function Home() {
                   />
                   <div className="absolute inset-0 bg-linear-to-t from-black/80 via-black/20 to-transparent" />
                   <div className="absolute bottom-0 left-0 right-0 p-6">
-                    <span className="inline-block rounded-full bg-white border border-black text-white text-xs font-semibold px-3 py-1 mb-3">
-                      <p className="text-black">Antes</p>
-                      
+                    <span className="inline-block rounded-full bg-white border border-black/10 text-black text-xs font-semibold px-3 py-1 mb-3">
+                      Antes
                     </span>
                     <h3 className="text-xl font-bold !text-white dark:!text-white">
                       Papeles, cuadernos y cuentas perdidas
@@ -153,7 +152,7 @@ export default function Home() {
                   <div className="absolute inset-0 bg-linear-to-t from-black/80 via-black/20 to-transparent" />
                   <div className="absolute bottom-0 left-0 right-0 p-6 text-white dark:text-white">
                     <span className="inline-block rounded-full bg-white border border-brand/30 text-brand text-xs font-semibold px-3 py-1 mb-3">
-                      <p className="text-black">Con posib</p>
+                      Con posib
                     </span>
                     <h3 className="text-xl font-bold !text-white dark:!text-white">
                       Ventas, inventario y fiados en tu celular

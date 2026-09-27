@@ -171,6 +171,12 @@ body {
 [data-landing-theme="light"] .text-white {
   color: #0f172a !important;
 }
+/* Excepción: sobre fondo de marca (botones CTA) el texto blanco es correcto */
+[data-landing-theme="light"] .bg-brand.text-white,
+[data-landing-theme="light"] .bg-brand .text-white,
+[data-landing-theme="light"] .bg-brand-hover.text-white {
+  color: #ffffff !important;
+}
 [data-landing-theme="light"] .text-white\/60,
 [data-landing-theme="light"] .text-white\/50,
 [data-landing-theme="light"] .text-white\/70 {
