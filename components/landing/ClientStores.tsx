@@ -1,7 +1,7 @@
-import Image from 'next/image';
-import Link from 'next/link';
-import { Store, MapPin } from 'lucide-react';
-import { getVisibleLandingStores } from '@/lib/landing-stores';
+import Image from "next/image";
+import Link from "next/link";
+import { Store, MapPin } from "lucide-react";
+import { getVisibleLandingStores } from "@/lib/landing-stores";
 
 export default function ClientStores() {
   const stores = getVisibleLandingStores();
@@ -12,13 +12,13 @@ export default function ClientStores() {
   }
 
   return (
-    <section className="py-16 md:py-20 bg-gradient-to-br from-gray-800 to-gray-900">
+    <section className="py-16 md:py-20 bg-linear-to-br from-gray-800 to-gray-900">
       <div className="container mx-auto px-4">
         <div className="text-center mb-12">
-          <h2 className="text-3xl md:text-4xl font-bold text-white mb-4">
+          <h2 className="text-3xl md:text-4xl font-bold !text-white mb-4">
             Tiendas que ya confían en posib.dev
           </h2>
-          <p className="text-lg text-white/80 max-w-2xl mx-auto">
+          <p className="text-lg !text-white max-w-2xl mx-auto">
             Negocios reales en Colombia que ya venden con nuestro sistema POS.
           </p>
         </div>
@@ -37,13 +37,13 @@ export default function ClientStores() {
                       className="object-cover"
                     />
                   ) : (
-                    <Store className="h-16 w-16 text-gray-500" />
+                    <Store className="h-16 w-16 !text-white" />
                   )}
                 </div>
-                <p className="mt-4 text-white font-semibold text-base sm:text-lg">
+                <p className="mt-4 !text-white font-semibold text-base sm:text-lg">
                   {store.name}
                 </p>
-                <p className="mt-1 flex items-center justify-center gap-1 text-sm text-gray-400">
+                <p className="mt-1 flex items-center justify-center gap-1 text-sm !text-white">
                   <MapPin className="h-4 w-4 shrink-0" />
                   {store.location}
                 </p>

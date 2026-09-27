@@ -86,11 +86,11 @@ export default function PricingPlans() {
       <div className="container mx-auto px-4 ">
         <div className="text-center mb-12">
           <h2 className="text-3xl md:text-4xl font-bold text-white mb-4">
-            Un Solo Plan con Todo Incluido
+            Plan para tu negocio
           </h2>
           <p className="text-lg text-white/80 max-w-2xl mx-auto">
-            Un único precio con todas las funcionalidades. El Análisis con IA y
-            el Email Marketing ahora vienen incluidos, sin costo adicional.
+            El plan de la tienda incluye todas las funcionalidades del POS, el
+            Análisis con IA y el Email Marketing, sin costos adicionales.
           </p>
         </div>
 
@@ -104,17 +104,17 @@ export default function PricingPlans() {
             </div>
 
             <CardHeader className="text-center pb-4 pt-8">
-              <CardTitle className="text-3xl text-white">
+              <CardTitle className="text-3xl !text-white">
                 {basePlan.name}
               </CardTitle>
-              <CardDescription className="text-gray-300 text-lg">
+              <CardDescription className="!text-white text-lg">
                 {basePlan.description}
               </CardDescription>
               <div className="mt-4">
-                <span className="text-5xl font-bold text-white">
+                <span className="text-5xl font-bold !text-white">
                   {basePlan.price}
                 </span>
-                <span className="text-white text-lg">/mes</span>
+                <span className="!text-white text-lg">/mes</span>
               </div>
             </CardHeader>
 
@@ -123,20 +123,20 @@ export default function PricingPlans() {
                 {basePlan.features.map((feature, index) => (
                   <li key={index} className="flex items-start gap-2">
                     <Check className="h-5 w-5 text-green-400 flex-shrink-0 mt-0.5" />
-                    <span className="text-gray-200 text-sm">{feature}</span>
+                    <span className="!text-white text-sm">{feature}</span>
                   </li>
                 ))}
                 <li className="flex items-start gap-2">
                   <Sparkles className="h-5 w-5 text-purple-400 flex-shrink-0 mt-0.5" />
-                  <span className="text-gray-200 text-sm">
-                    <strong className="text-white">Análisis con IA</strong>{" "}
+                  <span className="!text-white text-sm">
+                    <strong className="!text-white">Análisis con IA</strong>{" "}
                     incluido
                   </span>
                 </li>
                 <li className="flex items-start gap-2">
                   <Mail className="h-5 w-5 text-green-400 flex-shrink-0 mt-0.5" />
-                  <span className="text-gray-200 text-sm">
-                    <strong className="text-white">Email Marketing</strong>{" "}
+                  <span className="!text-white text-sm">
+                    <strong className="!text-white">Email Marketing</strong>{" "}
                     incluido
                   </span>
                 </li>
@@ -173,7 +173,7 @@ export default function PricingPlans() {
                   className="relative border-2 border-brand bg-gray-800 hover:shadow-2xl transition-shadow"
                 >
                   <div className="absolute -top-3 right-4">
-                    <span className="bg-green-500 text-white text-xs font-bold px-3 py-1 rounded-full">
+                    <span className="bg-green-500 !text-white text-xs font-bold px-3 py-1 rounded-full">
                       Incluido
                     </span>
                   </div>
@@ -183,10 +183,10 @@ export default function PricingPlans() {
                     >
                       <Icon className={`h-7 w-7 ${colors.accent}`} />
                     </div>
-                    <CardTitle className="text-xl text-white mb-2">
+                    <CardTitle className="text-xl !text-white mb-2">
                       {feature.name}
                     </CardTitle>
-                    <CardDescription className="text-gray-300 text-2xl">
+                    <CardDescription className="!text-white text-2xl">
                       {feature.description}
                     </CardDescription>
                   </CardHeader>
@@ -196,7 +196,7 @@ export default function PricingPlans() {
                       {feature.features.slice(0, 5).map((item, index) => (
                         <li key={index} className="flex items-start gap-2">
                           <Check className="h-4 w-4 text-brand mt-0.5" />
-                          <span className="text-white text-[16px] leading-tight">
+                          <span className="!text-white text-[16px] leading-tight">
                             {item}
                           </span>
                         </li>
