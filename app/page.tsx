@@ -127,13 +127,14 @@ export default function Home() {
                   />
                   <div className="absolute inset-0 bg-linear-to-t from-black/80 via-black/20 to-transparent" />
                   <div className="absolute bottom-0 left-0 right-0 p-6">
-                    <span className="inline-block rounded-full bg-white border border-black text-black text-xs font-semibold px-3 py-1 mb-3">
-                      Antes
+                    <span className="inline-block rounded-full bg-white border border-black text-white text-xs font-semibold px-3 py-1 mb-3">
+                      <p className="text-black">Antes</p>
+                      
                     </span>
-                    <h3 className="text-xl font-bold text-white dark:text-white">
+                    <h3 className="text-xl font-bold !text-white dark:!text-white">
                       Papeles, cuadernos y cuentas perdidas
                     </h3>
-                    <p className="text-sm text-white mt-1">
+                    <p className="text-sm !text-white mt-1 dark:!text-white">
                       Sin saber cuánto vendiste hoy ni cuánto te deben
                     </p>
                   </div>
@@ -149,15 +150,15 @@ export default function Home() {
                     sizes="(max-width: 768px) 100vw, 480px"
                     className="object-cover transition-transform duration-500 group-hover:scale-[1.03]"
                   />
-                  <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
-                  <div className="absolute bottom-0 left-0 right-0 p-6">
-                    <span className="inline-block rounded-full bg-brand/20 border border-brand/30 text-brand text-xs font-semibold px-3 py-1 mb-3">
-                      Con posib
+                  <div className="absolute inset-0 bg-linear-to-t from-black/80 via-black/20 to-transparent" />
+                  <div className="absolute bottom-0 left-0 right-0 p-6 text-white dark:text-white">
+                    <span className="inline-block rounded-full bg-white border border-brand/30 text-brand text-xs font-semibold px-3 py-1 mb-3">
+                      <p className="text-black">Con posib</p>
                     </span>
-                    <h3 className="text-xl font-bold text-white">
+                    <h3 className="text-xl font-bold !text-white dark:!text-white">
                       Ventas, inventario y fiados en tu celular
                     </h3>
-                    <p className="text-sm text-white/70 mt-1">
+                    <p className="text-sm !text-white mt-1 dark:!text-white">
                       La IA te muestra qué vender más y qué reponer
                     </p>
                   </div>
