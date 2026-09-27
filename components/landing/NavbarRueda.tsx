@@ -72,7 +72,26 @@ export default function NavbarRueda() {
       setMontado(true);
       setDark(readStoredTheme());
     });
-    return () => cancelAnimationFrame(id);
+
+    // Sincronizar con el cambio manual de tema (toggle) y con el resto de la
+    // landing (LandingShell emite el mismo evento).
+    const onThemeChange = (e: Event) => {
+      setDark((e as CustomEvent<boolean>).detail);
+    };
+    window.addEventListener("posib-theme-change", onThemeChange);
+
+    // Revisar cada minuto por si cruza las 7pm/7am mientras la página está
+    // abierta. Solo aplica el cambio automático si no hay preferencia manual
+    // guardada (mismo criterio que LandingShell).
+    const intervalo = setInterval(() => {
+      if (!localStorage.getItem(THEME_KEY)) setDark(isDarkHour());
+    }, 60_000);
+
+    return () => {
+      cancelAnimationFrame(id);
+      window.removeEventListener("posib-theme-change", onThemeChange);
+      clearInterval(intervalo);
+    };
   }, []);
 
   // Abre/cierra el menú. Al abrir, reinicia la rueda al primer enlace (se hace
