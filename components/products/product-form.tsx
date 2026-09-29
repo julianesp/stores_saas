@@ -33,8 +33,12 @@ type ProductPayload = Partial<Product> & {
 import { toast } from "sonner";
 import { Scan, Camera, X, Plus, Minus, Package } from "lucide-react";
 import { ImageUploader } from './image-uploader';
+import { SuggestNameFromPhoto } from './suggest-name-from-photo';
 import { Html5Qrcode } from "html5-qrcode";
 import { normalizeBarcode, barcodeEquals } from "@/lib/barcode-utils";
+import { findProductsWithSameName, normalizeName } from "@/lib/duplicate-helpers";
+import { formatCurrency } from "@/lib/utils";
+import Swal from "@/lib/sweetalert";
 
 const productSchema = z.object({
   barcode: z.string().optional().or(z.literal("")),
@@ -408,11 +412,40 @@ export function ProductForm({ initialData, productId }: ProductFormProps) {
     }
   };
 
+  // Avisa (sin bloquear) si el nombre ya lo usa otro producto: en el POS dos
+  // productos con el mismo nombre y distinto precio se confunden al vender.
+  const confirmRepeatedName = async (name: string): Promise<boolean> => {
+    if (productId && normalizeName(name) === normalizeName(initialData?.name || "")) {
+      return true;
+    }
+    let sameName: Awaited<ReturnType<typeof getProducts>> = [];
+    try {
+      sameName = findProductsWithSameName(await getProducts(getToken), name, productId);
+    } catch {
+      return true;
+    }
+    if (sameName.length === 0) return true;
+
+    const details = sameName
+      .slice(0, 3)
+      .map((p) => `${p.barcode || "sin código"} a ${formatCurrency(p.sale_price)}`)
+      .join(" · ");
+    const more = sameName.length > 3 ? ` y ${sameName.length - 3} más` : "";
+    return Swal.confirm(
+      `Ya tienes ${sameName.length === 1 ? "un producto" : `${sameName.length} productos`} llamado "${name.trim()}" (${details}${more}). ` +
+        `Para no confundirlos al vender, agrega la marca, la variedad o el tamaño al nombre (por ejemplo "${name.trim()} 100 g").`,
+      "Este nombre ya existe",
+      { confirmText: "Guardar así", cancelText: "Corregir el nombre", type: "question" }
+    );
+  };
+
   const onSubmit = async (data: ProductFormData) => {
     console.log('🚀 onSubmit called with data:', data);
     console.log('🔍 productId:', productId);
     setLoading(true);
     try {
+      if (!(await confirmRepeatedName(data.name))) return;
+
       const productData: ProductPayload = {
         ...data,
         images: productImages, // Incluir imágenes
@@ -569,6 +602,10 @@ export function ProductForm({ initialData, productId }: ProductFormProps) {
               {errors.name && (
                 <p className="text-sm text-red-600">{errors.name.message}</p>
               )}
+              <SuggestNameFromPhoto
+                currentName={watch("name")}
+                onUse={(name) => setValue("name", name, { shouldValidate: true, shouldDirty: true })}
+              />
             </div>
           </div>
 

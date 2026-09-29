@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, Suspense } from "react";
+import { useState, useEffect, useMemo, Suspense } from "react";
 import { useAuth } from "@clerk/nextjs";
 import { useSearchParams } from "next/navigation";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -20,9 +20,12 @@ import {
   Plus,
   Minus,
   CalendarClock,
+  Tags,
 } from "lucide-react";
 import { formatCurrency } from "@/lib/utils";
 import { getExpirationInfo, type ExpirationSeverity } from "@/lib/expiration-helpers";
+import { findRepeatedNameGroups } from "@/lib/duplicate-helpers";
+import { RepeatedNamesModal } from "@/components/products/repeated-names-modal";
 import { toast } from "sonner";
 import {
   Dialog,
@@ -44,6 +47,7 @@ function InventoryContent() {
   const [filterCategory, setFilterCategory] = useState("");
   const [showLowStockOnly, setShowLowStockOnly] = useState(false);
   const [showExpiringOnly, setShowExpiringOnly] = useState(false);
+  const [showRepeatedNames, setShowRepeatedNames] = useState(false);
 
   // Estados para el modal de edición
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
@@ -91,6 +95,11 @@ function InventoryContent() {
       !showExpiringOnly || getExpirationInfo(product).needsAttention;
     return matchesSearch && matchesCategory && matchesLowStock && matchesExpiring;
   });
+
+  const repeatedNameGroups = useMemo(
+    () => findRepeatedNameGroups(products),
+    [products]
+  );
 
   const lowStockProducts = filteredProducts.filter(
     (p) => p.stock <= p.min_stock
@@ -169,12 +178,30 @@ function InventoryContent() {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-3xl font-bold">Inventario</h1>
-        <p className="text-gray-500">
-          Gestiona la cantidad disponible de tus productos
-        </p>
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+        <div>
+          <h1 className="text-3xl font-bold">Inventario</h1>
+          <p className="text-gray-500">
+            Gestiona la cantidad disponible de tus productos
+          </p>
+        </div>
+        {repeatedNameGroups.length > 0 && (
+          <Button variant="outline" onClick={() => setShowRepeatedNames(true)}>
+            <Tags className="mr-2 h-4 w-4" />
+            Nombres repetidos
+            <span className="ml-1.5 bg-amber-500 text-white text-xs rounded-full px-2 py-0.5">
+              {repeatedNameGroups.length}
+            </span>
+          </Button>
+        )}
       </div>
+
+      <RepeatedNamesModal
+        isOpen={showRepeatedNames}
+        onClose={() => setShowRepeatedNames(false)}
+        products={products}
+        onUpdate={fetchData}
+      />
 
       {/* Estadísticas */}
       <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6">

@@ -15,7 +15,7 @@
  * Un grupo puede cumplir varios criterios a la vez; se reportan todos.
  */
 
-import { ProductWithRelations } from './types';
+import { Product, ProductWithRelations } from './types';
 
 export type DuplicateReason = 'barcode' | 'name' | 'name_category';
 
@@ -51,6 +51,17 @@ export function normalizeName(name: string): string {
 /** Normaliza un código de barras (quita espacios y ceros a la izquierda irrelevantes). */
 function normalizeBarcode(barcode?: string): string {
   return (barcode || '').trim();
+}
+
+/**
+ * Dos o más códigos de barras distintos en un grupo significan productos
+ * distintos aunque se llamen igual (p. ej. "Trululu" de 100 g y de 250 g).
+ * Esos grupos NO son duplicados fusionables: fusionarlos sumaría el stock de
+ * productos diferentes y borraría sus precios. Se resuelven renombrando.
+ */
+function hasConflictingBarcodes(group: { barcode?: string }[]): boolean {
+  const codes = new Set(group.map(p => normalizeBarcode(p.barcode)).filter(Boolean));
+  return codes.size > 1;
 }
 
 /**
@@ -177,7 +188,9 @@ export function findDuplicateGroups(
       byNorm.get(norm)!.push(p);
     }
     for (const group of byNorm.values()) {
-      if (group.length > 1) rawGroups.push({ reason: 'name', products: group });
+      if (group.length > 1 && !hasConflictingBarcodes(group)) {
+        rawGroups.push({ reason: 'name', products: group });
+      }
     }
   }
 
@@ -192,7 +205,9 @@ export function findDuplicateGroups(
       byNameCat.get(key)!.push(p);
     }
     for (const group of byNameCat.values()) {
-      if (group.length > 1) rawGroups.push({ reason: 'name_category', products: group });
+      if (group.length > 1 && !hasConflictingBarcodes(group)) {
+        rawGroups.push({ reason: 'name_category', products: group });
+      }
     }
   }
 
@@ -209,4 +224,59 @@ export function reasonLabel(reason: DuplicateReason): string {
     case 'name_category':
       return 'Mismo nombre y categoría';
   }
+}
+
+type NamedProduct = Pick<Product, 'id' | 'name' | 'barcode' | 'sale_price'>;
+
+export interface RepeatedNameGroup<T extends NamedProduct> {
+  key: string;
+  /** Nombre compartido, tal como lo escribió el tendero en el primer producto. */
+  name: string;
+  /** Productos con ese nombre, del más barato al más caro. */
+  products: T[];
+}
+
+/**
+ * Grupos de productos que comparten nombre pero NO son el mismo producto
+ * (códigos de barras distintos o precios distintos). Son productos mal
+ * etiquetados: se arreglan renombrándolos, no fusionándolos. Los repetidos
+ * "de verdad" (mismo nombre sin códigos en conflicto y mismo precio) los cubre
+ * `findDuplicateGroups`.
+ */
+export function findRepeatedNameGroups<T extends NamedProduct>(
+  products: T[]
+): RepeatedNameGroup<T>[] {
+  const byNorm = new Map<string, T[]>();
+  for (const p of products) {
+    const norm = normalizeName(p.name);
+    if (!norm) continue;
+    if (!byNorm.has(norm)) byNorm.set(norm, []);
+    byNorm.get(norm)!.push(p);
+  }
+
+  const groups: RepeatedNameGroup<T>[] = [];
+  for (const [key, group] of byNorm) {
+    if (group.length < 2) continue;
+    const distinctPrices = new Set(group.map(p => p.sale_price)).size;
+    if (!hasConflictingBarcodes(group) && distinctPrices < 2) continue;
+    const sorted = [...group].sort((a, b) => a.sale_price - b.sale_price);
+    groups.push({ key, name: sorted[0].name.trim(), products: sorted });
+  }
+
+  groups.sort((a, b) => b.products.length - a.products.length || a.name.localeCompare(b.name));
+  return groups;
+}
+
+/**
+ * Productos que ya usan este nombre (ignorando mayúsculas, tildes y espacios).
+ * Sirve para avisar al guardar un producto cuyo nombre ya existe.
+ */
+export function findProductsWithSameName<T extends Pick<Product, 'id' | 'name'>>(
+  products: T[],
+  name: string,
+  excludeId?: string
+): T[] {
+  const norm = normalizeName(name);
+  if (!norm) return [];
+  return products.filter(p => p.id !== excludeId && normalizeName(p.name) === norm);
 }

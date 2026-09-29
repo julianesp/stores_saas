@@ -3,7 +3,7 @@
 import { useState, useEffect, useMemo } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
-import { Plus, Search, Edit, Trash2, Package, Tag, Camera, AlertTriangle, Download, Layers } from 'lucide-react';
+import { Plus, Search, Edit, Trash2, Package, Tag, Tags, Camera, AlertTriangle, Download, Layers } from 'lucide-react';
 import { toast } from 'sonner';
 // import { HelpCircle } from 'lucide-react'; // COMENTADO: Tour deshabilitado
 import { Button } from '@/components/ui/button';
@@ -17,7 +17,8 @@ import Swal from '@/lib/sweetalert';
 import SwalOriginal from 'sweetalert2';
 import { CategoryManagerModal } from '@/components/products/category-manager-modal';
 import { DuplicatesReviewModal } from '@/components/products/duplicates-review-modal';
-import { findDuplicateGroups } from '@/lib/duplicate-helpers';
+import { RepeatedNamesModal } from '@/components/products/repeated-names-modal';
+import { findDuplicateGroups, findRepeatedNameGroups } from '@/lib/duplicate-helpers';
 import { exportProductsToExcel, exportProductsToCSV } from '@/lib/excel-export';
 import { useBusinessType } from '@/hooks/useBusinessType';
 // COMENTADO: Tour deshabilitado
@@ -68,9 +69,11 @@ export default function ProductsPage() {
   const [showOutOfStock, setShowOutOfStock] = useState(false);
   const [showCategoryModal, setShowCategoryModal] = useState(false);
   const [showDuplicatesModal, setShowDuplicatesModal] = useState(false);
+  const [showRepeatedNamesModal, setShowRepeatedNamesModal] = useState(false);
 
   // Grupos de productos repetidos (para el badge y el modal de revisión)
   const duplicateGroups = useMemo(() => findDuplicateGroups(products), [products]);
+  const repeatedNameGroups = useMemo(() => findRepeatedNameGroups(products), [products]);
 
   // COMENTADO: Tour deshabilitado
   // const { startTour, hasSeenTour } = useTour(productsTourConfig, true, userId || undefined);
@@ -280,6 +283,13 @@ export default function ProductsPage() {
         onUpdate={fetchProducts}
       />
 
+      <RepeatedNamesModal
+        isOpen={showRepeatedNamesModal}
+        onClose={() => setShowRepeatedNamesModal(false)}
+        products={products}
+        onUpdate={fetchProducts}
+      />
+
       <div className="space-y-6">
         <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4">
         <div>
@@ -314,6 +324,21 @@ export default function ProductsPage() {
             {duplicateGroups.length > 0 && (
               <span className="ml-1.5 bg-amber-500 text-white text-xs rounded-full px-2 py-0.5">
                 {duplicateGroups.length}
+              </span>
+            )}
+          </Button>
+          <Button
+            variant={repeatedNameGroups.length > 0 ? "default" : "outline"}
+            onClick={() => setShowRepeatedNamesModal(true)}
+            className="flex-1 sm:flex-none"
+            title="Renombrar productos que tienen el mismo nombre"
+          >
+            <Tags className="mr-2 h-4 w-4" />
+            <span className="hidden sm:inline">Nombres repetidos</span>
+            <span className="sm:hidden">Nombres</span>
+            {repeatedNameGroups.length > 0 && (
+              <span className="ml-1.5 bg-amber-500 text-white text-xs rounded-full px-2 py-0.5">
+                {repeatedNameGroups.length}
               </span>
             )}
           </Button>
