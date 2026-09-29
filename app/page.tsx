@@ -180,7 +180,7 @@ export default function Home() {
         </section>
       </FadeInSection>
 
-      {/* Por qué posib llega a cualquier tienda: sin equipos, fiados, reporte diario, respaldo en nube y referidos */}
+      {/* Por qué posib llega a cualquier tienda: sin equipos, fiados, reporte diario y respaldo en nube */}
       <FadeInSection>
         <WhyPosib />
       </FadeInSection>

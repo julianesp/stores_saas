@@ -9,9 +9,7 @@ import {
   HandCoins,
   ClipboardList,
   CloudUpload,
-  Gift,
   ArrowRight,
-  Check,
   HelpCircle,
   X,
 } from "lucide-react";
@@ -136,7 +134,7 @@ export default function WhyPosib() {
           </p>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-5 max-w-5xl mx-auto mb-16 md:mb-24">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-5 max-w-5xl mx-auto">
           {FEATURES.map(({ icon: Icon, title, text, accent, help }) => (
             <div
               key={title}
@@ -157,43 +155,6 @@ export default function WhyPosib() {
               </button>
             </div>
           ))}
-        </div>
-
-        {/* Bloque 3: referidos */}
-        <div className="max-w-4xl mx-auto rounded-3xl ring-1 ring-brand/20 bg-brand/8 p-8 md:p-12 text-center">
-          <div className="mx-auto mb-5 inline-flex rounded-2xl bg-brand/15 p-4">
-            <Gift className="h-8 w-8 text-brand" />
-          </div>
-          <h3 className="lp-text text-2xl sm:text-3xl font-bold mb-3">
-            Invita a otro tendero y ganan los dos
-          </h3>
-          <p className="lp-muted text-base max-w-2xl mx-auto mb-7">
-            ¿Conoces a otro negocio que anda con cuadernos? Recomiéndale posib.dev.
-            Cuando empiece a usarlo, ustedes dos reciben un beneficio en su suscripción.
-          </p>
-          <ul className="mx-auto mb-8 max-w-sm space-y-2.5 text-left">
-            {[
-              "Le compartes tu invitación por WhatsApp.",
-              "El tendero crea su cuenta y prueba el sistema.",
-              "Cuando activa su plan, ambos reciben su recompensa.",
-            ].map((item) => (
-              <li key={item} className="flex items-start gap-2.5">
-                <span className="lp-check-bg mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full">
-                  <Check className="h-3 w-3 text-brand" />
-                </span>
-                <span className="lp-muted text-sm">{item}</span>
-              </li>
-            ))}
-          </ul>
-          <Link href="/sign-up">
-            <Button
-              size="lg"
-              className="bg-brand hover:bg-brand-hover text-white font-semibold shadow-lg shadow-brand/20"
-            >
-              Empezar y luego invitar
-              <ArrowRight className="ml-2 h-4 w-4" />
-            </Button>
-          </Link>
         </div>
       </div>
 
