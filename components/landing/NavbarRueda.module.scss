@@ -8,10 +8,14 @@
 
   width: 100%;
 
-  border-bottom: 1px solid rgba(0, 124, 128, 0.9);
+  /* Sin border-bottom: la línea de contorno inferior (teal) se retiró para que el
+     navbar se funda con la página mediante la sombra, sin una línea dura debajo. */
   border-bottom-left-radius: 25px;
   border-bottom-right-radius: 25px;
-  box-shadow: 10px 10px 30px rgba(0, 0, 0, 0.25);
+  /* Sombra centrada (sin desplazamiento horizontal): antes era 10px 10px, y ese
+     offset lateral proyectaba una línea oscura dura contra el borde derecho de la
+     ventana. Ahora cae simétrica solo hacia abajo. */
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.25);
 
   /* El efecto "glass" (blur) va en una capa ::before DETRÁS del contenido, no
      en el propio nav. En varios navegadores móviles un elemento fixed con
