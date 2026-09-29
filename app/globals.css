@@ -37,6 +37,29 @@
   --brand-hover: #006467;
   --brand-light: #e6f4f4;
 
+  /* ── Tokens semánticos shadcn/ui ──────────────────────────────────────────
+     Los componentes de components/ui (select, badge, table, checkbox, switch,
+     tabs, dropdown-menu, …) usan estos tokens. Aquí quedan anclados al teal de
+     marca (--brand #007c80) para que toda la UI interna sea coherente.
+     Valores en HEX porque el proyecto ya usa HEX en el resto del tema. */
+  --primary: #007c80; /* = --brand */
+  --primary-foreground: #ffffff;
+  --secondary: #f1f5f9; /* slate-100 */
+  --secondary-foreground: #0f172a; /* slate-900 */
+  --muted: #f1f5f9; /* slate-100 */
+  --muted-foreground: #64748b; /* slate-500 */
+  --accent: #e6f4f4; /* = --brand-light: hover/selección sutil de marca */
+  --accent-foreground: #0f172a; /* slate-900 */
+  --destructive: #dc2626; /* red-600 */
+  --destructive-foreground: #ffffff;
+  --card: #ffffff;
+  --card-foreground: #0f172a; /* slate-900 */
+  --popover: #ffffff;
+  --popover-foreground: #0f172a; /* slate-900 */
+  --border: #e2e8f0; /* slate-200 */
+  --input: #e2e8f0; /* slate-200: borde de inputs / track del switch off */
+  --ring: #007c80; /* anillo de foco de marca */
+
   /* Landing page — tokens de tema controlados por hora (HourTheme.tsx) */
   --landing-bg: #f8fafb;
   --landing-card-bg: #ffffff;
@@ -78,6 +101,27 @@
   --color-brand: var(--brand);
   --color-brand-hover: var(--brand-hover);
   --color-brand-light: var(--brand-light);
+
+  /* Tokens semánticos shadcn/ui → utilidades bg-primary, text-muted-foreground,
+     bg-accent, ring-ring, bg-destructive, bg-popover, border-border, etc. */
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
 }
