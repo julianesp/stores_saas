@@ -6,6 +6,7 @@ import "./globals.css";
 import { Analytics } from "@vercel/analytics/next"
 import HourTheme from '@/components/HourTheme';
 import AppToaster from '@/components/AppToaster';
+import SiteVisitTracker from '@/components/SiteVisitTracker';
 import { THEME_INIT_SCRIPT } from '@/lib/theme';
 
 const geistSans = Geist({
@@ -194,6 +195,7 @@ export default function RootLayout({
           {children}
           <Analytics />
           <HourTheme />
+          <SiteVisitTracker />
           <AppToaster />
         </body>
       </html>

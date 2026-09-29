@@ -853,6 +853,37 @@ export async function getAllUserProfiles(getToken: GetTokenFn): Promise<UserProf
   return fetchAPI<UserProfile[]>('/api/user-profiles/all', getToken, {}, true);
 }
 
+export interface SiteVisitGroup {
+  label: string;
+  devices: number;
+  visits: number;
+}
+
+export interface SiteVisitStats {
+  days: number;
+  tracking_started_at: string | null;
+  totals: {
+    visits: number;
+    devices: number;
+    new_devices: number;
+    returning_devices: number;
+    anonymous_devices: number;
+    signed_in_devices: number;
+  };
+  today: { visits: number; devices: number };
+  daily: Array<{ day: string; visits: number; devices: number }>;
+  device_types: SiteVisitGroup[];
+  os: SiteVisitGroup[];
+  browsers: SiteVisitGroup[];
+  countries: SiteVisitGroup[];
+  sources: SiteVisitGroup[];
+  pages: SiteVisitGroup[];
+}
+
+export async function getSiteVisitStats(days: number, getToken: GetTokenFn): Promise<SiteVisitStats> {
+  return fetchAPI<SiteVisitStats>(`/api/admin/visits?days=${days}`, getToken, {}, true);
+}
+
 export async function createUserProfile(data: Partial<UserProfile>, getToken: GetTokenFn): Promise<UserProfile> {
   // Note: User profiles are usually auto-created by the auth middleware
   // This function exists for manual profile creation if needed

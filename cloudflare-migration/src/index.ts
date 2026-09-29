@@ -41,6 +41,7 @@ import telegramRoutes from './routes/telegram';
 import telegramRecipientsRoutes from './routes/telegram-recipients';
 import businessTypePricesRoutes from './routes/business-type-prices';
 import { backupAuth, backupPublic } from './routes/backup';
+import { siteVisitsPublic, siteVisitsAdmin } from './routes/site-visits';
 
 const app = new Hono<AppEnv>();
 
@@ -86,6 +87,9 @@ app.get('/', (c) => {
 app.route('/api/webhooks', webhooksRoutes);
 
 // Los /webhook de wompi.ts y subscriptions.ts no verifican la firma de Wompi: no exponerlos sin auth hasta implementarla.
+
+// Visitas al sitio público (NO auth - beacon anónimo desde el navegador)
+app.route('/api/visits', siteVisitsPublic);
 
 // Telegram webhook (NO auth - Telegram no envía JWT; se verifica su secret token)
 app.route('/api/telegram', telegramRoutes);
@@ -326,6 +330,7 @@ app.route('/api/credit-payments', creditPaymentsRoutes);
 app.route('/api/offers', offersRoutes);
 app.route('/api/payment-transactions', paymentTransactionsRoutes);
 app.route('/api/shipping-zones', shippingZonesRoutes);
+app.route('/api/admin/visits', siteVisitsAdmin);
 app.route('/api/admin', adminStatsRoutes);
 app.route('/api/email', emailRoutes);
 app.route('/loyalty-settings', loyaltySettingsRoutes);

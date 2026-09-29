@@ -34,6 +34,7 @@ import {
   ChevronRight,
   Calendar,
   CheckCircle,
+  MonitorSmartphone,
 } from "lucide-react";
 import {
   getUserProfileByClerkId,
@@ -91,6 +92,11 @@ const superAdminMenuItems = [
     title: "Analytics del Sistema",
     href: "/dashboard/admin/analytics",
     icon: TrendingUp,
+  },
+  {
+    title: "Visitas al sitio",
+    href: "/dashboard/admin/visitas",
+    icon: MonitorSmartphone,
   },
   {
     title: "Reportes Globales",
