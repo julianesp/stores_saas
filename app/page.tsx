@@ -26,6 +26,7 @@ import FadeInSection from "@/components/landing/FadeInSection";
 import WhatsAppButton from "@/components/landing/WhatsAppButton";
 import PricingPlans from "@/components/landing/PricingPlans";
 import WhyPosib from "@/components/landing/WhyPosib";
+import ProcessShowcase from "@/components/landing/process-showcase/ProcessShowcase";
 import FreeMigration from "@/components/landing/FreeMigration";
 import TrustBadges from "@/components/landing/TrustBadges";
 import VideoTutorials from "@/components/landing/VideoTutorials";
@@ -178,6 +179,11 @@ export default function Home() {
             </div>
           </div>
         </section>
+      </FadeInSection>
+
+      {/* Demos animadas de cada proceso (registrar producto, vender, fiados, etc.) */}
+      <FadeInSection>
+        <ProcessShowcase />
       </FadeInSection>
 
       {/* Por qué posib llega a cualquier tienda: sin equipos, fiados, reporte diario y respaldo en nube */}
