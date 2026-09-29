@@ -5,8 +5,9 @@ import { useState, useEffect, type ReactNode } from "react";
 const THEME_KEY = "posib-landing-theme";
 
 function isDarkHour(): boolean {
+  // Oscuro de 18:00 a 06:59, claro de 07:00 a 17:59
   const h = new Date().getHours();
-  return h >= 19 || h < 7;
+  return h >= 18 || h < 7;
 }
 
 function readInitialTheme(): boolean {

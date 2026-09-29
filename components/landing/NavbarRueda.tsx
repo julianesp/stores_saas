@@ -10,8 +10,9 @@ import styles from "./NavbarRueda.module.scss";
 const THEME_KEY = "posib-landing-theme";
 
 function isDarkHour(): boolean {
+  // Oscuro de 18:00 a 06:59, claro de 07:00 a 17:59
   const h = new Date().getHours();
-  return h >= 19 || h < 7;
+  return h >= 18 || h < 7;
 }
 
 function readStoredTheme(): boolean {
@@ -80,7 +81,7 @@ export default function NavbarRueda() {
     };
     window.addEventListener("posib-theme-change", onThemeChange);
 
-    // Revisar cada minuto por si cruza las 7pm/7am mientras la página está
+    // Revisar cada minuto por si cruza las 6pm/7am mientras la página está
     // abierta. Solo aplica el cambio automático si no hay preferencia manual
     // guardada (mismo criterio que LandingShell).
     const intervalo = setInterval(() => {

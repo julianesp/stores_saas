@@ -3,8 +3,8 @@
 import { useEffect } from "react";
 
 function getThemeForHour(hour: number): "dark" | "light" {
-  // Oscuro de 19:00 a 06:59, claro de 07:00 a 18:59
-  return hour >= 19 || hour < 7 ? "dark" : "light";
+  // Oscuro de 18:00 a 06:59, claro de 07:00 a 17:59
+  return hour >= 18 || hour < 7 ? "dark" : "light";
 }
 
 function applyTheme() {
