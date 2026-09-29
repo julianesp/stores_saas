@@ -80,8 +80,14 @@ function DashboardLayoutInner({
           const userEmail = user.emailAddresses[0]?.emailAddress || "";
           const superAdminEmail = "admin@neurai.dev";
 
-          // Limpiar tenant guardado para que se recargue con el usuario actual
-          localStorage.removeItem("selected_tenant_id");
+          // NOTA: NO borramos aquí el selected_tenant_id. Antes se hacía en cada
+          // carga "para recargar con el usuario actual", pero eso pisaba la tienda
+          // elegida en el StoreSwitcher (no sobrevivía a un refresco) y forzaba
+          // volver siempre a la primera tienda. En su lugar, más abajo validamos
+          // que el tenant guardado pertenezca a las tiendas del usuario actual: si
+          // es suyo lo respetamos; si no (p. ej. otro usuario en el mismo
+          // navegador) lo reemplazamos. Así se conserva la elección y se mantiene
+          // la protección contra heredar un tenant ajeno.
 
           // PASO 1: Obtener tiendas accesibles para configurar el tenant_id
           // Esto debe hacerse ANTES de cualquier otra llamada a la API
@@ -131,9 +137,14 @@ function DashboardLayoutInner({
                 userIsTeamMember = true;
                 setIsTeamMember(true);
 
-                // IMPORTANTE: Establecer el tenant_id ANTES de hacer otras llamadas
+                // IMPORTANTE: Establecer el tenant_id ANTES de hacer otras llamadas.
+                // Respetamos el guardado solo si es una de las tiendas del usuario
+                // (así sobrevive el cambio de tienda); si no, tomamos la primera.
                 const selectedTenantId = localStorage.getItem("selected_tenant_id");
-                if (!selectedTenantId) {
+                const savedIsValid =
+                  !!selectedTenantId &&
+                  teamMemberStores.some((s) => s.id === selectedTenantId);
+                if (!savedIsValid) {
                   localStorage.setItem(
                     "selected_tenant_id",
                     teamMemberStores[0].id
@@ -150,10 +161,19 @@ function DashboardLayoutInner({
                 setLoading(false);
                 return; // Terminar aquí para team members
               } else {
-                // Owner: guardar el tenant_id de la tienda propia si no hay uno
-                const ownerStore = stores.find((s: UserStore) => s.access_type === "owner") || stores[0];
-                if (ownerStore && !localStorage.getItem("selected_tenant_id")) {
-                  localStorage.setItem("selected_tenant_id", ownerStore.id);
+                // Owner: respetar el tenant guardado si es una de sus tiendas
+                // (conserva el cambio del StoreSwitcher); si no, usar la propia.
+                const savedTenantId = localStorage.getItem("selected_tenant_id");
+                const savedIsValid =
+                  !!savedTenantId &&
+                  stores.some((s: UserStore) => s.id === savedTenantId);
+                if (!savedIsValid) {
+                  const ownerStore =
+                    stores.find((s: UserStore) => s.access_type === "owner") ||
+                    stores[0];
+                  if (ownerStore) {
+                    localStorage.setItem("selected_tenant_id", ownerStore.id);
+                  }
                 }
               }
             }
