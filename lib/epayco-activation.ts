@@ -9,15 +9,15 @@ import { getBusinessTypeByPlanId } from './business-types';
  *  2. La página de retorno del checkout (payment-status), como red de seguridad
  *     por si el webhook no llega (ePayco no lo manda, timeout, etc.).
  *
- * Es IDEMPOTENTE: si el webhook ya activó, volver a activar desde el retorno solo
- * reescribe los mismos campos (estado activo + fecha de facturación a +1 mes). No
- * duplica cobros — solo refleja en el perfil lo que ePayco ya aprobó.
+ * Toda la lógica de fechas vive en el Worker (POST /api/user-profiles/:id/apply-payment),
+ * que aplica el pago y registra la transacción en un solo batch e idempotente por
+ * `payment_key`: si los dos caminos llegan a la vez, solo el primero suma el mes.
+ * Pagar antes de vencer suma el mes al final del período en curso.
  *
  * IMPORTANTE: los IDs de plan deben coincidir con SUBSCRIPTION_PLANS (lib/epayco.ts).
  * El addon de tienda es 'addon-store-monthly'.
  */
 
-// IDs de complementos de pago. Cualquier otro planId se trata como plan principal.
 const AI_ADDON = 'ai-addon-monthly';
 const EMAIL_ADDON = 'email-addon-monthly';
 const STORE_ADDON = 'addon-store-monthly';
@@ -26,9 +26,9 @@ export interface ActivateEPaycoParams {
   apiUrl: string;
   userProfileId: string;
   planId: string;
-  /** Id de transacción de ePayco (x_transaction_id), para el registro contable. */
+  /** Id de transacción de ePayco (x_transaction_id). */
   transactionId?: string;
-  /** Referencia de ePayco (x_ref_payco), para rastrear el pago. */
+  /** Referencia de ePayco (x_ref_payco); es la llave de idempotencia. */
   refPayco?: string;
   /** Monto pagado (x_amount). */
   amount?: string | number;
@@ -38,86 +38,49 @@ export interface ActivateEPaycoParams {
   invoice?: string;
 }
 
+function kindOfPlan(planId: string): 'plan' | 'store' | 'ai' | 'email' {
+  if (planId === STORE_ADDON) return 'store';
+  if (planId === AI_ADDON) return 'ai';
+  if (planId === EMAIL_ADDON) return 'email';
+  return 'plan';
+}
+
 /**
- * Activa la suscripción o el complemento en el perfil del usuario (vía Worker) y
- * registra la transacción (best-effort). Devuelve `true` si el perfil quedó
- * actualizado. Lanza solo si el PUT al perfil falla (para que el webhook pueda
- * responder 500 y ePayco reintente); el registro de transacción nunca hace fallar.
+ * Aplica el pago aprobado al perfil (vía Worker). Devuelve `true` si el perfil
+ * quedó al día, incluso si el pago ya se había aplicado antes. Lanza si el Worker
+ * falla, para que el webhook responda 500 y ePayco reintente.
  */
 export async function activateEPaycoPayment(params: ActivateEPaycoParams): Promise<boolean> {
   const { apiUrl, userProfileId, planId } = params;
   const secret = process.env.CRON_SECRET || '';
 
-  const now = new Date();
-  const nextBillingDate = new Date(now);
-  nextBillingDate.setMonth(nextBillingDate.getMonth() + 1);
+  const kind = kindOfPlan(planId);
+  const paymentKey = params.refPayco
+    ? `epayco-${params.refPayco}`
+    : params.transactionId || `epayco-${Date.now()}`;
 
-  const isAiAddon = planId === AI_ADDON;
-  const isEmailAddon = planId === EMAIL_ADDON;
-  const isStoreAddon = planId === STORE_ADDON;
-  const isMainPlan = !isAiAddon && !isEmailAddon && !isStoreAddon;
-
-  const updatePayload: Record<string, unknown> = {
-    subscription_status: 'active',
-    last_payment_date: now.toISOString(),
-    next_billing_date: nextBillingDate.toISOString(),
-    trial_start_date: null,
-    trial_end_date: null,
-  };
-
-  if (isMainPlan) {
-    // No sobreescribir plan_id si es un addon.
-    updatePayload.plan_id = planId;
-    const businessType = getBusinessTypeByPlanId(planId);
-    if (businessType) {
-      updatePayload.business_type = businessType.id;
-    }
-  }
-  if (isAiAddon) updatePayload.has_ai_addon = 1;
-  if (isEmailAddon) updatePayload.has_email_addon = 1;
-  if (isStoreAddon) updatePayload.has_store_addon = 1;
-
-  const updateResponse = await fetch(`${apiUrl}/api/user-profiles/${userProfileId}`, {
-    method: 'PUT',
+  const response = await fetch(`${apiUrl}/api/user-profiles/${userProfileId}/apply-payment`, {
+    method: 'POST',
     headers: {
       'Content-Type': 'application/json',
       'X-Webhook-Secret': secret,
     },
-    body: JSON.stringify(updatePayload),
+    body: JSON.stringify({
+      kind,
+      plan_id: kind === 'plan' ? planId : undefined,
+      business_type: kind === 'plan' ? getBusinessTypeByPlanId(planId)?.id : undefined,
+      payment_key: paymentKey,
+      amount: params.amount != null ? parseFloat(String(params.amount)) : 0,
+      currency: params.currency || 'COP',
+      reference: [params.invoice, params.transactionId && `tx ${params.transactionId}`, params.refPayco && `ref ${params.refPayco}`]
+        .filter(Boolean)
+        .join(' ') || null,
+    }),
   });
 
-  if (!updateResponse.ok) {
-    console.error('activateEPaycoPayment: error actualizando perfil:', await updateResponse.text());
-    throw new Error(`No se pudo actualizar el perfil ${userProfileId}: ${updateResponse.status}`);
-  }
-
-  // Registro contable (best-effort). El Worker usa la columna legacy
-  // `wompi_transaction_id` y el estado canónico en inglés (CHECK). Si el pago se
-  // activa por la red de seguridad sin transactionId, igual dejamos rastro.
-  try {
-    const txResponse = await fetch(`${apiUrl}/api/payment-transactions`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'X-Webhook-Secret': secret,
-      },
-      body: JSON.stringify({
-        user_profile_id: userProfileId,
-        wompi_transaction_id: params.transactionId || `epayco-${params.refPayco || now.getTime()}`,
-        amount: params.amount != null ? parseFloat(String(params.amount)) : 0,
-        currency: params.currency || 'COP',
-        status: 'APPROVED',
-        payment_method_type: 'epayco',
-        reference: [params.invoice, params.refPayco && `ref ${params.refPayco}`]
-          .filter(Boolean)
-          .join(' ') || null,
-      }),
-    });
-    if (!txResponse.ok) {
-      console.error('activateEPaycoPayment: registro de transacción falló:', txResponse.status, await txResponse.text());
-    }
-  } catch (error) {
-    console.error('activateEPaycoPayment: error registrando transacción (best-effort):', error);
+  if (!response.ok) {
+    console.error('activateEPaycoPayment: el Worker rechazó el pago:', response.status, await response.text());
+    throw new Error(`No se pudo aplicar el pago al perfil ${userProfileId}: ${response.status}`);
   }
 
   return true;

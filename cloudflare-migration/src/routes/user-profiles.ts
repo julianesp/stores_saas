@@ -298,6 +298,139 @@ app.put('/:id', async (c) => {
   }
 });
 
+const ADDON_EXPIRY_COLUMN = {
+  store: { flag: 'has_store_addon', expires: 'store_addon_expires_at' },
+  ai: { flag: 'has_ai_addon', expires: 'ai_addon_expires_at' },
+  email: { flag: 'has_email_addon', expires: 'email_addon_expires_at' },
+} as const;
+
+// Un mes después de MAX(vencimiento vigente, ahora): pagar antes de vencer suma
+// el mes al final del período en curso en vez de perder los días que faltaban.
+// `column` sale de ADDON_EXPIRY_COLUMN / 'next_billing_date', nunca del cliente.
+const monthFromCurrentExpiry = (column: string) =>
+  `strftime('%Y-%m-%dT%H:%M:%fZ', MAX(COALESCE(julianday(${column}), 0), julianday('now')), '+1 month')`;
+
+/**
+ * POST /api/user-profiles/:id/apply-payment
+ * Aplica un pago aprobado de ePayco (plan o complemento) al perfil y registra la
+ * transacción, todo en un único batch. Idempotente por `payment_key`: el webhook
+ * y la página de retorno pueden llamarlo a la vez y solo el primero suma el mes.
+ * Solo superadmin / llamada interna con X-Webhook-Secret.
+ */
+app.post('/:id/apply-payment', async (c) => {
+  try {
+    const tenant: Tenant = c.get('tenant');
+    if ((tenant as any).is_superadmin !== true) {
+      return c.json<APIResponse<null>>({
+        success: false,
+        error: 'Unauthorized - Solo superadmin o llamada interna',
+        data: null,
+      }, 403);
+    }
+
+    const id = c.req.param('id');
+    const body = await c.req.json().catch(() => ({} as Record<string, unknown>));
+    const kind = body.kind as string;
+    const paymentKey = typeof body.payment_key === 'string' ? body.payment_key.trim() : '';
+    const planId = typeof body.plan_id === 'string' ? body.plan_id.trim().slice(0, 100) : '';
+    const businessType = typeof body.business_type === 'string' ? body.business_type.trim().slice(0, 50) : '';
+
+    if (!paymentKey || paymentKey.length > 200) {
+      return c.json<APIResponse<null>>({ success: false, error: 'payment_key requerido', data: null }, 400);
+    }
+    if (kind !== 'plan' && !(kind in ADDON_EXPIRY_COLUMN)) {
+      return c.json<APIResponse<null>>({ success: false, error: 'kind inválido', data: null }, 400);
+    }
+    if (kind === 'plan' && !planId) {
+      return c.json<APIResponse<null>>({ success: false, error: 'plan_id requerido para kind=plan', data: null }, 400);
+    }
+
+    const exists = await c.env.DB.prepare('SELECT id FROM user_profiles WHERE id = ?')
+      .bind(id)
+      .first<{ id: string }>();
+    if (!exists) {
+      return c.json<APIResponse<null>>({ success: false, error: 'User profile not found', data: null }, 404);
+    }
+
+    const amount = Number(body.amount);
+    const currency = typeof body.currency === 'string' && body.currency ? body.currency.slice(0, 10) : 'COP';
+    const reference = typeof body.reference === 'string' && body.reference ? body.reference.slice(0, 300) : null;
+    const nowIso = new Date().toISOString();
+
+    const notYetApplied = `NOT EXISTS (
+      SELECT 1 FROM payment_transactions WHERE user_profile_id = ? AND wompi_transaction_id = ?
+    )`;
+
+    let updateStatement: D1PreparedStatement;
+    if (kind === 'plan') {
+      updateStatement = c.env.DB.prepare(
+        `UPDATE user_profiles SET
+           subscription_status = 'active',
+           last_payment_date = ?,
+           next_billing_date = ${monthFromCurrentExpiry('next_billing_date')},
+           trial_start_date = NULL,
+           trial_end_date = NULL,
+           plan_id = ?,
+           business_type = COALESCE(NULLIF(?, ''), business_type),
+           updated_at = datetime('now')
+         WHERE id = ? AND ${notYetApplied}`
+      ).bind(nowIso, planId, businessType, id, id, paymentKey);
+    } else {
+      const { flag, expires } = ADDON_EXPIRY_COLUMN[kind as keyof typeof ADDON_EXPIRY_COLUMN];
+      updateStatement = c.env.DB.prepare(
+        `UPDATE user_profiles SET
+           ${flag} = 1,
+           ${expires} = ${monthFromCurrentExpiry(expires)},
+           last_payment_date = ?,
+           updated_at = datetime('now')
+         WHERE id = ? AND ${notYetApplied}`
+      ).bind(nowIso, id, id, paymentKey);
+    }
+
+    const insertStatement = c.env.DB.prepare(
+      `INSERT INTO payment_transactions (
+         id, user_profile_id, wompi_transaction_id, amount, currency,
+         status, payment_method_type, reference, created_at
+       )
+       SELECT ?, ?, ?, ?, ?, 'APPROVED', 'epayco', ?, ?
+       WHERE ${notYetApplied}`
+    ).bind(
+      `tx_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`,
+      id,
+      paymentKey,
+      Number.isFinite(amount) && amount > 0 ? amount : 0,
+      currency,
+      reference,
+      nowIso,
+      id,
+      paymentKey,
+    );
+
+    const [updateResult] = await c.env.DB.batch([updateStatement, insertStatement]);
+    const applied = (updateResult.meta?.changes ?? 0) > 0;
+
+    const profile = await c.env.DB.prepare(
+      `SELECT subscription_status, plan_id, next_billing_date, has_store_addon, store_addon_expires_at,
+              has_ai_addon, ai_addon_expires_at, has_email_addon, email_addon_expires_at
+       FROM user_profiles WHERE id = ?`
+    )
+      .bind(id)
+      .first();
+
+    return c.json<APIResponse<{ applied: boolean; profile: unknown }>>({
+      success: true,
+      data: { applied, profile },
+    });
+  } catch (error: any) {
+    console.error('Error applying payment:', error);
+    return c.json<APIResponse<null>>({
+      success: false,
+      error: error.message || 'Failed to apply payment',
+      data: null,
+    }, 500);
+  }
+});
+
 /**
  * DELETE /api/user-profiles/:id
  * Eliminar un usuario y todos sus datos relacionados

@@ -253,6 +253,33 @@ export default function SubscriptionPageWompi() {
   // para pagar de nuevo: solo confirmar que está al día.
   const hasActiveSubscription = subscriptionStatus?.status === "active";
 
+  // Ventana de renovación anticipada. El backend suma el mes al final del período
+  // vigente (apply-payment), así que pagar unos días antes no pierde ningún día.
+  const RENEWAL_WINDOW_DAYS = 7;
+  const now = new Date();
+  const daysUntil = (iso?: string | null) =>
+    iso ? Math.ceil((new Date(iso).getTime() - now.getTime()) / 86_400_000) : null;
+  const planDaysLeft = daysUntil(profile?.next_billing_date);
+  const planCanRenew =
+    hasActiveSubscription && planDaysLeft !== null && planDaysLeft <= RENEWAL_WINDOW_DAYS;
+  const storeAddonDaysLeft = daysUntil(profile?.store_addon_expires_at);
+  const storeAddonExpired =
+    !!profile?.has_store_addon && storeAddonDaysLeft !== null && storeAddonDaysLeft <= 0;
+  const storeAddonCanRenew =
+    !!profile?.has_store_addon &&
+    !storeAddonExpired &&
+    hasActiveSubscription &&
+    storeAddonDaysLeft !== null &&
+    storeAddonDaysLeft <= RENEWAL_WINDOW_DAYS;
+  const formatDate = (iso?: string | null) =>
+    iso
+      ? new Date(iso).toLocaleDateString("es-CO", {
+          year: "numeric",
+          month: "long",
+          day: "numeric",
+        })
+      : null;
+
   // El tipo de negocio queda "fijo" cuando el perfil ya tiene uno guardado y el
   // usuario no está en modo edición. En ese estado ocultamos los demás tipos.
   const businessTypeFixed = !!profile?.business_type && !editingBusinessType;
@@ -358,7 +385,13 @@ export default function SubscriptionPageWompi() {
                       restantes
                     </>
                   )}
-                  {subscriptionStatus.status === "active" && (
+                  {subscriptionStatus.status === "active" && planCanRenew && (
+                    <>
+                      Tu plan vence el {formattedNextBilling}. Puedes renovarlo
+                      ahora abajo: el nuevo mes se suma a partir de esa fecha.
+                    </>
+                  )}
+                  {subscriptionStatus.status === "active" && !planCanRenew && (
                     <>
                       ✅ Tu plan está al día. No necesitas hacer nada más.
                       {formattedNextBilling && (
@@ -463,14 +496,14 @@ export default function SubscriptionPageWompi() {
           </ul>
           <Button
             className={`w-full ${
-              hasActiveSubscription
+              hasActiveSubscription && !planCanRenew
                 ? "bg-green-600 hover:bg-green-600"
                 : "bg-gray-800 hover:bg-gray-900"
             }`}
             size="lg"
             onClick={() => handleSubscribe('plan-abarrotes-monthly')}
             disabled={
-              hasActiveSubscription ||
+              (hasActiveSubscription && !planCanRenew) ||
               (loading && selectedItem === 'plan-abarrotes-monthly')
             }
           >
@@ -479,6 +512,8 @@ export default function SubscriptionPageWompi() {
                 <Loader2 className="mr-2 h-5 w-5 animate-spin" />
                 Creando link de pago...
               </>
+            ) : planCanRenew ? (
+              `Renovar plan — ${formatCurrency(getPrice('abarrotes'))}/mes`
             ) : hasActiveSubscription ? (
               <>
                 <Check className="mr-2 h-5 w-5" />
@@ -488,6 +523,12 @@ export default function SubscriptionPageWompi() {
               "Activar plan — $24.900/mes"
             )}
           </Button>
+          {planCanRenew && (
+            <p className="text-xs text-gray-500 text-center">
+              Vence el {formattedNextBilling}. Si pagas ahora, el nuevo mes se
+              suma a partir de esa fecha: no pierdes ningún día.
+            </p>
+          )}
         </CardContent>
       </Card>
 
@@ -590,21 +631,39 @@ export default function SubscriptionPageWompi() {
               ))}
             </ul>
 
-            {profile?.has_store_addon ? (
-              <div className="space-y-1">
-                <span className="inline-flex items-center gap-1 rounded-full bg-green-100 px-3 py-1 text-sm font-semibold text-green-700">
-                  <Check className="h-4 w-4" />
-                  Complemento activo
-                </span>
-                {profile?.store_addon_expires_at && (
-                  <p className="text-xs text-gray-500">
-                    Activo hasta el{" "}
-                    {new Date(profile.store_addon_expires_at).toLocaleDateString(
-                      "es-CO",
-                      { year: "numeric", month: "long", day: "numeric" },
+            {profile?.has_store_addon && !storeAddonExpired ? (
+              <div className="space-y-3">
+                <div className="space-y-1">
+                  <span className="inline-flex items-center gap-1 rounded-full bg-green-100 px-3 py-1 text-sm font-semibold text-green-700">
+                    <Check className="h-4 w-4" />
+                    Complemento activo
+                  </span>
+                  {profile?.store_addon_expires_at && (
+                    <p className="text-xs text-gray-500">
+                      Activo hasta el {formatDate(profile.store_addon_expires_at)}.
+                      {storeAddonCanRenew &&
+                        " Si renuevas ahora, el nuevo mes se suma a partir de esa fecha."}
+                    </p>
+                  )}
+                </div>
+                {storeAddonCanRenew && (
+                  <Button
+                    className="w-full"
+                    onClick={() => handleSubscribe("addon-store-monthly")}
+                    disabled={loading}
+                  >
+                    {loading && selectedItem === "addon-store-monthly" ? (
+                      <>
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        Procesando…
+                      </>
+                    ) : (
+                      <>
+                        <Store className="mr-2 h-4 w-4" />
+                        Renovar Tienda Online — {formatCurrency(14900)}/mes
+                      </>
                     )}
-                    .
-                  </p>
+                  </Button>
                 )}
               </div>
             ) : storeAddonRequiresBasePlan ? (
@@ -646,7 +705,7 @@ export default function SubscriptionPageWompi() {
                 ) : (
                   <>
                     <Store className="mr-2 h-4 w-4" />
-                    Activar Tienda Online
+                    {storeAddonExpired ? "Renovar Tienda Online" : "Activar Tienda Online"}
                   </>
                 )}
               </Button>
