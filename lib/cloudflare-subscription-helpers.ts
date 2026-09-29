@@ -2,7 +2,12 @@ import { UserProfile, SubscriptionStatus } from './types';
 import { ApiError, getUserProfile, updateUserProfile, type GetTokenFn } from './cloudflare-api';
 
 /**
- * Verifica el estado de suscripción de un usuario usando Cloudflare API
+ * Verifica el estado de suscripción de un usuario usando Cloudflare API.
+ *
+ * Obtiene el perfil (con caché/dedupe de getUserProfile) y delega el cálculo en
+ * evaluateSubscriptionStatus. Se conserva por compatibilidad con los llamadores
+ * que solo tienen el getToken; cuando ya se dispone del perfil cargado conviene
+ * usar evaluateSubscriptionStatus directamente para no re-pedirlo.
  */
 export async function checkSubscriptionStatus(
   getToken: GetTokenFn
@@ -10,7 +15,23 @@ export async function checkSubscriptionStatus(
   try {
     // Obtener el perfil del usuario actual
     const userProfile = await getUserProfile(getToken);
+    return evaluateSubscriptionStatus(userProfile, getToken);
+  } catch (error) {
+    return subscriptionStatusFromError(error);
+  }
+}
 
+/**
+ * Calcula el estado de suscripción a partir de un perfil YA cargado, sin volver
+ * a pedirlo a la API. Reusa el perfil que el layout ya trajo, evitando una
+ * lectura redundante. Puede hacer writes (marcar expirado, fijar trial_end_date)
+ * igual que antes, por eso recibe getToken.
+ */
+export async function evaluateSubscriptionStatus(
+  userProfile: UserProfile | null,
+  getToken: GetTokenFn
+): Promise<SubscriptionStatus> {
+  try {
     if (!userProfile) {
       // No se pudo leer el perfil (p. ej. la API devolvió vacío). Esto NO es lo
       // mismo que una suscripción expirada; no debemos bloquear ni empujar a pagar.
@@ -135,29 +156,39 @@ export async function checkSubscriptionStatus(
       status: userProfile.subscription_status,
     };
   } catch (error) {
-    // Un 402 SÍ es una suscripción vencida/cancelada: aunque las rutas de
-    // identidad y pago están exentas del gate en el Worker, si por cualquier
-    // motivo la lectura del perfil devuelve 402 debemos llevar al usuario al
-    // modal de suscripción (con enlace a pagar), no dejarlo varado en la
-    // pantalla de "error de conexión".
-    if (error instanceof ApiError && error.status === 402) {
-      return {
-        canAccess: false,
-        status: 'expired',
-        daysLeft: 0,
-      };
-    }
+    return subscriptionStatusFromError(error);
+  }
+}
 
-    // Cualquier otro fallo de red o de autenticación (p. ej. el Worker devuelve
-    // Unauthorized) NO significa que la suscripción haya expirado. Devolvemos
-    // 'unknown' para que la UI muestre un error de conexión reintentable en
-    // lugar del modal de "suscripción expirada" que empuja a pagar de nuevo.
-    console.error('Error checking subscription status:', error);
+/**
+ * Traduce un error (de lectura de perfil o de un update de estado) al
+ * SubscriptionStatus adecuado. Centraliza la política: un 402 es suscripción
+ * vencida (llevar al modal de pago); cualquier otro fallo es 'unknown' (error de
+ * conexión reintentable, NO empujar a pagar).
+ */
+function subscriptionStatusFromError(error: unknown): SubscriptionStatus {
+  // Un 402 SÍ es una suscripción vencida/cancelada: aunque las rutas de
+  // identidad y pago están exentas del gate en el Worker, si por cualquier
+  // motivo la lectura del perfil devuelve 402 debemos llevar al usuario al
+  // modal de suscripción (con enlace a pagar), no dejarlo varado en la
+  // pantalla de "error de conexión".
+  if (error instanceof ApiError && error.status === 402) {
     return {
       canAccess: false,
-      status: 'unknown',
+      status: 'expired',
+      daysLeft: 0,
     };
   }
+
+  // Cualquier otro fallo de red o de autenticación (p. ej. el Worker devuelve
+  // Unauthorized) NO significa que la suscripción haya expirado. Devolvemos
+  // 'unknown' para que la UI muestre un error de conexión reintentable en
+  // lugar del modal de "suscripción expirada" que empuja a pagar de nuevo.
+  console.error('Error checking subscription status:', error);
+  return {
+    canAccess: false,
+    status: 'unknown',
+  };
 }
 
 /**

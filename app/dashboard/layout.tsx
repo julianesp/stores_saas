@@ -15,7 +15,7 @@ import { TrialNotificationWrapper } from "@/components/subscription/trial-notifi
 import { AddonExpiryBanner } from "@/components/subscription/addon-expiry-banner";
 import OfflineProvider from "@/components/OfflineProvider";
 import {
-  checkSubscriptionStatus,
+  evaluateSubscriptionStatus,
   getUserProfileByClerkId,
 } from "@/lib/cloudflare-subscription-helpers";
 import { SubscriptionStatus } from "@/lib/types";
@@ -163,14 +163,15 @@ function DashboardLayoutInner({
 
           // PASO 2: Si NO es team member, continuar con el flujo normal de owner
 
-          // Asegurarse de que el perfil de usuario existe
-          try {
-            await fetch("/api/user/init-profile", {
-              method: "POST",
-            });
-          } catch (err) {
+          // Asegurarse de que el perfil de usuario existe. No dependemos de su
+          // resultado para leer el perfil (init-profile es idempotente y el
+          // Worker crea el perfil bajo demanda), así que lo lanzamos en paralelo
+          // con la lectura del perfil en lugar de esperar en serie.
+          const initProfilePromise = fetch("/api/user/init-profile", {
+            method: "POST",
+          }).catch((err) => {
             console.warn("Error initializing profile:", err);
-          }
+          });
 
           // Intentar auto-upgrade si es el super admin
           if (userEmail === superAdminEmail) {
@@ -193,8 +194,13 @@ function DashboardLayoutInner({
           }
 
           // Verificar si es superadmin — el email del admin SIEMPRE tiene acceso
-          // independientemente de lo que diga la BD (protección contra resets)
-          const profile = await getUserProfileByClerkId(getToken);
+          // independientemente de lo que diga la BD (protección contra resets).
+          // Esperamos el perfil y el init en paralelo (init no aporta datos, solo
+          // garantiza existencia; su fallo ya quedó registrado arriba).
+          const [profile] = await Promise.all([
+            getUserProfileByClerkId(getToken),
+            initProfilePromise,
+          ]);
 
           // Poblar la caché de perfil que lee el Sidebar (PROFILE_CACHE_KEY),
           // para que NO tenga que llamar de nuevo a /api/user/init-profile en el
@@ -276,8 +282,10 @@ function DashboardLayoutInner({
               status: "active",
             });
           } else {
-            // Verificar el estado de suscripción para owners normales
-            const info = await checkSubscriptionStatus(getToken);
+            // Verificar el estado de suscripción para owners normales.
+            // Reutilizamos el perfil ya cargado (evaluateSubscriptionStatus) en
+            // lugar de volver a pedirlo con checkSubscriptionStatus.
+            const info = await evaluateSubscriptionStatus(profile, getToken);
             setSubscriptionInfo(info);
           }
           setTenantReady(true);
