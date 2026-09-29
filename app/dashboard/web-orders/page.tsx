@@ -20,7 +20,9 @@ import {
   User,
   MapPin,
   Package,
-  Trash2
+  Trash2,
+  Truck,
+  Receipt,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import {
@@ -36,12 +38,70 @@ import {
 } from '@/lib/storefront-access';
 import Swal from 'sweetalert2';
 
+interface WebOrderItem {
+  id: string;
+  product_id: string;
+  quantity: number;
+  unit_price: number;
+  discount: number;
+  subtotal: number;
+  product?: { name?: string };
+}
+
+type WebOrder = Sale & { items?: WebOrderItem[] };
+
+const REFERENCE_PATTERN = /^[A-Z0-9][A-Z0-9-]{3,29}$/;
+
+const escapeHtml = (value: string) =>
+  value
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+
+// Pedido pendiente cuyo cliente ya digitó la referencia: el tendero debe contrastarla con su app de Nequi.
+const isPendingVerification = (order: WebOrder) =>
+  order.status === 'pendiente' && !!order.payment_reference;
+
+const buildItemsHtml = (order: WebOrder) => {
+  const rows = (order.items || [])
+    .map((item) => {
+      const name = escapeHtml(item.product?.name || 'Producto');
+      const discount =
+        item.discount > 0
+          ? `<span style="color:#dc2626"> (desc. -${formatCurrency(item.discount)})</span>`
+          : '';
+      return `<tr>
+        <td style="text-align:left;padding:2px 0">${item.quantity} × ${name}${discount}</td>
+        <td style="text-align:right;padding:2px 0 2px 12px;white-space:nowrap">${formatCurrency(item.subtotal)}</td>
+      </tr>`;
+    })
+    .join('');
+
+  const shipping = order.shipping_cost || 0;
+  const shippingRow =
+    shipping > 0
+      ? `<tr>
+          <td style="text-align:left;padding:2px 0">Envío a domicilio</td>
+          <td style="text-align:right;padding:2px 0 2px 12px;white-space:nowrap">${formatCurrency(shipping)}</td>
+        </tr>`
+      : '';
+
+  return `<table style="width:100%;font-size:14px">${rows}${shippingRow}
+    <tr style="border-top:1px solid #d1d5db">
+      <td style="text-align:left;padding-top:6px;font-weight:700">Total a recibir en Nequi</td>
+      <td style="text-align:right;padding-top:6px;font-weight:700;white-space:nowrap">${formatCurrency(order.total)}</td>
+    </tr>
+  </table>`;
+};
+
 export default function WebOrdersPage() {
   const { getToken } = useAuth();
   const router = useRouter();
-  const [orders, setOrders] = useState<Sale[]>([]);
+  const [orders, setOrders] = useState<WebOrder[]>([]);
   const [loading, setLoading] = useState(true);
-  const [selectedOrder, setSelectedOrder] = useState<Sale | null>(null);
+  const [selectedOrder, setSelectedOrder] = useState<WebOrder | null>(null);
   const [showDetailsDialog, setShowDetailsDialog] = useState(false);
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [hasAccess, setHasAccess] = useState(false);
@@ -130,42 +190,76 @@ export default function WebOrdersPage() {
 
   const confirmPayment = async (orderId: string) => {
     const order = orders.find(o => o.id === orderId);
+    if (!order) return;
+
+    const existingReference = order.payment_reference;
+
+    const referenceBlock = existingReference
+      ? `<div style="background:#eff6ff;border:1px solid #bfdbfe;border-radius:8px;padding:12px;margin:12px 0;text-align:left">
+          <p style="font-size:12px;color:#1d4ed8;margin:0">Referencia que ingresó el cliente</p>
+          <p style="font-family:monospace;font-size:20px;font-weight:700;margin:2px 0 0">${escapeHtml(existingReference)}</p>
+        </div>
+        <p style="font-size:13px;color:#4b5563;text-align:left">
+          Abre tu app de Nequi y confirma que existe un pago por
+          <strong>${formatCurrency(order.total)}</strong> con esa referencia.
+        </p>`
+      : `<div style="background:#fffbeb;border:1px solid #fde68a;border-radius:8px;padding:12px;margin:12px 0;text-align:left">
+          <p style="font-size:13px;color:#92400e;margin:0">
+            El cliente aún no registró la referencia. Pídela (o tómala del comprobante que te envió)
+            y escríbela abajo después de verificarla en tu app de Nequi.
+          </p>
+        </div>`;
 
     const result = await Swal.fire({
-      title: '¿Confirmar pago recibido?',
+      title: existingReference ? '¿El pago llegó a tu Nequi?' : 'Registra la referencia del pago',
       html: `
-        <p class="text-gray-600 mb-4">Estás a punto de confirmar el pago de:</p>
-        <div class="bg-brand-light/50 p-4 rounded-lg mb-4">
-          <p class="font-bold text-lg text-brand">${formatCurrency(order?.total || 0)}</p>
-          <p class="text-sm text-gray-600 mt-1">Pedido: ${order?.sale_number}</p>
-        </div>
-        <p class="text-sm text-orange-600">⚠️ El inventario se descontará automáticamente</p>
+        <p style="font-size:13px;color:#6b7280;margin:0 0 8px">Pedido ${escapeHtml(order.sale_number)}</p>
+        ${buildItemsHtml(order)}
+        ${referenceBlock}
+        <p style="font-size:13px;color:#c2410c;text-align:left">⚠️ Al confirmar se descuenta el inventario y se habilita la factura pagada.</p>
       `,
+      input: existingReference ? undefined : 'text',
+      inputPlaceholder: 'Referencia de Nequi (ej. M1234567)',
+      inputAttributes: { autocapitalize: 'characters', maxlength: '30' },
+      inputValidator: existingReference
+        ? undefined
+        : (value: string) => {
+            const normalized = (value || '').replace(/\s+/g, '').toUpperCase();
+            return REFERENCE_PATTERN.test(normalized)
+              ? undefined
+              : 'Escribe la referencia del comprobante (4 a 30 letras, números o guiones)';
+          },
       icon: 'question',
       showCancelButton: true,
       confirmButtonColor: '#16a34a',
       cancelButtonColor: '#6b7280',
-      confirmButtonText: 'Sí, confirmar pago',
+      confirmButtonText: 'Sí, ya verifiqué el pago',
       cancelButtonText: 'Cancelar',
       reverseButtons: true,
     });
 
     if (!result.isConfirmed) return;
 
+    const typedReference =
+      !existingReference && typeof result.value === 'string'
+        ? result.value.replace(/\s+/g, '').toUpperCase()
+        : undefined;
+
     try {
       await updateSale(orderId, {
         status: 'completada',
         payment_status: 'pagado',
-        amount_paid: order?.total || 0,
+        amount_paid: order.total,
         amount_pending: 0,
+        ...(typedReference ? { payment_reference: typedReference } : {}),
       } as Partial<Sale>, getToken);
 
       await Swal.fire({
         title: '¡Pago confirmado!',
-        text: 'El stock ha sido actualizado correctamente',
+        text: 'El stock se actualizó y la factura pagada ya está disponible en Ventas',
         icon: 'success',
         confirmButtonColor: '#16a34a',
-        timer: 2000,
+        timer: 2500,
       });
 
       loadOrders();
@@ -277,15 +371,19 @@ export default function WebOrdersPage() {
     }
   };
 
-  const viewOrderDetails = (order: Sale) => {
+  const viewOrderDetails = (order: WebOrder) => {
     setSelectedOrder(order);
     setShowDetailsDialog(true);
   };
 
-  const getStatusBadge = (status: string) => {
+  const getStatusBadge = (order: WebOrder) => {
+    const status = order.status;
     switch (status) {
       case 'pendiente':
-        return <Badge variant="outline" className="bg-yellow-50 text-yellow-700 border-yellow-300"><Clock className="h-3 w-3 mr-1" />Pendiente</Badge>;
+        if (isPendingVerification(order)) {
+          return <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-300"><Receipt className="h-3 w-3 mr-1" />Por verificar</Badge>;
+        }
+        return <Badge variant="outline" className="bg-yellow-50 text-yellow-700 border-yellow-300"><Clock className="h-3 w-3 mr-1" />Esperando referencia</Badge>;
       case 'completada':
         return <Badge variant="outline" className="bg-green-50 text-green-700 border-green-300"><CheckCircle className="h-3 w-3 mr-1" />Confirmado</Badge>;
       case 'cancelada':
@@ -339,21 +437,35 @@ export default function WebOrdersPage() {
   }
 
   // Filtrar pedidos por estado
-  const pendingOrders = orders.filter(o => o.status === 'pendiente');
+  // Los pedidos con referencia por verificar van primero: son los que el tendero puede resolver ya.
+  const pendingOrders = orders
+    .filter(o => o.status === 'pendiente')
+    .sort((a, b) => Number(isPendingVerification(b)) - Number(isPendingVerification(a)));
+  const toVerifyCount = pendingOrders.filter(isPendingVerification).length;
   const completedOrders = orders.filter(o => o.status === 'completada');
   const canceledOrders = orders.filter(o => o.status === 'cancelada');
 
-  const renderOrderCard = (order: Sale) => {
+  const renderOrderCard = (order: WebOrder) => {
             const customerInfo = extractCustomerInfo(order.notes || '');
+            const shippingCost = order.shipping_cost || 0;
 
             return (
-              <Card key={order.id} className={order.status === 'pendiente' ? 'border-yellow-300 border-2' : ''}>
+              <Card
+                key={order.id}
+                className={
+                  isPendingVerification(order)
+                    ? 'border-blue-300 border-2'
+                    : order.status === 'pendiente'
+                      ? 'border-yellow-300 border-2'
+                      : ''
+                }
+              >
                 <CardContent className="p-6">
                   <div className="flex justify-between items-start mb-4">
                     <div>
                       <div className="flex items-center gap-3 mb-2">
                         <h3 className="text-lg font-bold">{order.sale_number}</h3>
-                        {getStatusBadge(order.status)}
+                        {getStatusBadge(order)}
                       </div>
                       <p className="text-sm text-gray-500">
                         {new Date(order.created_at).toLocaleString('es-CO', {
@@ -400,7 +512,76 @@ export default function WebOrdersPage() {
                     </div>
                   </div>
 
-                  <div className="flex gap-2 pt-4 border-t">
+                  {order.items && order.items.length > 0 && (
+                    <div className="mb-4 rounded-lg border bg-gray-50 p-3 text-sm">
+                      <ul className="space-y-1">
+                        {order.items.map((item) => (
+                          <li key={item.id} className="flex justify-between gap-3">
+                            <span>
+                              {item.quantity} × {item.product?.name || 'Producto'}
+                              {item.discount > 0 && (
+                                <span className="ml-2 text-xs text-red-600">
+                                  (desc. -{formatCurrency(item.discount)})
+                                </span>
+                              )}
+                            </span>
+                            <span className="whitespace-nowrap font-medium">
+                              {formatCurrency(item.subtotal)}
+                            </span>
+                          </li>
+                        ))}
+                        {shippingCost > 0 && (
+                          <li className="flex justify-between gap-3">
+                            <span className="flex items-center gap-1">
+                              <Truck className="h-3.5 w-3.5 text-gray-400" />
+                              Envío a domicilio
+                            </span>
+                            <span className="whitespace-nowrap font-medium">
+                              {formatCurrency(shippingCost)}
+                            </span>
+                          </li>
+                        )}
+                        <li className="flex justify-between gap-3 border-t pt-1 font-bold">
+                          <span>Total a recibir en Nequi</span>
+                          <span className="whitespace-nowrap">{formatCurrency(order.total)}</span>
+                        </li>
+                      </ul>
+                    </div>
+                  )}
+
+                  {order.status === 'pendiente' && (
+                    <div
+                      className={`mb-4 rounded-lg border p-3 text-sm ${
+                        isPendingVerification(order)
+                          ? 'border-blue-200 bg-blue-50'
+                          : 'border-yellow-200 bg-yellow-50'
+                      }`}
+                    >
+                      {order.payment_reference ? (
+                        <>
+                          <p className="text-xs text-blue-700">
+                            Referencia de Nequi ingresada por el cliente
+                          </p>
+                          <p className="font-mono text-lg font-bold">{order.payment_reference}</p>
+                          <p className="mt-1 text-xs text-gray-600">
+                            Verifica en tu app de Nequi que llegó {formatCurrency(order.total)} con esta referencia antes de confirmar.
+                          </p>
+                        </>
+                      ) : (
+                        <p className="text-yellow-800">
+                          El cliente todavía no ha ingresado la referencia de su pago. No confirmes hasta verificarla en tu app de Nequi.
+                        </p>
+                      )}
+                    </div>
+                  )}
+
+                  {order.status === 'completada' && order.payment_reference && (
+                    <p className="mb-4 text-sm text-gray-600">
+                      Referencia de Nequi: <span className="font-mono font-semibold">{order.payment_reference}</span>
+                    </p>
+                  )}
+
+                  <div className="flex flex-wrap gap-2 pt-4 border-t">
                     <Button
                       variant="outline"
                       size="sm"
@@ -418,7 +599,7 @@ export default function WebOrdersPage() {
                           onClick={() => confirmPayment(order.id)}
                         >
                           <CheckCircle className="h-4 w-4 mr-2" />
-                          Confirmar Pago
+                          {order.payment_reference ? 'Confirmar Pago' : 'Registrar referencia y confirmar'}
                         </Button>
                         <Button
                           size="sm"
@@ -455,6 +636,12 @@ export default function WebOrdersPage() {
           <p className="text-gray-500">Gestiona los pedidos de tu tienda online</p>
         </div>
         <div className="flex gap-2">
+          {toVerifyCount > 0 && (
+            <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-300">
+              <Receipt className="h-4 w-4 mr-1" />
+              {toVerifyCount} por verificar
+            </Badge>
+          )}
           <Badge variant="outline" className="bg-yellow-50 text-yellow-700 border-yellow-300">
             <Clock className="h-4 w-4 mr-1" />
             {pendingOrders.length} Pendientes
@@ -575,9 +762,25 @@ export default function WebOrdersPage() {
               </div>
 
               <div className="bg-brand-light/50 p-4 rounded-lg">
-                <h4 className="font-semibold mb-2">Resumen del Pedido</h4>
+                <h4 className="font-semibold mb-2">Productos y Total</h4>
                 <div className="space-y-1 text-sm">
-                  <div className="flex justify-between">
+                  {(selectedOrder.items || []).map((item) => (
+                    <div key={item.id} className="flex justify-between gap-3">
+                      <span>
+                        {item.quantity} × {item.product?.name || 'Producto'}{' '}
+                        <span className="text-gray-500">
+                          ({formatCurrency(item.unit_price)} c/u)
+                        </span>
+                        {item.discount > 0 && (
+                          <span className="ml-2 text-xs text-red-600">
+                            desc. -{formatCurrency(item.discount)}
+                          </span>
+                        )}
+                      </span>
+                      <span className="whitespace-nowrap">{formatCurrency(item.subtotal)}</span>
+                    </div>
+                  ))}
+                  <div className="flex justify-between pt-2 border-t">
                     <span>Subtotal:</span>
                     <span>{formatCurrency(selectedOrder.subtotal)}</span>
                   </div>
@@ -585,6 +788,12 @@ export default function WebOrdersPage() {
                     <div className="flex justify-between text-green-600">
                       <span>Descuento:</span>
                       <span>-{formatCurrency(selectedOrder.discount)}</span>
+                    </div>
+                  )}
+                  {(selectedOrder.shipping_cost || 0) > 0 && (
+                    <div className="flex justify-between">
+                      <span>Envío a domicilio:</span>
+                      <span>{formatCurrency(selectedOrder.shipping_cost || 0)}</span>
                     </div>
                   )}
                   <div className="flex justify-between font-bold text-base pt-2 border-t">
@@ -595,9 +804,34 @@ export default function WebOrdersPage() {
               </div>
 
               <div className="bg-gray-50 p-4 rounded-lg">
+                <h4 className="font-semibold mb-2">Pago por Nequi</h4>
+                <div className="space-y-1 text-sm">
+                  <div className="flex justify-between">
+                    <span>Referencia:</span>
+                    {selectedOrder.payment_reference ? (
+                      <span className="font-mono font-bold">{selectedOrder.payment_reference}</span>
+                    ) : (
+                      <span className="text-yellow-700">Sin registrar</span>
+                    )}
+                  </div>
+                  {selectedOrder.payment_reference_at && (
+                    <div className="flex justify-between text-gray-500">
+                      <span>Registrada:</span>
+                      <span>
+                        {new Date(selectedOrder.payment_reference_at).toLocaleString('es-CO', {
+                          dateStyle: 'medium',
+                          timeStyle: 'short',
+                        })}
+                      </span>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              <div className="bg-gray-50 p-4 rounded-lg">
                 <h4 className="font-semibold mb-2">Estado</h4>
                 <div className="flex gap-2">
-                  {getStatusBadge(selectedOrder.status)}
+                  {getStatusBadge(selectedOrder)}
                   {selectedOrder.payment_status && (
                     <Badge variant="outline">
                       Pago: {selectedOrder.payment_status}

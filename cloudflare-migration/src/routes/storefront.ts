@@ -8,8 +8,30 @@ import type { Env, Tenant, APIResponse } from '../types';
 import { TenantDB, generateId } from '../utils/db-helpers';
 import { findActiveStore, type StoreAccessRow } from '../utils/storefront-access';
 import { escapeTelegramHtml, getTenantChatIds, sendToChats } from '../utils/telegram';
+import { hashOrderToken, isUniqueViolation, normalizePaymentReference } from '../utils/payment-reference';
 
 const app = new Hono<{ Bindings: Env }>();
+
+const MAX_ORDER_LINES = 50;
+const MAX_LINE_QUANTITY = 999;
+
+const formatCOP = (amount: number) => `$${Math.round(amount).toLocaleString('es-CO')}`;
+
+interface OrderSummaryLine {
+  name: string;
+  quantity: number;
+  lineTotal: number;
+}
+
+// Detalle de productos con precio + envío + total, para que el tendero pueda
+// contrastarlo con lo que le llegó a Nequi.
+function buildOrderSummaryText(lines: OrderSummaryLine[], shippingCost: number, total: number): string {
+  const itemsText = lines
+    .map((l) => `• ${escapeTelegramHtml(l.name)} x${l.quantity} — ${formatCOP(l.lineTotal)}`)
+    .join('\n');
+  const shippingText = shippingCost > 0 ? `\n🛵 Envío: ${formatCOP(shippingCost)}` : '';
+  return `${itemsText}${shippingText}\n<b>Total a recibir:</b> ${formatCOP(total)}`;
+}
 
 interface StoreConfig {
   id: string;
@@ -323,57 +345,129 @@ app.post('/orders/:slug', async (c) => {
     const saleCount = await tenantDB.count('sales');
     const orderNumber = `WEB-${dateStr}-${String(saleCount + 1).padStart(6, '0')}`;
 
-    // Calcular totales
-    const subtotal = body.items.reduce((sum: number, item: any) => {
-      return sum + (item.unit_price * item.quantity);
-    }, 0);
-
-    const discount = body.items.reduce((sum: number, item: any) => {
-      if (item.discount_percentage && item.discount_percentage > 0) {
-        const itemTotal = item.unit_price * item.quantity;
-        const discountAmount = itemTotal * (item.discount_percentage / 100);
-        return sum + discountAmount;
+    // Los precios, descuentos y el envío se calculan aquí con los datos de la
+    // tienda; del cliente solo se aceptan producto, cantidad y zona de envío.
+    const requested = new Map<string, number>();
+    if (!Array.isArray(body.items)) {
+      return c.json<APIResponse>({ success: false, error: 'Los productos del pedido no son válidos' }, 400);
+    }
+    for (const raw of body.items) {
+      const productId = typeof raw?.product_id === 'string' ? raw.product_id : '';
+      const quantity = Number(raw?.quantity);
+      if (!productId || !Number.isInteger(quantity) || quantity < 1 || quantity > MAX_LINE_QUANTITY) {
+        return c.json<APIResponse>({ success: false, error: 'Producto o cantidad no válidos en el pedido' }, 400);
       }
-      return sum;
-    }, 0);
+      requested.set(productId, (requested.get(productId) ?? 0) + quantity);
+    }
+    if (requested.size > MAX_ORDER_LINES) {
+      return c.json<APIResponse>({ success: false, error: 'El pedido tiene demasiados productos' }, 400);
+    }
 
-    const shippingCost = body.shipping_cost ? parseFloat(body.shipping_cost) : 0;
-    const total = subtotal - discount + shippingCost;
+    const productIds = [...requested.keys()];
+    const { results: products } = await c.env.DB.prepare(
+      `SELECT p.id, p.name, p.sale_price, p.stock,
+        (SELECT MAX(o.discount_percentage) FROM offers o
+          WHERE o.product_id = p.id
+            AND o.is_active = 1
+            AND datetime(o.start_date) <= datetime('now')
+            AND datetime(o.end_date) >= datetime('now')) AS discount_percentage
+       FROM products p
+       WHERE p.tenant_id = ? AND p.id IN (${productIds.map(() => '?').join(',')})`
+    )
+      .bind(store.id, ...productIds)
+      .all<{ id: string; name: string; sale_price: number; stock: number; discount_percentage: number | null }>();
+
+    if (products.length !== productIds.length) {
+      return c.json<APIResponse>({
+        success: false,
+        error: 'Uno de los productos ya no está disponible. Actualiza tu carrito e inténtalo de nuevo.',
+      }, 400);
+    }
+
+    const summaryLines: OrderSummaryLine[] = [];
+    const itemsToInsert: Record<string, any>[] = [];
+    const saleId = generateId('sale');
+    let subtotal = 0;
+
+    for (const product of products) {
+      const quantity = requested.get(product.id)!;
+      if (product.stock < quantity) {
+        return c.json<APIResponse>({
+          success: false,
+          error: `No hay stock suficiente de "${product.name}" (disponible: ${product.stock}).`,
+        }, 400);
+      }
+
+      const unitPrice = Number(product.sale_price) || 0;
+      const discountPct = Math.min(Math.max(Number(product.discount_percentage) || 0, 0), 100);
+      const gross = unitPrice * quantity;
+      const lineDiscount = Math.round(gross * discountPct / 100);
+      const lineTotal = gross - lineDiscount;
+
+      subtotal += lineTotal;
+      summaryLines.push({ name: product.name, quantity, lineTotal });
+      itemsToInsert.push({
+        id: generateId('item'),
+        sale_id: saleId,
+        product_id: product.id,
+        quantity,
+        unit_price: unitPrice,
+        discount: lineDiscount,
+        subtotal: lineTotal,
+      });
+    }
+
+    // Envío: el costo sale de la zona elegida, nunca del cliente.
+    const isShipping = body.delivery_method !== 'pickup';
+    let shippingCost = 0;
+    let shippingZoneName: string | null = null;
+    if (isShipping) {
+      const { results: zones } = await c.env.DB.prepare(
+        `SELECT id, zone_name, shipping_cost FROM shipping_zones WHERE tenant_id = ? AND is_active = 1`
+      )
+        .bind(store.id)
+        .all<{ id: string; zone_name: string; shipping_cost: number }>();
+
+      if (zones.length > 0) {
+        const zone = zones.find((z) => z.id === body.shipping_zone_id);
+        if (!zone) {
+          return c.json<APIResponse>({ success: false, error: 'Selecciona una zona de envío válida' }, 400);
+        }
+        shippingCost = Number(zone.shipping_cost) || 0;
+        shippingZoneName = zone.zone_name;
+      }
+    }
+
+    // Las ofertas ya van descontadas en cada línea (subtotal = neto), así que
+    // el descuento a nivel de venta queda en 0 para no descontar dos veces.
+    const total = subtotal + shippingCost;
+
+    const orderToken = crypto.randomUUID();
+    const orderTokenHash = await hashOrderToken(orderToken);
 
     // Crear venta/pedido
     const saleData: any = {
-      id: generateId('sale'),
+      id: saleId,
       sale_number: orderNumber,
       cashier_id: store.id, // El dueño de la tienda como "cajero"
       customer_id: null, // Sin customer_id porque no está registrado
       subtotal: subtotal,
       tax: 0,
-      discount: discount,
+      discount: 0,
       total: total,
       payment_method: 'transferencia', // Pago por transferencia (Nequi, etc.)
       status: 'pendiente', // Estado inicial del pedido
       points_earned: 0,
-      notes: `Pedido web - Cliente: ${body.customer_name}\nTeléfono: ${body.customer_phone}\n${body.customer_email ? `Email: ${body.customer_email}\n` : ''}Entrega: ${body.delivery_method === 'pickup' ? 'Recogida en tienda' : 'Envío a domicilio'}\n${body.delivery_address ? `Dirección: ${body.delivery_address}\n` : ''}${shippingCost > 0 ? `Costo de envío: $${shippingCost.toFixed(0)}\n` : ''}${body.notes ? `Notas: ${body.notes}` : ''}`,
+      notes: `Pedido web - Cliente: ${body.customer_name}\nTeléfono: ${body.customer_phone}\n${body.customer_email ? `Email: ${body.customer_email}\n` : ''}Entrega: ${isShipping ? 'Envío a domicilio' : 'Recogida en tienda'}\n${body.delivery_address ? `Dirección: ${body.delivery_address}\n` : ''}${shippingCost > 0 ? `Costo de envío: $${shippingCost.toFixed(0)}\n` : ''}${shippingZoneName ? `Zona de envío: ${shippingZoneName}\n` : ''}${body.notes ? `Notas: ${body.notes}` : ''}`,
       payment_status: 'pendiente',
       amount_paid: 0,
       amount_pending: total,
       due_date: null,
+      shipping_cost: shippingCost,
+      order_token: orderTokenHash,
     };
 
-    // Insertar venta
     await tenantDB.insert('sales', saleData);
-
-    // Insertar items del pedido
-    const itemsToInsert = body.items.map((item: any) => ({
-      id: generateId('item'),
-      sale_id: saleData.id,
-      product_id: item.product_id,
-      quantity: item.quantity,
-      unit_price: item.unit_price,
-      discount: item.discount_percentage ? (item.unit_price * item.quantity * item.discount_percentage / 100) : 0,
-      subtotal: item.unit_price * item.quantity - (item.discount_percentage ? (item.unit_price * item.quantity * item.discount_percentage / 100) : 0),
-    }));
-
     await tenantDB.batchInsert('sale_items', itemsToInsert);
 
     // NO descontar inventario todavía - esperamos confirmación de pago del dueño
@@ -384,24 +478,18 @@ app.post('/orders/:slug', async (c) => {
     // creado. El pago sigue siendo manual — este aviso solo evita el punto
     // ciego de no enterarse de que entró un pedido.
     if (store.telegram_enabled && c.env.TELEGRAM_BOT_TOKEN) {
-      const deliveryText =
-        body.delivery_method === 'pickup'
-          ? '🏪 Recogida en tienda'
-          : `🛵 Envío a domicilio${body.delivery_address ? `\n📍 ${escapeTelegramHtml(body.delivery_address)}` : ''}`;
-
-      const itemsText = body.items
-        .map((it: any) => `• ${escapeTelegramHtml(it.product_name)} x${it.quantity}`)
-        .join('\n');
+      const deliveryText = isShipping
+        ? `🛵 Envío a domicilio${body.delivery_address ? `\n📍 ${escapeTelegramHtml(String(body.delivery_address))}` : ''}`
+        : '🏪 Recogida en tienda';
 
       const msg =
         `🛒 <b>Nuevo pedido web</b>\n\n` +
         `<b>Pedido:</b> ${orderNumber}\n` +
-        `<b>Cliente:</b> ${escapeTelegramHtml(body.customer_name)}\n` +
-        `<b>Teléfono:</b> ${escapeTelegramHtml(body.customer_phone)}\n\n` +
-        `${itemsText}\n\n` +
-        `${deliveryText}\n` +
-        `<b>Total:</b> $${Math.round(total).toLocaleString('es-CO')}\n\n` +
-        `⚠️ Pendiente de pago. El cliente enviará su comprobante de Nequi por WhatsApp.`;
+        `<b>Cliente:</b> ${escapeTelegramHtml(String(body.customer_name))}\n` +
+        `<b>Teléfono:</b> ${escapeTelegramHtml(String(body.customer_phone))}\n\n` +
+        `${buildOrderSummaryText(summaryLines, shippingCost, total)}\n\n` +
+        `${deliveryText}\n\n` +
+        `⏳ Esperando que el cliente ingrese el código de referencia de su pago por Nequi. Te avisaré cuando lo envíe para que lo verifiques.`;
 
       const chatIds = await getTenantChatIds(c.env.DB, store.id, store.telegram_chat_id ?? null);
       c.executionCtx.waitUntil(sendToChats(chatIds, msg, c.env.TELEGRAM_BOT_TOKEN));
@@ -413,7 +501,11 @@ app.post('/orders/:slug', async (c) => {
       data: {
         order_id: saleData.id,
         order_number: orderNumber,
+        order_token: orderToken,
         total: total,
+        subtotal: subtotal,
+        shipping_cost: shippingCost,
+        items: summaryLines.map((l) => ({ name: l.name, quantity: l.quantity, line_total: l.lineTotal })),
         store_whatsapp: store.store_whatsapp,
         epayco_enabled: !!store.epayco_enabled,
       },
@@ -424,6 +516,135 @@ app.post('/orders/:slug', async (c) => {
     return c.json<APIResponse>({
       success: false,
       error: error.message || 'Failed to create order',
+    }, 500);
+  }
+});
+
+// POST /api/storefront/orders/:slug/:orderNumber/reference - El cliente registra la
+// referencia de su pago por Nequi. El pedido queda "por verificar": el tendero la
+// contrasta con su app y solo entonces confirma el pago (no se marca pagado aquí).
+app.post('/orders/:slug/:orderNumber/reference', async (c) => {
+  const slug = c.req.param('slug');
+  const orderNumber = c.req.param('orderNumber');
+
+  try {
+    const body = await c.req.json<{ token?: string; reference?: string }>().catch(() => ({} as { token?: string; reference?: string }));
+
+    const reference = normalizePaymentReference(body.reference);
+    if (!reference) {
+      return c.json<APIResponse>({
+        success: false,
+        error: 'El código de referencia no es válido. Revisa el comprobante de Nequi (4 a 30 letras o números).',
+      }, 400);
+    }
+
+    const store = await findActiveStore<
+      StoreAccessRow & {
+        store_name?: string;
+        telegram_chat_id?: string | null;
+        telegram_enabled?: number;
+      }
+    >(c.env.DB, slug, 'store_name, telegram_chat_id, telegram_enabled');
+
+    if (!store) {
+      return c.json<APIResponse>({ success: false, error: 'Store not found or disabled' }, 404);
+    }
+
+    const sale = await c.env.DB.prepare(
+      `SELECT id, total, status, payment_status, shipping_cost, order_token, payment_reference, notes
+       FROM sales
+       WHERE tenant_id = ? AND sale_number = ?`
+    )
+      .bind(store.id, orderNumber)
+      .first<{
+        id: string;
+        total: number;
+        status: string;
+        payment_status: string | null;
+        shipping_cost: number | null;
+        order_token: string | null;
+        payment_reference: string | null;
+        notes: string | null;
+      }>();
+
+    // Mismo 404 para "no existe" y "token incorrecto": no revelar qué pedidos hay.
+    const tokenHash = typeof body.token === 'string' && body.token ? await hashOrderToken(body.token) : null;
+    if (!sale || !sale.order_token || !tokenHash || sale.order_token !== tokenHash) {
+      return c.json<APIResponse>({ success: false, error: 'Order not found' }, 404);
+    }
+
+    if (sale.status !== 'pendiente' || sale.payment_status === 'pagado') {
+      return c.json<APIResponse>({
+        success: false,
+        error: 'Este pedido ya fue procesado y no admite cambios en el pago.',
+      }, 409);
+    }
+
+    if (sale.payment_reference === reference) {
+      return c.json<APIResponse>({
+        success: true,
+        data: { order_number: orderNumber, payment_reference: reference, verification_status: 'por_verificar' },
+      });
+    }
+
+    try {
+      await c.env.DB.prepare(
+        `UPDATE sales
+         SET payment_reference = ?, payment_reference_at = ?, updated_at = ?
+         WHERE id = ? AND tenant_id = ? AND status = 'pendiente'`
+      )
+        .bind(reference, new Date().toISOString(), new Date().toISOString(), sale.id, store.id)
+        .run();
+    } catch (error) {
+      if (isUniqueViolation(error)) {
+        return c.json<APIResponse>({
+          success: false,
+          error: 'Ese código de referencia ya fue usado en otro pedido. Revisa que sea el de tu pago.',
+        }, 409);
+      }
+      throw error;
+    }
+
+    if (store.telegram_enabled && c.env.TELEGRAM_BOT_TOKEN) {
+      const { results: rows } = await c.env.DB.prepare(
+        `SELECT p.name AS name, si.quantity AS quantity, si.subtotal AS line_total
+         FROM sale_items si
+         LEFT JOIN products p ON p.id = si.product_id AND p.tenant_id = si.tenant_id
+         WHERE si.sale_id = ? AND si.tenant_id = ?`
+      )
+        .bind(sale.id, store.id)
+        .all<{ name: string | null; quantity: number; line_total: number }>();
+
+      const customerName = sale.notes?.match(/Cliente: (.+)/)?.[1]?.trim() ?? '';
+      const customerPhone = sale.notes?.match(/Teléfono: (.+)/)?.[1]?.trim() ?? '';
+      const lines: OrderSummaryLine[] = rows.map((r) => ({
+        name: r.name ?? 'Producto',
+        quantity: r.quantity,
+        lineTotal: r.line_total,
+      }));
+
+      const msg =
+        `💳 <b>Pago por verificar</b>${sale.payment_reference ? ' (referencia corregida)' : ''}\n\n` +
+        `<b>Pedido:</b> ${escapeTelegramHtml(orderNumber)}\n` +
+        (customerName ? `<b>Cliente:</b> ${escapeTelegramHtml(customerName)}\n` : '') +
+        (customerPhone ? `<b>Teléfono:</b> ${escapeTelegramHtml(customerPhone)}\n` : '') +
+        `\n${buildOrderSummaryText(lines, Number(sale.shipping_cost) || 0, sale.total)}\n\n` +
+        `<b>Referencia Nequi:</b> <code>${escapeTelegramHtml(reference)}</code>\n\n` +
+        `Revisa en tu app de Nequi que te llegó un pago de ${formatCOP(sale.total)} con esa referencia y luego confírmalo en Pedidos Web.`;
+
+      const chatIds = await getTenantChatIds(c.env.DB, store.id, store.telegram_chat_id ?? null);
+      c.executionCtx.waitUntil(sendToChats(chatIds, msg, c.env.TELEGRAM_BOT_TOKEN));
+    }
+
+    return c.json<APIResponse>({
+      success: true,
+      data: { order_number: orderNumber, payment_reference: reference, verification_status: 'por_verificar' },
+    });
+  } catch (error: any) {
+    console.error('Error saving payment reference:', error);
+    return c.json<APIResponse>({
+      success: false,
+      error: 'No se pudo registrar la referencia. Inténtalo de nuevo.',
     }, 500);
   }
 });
@@ -574,68 +795,6 @@ app.post('/wompi/create-payment-link/:slug', async (c) => {
     return c.json<APIResponse>({
       success: false,
       error: error.message || 'Failed to create payment link',
-    }, 500);
-  }
-});
-
-// GET /api/storefront/:slug/order/:orderNumber/status - Debug endpoint para verificar estado de orden
-app.get('/:slug/order/:orderNumber/status', async (c) => {
-  try {
-    const orderNumber = c.req.param('orderNumber');
-
-    // Buscar la orden
-    const sale = await c.env.DB.prepare(
-      `SELECT
-        id, sale_number, total, status, payment_status,
-        amount_paid, amount_pending, notes, created_at
-       FROM sales
-       WHERE sale_number = ?`
-    ).bind(orderNumber).first<{
-      id: string;
-      sale_number: string;
-      total: number;
-      status: string;
-      payment_status: string;
-      amount_paid: number;
-      amount_pending: number;
-      notes: string;
-      created_at: string;
-    }>();
-
-    if (!sale) {
-      return c.json<APIResponse>({
-        success: false,
-        error: 'Order not found',
-      }, 404);
-    }
-
-    // Extraer Wompi Payment Link ID de las notas
-    const wompiLinkMatch = sale.notes?.match(/Wompi Payment Link ID: (.+)/);
-    const wompiLinkId = wompiLinkMatch ? wompiLinkMatch[1].trim() : null;
-
-    return c.json<APIResponse>({
-      success: true,
-      data: {
-        order: {
-          id: sale.id,
-          sale_number: sale.sale_number,
-          total: sale.total,
-          status: sale.status,
-          payment_status: sale.payment_status,
-          amount_paid: sale.amount_paid,
-          amount_pending: sale.amount_pending,
-          created_at: sale.created_at,
-        },
-        wompi_link_id: wompiLinkId,
-        notes: sale.notes,
-      },
-    });
-
-  } catch (error: any) {
-    console.error('Error checking order status:', error);
-    return c.json<APIResponse>({
-      success: false,
-      error: error.message || 'Failed to check order status',
     }, 500);
   }
 });

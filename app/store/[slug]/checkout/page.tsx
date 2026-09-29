@@ -9,14 +9,20 @@ import {
   createOrder,
   CreateOrderData,
   calculateDiscountedPrice,
+  calculateLineTotals,
   getStoreShippingZones,
   ShippingZonePublic,
+  submitPaymentReference,
 } from "@/lib/storefront-api";
 import { formatCurrency } from "@/lib/utils";
 import { buildWhatsAppLink } from "@/lib/whatsapp";
 import {
+  clearPendingOrder,
   readCart,
+  readPendingOrder,
   writeCart,
+  writePendingOrder,
+  type PendingOrder,
   type StoreCartItem,
 } from "@/lib/storefront-cart";
 import {
@@ -81,9 +87,34 @@ export default function CheckoutPage() {
   const [orderShippingCost, setOrderShippingCost] = useState(0);
   const [downloadingPdf, setDownloadingPdf] = useState(false);
 
+  // Referencia de pago de Nequi: el pedido no se factura como pagado hasta que
+  // el cliente la registra y el tendero la verifica en su app.
+  const [orderToken, setOrderToken] = useState("");
+  const [referenceInput, setReferenceInput] = useState("");
+  const [referenceSent, setReferenceSent] = useState<string | null>(null);
+  const [editingReference, setEditingReference] = useState(false);
+  const [submittingReference, setSubmittingReference] = useState(false);
+
   useEffect(() => {
     loadConfigAndCart();
   }, [slug]);
+
+  const restorePendingOrder = (pending: PendingOrder, nequiNumber: string) => {
+    setOrderNumber(pending.orderNumber);
+    setOrderToken(pending.token);
+    setOrderTotal(pending.total);
+    setOrderShippingCost(pending.shippingCost);
+    setStoreWhatsApp(pending.storeWhatsApp);
+    setStoreNequiNumber(nequiNumber);
+    setOrderItems(pending.items);
+    setCustomerName(pending.customerName);
+    setCustomerPhone(pending.customerPhone);
+    setDeliveryMethod(pending.deliveryMethod);
+    setDeliveryAddress(pending.deliveryAddress);
+    setNotes(pending.notes);
+    setReferenceSent(pending.paymentReference);
+    setOrderCompleted(true);
+  };
 
   const loadConfigAndCart = async () => {
     try {
@@ -111,7 +142,13 @@ export default function CheckoutPage() {
       // Cargar carrito desde localStorage
       const parsedCart = readCart(slug);
       if (parsedCart.length === 0) {
-        // Carrito vacío, redirigir
+        // Carrito vacío: si hay un pedido esperando el pago (recarga o regreso
+        // del cliente), se retoma; si no, se vuelve al carrito.
+        const pending = readPendingOrder(slug);
+        if (pending) {
+          restorePendingOrder(pending, configData.store_nequi_number || "");
+          return;
+        }
         router.push(`/store/${slug}/cart`);
         return;
       }
@@ -131,6 +168,7 @@ export default function CheckoutPage() {
     storeWhatsapp: storeWhatsApp || config?.store_whatsapp,
     storeAddress: config?.store_address,
     orderNumber,
+    paymentReference: referenceSent || undefined,
     customerName,
     customerPhone,
     deliveryMethod,
@@ -160,24 +198,31 @@ export default function CheckoutPage() {
     let message = `Hola! Acabo de realizar el pedido *${orderNumber}* por ${formatCurrency(orderTotal)}.\n`;
     message += `Mi nombre es ${customerName}.\n\n`;
 
-    // Detalle de los productos pedidos, para que el tendero tenga la lista
-    // también por WhatsApp (además del aviso de Telegram).
+    // Detalle de los productos pedidos con su precio, más envío y total, para
+    // que el tendero pueda contrastarlo con el pago que le llegó a Nequi.
     message += `*Productos:*\n`;
     orderItems.forEach((item) => {
-      const hasOffer =
-        item.discount_percentage && item.discount_percentage > 0;
-      const finalPrice = hasOffer
-        ? calculateDiscountedPrice(item.price, item.discount_percentage!)
-        : item.price;
-      message += `• ${item.name} x${item.quantity} - ${formatCurrency(finalPrice * item.quantity)}\n`;
+      const line = calculateLineTotals(
+        item.price,
+        item.quantity,
+        item.discount_percentage
+      );
+      message += `• ${item.name} x${item.quantity} - ${formatCurrency(line.net)}\n`;
     });
-    message += `\n`;
+    if (orderShippingCost > 0) {
+      message += `• Envío a domicilio - ${formatCurrency(orderShippingCost)}\n`;
+    }
+    message += `*Total pagado:* ${formatCurrency(orderTotal)}\n\n`;
 
     message +=
       deliveryMethod === "pickup"
         ? "Recogeré el pedido en la tienda."
         : `Entrega a domicilio: ${deliveryAddress}.`;
-    message += `\nYa realicé el pago por Nequi y adjunto el comprobante. 📎`;
+    message += `\nPagué por Nequi.`;
+    if (referenceSent) {
+      message += ` *Referencia:* ${referenceSent}`;
+    }
+    message += `\nAdjunto el comprobante. 📎`;
 
     const url = buildWhatsAppLink(storeWhatsApp, message);
     if (url) window.open(url, "_blank");
@@ -204,29 +249,26 @@ export default function CheckoutPage() {
     }
   };
 
-  const calculateItemTotal = (item: CartItem): number => {
-    const hasOffer = item.discount_percentage && item.discount_percentage > 0;
-    const finalPrice = hasOffer
-      ? calculateDiscountedPrice(item.price, item.discount_percentage!)
-      : item.price;
-    return finalPrice * item.quantity;
-  };
+  const calculateItemTotal = (item: CartItem): number =>
+    calculateLineTotals(item.price, item.quantity, item.discount_percentage)
+      .net;
 
-  // Calcular subtotal SIN descuentos (precio original)
+  // Subtotal SIN descuentos (precio original) y total de descuentos, con el
+  // mismo redondeo que el servidor
   const subtotalOriginal = cart.reduce(
-    (sum, item) => sum + item.price * item.quantity,
+    (sum, item) =>
+      sum +
+      calculateLineTotals(item.price, item.quantity, item.discount_percentage)
+        .gross,
     0
   );
-
-  // Calcular total de descuentos
-  const totalDiscount = cart.reduce((sum, item) => {
-    if (item.discount_percentage && item.discount_percentage > 0) {
-      const originalTotal = item.price * item.quantity;
-      const discountAmount = originalTotal * (item.discount_percentage / 100);
-      return sum + discountAmount;
-    }
-    return sum;
-  }, 0);
+  const totalDiscount = cart.reduce(
+    (sum, item) =>
+      sum +
+      calculateLineTotals(item.price, item.quantity, item.discount_percentage)
+        .discount,
+    0
+  );
 
   // Subtotal con descuentos aplicados
   const subtotal = subtotalOriginal - totalDiscount;
@@ -300,37 +342,47 @@ export default function CheckoutPage() {
         delivery_method: deliveryMethod,
         delivery_address:
           deliveryMethod === "shipping" ? deliveryAddress.trim() : undefined,
-        shipping_cost: shippingAmount > 0 ? shippingAmount : undefined,
+        shipping_zone_id:
+          deliveryMethod === "shipping" ? selectedZoneId : undefined,
         notes: notes.trim() || undefined,
-        items: cart.map((item) => {
-          const hasOffer =
-            item.discount_percentage && item.discount_percentage > 0;
-          const finalPrice = hasOffer
-            ? calculateDiscountedPrice(item.price, item.discount_percentage!)
-            : item.price;
-
-          return {
-            product_id: item.id,
-            product_name: item.name,
-            quantity: item.quantity,
-            unit_price: finalPrice,
-            discount_percentage: item.discount_percentage,
-          };
-        }),
+        items: cart.map((item) => ({
+          product_id: item.id,
+          quantity: item.quantity,
+        })),
       };
 
-      // Crear pedido
+      // Crear pedido (el servidor calcula precios, ofertas y envío)
       const response = await createOrder(slug, orderData);
+      const whatsapp = response.store_whatsapp || config?.store_whatsapp || "";
 
       // Guardar datos del pedido
       setOrderNumber(response.order_number);
+      setOrderToken(response.order_token);
       setOrderTotal(response.total);
-      setStoreWhatsApp(response.store_whatsapp || config?.store_whatsapp || "");
+      setStoreWhatsApp(whatsapp);
       setStoreNequiNumber(config?.store_nequi_number || "");
 
-      // Preservar los items y el envío para el comprobante PDF antes de vaciar
+      // Preservar los items y el envío para el PDF antes de vaciar el carrito
       setOrderItems(cart);
-      setOrderShippingCost(shippingAmount);
+      setOrderShippingCost(response.shipping_cost);
+
+      // Guardar el pedido pendiente: si el cliente recarga, puede seguir
+      // ingresando la referencia de su pago
+      writePendingOrder(slug, {
+        orderNumber: response.order_number,
+        token: response.order_token,
+        total: response.total,
+        shippingCost: response.shipping_cost,
+        storeWhatsApp: whatsapp,
+        items: cart,
+        customerName: customerName.trim(),
+        customerPhone: customerPhone.trim(),
+        deliveryMethod,
+        deliveryAddress: deliveryMethod === "shipping" ? deliveryAddress.trim() : "",
+        notes: notes.trim(),
+        paymentReference: null,
+        createdAt: Date.now(),
+      });
 
       // Limpiar carrito
       writeCart(slug, []);
@@ -345,6 +397,49 @@ export default function CheckoutPage() {
       toast.error(err instanceof Error ? err.message : "Error al crear el pedido");
     } finally {
       setSubmitting(false);
+    }
+  };
+
+  const handleSubmitReference = async (e: React.FormEvent) => {
+    e.preventDefault();
+
+    const reference = referenceInput.replace(/\s+/g, "").toUpperCase();
+    if (!/^[A-Z0-9][A-Z0-9-]{3,29}$/.test(reference)) {
+      toast.error(
+        "Revisa el código de referencia: son de 4 a 30 letras o números, como aparece en tu comprobante de Nequi"
+      );
+      return;
+    }
+
+    try {
+      setSubmittingReference(true);
+      const result = await submitPaymentReference(
+        slug,
+        orderNumber,
+        orderToken,
+        reference
+      );
+
+      setReferenceSent(result.payment_reference);
+      setEditingReference(false);
+      setReferenceInput("");
+
+      const pending = readPendingOrder(slug);
+      if (pending && pending.orderNumber === orderNumber) {
+        writePendingOrder(slug, {
+          ...pending,
+          paymentReference: result.payment_reference,
+        });
+      }
+
+      toast.success("Referencia enviada. El tendero verificará tu pago.");
+    } catch (err) {
+      console.error("Error enviando la referencia:", err);
+      toast.error(
+        err instanceof Error ? err.message : "No se pudo enviar la referencia"
+      );
+    } finally {
+      setSubmittingReference(false);
     }
   };
 
@@ -388,7 +483,11 @@ export default function CheckoutPage() {
         >
           <div className="max-w-7xl mx-auto px-4 py-4">
             <div className="flex items-center justify-center">
-              <h1 className="text-xl font-bold">Pedido Registrado - Paga con Nequi</h1>
+              <h1 className="text-xl font-bold">
+                {referenceSent
+                  ? "Pago en verificación"
+                  : "Pedido Registrado - Paga con Nequi"}
+              </h1>
             </div>
           </div>
         </header>
@@ -408,7 +507,9 @@ export default function CheckoutPage() {
 
               <h2 className="text-3xl font-bold mb-2">¡Pedido Registrado!</h2>
               <p className="text-black mb-6">
-                Tu pedido ha sido creado. Ahora debes completar el pago.
+                {referenceSent
+                  ? "Recibimos la referencia de tu pago."
+                  : "Tu pedido ha sido creado. Ahora debes completar el pago."}
               </p>
 
               <div className="bg-gray-50 rounded-lg p-6 mb-6">
@@ -419,19 +520,55 @@ export default function CheckoutPage() {
                 >
                   {orderNumber}
                 </p>
-                <p className="text-3xl font-bold mt-4">
+
+                {/* Detalle de lo pedido: productos, envío y total */}
+                <div className="mt-4 space-y-1.5 text-left text-sm border-t pt-4">
+                  {orderItems.map((item) => (
+                    <div key={item.id} className="flex justify-between gap-3">
+                      <span className="text-black">
+                        {item.name} x{item.quantity}
+                      </span>
+                      <span className="font-medium text-black whitespace-nowrap">
+                        {formatCurrency(calculateItemTotal(item))}
+                      </span>
+                    </div>
+                  ))}
+                  {orderShippingCost > 0 && (
+                    <div className="flex justify-between gap-3">
+                      <span className="text-black">Envío a domicilio</span>
+                      <span className="font-medium text-black whitespace-nowrap">
+                        {formatCurrency(orderShippingCost)}
+                      </span>
+                    </div>
+                  )}
+                </div>
+
+                <p className="text-sm text-black mt-4">Total a pagar</p>
+                <p className="text-3xl font-bold">
                   {formatCurrency(orderTotal)}
                 </p>
               </div>
 
               <div className="space-y-4">
-                <div className="p-4 bg-yellow-50 border border-yellow-500 rounded-lg text-left">
-                  <p className="text-sm text-yellow-900">
-                    ⚠️ <strong>¡IMPORTANTE!</strong> Tu pedido está registrado
-                    pero aún NO está pagado. Paga con Nequi escaneando el código
-                    de abajo y luego envía tu comprobante por WhatsApp.
-                  </p>
-                </div>
+                {referenceSent ? (
+                  <div className="p-4 bg-green-50 border border-green-500 rounded-lg text-left">
+                    <p className="text-sm text-green-900">
+                      ✅ <strong>Referencia recibida:</strong>{" "}
+                      <span className="font-mono">{referenceSent}</span>. El
+                      tendero verificará en su Nequi que llegó tu pago de{" "}
+                      {formatCurrency(orderTotal)} y confirmará tu pedido.
+                    </p>
+                  </div>
+                ) : (
+                  <div className="p-4 bg-yellow-50 border border-yellow-500 rounded-lg text-left">
+                    <p className="text-sm text-yellow-900">
+                      ⚠️ <strong>¡IMPORTANTE!</strong> Tu pedido está registrado
+                      pero aún NO está pagado. Paga con Nequi escaneando el
+                      código de abajo y luego escribe el código de referencia de
+                      tu pago para que el tendero lo verifique.
+                    </p>
+                  </div>
+                )}
 
                 {/* Pago con Nequi: QR de la tienda (preferido) y número */}
                 {(config.payment_qr_url || storeNequiNumber) && (
@@ -491,6 +628,65 @@ export default function CheckoutPage() {
                   </div>
                 )}
 
+                {/* Referencia del pago: sin ella el tendero no puede verificar
+                    ni confirmar el pedido */}
+                {(!referenceSent || editingReference) && (
+                  <form
+                    onSubmit={handleSubmitReference}
+                    className="p-5 border-2 rounded-lg text-left"
+                    style={{ borderColor: primaryColor }}
+                  >
+                    <Label
+                      htmlFor="payment-reference"
+                      className="text-base font-semibold"
+                    >
+                      Código de referencia de tu pago en Nequi *
+                    </Label>
+                    <p className="text-sm text-gray-600 mt-1 mb-3">
+                      Después de pagar, Nequi te muestra un comprobante con una
+                      referencia (por ejemplo M1234567). Escríbela aquí para que
+                      el tendero pueda verificar tu pago.
+                    </p>
+                    <div className="flex flex-col sm:flex-row gap-2">
+                      <Input
+                        id="payment-reference"
+                        value={referenceInput}
+                        onChange={(e) => setReferenceInput(e.target.value)}
+                        placeholder="Ej: M1234567"
+                        autoComplete="off"
+                        autoCapitalize="characters"
+                        maxLength={40}
+                        className="font-mono uppercase"
+                      />
+                      <Button
+                        type="submit"
+                        disabled={submittingReference || !referenceInput.trim()}
+                        className="text-white sm:w-auto"
+                        style={{ backgroundColor: primaryColor }}
+                      >
+                        {submittingReference ? (
+                          <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                        ) : (
+                          <CheckCircle2 className="h-4 w-4 mr-2" />
+                        )}
+                        {editingReference ? "Corregir referencia" : "Enviar referencia"}
+                      </Button>
+                    </div>
+                  </form>
+                )}
+
+                {referenceSent && !editingReference && (
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    className="w-full text-gray-600"
+                    onClick={() => setEditingReference(true)}
+                  >
+                    ¿Te equivocaste de referencia? Corregirla
+                  </Button>
+                )}
+
                 <div className="grid grid-cols-1 gap-3">
                   {/* Descargar el resumen del pedido en PDF (lista de
                       productos, NO es un comprobante de pago) */}
@@ -510,8 +706,8 @@ export default function CheckoutPage() {
                     Descargar mi pedido (PDF)
                   </Button>
 
-                  {/* Enviar el pedido por WhatsApp con el comprobante de pago */}
-                  {storeWhatsApp && (
+                  {/* Aviso opcional por WhatsApp, ya con la referencia registrada */}
+                  {storeWhatsApp && referenceSent && (
                     <Button
                       type="button"
                       size="lg"
@@ -524,9 +720,17 @@ export default function CheckoutPage() {
                     </Button>
                   )}
 
-                  {/* Botón volver a la tienda */}
+                  {/* Botón volver a la tienda: con la referencia ya enviada el
+                      pedido deja de estar pendiente de acción del cliente */}
                   <Link href={`/store/${slug}`}>
-                    <Button variant="outline" size="lg" className="w-full">
+                    <Button
+                      variant="outline"
+                      size="lg"
+                      className="w-full"
+                      onClick={() => {
+                        if (referenceSent) clearPendingOrder(slug);
+                      }}
+                    >
                       Volver a la tienda
                     </Button>
                   </Link>
@@ -536,19 +740,22 @@ export default function CheckoutPage() {
               <div className="mt-8 p-4 bg-gray-50 rounded-lg text-left text-sm text-black">
                 <p className="font-semibold mb-2">¿Cómo completo mi pedido?</p>
                 <ul className="space-y-1 list-decimal list-inside">
-                  <li>Paga escaneando el código QR de Nequi con tu celular.</li>
                   <li>
-                    Descarga el resumen de tu pedido (PDF) con la lista de
-                    productos.
+                    Paga el total exacto escaneando el código QR de Nequi con tu
+                    celular.
                   </li>
                   <li>
-                    Envía por WhatsApp el comprobante del pago de Nequi para
-                    confirmar tu pedido.
+                    Escribe arriba el código de referencia que te muestra el
+                    comprobante de Nequi.
+                  </li>
+                  <li>
+                    El tendero verifica tu pago en su Nequi y confirma tu
+                    pedido. Solo entonces se genera tu factura como pagada.
                   </li>
                   <li>
                     {deliveryMethod === "pickup"
                       ? "Recoge tu pedido en la tienda una vez confirmado el pago."
-                      : "El domicilio ya está incluido en el total. Con tu comprobante coordinamos la entrega."}
+                      : "El domicilio ya está incluido en el total. Una vez confirmado el pago coordinamos la entrega."}
                   </li>
                 </ul>
               </div>

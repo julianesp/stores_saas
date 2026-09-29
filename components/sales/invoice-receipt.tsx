@@ -29,6 +29,7 @@ export const InvoiceReceipt = forwardRef<HTMLDivElement, InvoiceReceiptProps>(
     const subtotalAmount = saleItems.reduce((sum, item) => sum + item.subtotal, 0);
     const discountAmount = sale.discount || 0;
     const taxAmount = sale.tax || 0;
+    const shippingAmount = sale.shipping_cost || 0;
     const totalAmount = sale.total;
 
     // Método de pago en español
@@ -203,6 +204,13 @@ export const InvoiceReceipt = forwardRef<HTMLDivElement, InvoiceReceiptProps>(
             </div>
           )}
 
+          {shippingAmount > 0 && (
+            <div className="flex justify-between mb-1">
+              <span style={{ color: '#000000' }}>Envío a domicilio:</span>
+              <span style={{ color: '#000000' }}>{formatCurrency(shippingAmount)}</span>
+            </div>
+          )}
+
           <div className="flex justify-between mt-2 pt-2 border-t border-gray-300 text-lg font-bold">
             <span style={{ color: '#000000' }}>TOTAL:</span>
             <span style={{ color: '#000000' }}>{formatCurrency(totalAmount)}</span>
@@ -215,6 +223,13 @@ export const InvoiceReceipt = forwardRef<HTMLDivElement, InvoiceReceiptProps>(
             <span className="font-bold" style={{ color: '#000000' }}>Método de pago:</span>
             <span style={{ color: '#000000' }}>{paymentMethodLabels[sale.payment_method] || sale.payment_method}</span>
           </div>
+
+          {sale.payment_reference && (
+            <div className="flex justify-between mb-1">
+              <span className="font-bold" style={{ color: '#000000' }}>Referencia de pago:</span>
+              <span style={{ color: '#000000' }}>{sale.payment_reference}</span>
+            </div>
+          )}
 
           {sale.payment_status && (
             <div className="flex justify-between mb-1">

@@ -137,6 +137,23 @@ export function calculateDiscountedPrice(originalPrice: number, discountPercenta
 }
 
 /**
+ * Totales de una línea del carrito. El descuento se redondea a pesos enteros
+ * igual que en el servidor, para que el total mostrado coincida con el cobrado.
+ */
+export function calculateLineTotals(
+  price: number,
+  quantity: number,
+  discountPercentage?: number
+): { gross: number; discount: number; net: number } {
+  const gross = price * quantity;
+  const discount =
+    discountPercentage && discountPercentage > 0
+      ? Math.round((gross * discountPercentage) / 100)
+      : 0;
+  return { gross, discount, net: gross - discount };
+}
+
+/**
  * Format product images (parse JSON string to array)
  */
 export function parseProductImages(images?: string): string[] {
@@ -158,23 +175,61 @@ export interface CreateOrderData {
   customer_email?: string;
   delivery_method: 'pickup' | 'shipping';
   delivery_address?: string;
-  shipping_cost?: number;
+  shipping_zone_id?: string;
   notes?: string;
+  // El servidor recalcula precios, ofertas y envío: solo importan producto y cantidad.
   items: Array<{
     product_id: string;
-    product_name: string;
     quantity: number;
-    unit_price: number;
-    discount_percentage?: number;
   }>;
+}
+
+export interface OrderResponseItem {
+  name: string;
+  quantity: number;
+  line_total: number;
 }
 
 export interface OrderResponse {
   order_id: string;
   order_number: string;
+  order_token: string;
   total: number;
+  subtotal: number;
+  shipping_cost: number;
+  items: OrderResponseItem[];
   store_whatsapp?: string;
   epayco_enabled?: boolean;
+}
+
+/**
+ * Registra el código de referencia del pago por Nequi. El pedido queda "por
+ * verificar" hasta que el tendero lo contraste con su app y confirme el pago.
+ */
+export async function submitPaymentReference(
+  slug: string,
+  orderNumber: string,
+  token: string,
+  reference: string
+): Promise<{ payment_reference: string }> {
+  const response = await fetch(
+    `${WORKER_URL}/api/storefront/orders/${slug}/${encodeURIComponent(orderNumber)}/reference`,
+    {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ token, reference }),
+    }
+  );
+
+  const data: APIResponse<{ payment_reference: string }> = await response
+    .json()
+    .catch(() => ({ success: false }));
+
+  if (!response.ok || !data.success) {
+    throw new Error(data.error || `Error ${response.status}`);
+  }
+
+  return data.data as { payment_reference: string };
 }
 
 export interface EPaycoSessionResponse {
@@ -259,32 +314,3 @@ export async function createEPaycoSession(
   return data.data as EPaycoSessionResponse;
 }
 
-/**
- * Get order details by order number (public endpoint)
- */
-export async function getOrderByNumber(
-  slug: string,
-  orderNumber: string
-): Promise<unknown> {
-  const url = `${WORKER_URL}/api/storefront/orders/${slug}/${orderNumber}`;
-
-  const response = await fetch(url, {
-    method: 'GET',
-    headers: {
-      'Content-Type': 'application/json',
-    },
-  });
-
-  if (!response.ok) {
-    const errorData = await response.json().catch(() => ({}));
-    throw new Error(errorData.error || `Error ${response.status}`);
-  }
-
-  const data: APIResponse<unknown> = await response.json();
-
-  if (!data.success) {
-    throw new Error(data.error || 'Failed to get order');
-  }
-
-  return data.data;
-}

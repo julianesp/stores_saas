@@ -244,7 +244,18 @@ export default function SalesPage() {
     );
   };
 
+  // La factura de un pedido web solo existe cuando el tendero verificó el pago en Nequi.
+  const isUnpaidWebOrder = (sale: SaleWithRelations) =>
+    sale.sale_number.startsWith("WEB-") &&
+    !(sale.status === "completada" && sale.payment_status === "pagado");
+
   const handleShowInvoice = (sale: SaleWithRelations) => {
+    if (isUnpaidWebOrder(sale)) {
+      toast.error(
+        "Este pedido web aún no tiene el pago verificado. La factura se genera al confirmar el pago en Pedidos Web."
+      );
+      return;
+    }
     setInvoiceSale(sale as Sale);
     setInvoiceSaleItems(sale.items || []);
     setInvoiceCustomer(sale.customer || null);
@@ -903,7 +914,12 @@ export default function SalesPage() {
                               size="sm"
                               variant="outline"
                               onClick={() => handleShowInvoice(sale)}
-                              title="Ver factura"
+                              disabled={isUnpaidWebOrder(sale)}
+                              title={
+                                isUnpaidWebOrder(sale)
+                                  ? "Disponible cuando se confirme el pago"
+                                  : "Ver factura"
+                              }
                             >
                               <FileText className="h-4 w-4" />
                             </Button>
@@ -1055,6 +1071,7 @@ export default function SalesPage() {
                           size="sm"
                           variant="outline"
                           onClick={() => handleShowInvoice(sale)}
+                          disabled={isUnpaidWebOrder(sale)}
                         >
                           <FileText className="h-4 w-4 mr-1" />
                           Ver Factura
@@ -1276,6 +1293,21 @@ export default function SalesPage() {
                     <div className="flex justify-between text-sm text-green-600">
                       <span>Descuento:</span>
                       <span>-{formatCurrency(selectedSale.discount)}</span>
+                    </div>
+                  )}
+                  {selectedSale.shipping_cost !== undefined &&
+                    selectedSale.shipping_cost > 0 && (
+                      <div className="flex justify-between text-sm">
+                        <span className="text-gray-600">Envío a domicilio:</span>
+                        <span>{formatCurrency(selectedSale.shipping_cost)}</span>
+                      </div>
+                    )}
+                  {selectedSale.payment_reference && (
+                    <div className="flex justify-between text-sm">
+                      <span className="text-gray-600">Referencia de pago:</span>
+                      <span className="font-mono">
+                        {selectedSale.payment_reference}
+                      </span>
                     </div>
                   )}
                   {selectedSale.points_earned &&

@@ -210,6 +210,12 @@ export async function generateInvoicePDF(data: InvoiceData): Promise<jsPDF> {
     yPos += 6;
   }
 
+  if (sale.shipping_cost && sale.shipping_cost > 0) {
+    doc.text('Envío a domicilio:', pageWidth - margin - 60, yPos);
+    doc.text(formatCurrency(sale.shipping_cost), pageWidth - margin - 25, yPos, { align: 'right' });
+    yPos += 6;
+  }
+
   yPos += 2;
   doc.setFont('helvetica', 'bold');
   doc.setFontSize(12);
@@ -224,6 +230,7 @@ export async function generateInvoicePDF(data: InvoiceData): Promise<jsPDF> {
   // Método de pago
   const paymentMethodLabels: Record<string, string> = {
     efectivo: 'Efectivo',
+    nequi: 'Nequi',
     tarjeta: 'Tarjeta',
     transferencia: 'Transferencia',
     credito: 'Crédito',
@@ -234,6 +241,14 @@ export async function generateInvoicePDF(data: InvoiceData): Promise<jsPDF> {
   doc.setFont('helvetica', 'normal');
   doc.text(paymentMethodLabels[sale.payment_method] || sale.payment_method, margin + 50, yPos);
   yPos += 6;
+
+  if (sale.payment_reference) {
+    doc.setFont('helvetica', 'bold');
+    doc.text('Referencia de pago:', margin, yPos);
+    doc.setFont('helvetica', 'normal');
+    doc.text(sale.payment_reference, margin + 50, yPos);
+    yPos += 6;
+  }
 
   // Puntos ganados
   if (sale.points_earned && sale.points_earned > 0) {
@@ -299,6 +314,7 @@ export function generateWhatsAppMessage(data: InvoiceData): string {
 
   const paymentMethodLabels: Record<string, string> = {
     efectivo: 'Efectivo',
+    nequi: 'Nequi',
     tarjeta: 'Tarjeta',
     transferencia: 'Transferencia',
     credito: 'Crédito',
@@ -368,9 +384,16 @@ export function generateWhatsAppMessage(data: InvoiceData): string {
     message += `Impuesto (IVA): ${formatCurrency(sale.tax)}\n`;
   }
 
+  if (sale.shipping_cost && sale.shipping_cost > 0) {
+    message += `Envío a domicilio: ${formatCurrency(sale.shipping_cost)}\n`;
+  }
+
   message += `\n*TOTAL: ${formatCurrency(sale.total)}*\n\n`;
 
   message += `*Método de pago:* ${paymentMethodLabels[sale.payment_method] || sale.payment_method}\n`;
+  if (sale.payment_reference) {
+    message += `*Referencia de pago:* ${sale.payment_reference}\n`;
+  }
 
   if (sale.payment_method === 'credito' && sale.amount_pending && sale.amount_pending > 0) {
     message += `\n⚠️ *Saldo pendiente:* ${formatCurrency(sale.amount_pending)}\n`;

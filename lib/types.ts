@@ -228,6 +228,10 @@ export interface Sale {
   amount_paid?: number; // Monto pagado
   amount_pending?: number; // Monto pendiente
   due_date?: string; // Fecha límite de pago
+  // Pedidos de la tienda online (pago por Nequi)
+  shipping_cost?: number; // Envío a domicilio; ya está incluido en `total`
+  payment_reference?: string; // Código de referencia de Nequi que ingresó el cliente
+  payment_reference_at?: string; // Cuándo lo registró
   created_at: string;
   updated_at: string;
 }

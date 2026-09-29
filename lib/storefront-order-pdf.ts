@@ -7,7 +7,7 @@
 
 import { formatCurrency } from '@/lib/utils';
 import type { StoreCartItem } from '@/lib/storefront-cart';
-import { calculateDiscountedPrice } from '@/lib/storefront-api';
+import { calculateDiscountedPrice, calculateLineTotals } from '@/lib/storefront-api';
 
 export interface OrderPdfData {
   storeName: string;
@@ -15,6 +15,7 @@ export interface OrderPdfData {
   storeWhatsapp?: string;
   storeAddress?: string;
   orderNumber: string;
+  paymentReference?: string;
   customerName: string;
   customerPhone: string;
   deliveryMethod: 'pickup' | 'shipping';
@@ -125,9 +126,10 @@ export async function generateOrderPDF(data: OrderPdfData) {
 
     const name = item.name.length > 50 ? item.name.substring(0, 47) + '...' : item.name;
     const finalPrice = itemFinalPrice(item);
-    const lineSubtotal = finalPrice * item.quantity;
-    subtotalOriginal += item.price * item.quantity;
-    totalDescuento += (item.price - finalPrice) * item.quantity;
+    const line = calculateLineTotals(item.price, item.quantity, item.discount_percentage);
+    const lineSubtotal = line.net;
+    subtotalOriginal += line.gross;
+    totalDescuento += line.discount;
 
     doc.text(name, margin, yPos);
     doc.text(String(item.quantity), pageWidth - margin - 80, yPos);
@@ -187,7 +189,16 @@ export async function generateOrderPDF(data: OrderPdfData) {
   doc.text('Método de pago:', margin, yPos);
   doc.setFont('helvetica', 'normal');
   doc.text('Nequi', margin + 50, yPos);
-  yPos += 8;
+  yPos += 6;
+
+  if (data.paymentReference) {
+    doc.setFont('helvetica', 'bold');
+    doc.text('Referencia de pago:', margin, yPos);
+    doc.setFont('helvetica', 'normal');
+    doc.text(data.paymentReference, margin + 50, yPos);
+    yPos += 6;
+  }
+  yPos += 2;
 
   // Notas
   if (data.notes) {

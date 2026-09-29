@@ -638,6 +638,12 @@ export interface Sale {
   payment_status?: 'pagado' | 'pendiente' | 'parcial';
   status: 'completada' | 'cancelada' | 'pendiente';
   points_earned?: number;
+  notes?: string;
+  amount_paid?: number;
+  amount_pending?: number;
+  shipping_cost?: number;
+  payment_reference?: string;
+  payment_reference_at?: string;
   created_at: string;
   updated_at: string;
   items?: SaleItem[];

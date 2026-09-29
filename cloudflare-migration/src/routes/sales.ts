@@ -6,6 +6,7 @@
 import { Hono } from 'hono';
 import type { Env, Tenant, APIResponse } from '../types';
 import { TenantDB, generateId } from '../utils/db-helpers';
+import { isUniqueViolation, normalizePaymentReference } from '../utils/payment-reference';
 
 const app = new Hono<{ Bindings: Env }>();
 
@@ -21,6 +22,7 @@ interface Sale {
   total: number;
   payment_method: string;
   status: string;
+  payment_reference?: string | null;
   points_earned?: number;
   created_at: string;
   updated_at: string;
@@ -96,10 +98,10 @@ app.get('/', async (c) => {
     });
 
     // Add items to each sale
-    const salesWithItems = (sales.results || []).map((sale: any) => ({
-      ...sale,
-      items: itemsMap.get(sale.id) || []
-    }));
+    const salesWithItems = (sales.results || []).map((sale: any) => {
+      const { order_token: _orderToken, ...publicSale } = sale;
+      return { ...publicSale, items: itemsMap.get(sale.id) || [] };
+    });
 
     return c.json<APIResponse<any[]>>({
       success: true,
@@ -174,9 +176,11 @@ app.get('/:id', async (c) => {
       }
     }));
 
+    const { order_token: _orderToken, ...publicSale } = sale as Record<string, unknown>;
+
     return c.json<APIResponse<any>>({
       success: true,
-      data: { ...sale, items },
+      data: { ...publicSale, items },
     });
   } catch (error) {
     console.error('Error fetching sale:', error);
@@ -528,6 +532,45 @@ app.put('/:id', async (c) => {
     // Verificar si es un pedido web que se está confirmando
     const isWebOrder = existingSale.sale_number.startsWith('WEB-');
     const isConfirmingPayment = body.status === 'completada' && existingSale.status === 'pendiente';
+    const isMarkingPaid = body.payment_status === 'pagado' && (existingSale as any).payment_status !== 'pagado';
+
+    // Un pedido web pagado por Nequi solo se da por pagado con el código de
+    // referencia del pago (el del cliente o el que digita el tendero desde el
+    // comprobante). Se valida antes de tocar el inventario.
+    let referenceToSave: string | null = null;
+    if (isWebOrder && (isConfirmingPayment || isMarkingPaid)) {
+      const reference =
+        body.payment_reference !== undefined && body.payment_reference !== null && body.payment_reference !== ''
+          ? normalizePaymentReference(body.payment_reference)
+          : existingSale.payment_reference ?? null;
+
+      if (!reference) {
+        const provided = body.payment_reference !== undefined && body.payment_reference !== null && body.payment_reference !== '';
+        return c.json<APIResponse>({
+          success: false,
+          error: provided
+            ? 'El código de referencia no es válido (4 a 30 letras o números).'
+            : 'Falta el código de referencia del pago. Pídelo al cliente o cópialo del comprobante de Nequi.',
+          code: 'PAYMENT_REFERENCE_REQUIRED',
+        } as APIResponse, 400);
+      }
+
+      if (reference !== existingSale.payment_reference) {
+        const duplicate = await c.env.DB.prepare(
+          `SELECT sale_number FROM sales WHERE tenant_id = ? AND payment_reference = ? AND id != ?`
+        )
+          .bind(tenant.id, reference, saleId)
+          .first<{ sale_number: string }>();
+
+        if (duplicate) {
+          return c.json<APIResponse>({
+            success: false,
+            error: `Esa referencia ya se usó en el pedido ${duplicate.sale_number}.`,
+          }, 409);
+        }
+        referenceToSave = reference;
+      }
+    }
 
     // Si es un pedido web que se está confirmando, descontar inventario
     if (isWebOrder && isConfirmingPayment) {
@@ -562,8 +605,22 @@ app.put('/:id', async (c) => {
     if (body.amount_paid !== undefined) updateData.amount_paid = body.amount_paid;
     if (body.amount_pending !== undefined) updateData.amount_pending = body.amount_pending;
     if (body.notes !== undefined) updateData.notes = body.notes;
+    if (referenceToSave) {
+      updateData.payment_reference = referenceToSave;
+      updateData.payment_reference_at = new Date().toISOString();
+    }
 
-    await tenantDB.update('sales', saleId, updateData);
+    try {
+      await tenantDB.update('sales', saleId, updateData);
+    } catch (error) {
+      if (isUniqueViolation(error)) {
+        return c.json<APIResponse>({
+          success: false,
+          error: 'Esa referencia de pago ya está registrada en otro pedido.',
+        }, 409);
+      }
+      throw error;
+    }
 
     // Obtener venta actualizada
     const updatedSale = await tenantDB.getById<Sale>('sales', saleId);
