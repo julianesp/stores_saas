@@ -9,6 +9,7 @@ import { NotificationPanel } from './notification-panel';
 import { OpenWindowButton } from './open-window-button';
 import HelpButton from '@/components/help/HelpButton';
 import StoreSwitcher from '@/components/layout/StoreSwitcher';
+import { ThemeToggle } from '@/components/HourTheme';
 
 const UserButtonClient = dynamic(
   () => import('@clerk/nextjs').then((mod) => ({ default: mod.UserButton })),
@@ -50,6 +51,8 @@ export function Header({ onMenuClick }: HeaderProps) {
             abrir el panel para ver/marcar sus notificaciones (y el aviso seguiría
             activo sin forma de atenderlo). */}
         <NotificationPanel />
+
+        <ThemeToggle />
 
         {/* Solo visible cuando corre como PWA instalada (standalone). */}
         <OpenWindowButton />

@@ -1,22 +1,9 @@
 "use client";
 
-import { useState, useEffect, type ReactNode } from "react";
+import { useSyncExternalStore, type ReactNode } from "react";
+import { useIsDark } from "@/lib/use-is-dark";
 
-const THEME_KEY = "posib-landing-theme";
-
-function isDarkHour(): boolean {
-  // Oscuro de 18:00 a 06:59, claro de 07:00 a 17:59
-  const h = new Date().getHours();
-  return h >= 18 || h < 7;
-}
-
-function readInitialTheme(): boolean {
-  if (typeof window === "undefined") return isDarkHour();
-  const stored = localStorage.getItem(THEME_KEY);
-  if (stored === "dark") return true;
-  if (stored === "light") return false;
-  return isDarkHour();
-}
+const noopSubscribe = () => () => {};
 
 const LIGHT_CSS = `
   .landing-root .lp-text         { color: #0f172a !important; }
@@ -42,37 +29,15 @@ const DARK_CSS = `
   .landing-root .lp-ghost-btn    { color: rgba(255,255,255,0.70) !important; border-color: rgba(255,255,255,0.10) !important; }
   .landing-root .lp-ghost-btn:hover { color: #ffffff !important; background: rgba(255,255,255,0.08) !important; }
   .landing-root .lp-badge        { background: rgba(255,255,255,0.05) !important; border-color: rgba(255,255,255,0.10) !important; color: rgba(255,255,255,0.60) !important; }
-  .landing-root .lp-modal-bg     { background: #161b22 !important; color: #ffffff !important; }
+  .landing-root .lp-modal-bg     { background: #252932 !important; color: #ffffff !important; }
   .landing-root .lp-section-sep  { border-color: rgba(255,255,255,0.05) !important; }
   .landing-root .lp-icon-bg      { background: rgba(255,255,255,0.06) !important; }
   .landing-root .lp-check-bg     { background: rgba(0,124,128,0.20) !important; }
 `;
 
 export default function LandingShell({ children }: { children: ReactNode }) {
-  const [dark, setDark] = useState(false);
-  const [mounted, setMounted] = useState(false);
-
-  useEffect(() => {
-    setDark(readInitialTheme());
-    setMounted(true);
-
-    // Escuchar cambios manuales desde el navbar
-    const onThemeChange = (e: Event) => {
-      setDark((e as CustomEvent<boolean>).detail);
-    };
-    window.addEventListener("posib-theme-change", onThemeChange);
-
-    // Revisar cada minuto por si cambia la hora (solo si no hay preferencia guardada)
-    const id = setInterval(() => {
-      const stored = localStorage.getItem(THEME_KEY);
-      if (!stored) setDark(isDarkHour());
-    }, 60_000);
-
-    return () => {
-      window.removeEventListener("posib-theme-change", onThemeChange);
-      clearInterval(id);
-    };
-  }, []);
+  const dark = useIsDark();
+  const mounted = useSyncExternalStore(noopSubscribe, () => true, () => false);
 
   return (
     <>
@@ -81,7 +46,7 @@ export default function LandingShell({ children }: { children: ReactNode }) {
         data-landing-theme={dark ? "dark" : "light"}
         className="min-h-screen landing-root"
         style={{
-          background: mounted ? (dark ? "#0f1117" : "#f8fafb") : "#0f1117",
+          background: mounted ? (dark ? "#1c1f26" : "#f8fafb") : "#1c1f26",
           transition: mounted ? "background 0.5s ease" : "none",
         }}
       >

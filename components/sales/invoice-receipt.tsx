@@ -43,7 +43,7 @@ export const InvoiceReceipt = forwardRef<HTMLDivElement, InvoiceReceiptProps>(
     return (
       <div
         ref={ref}
-        className="bg-white p-8 max-w-2xl mx-auto text-black"
+        className="keep-light bg-white p-8 max-w-2xl mx-auto text-black"
         style={{
           fontFamily: 'monospace',
           fontSize: '14px',

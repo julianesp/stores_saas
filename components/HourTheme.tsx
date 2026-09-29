@@ -1,25 +1,42 @@
 "use client";
 
 import { useEffect } from "react";
-
-function getThemeForHour(hour: number): "dark" | "light" {
-  // Oscuro de 18:00 a 06:59, claro de 07:00 a 17:59
-  return hour >= 18 || hour < 7 ? "dark" : "light";
-}
-
-function applyTheme() {
-  const hour = new Date().getHours();
-  const theme = getThemeForHour(hour);
-  document.documentElement.setAttribute("data-theme", theme);
-}
+import { usePathname } from "next/navigation";
+import { Moon, Sun } from "lucide-react";
+import { applyTheme, isThemeEnabledForPath, setManualTheme } from "@/lib/theme";
+import { useIsDark } from "@/lib/use-is-dark";
 
 export default function HourTheme() {
+  const dark = useIsDark();
+  const pathname = usePathname();
+
   useEffect(() => {
-    applyTheme();
-    // Revisar cada minuto por si cambia la hora mientras la página está abierta
-    const interval = setInterval(applyTheme, 60_000);
-    return () => clearInterval(interval);
-  }, []);
+    applyTheme(dark, pathname);
+  }, [dark, pathname]);
 
   return null;
+}
+
+export function ThemeToggle({ className }: { className?: string }) {
+  const dark = useIsDark();
+  const pathname = usePathname();
+
+  if (!isThemeEnabledForPath(pathname)) return null;
+
+  const label = dark ? "Cambiar a modo claro" : "Cambiar a modo oscuro";
+
+  return (
+    <button
+      type="button"
+      onClick={() => setManualTheme(!dark)}
+      aria-label={label}
+      title={label}
+      className={
+        className ??
+        "inline-flex h-9 w-9 shrink-0 cursor-pointer items-center justify-center rounded-md text-white transition-colors hover:bg-white/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/60"
+      }
+    >
+      {dark ? <Sun className="h-5 w-5" /> : <Moon className="h-5 w-5" />}
+    </button>
+  );
 }

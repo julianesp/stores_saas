@@ -5,23 +5,9 @@ import { createPortal } from "react-dom";
 import Link from "next/link";
 import { Moon, Sun } from "lucide-react";
 import Image from "next/image";
+import { setManualTheme } from "@/lib/theme";
+import { useIsDark } from "@/lib/use-is-dark";
 import styles from "./NavbarRueda.module.scss";
-
-const THEME_KEY = "posib-landing-theme";
-
-function isDarkHour(): boolean {
-  // Oscuro de 18:00 a 06:59, claro de 07:00 a 17:59
-  const h = new Date().getHours();
-  return h >= 18 || h < 7;
-}
-
-function readStoredTheme(): boolean {
-  if (typeof window === "undefined") return isDarkHour();
-  const stored = localStorage.getItem(THEME_KEY);
-  if (stored === "dark") return true;
-  if (stored === "light") return false;
-  return isDarkHour();
-}
 
 // label2 (opcional) fuerza una segunda línea, para textos largos que no caben
 // en una sola en el panel angosto (p. ej. "Preguntas frecuentes").
@@ -58,41 +44,14 @@ export default function NavbarRueda() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [montado, setMontado] = useState(false);
   const [ruedaActiva, setRuedaActiva] = useState(0);
-  const [dark, setDark] = useState(false);
+  const dark = useIsDark();
   const acumScroll = useRef(0);
 
-  const toggleTheme = () => {
-    const next = !dark;
-    setDark(next);
-    localStorage.setItem(THEME_KEY, next ? "dark" : "light");
-    window.dispatchEvent(new CustomEvent("posib-theme-change", { detail: next }));
-  };
+  const toggleTheme = () => setManualTheme(!dark);
 
   useEffect(() => {
-    const id = requestAnimationFrame(() => {
-      setMontado(true);
-      setDark(readStoredTheme());
-    });
-
-    // Sincronizar con el cambio manual de tema (toggle) y con el resto de la
-    // landing (LandingShell emite el mismo evento).
-    const onThemeChange = (e: Event) => {
-      setDark((e as CustomEvent<boolean>).detail);
-    };
-    window.addEventListener("posib-theme-change", onThemeChange);
-
-    // Revisar cada minuto por si cruza las 6pm/7am mientras la página está
-    // abierta. Solo aplica el cambio automático si no hay preferencia manual
-    // guardada (mismo criterio que LandingShell).
-    const intervalo = setInterval(() => {
-      if (!localStorage.getItem(THEME_KEY)) setDark(isDarkHour());
-    }, 60_000);
-
-    return () => {
-      cancelAnimationFrame(id);
-      window.removeEventListener("posib-theme-change", onThemeChange);
-      clearInterval(intervalo);
-    };
+    const id = requestAnimationFrame(() => setMontado(true));
+    return () => cancelAnimationFrame(id);
   }, []);
 
   // Abre/cierra el menú. Al abrir, reinicia la rueda al primer enlace (se hace

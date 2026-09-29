@@ -1,4 +1,5 @@
 @import "tailwindcss";
+@import "./dark-theme.css";
 
 /*
  * Preguntas Frecuentes (FAQ):
@@ -73,7 +74,7 @@
 
 /* Modo oscuro de landing (hora >= 19 o < 7) */
 [data-theme="dark"] {
-  --landing-bg: #0f1117;
+  --landing-bg: #1c1f26;
   --landing-card-bg: rgba(255, 255, 255, 0.03);
   --landing-card-ring: rgba(255, 255, 255, 0.08);
   --landing-text: #ffffff;
@@ -126,10 +127,72 @@
   --font-mono: var(--font-geist-mono);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+/*
+ * Modo oscuro de toda la app (dashboard y demás páginas). Lo activa HourTheme /
+ * el script de <head> con html[data-theme="dark"] según la hora (18:00–07:00) o
+ * el botón de tema. Antes se usaba prefers-color-scheme, que ignoraba el horario
+ * y dejaba fondo oscuro con textos oscuros.
+ *
+ * Aquí van los tokens semánticos; las utilidades con color fijo (bg-white,
+ * text-gray-600, bg-green-100, ...) se remapean en dark-theme.css (generado).
+ * Todo va en @media screen: la impresión sale siempre en claro.
+ */
+@media screen {
+  html[data-theme="dark"] {
+    color-scheme: dark;
+    --background: #1c1f26;
+    --foreground: #e6edf3;
+    --brand-light: rgba(0, 124, 128, 0.2);
+
+    --secondary: #2d323c;
+    --secondary-foreground: #e6edf3;
+    --muted: #2d323c;
+    --muted-foreground: #a0abbb;
+    --accent: #25383d;
+    --accent-foreground: #e6edf3;
+    --card: #252932;
+    --card-foreground: #e6edf3;
+    --popover: #252932;
+    --popover-foreground: #e6edf3;
+    --border: #3b414d;
+    --input: #4a5261;
+    --ring: #2fb8bd;
+  }
+
+  /* Tailwind v4 deja los bordes sin color en currentColor: en oscuro serían
+     blancos. En la capa base para que cualquier border-* los sobrescriba. */
+  @layer base {
+    html[data-theme="dark"] *,
+    html[data-theme="dark"] ::before,
+    html[data-theme="dark"] ::after {
+      border-color: #3b414d;
+    }
+  }
+
+  /* Terceros que traen su propio color claro */
+  html[data-theme="dark"] .swal2-popup {
+    background: #252932;
+    color: #e6edf3;
+  }
+  html[data-theme="dark"] .swal2-title,
+  html[data-theme="dark"] .swal2-html-container {
+    color: #e6edf3;
+  }
+  html[data-theme="dark"] .recharts-cartesian-axis-tick-value,
+  html[data-theme="dark"] .recharts-text {
+    fill: #a0abbb;
+  }
+  html[data-theme="dark"] .recharts-cartesian-grid line,
+  html[data-theme="dark"] .recharts-polar-grid-concentric-polygon {
+    stroke: #3b414d;
+  }
+  html[data-theme="dark"] .recharts-default-tooltip {
+    background-color: #252932 !important;
+    border-color: #3b414d !important;
+  }
+  html[data-theme="dark"] .recharts-tooltip-label,
+  html[data-theme="dark"] .recharts-legend-item-text {
+    color: #e6edf3 !important;
   }
 }
 

@@ -1,10 +1,12 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import { ClerkProvider } from '@clerk/nextjs';
-import { Toaster } from 'sonner';
 import Script from 'next/script';
 import "./globals.css";
 import { Analytics } from "@vercel/analytics/next"
+import HourTheme from '@/components/HourTheme';
+import AppToaster from '@/components/AppToaster';
+import { THEME_INIT_SCRIPT } from '@/lib/theme';
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -155,7 +157,10 @@ export default function RootLayout({
 }>) {
   return (
     <ClerkProvider>
-      <html lang="es">
+      <html lang="es" suppressHydrationWarning>
+        <head>
+          <script dangerouslySetInnerHTML={{ __html: THEME_INIT_SCRIPT }} />
+        </head>
         <body
           className={`${geistSans.variable} ${geistMono.variable} antialiased `}
         >
@@ -188,17 +193,8 @@ export default function RootLayout({
           </Script>
           {children}
           <Analytics />
-          <Toaster
-            position="top-right"
-            richColors
-            toastOptions={{
-              style: {
-                marginTop: '10px',
-              },
-              className: 'toast-below-cart',
-            }}
-          />
-          
+          <HourTheme />
+          <AppToaster />
         </body>
       </html>
     </ClerkProvider>
