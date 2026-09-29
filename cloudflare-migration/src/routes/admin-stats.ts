@@ -1,7 +1,7 @@
 import { Hono } from 'hono';
-import type { Env, APIResponse, Tenant } from '../types';
+import type { Env, APIResponse, Tenant, AppEnv } from '../types';
 
-const app = new Hono<{ Bindings: Env }>();
+const app = new Hono<AppEnv>();
 
 interface StoreStats {
   storeId: string;

@@ -4,10 +4,10 @@
  */
 
 import { Hono } from 'hono';
-import type { Env, APIResponse } from '../types';
+import type { Env, APIResponse, AppEnv } from '../types';
 import { findActiveStore, type StoreAccessRow } from '../utils/storefront-access';
 
-const app = new Hono<{ Bindings: Env }>();
+const app = new Hono<AppEnv>();
 
 // POST /api/storefront/epayco/create-session/:slug
 // Crea una sesión de checkout de ePayco usando las credenciales del comerciante

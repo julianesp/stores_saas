@@ -4,13 +4,14 @@
  */
 
 import { Hono } from 'hono';
-import type { Env, Tenant, APIResponse } from '../types';
+import type { Env, Tenant, APIResponse, AppEnv } from '../types';
 import { TenantDB, generateId } from '../utils/db-helpers';
 import { isUniqueViolation, normalizePaymentReference } from '../utils/payment-reference';
 
-const app = new Hono<{ Bindings: Env }>();
+const app = new Hono<AppEnv>();
 
 interface Sale {
+  amount_pending?: number;
   id: string;
   tenant_id: string;
   sale_number: string;
@@ -699,7 +700,7 @@ app.delete('/:id', async (c) => {
     }
 
     // Eliminar los items de la venta
-    await tenantDB.db
+    await c.env.DB
       .prepare('DELETE FROM sale_items WHERE tenant_id = ? AND sale_id = ?')
       .bind(tenant.id, saleId)
       .run();

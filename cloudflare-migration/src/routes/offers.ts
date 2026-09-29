@@ -4,12 +4,12 @@
  */
 
 import { Hono } from 'hono';
-import type { Env, Tenant, APIResponse } from '../types';
+import type { Env, Tenant, APIResponse, AppEnv } from '../types';
 import { TenantDB, generateId } from '../utils/db-helpers';
 import { sendEmail, logEmail } from '../utils/email';
 import { offerTemplate } from '../utils/email-templates';
 
-const app = new Hono<{ Bindings: Env }>();
+const app = new Hono<AppEnv>();
 
 /**
  * Envía un email de promoción a todos los clientes con correo de la tienda.
@@ -174,7 +174,7 @@ app.get('/active', async (c) => {
 
     return c.json<APIResponse<Offer[]>>({
       success: true,
-      data: result.results as Offer[],
+      data: result.results as unknown as Offer[],
     });
   } catch (error) {
     console.error('Error fetching active offers:', error);
@@ -201,7 +201,7 @@ app.get('/product/:productId', async (c) => {
 
     return c.json<APIResponse<Offer[]>>({
       success: true,
-      data: result.results as Offer[],
+      data: result.results as unknown as Offer[],
     });
   } catch (error) {
     console.error('Error fetching product offers:', error);

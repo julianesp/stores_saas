@@ -5,7 +5,7 @@
 
 import { Context, Next } from 'hono';
 import { createRemoteJWKSet, jwtVerify, decodeJwt } from 'jose';
-import type { Env, ClerkJWTPayload } from '../types';
+import type { Env, AppEnv, Tenant } from '../types';
 import { TenantManager } from '../utils/tenant-manager';
 
 // Cache de JWKS por issuer. createRemoteJWKSet ya cachea las claves en memoria
@@ -61,7 +61,7 @@ function isAllowedClerkIssuer(issuer: string, env: Env): boolean {
   }
 }
 
-export async function authMiddleware(c: Context<{ Bindings: Env }>, next: Next) {
+export async function authMiddleware(c: Context<AppEnv>, next: Next) {
   // Peticiones internas del servidor (webhooks de ePayco, crons) autenticadas
   // con X-Webhook-Secret en lugar de un token de Clerk. Solo se acepta si
   // CRON_SECRET está configurado y coincide exactamente.
@@ -125,7 +125,7 @@ export async function authMiddleware(c: Context<{ Bindings: Env }>, next: Next) 
     const tenantManager = new TenantManager(c.env);
     const requestedTenantId = c.req.header('X-Tenant-ID');
 
-    let tenant = null;
+    let tenant: Tenant | null = null;
     let userProfileId = null;
     let isTeamMember = false; // Flag to track if user is accessing as team member
 
@@ -554,7 +554,7 @@ async function verifyClerkToken(token: string, env: Env): Promise<string | null>
 /**
  * Middleware to check if user is admin
  */
-export async function requireAdmin(c: Context<{ Bindings: Env }>, next: Next) {
+export async function requireAdmin(c: Context<AppEnv>, next: Next) {
   const tenant = c.get('tenant');
 
   if (!tenant) {
@@ -575,7 +575,7 @@ export async function requireAdmin(c: Context<{ Bindings: Env }>, next: Next) {
 /**
  * Optional middleware - check subscription for specific features
  */
-export async function requireActiveSubscription(c: Context<{ Bindings: Env }>, next: Next) {
+export async function requireActiveSubscription(c: Context<AppEnv>, next: Next) {
   const tenant = c.get('tenant');
 
   if (!tenant) {

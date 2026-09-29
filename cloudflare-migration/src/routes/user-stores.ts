@@ -4,9 +4,9 @@
  */
 
 import { Hono } from 'hono';
-import type { Env, Tenant } from '../types';
+import type { Env, Tenant, AppEnv } from '../types';
 
-const app = new Hono<{ Bindings: Env }>();
+const app = new Hono<AppEnv>();
 
 interface AccessibleStore {
   id: string;

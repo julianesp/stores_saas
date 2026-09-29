@@ -4,9 +4,9 @@
  */
 
 import { Hono } from 'hono';
-import type { Env, APIResponse, Tenant } from '../types';
+import type { Env, APIResponse, Tenant, AppEnv } from '../types';
 
-const app = new Hono<{ Bindings: Env }>();
+const app = new Hono<AppEnv>();
 
 /**
  * POST /api/wompi/create-payment-link
@@ -92,7 +92,7 @@ app.post('/create-payment-link', async (c) => {
     });
 
     if (!wompiResponse.ok) {
-      const errorData = await wompiResponse.json().catch(() => ({}));
+      const errorData = (await wompiResponse.json().catch(() => ({}))) as any;
       console.error('Wompi API error:', errorData);
       return c.json<APIResponse<null>>({
         success: false,
@@ -101,7 +101,7 @@ app.post('/create-payment-link', async (c) => {
       }, 500);
     }
 
-    const wompiData = await wompiResponse.json();
+    const wompiData = (await wompiResponse.json()) as any;
 
     // Construir la URL del checkout
     const checkoutUrl = `https://checkout.wompi.co/l/${wompiData.data.id}`;

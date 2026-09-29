@@ -1,7 +1,7 @@
 import { Hono } from 'hono';
-import type { Env } from '../types';
+import type { Env, AppEnv } from '../types';
 
-const app = new Hono<{ Bindings: Env }>();
+const app = new Hono<AppEnv>();
 
 app.get('/', async (c) => {
   return c.json({ success: true, data: [], message: 'Get all debtors (customers with debt)' });

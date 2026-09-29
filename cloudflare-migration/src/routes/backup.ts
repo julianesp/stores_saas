@@ -25,11 +25,11 @@
  */
 
 import { Hono } from 'hono';
-import type { Env } from '../types';
+import type { Env, AppEnv } from '../types';
 
 // --- Router autenticado (tendero) -------------------------------------------
 
-const backupAuth = new Hono<{ Bindings: Env }>();
+const backupAuth = new Hono<AppEnv>();
 
 function getTenantId(c: any): string | null {
   const tenant = c.get('tenant');
@@ -129,7 +129,7 @@ backupAuth.get('/history', async (c) => {
 
 // --- Router interno (cron / OAuth de Next.js) -------------------------------
 
-const backupPublic = new Hono<{ Bindings: Env }>();
+const backupPublic = new Hono<AppEnv>();
 
 // Todas las rutas internas exigen el CRON_SECRET si está configurado.
 backupPublic.use('/*', async (c, next) => {

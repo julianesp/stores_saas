@@ -3,12 +3,12 @@
  * Plantillas HTML responsive para emails
  */
 
-import {
+import type {
   SubscriptionReminderData,
   DailyReportData,
   StockAlertData,
   AbandonedCartData,
-} from '../types';
+} from '../../../lib/types';
 
 // Base template wrapper
 function baseTemplate(content: string, primaryColor = '#2563eb'): string {

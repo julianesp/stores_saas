@@ -3,7 +3,7 @@
  */
 
 import { Hono } from 'hono';
-import type { Env } from '../types';
+import type { Env, AppEnv } from '../types';
 import { sendEmail, logEmail } from '../utils/email';
 import {
   subscriptionReminderTemplate,
@@ -12,7 +12,7 @@ import {
   abandonedCartTemplate,
 } from '../utils/email-templates';
 
-const app = new Hono<{ Bindings: Env }>();
+const app = new Hono<AppEnv>();
 
 /**
  * CRON: Send subscription reminder emails

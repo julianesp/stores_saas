@@ -5,9 +5,9 @@
  */
 
 import { Hono } from 'hono';
-import type { Env, Tenant, APIResponse } from '../types';
+import type { Env, Tenant, APIResponse, AppEnv } from '../types';
 
-const app = new Hono<{ Bindings: Env }>();
+const app = new Hono<AppEnv>();
 
 interface PaymentTransaction {
   id: string;
@@ -40,7 +40,7 @@ app.get('/', async (c) => {
 
     return c.json<APIResponse<PaymentTransaction[]>>({
       success: true,
-      data: result.results as PaymentTransaction[],
+      data: result.results as unknown as PaymentTransaction[],
     });
   } catch (error) {
     console.error('Error fetching payment transactions:', error);
@@ -66,7 +66,7 @@ app.get('/my', async (c) => {
 
     return c.json<APIResponse<PaymentTransaction[]>>({
       success: true,
-      data: result.results as PaymentTransaction[],
+      data: result.results as unknown as PaymentTransaction[],
     });
   } catch (error) {
     console.error('Error fetching my payment transactions:', error);
@@ -101,7 +101,7 @@ app.get('/user/:userId', async (c) => {
 
     return c.json<APIResponse<PaymentTransaction[]>>({
       success: true,
-      data: result.results as PaymentTransaction[],
+      data: result.results as unknown as PaymentTransaction[],
     });
   } catch (error) {
     console.error('Error fetching user payment transactions:', error);
@@ -131,7 +131,7 @@ app.get('/:id', async (c) => {
       }, 404);
     }
 
-    const transaction = result as PaymentTransaction;
+    const transaction = result as unknown as PaymentTransaction;
 
     // Solo el dueño o un superadmin puede ver la transacción
     if (transaction.user_profile_id !== tenant.id && !tenant.is_superadmin) {
@@ -287,7 +287,7 @@ app.put('/:id', async (c) => {
 
     return c.json<APIResponse<PaymentTransaction>>({
       success: true,
-      data: updatedTransaction as PaymentTransaction,
+      data: updatedTransaction as unknown as PaymentTransaction,
     });
   } catch (error) {
     console.error('Error updating payment transaction:', error);

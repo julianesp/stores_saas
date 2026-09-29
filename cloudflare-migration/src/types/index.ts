@@ -19,6 +19,11 @@ export interface Env {
   ADMIN_WOMPI_PUBLIC_KEY?: string;
   ADMIN_WOMPI_PRIVATE_KEY?: string;
 
+  // Wompi (webhooks de eventos y llaves de la cuenta admin)
+  WOMPI_EVENTS_SECRET?: string;
+  WOMPI_PUBLIC_KEY?: string;
+  WOMPI_PRIVATE_KEY?: string;
+
   // CRON secret for scheduled tasks
   CRON_SECRET?: string;
 
@@ -53,7 +58,20 @@ export interface Tenant {
   subscriptionStatus: 'trial' | 'active' | 'expired' | 'canceled';
   createdAt: string;
   updatedAt: string;
+  // Adjuntados por authMiddleware tras resolver el perfil del usuario
+  clerk_user_id?: string;
+  is_superadmin?: boolean;
 }
+
+// Variables que authMiddleware deja en el contexto de Hono
+export interface AppVariables {
+  tenant: Tenant;
+  clerkUserId: string;
+  userProfileId: string;
+}
+
+// Tipo de entorno compartido por todos los routers y middlewares
+export type AppEnv = { Bindings: Env; Variables: AppVariables };
 
 // Database binding for a specific tenant
 export interface TenantContext {

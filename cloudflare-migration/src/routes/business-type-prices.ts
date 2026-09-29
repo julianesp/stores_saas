@@ -6,10 +6,10 @@
  * mostrar precios en vivo). PUT está restringido a superadmin.
  */
 
-import { Hono } from 'hono';
-import type { Env, Tenant, APIResponse } from '../types';
+import { Hono, type Context } from 'hono';
+import type { Env, Tenant, APIResponse, AppEnv } from '../types';
 
-const app = new Hono<{ Bindings: Env }>();
+const app = new Hono<AppEnv>();
 
 interface PriceRow {
   business_type: string;
@@ -18,7 +18,7 @@ interface PriceRow {
 }
 
 /** Verifica que el usuario autenticado sea superadmin. */
-async function ensureSuperAdmin(c: any): Promise<Response | null> {
+async function ensureSuperAdmin(c: Context<AppEnv>): Promise<Response | null> {
   const tenant: Tenant = c.get('tenant');
 
   // El authMiddleware ya resolvió el perfil (contemplando clerk_user_id y

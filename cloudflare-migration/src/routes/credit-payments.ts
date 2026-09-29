@@ -5,14 +5,10 @@
 
 import { Hono } from 'hono';
 import { TenantDB, generateId } from '../utils/db-helpers';
-import type { Tenant } from '../middleware/tenant-middleware';
-import type { CreditPayment, Sale } from '../types';
+import type { Tenant, AppEnv } from '../types';
+import type { CreditPayment, Sale } from '../../../lib/types';
 
-const app = new Hono<{
-  Variables: {
-    tenant: Tenant;
-  };
-}>();
+const app = new Hono<AppEnv>();
 
 // ============================================================================
 // GET /api/credit-payments/sale/:saleId - Get payment history for a sale
@@ -133,7 +129,7 @@ app.post('/', async (c) => {
 
     // Create credit payment record
     const creditPaymentId = generateId('pay');
-    const creditPayment: CreditPayment = {
+    const creditPayment: CreditPayment & { tenant_id: string } = {
       id: creditPaymentId,
       tenant_id: tenant.id,
       sale_id,

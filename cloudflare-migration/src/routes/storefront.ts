@@ -4,13 +4,13 @@
  */
 
 import { Hono } from 'hono';
-import type { Env, Tenant, APIResponse } from '../types';
+import type { Env, Tenant, APIResponse, AppEnv } from '../types';
 import { TenantDB, generateId } from '../utils/db-helpers';
 import { findActiveStore, type StoreAccessRow } from '../utils/storefront-access';
 import { escapeTelegramHtml, getTenantChatIds, sendToChats } from '../utils/telegram';
 import { hashOrderToken, isUniqueViolation, normalizePaymentReference } from '../utils/payment-reference';
 
-const app = new Hono<{ Bindings: Env }>();
+const app = new Hono<AppEnv>();
 
 const MAX_ORDER_LINES = 50;
 const MAX_LINE_QUANTITY = 999;
@@ -761,7 +761,7 @@ app.post('/wompi/create-payment-link/:slug', async (c) => {
     });
 
     if (!wompiResponse.ok) {
-      const errorData = await wompiResponse.json().catch(() => ({}));
+      const errorData = (await wompiResponse.json().catch(() => ({}))) as any;
       console.error('Wompi API error:', errorData);
       return c.json<APIResponse>({
         success: false,
@@ -769,7 +769,7 @@ app.post('/wompi/create-payment-link/:slug', async (c) => {
       }, 500);
     }
 
-    const wompiData = await wompiResponse.json();
+    const wompiData = (await wompiResponse.json()) as any;
     const checkoutUrl = `https://checkout.wompi.co/l/${wompiData.data.id}`;
 
     // Guardar referencia del payment link en las notas del pedido

@@ -1,8 +1,8 @@
 import { Hono } from 'hono';
-import type { Env, APIResponse, Tenant } from '../types';
+import type { Env, APIResponse, Tenant, AppEnv } from '../types';
 import type { UserProfile } from '../../../lib/types';
 
-const app = new Hono<{ Bindings: Env }>();
+const app = new Hono<AppEnv>();
 
 /**
  * GET /api/user-profiles

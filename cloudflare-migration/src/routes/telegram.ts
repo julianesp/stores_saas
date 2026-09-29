@@ -13,10 +13,10 @@
  */
 
 import { Hono } from 'hono';
-import type { Env } from '../types';
+import type { Env, AppEnv } from '../types';
 import { sendTelegramMessage, escapeTelegramHtml, getTenantChatIds, sendToChats } from '../utils/telegram';
 
-const app = new Hono<{ Bindings: Env }>();
+const app = new Hono<AppEnv>();
 
 // Umbral de "próximo a vencer": mismo que el front (lib/expiration-helpers.ts)
 const EXPIRATION_WARNING_DAYS = 30;

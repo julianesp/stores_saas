@@ -4,10 +4,10 @@
  */
 
 import { Hono } from 'hono';
-import type { Env, Tenant, APIResponse } from '../types';
+import type { Env, Tenant, APIResponse, AppEnv } from '../types';
 import { TenantDB, generateId } from '../utils/db-helpers';
 
-const app = new Hono<{ Bindings: Env }>();
+const app = new Hono<AppEnv>();
 
 interface PurchaseOrder {
   id: string;

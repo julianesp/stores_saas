@@ -5,7 +5,7 @@
 
 import { Hono } from 'hono';
 import { cors } from 'hono/cors';
-import type { Env } from './types';
+import type { Env, AppEnv } from './types';
 import { authMiddleware } from './middleware/auth';
 import type { ScheduledEvent, ExecutionContext } from '@cloudflare/workers-types';
 
@@ -42,7 +42,7 @@ import telegramRecipientsRoutes from './routes/telegram-recipients';
 import businessTypePricesRoutes from './routes/business-type-prices';
 import { backupAuth, backupPublic } from './routes/backup';
 
-const app = new Hono<{ Bindings: Env }>();
+const app = new Hono<AppEnv>();
 
 // CORS middleware - allow localhost and vercel domains
 app.use('/*', cors({

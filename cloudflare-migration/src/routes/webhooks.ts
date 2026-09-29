@@ -4,9 +4,9 @@
  */
 
 import { Hono } from 'hono';
-import type { Env, APIResponse } from '../types';
+import type { Env, APIResponse, AppEnv } from '../types';
 
-const app = new Hono<{ Bindings: Env }>();
+const app = new Hono<AppEnv>();
 
 // GET /api/webhooks/wompi/config - Debug endpoint para verificar configuración
 app.get('/wompi/config', async (c) => {

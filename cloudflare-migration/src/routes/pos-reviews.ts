@@ -7,10 +7,10 @@
  * (sin autenticación) para mostrarse en la landing.
  */
 
-import { Hono } from 'hono';
-import type { Env, Tenant, APIResponse } from '../types';
+import { Hono, type Context } from 'hono';
+import type { Env, Tenant, APIResponse, AppEnv } from '../types';
 
-const app = new Hono<{ Bindings: Env }>();
+const app = new Hono<AppEnv>();
 
 interface ReviewRow {
   user_profile_id: string;
@@ -127,7 +127,7 @@ app.delete('/me', async (c) => {
 // ============================================
 
 /** Verifica que el usuario autenticado sea superadmin. */
-async function ensureSuperAdmin(c: any): Promise<Response | null> {
+async function ensureSuperAdmin(c: Context<AppEnv>): Promise<Response | null> {
   const tenant: Tenant = c.get('tenant');
 
   // El authMiddleware ya resolvió el perfil (contemplando clerk_user_id y
