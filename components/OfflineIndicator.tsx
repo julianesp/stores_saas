@@ -12,30 +12,45 @@ export default function OfflineIndicator() {
   const [userDismissed, setUserDismissed] = useState(false);
 
   useEffect(() => {
-    // Resetear dismissal cuando cambia el estado de conexión
     if (!isOnline) {
+      // Sin conexión: mostrar el aviso (naranja) y resetear el cierre manual.
       setUserDismissed(false);
       setShowIndicator(true);
       toast.warning('Sin conexión a internet', {
         description: 'El sistema continuará funcionando offline',
         duration: 5000,
       });
-    } else if (isOnline && !userDismissed) {
-      // Solo mostrar mensaje si hay cambio de offline a online
-      if (showIndicator) {
-        toast.success('Conexión restaurada', {
-          description: 'Sincronizando datos...',
-          duration: 3000,
-        });
-      }
-      setShowIndicator(true);
-      // Auto-ocultar después de sincronizar
-      setTimeout(() => {
-        if (pendingSync === 0 && !userDismissed) {
-          setShowIndicator(false);
-        }
-      }, 3000);
+      return;
     }
+
+    // Online. Solo mostramos el indicador si hay algo accionable (datos
+    // pendientes de sincronizar) o si venimos de un estado offline (para
+    // confirmar "Conexión restaurada"). El estado "todo sincronizado" NO se
+    // queda pegado: se auto-oculta a los 3s.
+    const wasOffline = showIndicator; // estaba visible por estar offline
+    if (wasOffline) {
+      toast.success('Conexión restaurada', {
+        description: 'Sincronizando datos...',
+        duration: 3000,
+      });
+    }
+
+    if (pendingSync > 0) {
+      // Hay operaciones pendientes: mantener visible (tiene botón de acción).
+      setShowIndicator(true);
+      return;
+    }
+
+    if (wasOffline) {
+      // Acabamos de reconectar sin pendientes: mostrar breve confirmación y ocultar.
+      setShowIndicator(true);
+      const t = setTimeout(() => setShowIndicator(false), 3000);
+      return () => clearTimeout(t);
+    }
+
+    // Online, sin pendientes y sin transición desde offline: no molestar.
+    setShowIndicator(false);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isOnline, pendingSync]);
 
   const handleSync = async () => {
