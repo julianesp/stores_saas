@@ -167,10 +167,15 @@ export function useOfflineSync() {
   };
 }
 
-// Abrir base de datos IndexedDB
+// Abrir base de datos IndexedDB.
+// IMPORTANTE: la misma DB 'posib-offline-db' la abre también lib/offline-store.ts
+// con versión 3. IndexedDB es global por origen: si aquí se abre con una versión
+// menor, el navegador lanza VersionError ("requested version (2) is less than the
+// existing version (3)"). Por eso usamos la MISMA versión (3) y creamos los stores
+// solo si faltan (sin borrar los existentes), replicando el esquema de offline-store.
 function openDB(): Promise<IDBDatabase> {
   return new Promise((resolve, reject) => {
-    const request = indexedDB.open('posib-offline-db', 2); // Versión 2 con keyPath correcto
+    const request = indexedDB.open('posib-offline-db', 3);
 
     request.onerror = () => reject(request.error);
     request.onsuccess = () => resolve(request.result);
@@ -178,13 +183,18 @@ function openDB(): Promise<IDBDatabase> {
     request.onupgradeneeded = (event) => {
       const db = (event.target as IDBOpenDBRequest).result;
 
-      // Eliminar store antiguo si existe
-      if (db.objectStoreNames.contains('pending-requests')) {
-        db.deleteObjectStore('pending-requests');
+      // Store usado por este hook para las peticiones pendientes.
+      if (!db.objectStoreNames.contains('pending-requests')) {
+        db.createObjectStore('pending-requests', { keyPath: 'timestamp' });
       }
-
-      // Crear nuevo store con keyPath correcto
-      db.createObjectStore('pending-requests', { keyPath: 'timestamp' });
+      // Stores de offline-store.ts: crearlos si el upgrade lo dispara este hook,
+      // para no dejar la DB a medias respecto al otro consumidor.
+      if (!db.objectStoreNames.contains('catalog-cache')) {
+        db.createObjectStore('catalog-cache', { keyPath: 'key' });
+      }
+      if (!db.objectStoreNames.contains('sales-queue')) {
+        db.createObjectStore('sales-queue', { keyPath: 'localId' });
+      }
     };
   });
 }
