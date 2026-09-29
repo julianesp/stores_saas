@@ -85,11 +85,7 @@ app.get('/', (c) => {
 // Webhooks (NO auth middleware - verifican su propio secret)
 app.route('/api/webhooks', webhooksRoutes);
 
-// Wompi webhook (NO auth - Wompi verifica con signature)
-app.post('/api/wompi/webhook', wompiRoutes);
-
-// Subscriptions webhook (NO auth - Wompi verifica con signature)
-app.post('/api/subscriptions/webhook', subscriptionsRoutes);
+// Los /webhook de wompi.ts y subscriptions.ts no verifican la firma de Wompi: no exponerlos sin auth hasta implementarla.
 
 // Telegram webhook (NO auth - Telegram no envía JWT; se verifica su secret token)
 app.route('/api/telegram', telegramRoutes);
