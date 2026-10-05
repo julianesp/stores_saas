@@ -18,7 +18,6 @@ export default function robots(): MetadataRoute.Robots {
         '/store/',
         '/sign-in',
         '/sign-up',
-        '/admin-upgrade',
         '/fix-trial',
       ],
     },

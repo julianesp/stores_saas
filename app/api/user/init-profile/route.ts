@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { auth, currentUser } from '@clerk/nextjs/server';
-import { createUserProfile, updateUserProfile, getAllUserProfiles, getUserProfile } from '@/lib/cloudflare-api';
+import { createUserProfile, getUserProfile } from '@/lib/cloudflare-api';
 
 export async function POST(req: NextRequest) {
   try {
@@ -25,11 +25,9 @@ export async function POST(req: NextRequest) {
     }
 
     const userEmail = user.emailAddresses[0]?.emailAddress || '';
-    const superAdminEmail = process.env.SUPER_ADMIN_EMAIL || 'admin@neurai.dev';
-    const isSuperAdmin = userEmail === superAdminEmail;
 
-    console.log('[init-profile] userEmail:', userEmail);
-    console.log('[init-profile] isSuperAdmin:', isSuperAdmin);
+    // Este endpoint NUNCA concede superadmin: el flag solo lo tiene
+    // admin@neurai.dev y lo asigna el Worker al crear su perfil.
 
     const getToken = async () => {
       const { getToken } = await auth();
@@ -59,22 +57,6 @@ export async function POST(req: NextRequest) {
 
       console.log('[init-profile] normalizedProfile.is_superadmin:', normalizedProfile.is_superadmin);
 
-      // Si el email es admin@neurai.dev, actualizar a superadmin
-      if (isSuperAdmin && !normalizedProfile.is_superadmin) {
-        await updateUserProfile(existingProfile.id, {
-          is_superadmin: true,
-          subscription_status: 'active',
-          trial_start_date: undefined,
-          trial_end_date: undefined,
-        }, getToken);
-
-        return NextResponse.json({
-          success: true,
-          profile: { ...normalizedProfile, is_superadmin: true, subscription_status: 'active' },
-          message: 'Perfil actualizado a Super Admin',
-        });
-      }
-
       console.log('[init-profile] Retornando perfil normalizado:', {
         is_superadmin: normalizedProfile.is_superadmin,
         email: normalizedProfile.email
@@ -87,39 +69,6 @@ export async function POST(req: NextRequest) {
       });
     }
 
-    // Si no existe por clerk_user_id, buscar por email (para el caso de admin@neurai.dev)
-    if (isSuperAdmin) {
-      try {
-        // Intentar obtener todos los perfiles y buscar por email
-        const allProfiles = await getAllUserProfiles(getToken);
-        const profileByEmail = allProfiles.find(p => p.email === userEmail);
-
-        if (profileByEmail) {
-          // Actualizar el clerk_user_id del perfil existente
-          await updateUserProfile(profileByEmail.id, {
-            clerk_user_id: userId,
-            is_superadmin: true,
-            subscription_status: 'active',
-          }, getToken);
-
-          // Normalizar is_superadmin a boolean
-          const normalizedProfile = {
-            ...profileByEmail,
-            clerk_user_id: userId,
-            is_superadmin: true,
-          };
-
-          return NextResponse.json({
-            success: true,
-            profile: normalizedProfile,
-            message: 'Perfil de Super Admin asociado a tu cuenta de Clerk',
-          });
-        }
-      } catch (error) {
-        console.error('Error buscando perfil por email:', error);
-      }
-    }
-
     // Crear nuevo perfil
     const now = new Date();
     const trialEnd = new Date();
@@ -130,10 +79,10 @@ export async function POST(req: NextRequest) {
       email: userEmail,
       full_name: `${user.firstName || ''} ${user.lastName || ''}`.trim() || 'Usuario',
       role: 'admin', // Por defecto, el primer usuario es admin
-      is_superadmin: isSuperAdmin,
-      subscription_status: isSuperAdmin ? 'active' : 'trial', // Super admin tiene acceso ilimitado
-      trial_start_date: isSuperAdmin ? undefined : now.toISOString(),
-      trial_end_date: isSuperAdmin ? undefined : trialEnd.toISOString(),
+      is_superadmin: false,
+      subscription_status: 'trial',
+      trial_start_date: now.toISOString(),
+      trial_end_date: trialEnd.toISOString(),
     }, getToken);
 
     return NextResponse.json({

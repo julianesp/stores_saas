@@ -77,8 +77,6 @@ function DashboardLayoutInner({
       if (user) {
         try {
           const token = await getToken();
-          const userEmail = user.emailAddresses[0]?.emailAddress || "";
-          const superAdminEmail = "admin@neurai.dev";
 
           // NOTA: NO borramos aquí el selected_tenant_id. Antes se hacía en cada
           // carga "para recargar con el usuario actual", pero eso pisaba la tienda
@@ -193,28 +191,6 @@ function DashboardLayoutInner({
             console.warn("Error initializing profile:", err);
           });
 
-          // Intentar auto-upgrade si es el super admin
-          if (userEmail === superAdminEmail) {
-            try {
-              const upgradeResponse = await fetch("/api/admin/auto-upgrade", {
-                method: "POST",
-              });
-              const upgradeData = await upgradeResponse.json();
-
-              if (upgradeData.upgraded) {
-                console.log(
-                  "✅ Perfil actualizado a super admin automáticamente"
-                );
-              } else if (upgradeData.isSuperAdmin) {
-                console.log("✅ Ya eres super admin");
-              }
-            } catch (err) {
-              console.warn("Error en auto-upgrade:", err);
-            }
-          }
-
-          // Verificar si es superadmin — el email del admin SIEMPRE tiene acceso
-          // independientemente de lo que diga la BD (protección contra resets).
           // Esperamos el perfil y el init en paralelo (init no aporta datos, solo
           // garantiza existencia; su fallo ya quedó registrado arriba).
           const [profile] = await Promise.all([
@@ -241,8 +217,9 @@ function DashboardLayoutInner({
             localStorage.setItem("selected_tenant_id", profile.id);
           }
 
-          const isSuperAdminUser =
-            profile?.is_superadmin || userEmail === superAdminEmail;
+          // Superadmin solo por el flag de la BD (únicamente admin@neurai.dev
+          // lo tiene); nunca por el email de la sesión.
+          const isSuperAdminUser = !!profile?.is_superadmin;
           setIsSuperAdmin(isSuperAdminUser);
 
           // Verificar addons próximos a vencer (solo para owners, no para team members ni superadmin)

@@ -185,7 +185,8 @@ app.put('/:id', async (c) => {
       'next_billing_date',
       'loyalty_points',
       'loyalty_tier',
-      'is_superadmin',
+      // is_superadmin NO se puede cambiar por API: solo admin@neurai.dev lo
+      // tiene, y se asigna al crear su perfil (middleware/auth.ts).
       // Clasificación de tienda (abarrotes, papelería, pizzería, licorera, farmacia)
       'business_type',
       // QR de pagos del tendero (Nequi/Daviplata/Bre-B) para cobrar en el POS

@@ -132,9 +132,8 @@ export default function SuperAdminPage() {
         null;
       setCurrentUserProfile(myProfile);
 
-      // Verificar si es super admin — email del admin siempre tiene acceso
-      const isSuperAdmin =
-        myProfile?.is_superadmin || userEmail === "admin@neurai.dev";
+      // Superadmin solo por el flag de la BD, nunca por el email.
+      const isSuperAdmin = !!myProfile?.is_superadmin;
       if (!isSuperAdmin) {
         toast.error("No tienes permisos para acceder a esta página");
         return;
@@ -217,38 +216,6 @@ export default function SuperAdminPage() {
     } catch (error) {
       console.error("Error updating store status:", error);
       toast.error(error instanceof Error ? error.message : "Error al actualizar estado de la tienda");
-    }
-  };
-
-  const handlePromoteToSuperAdmin = async (email: string) => {
-    if (
-      !confirm(
-        `¿Estás seguro de promover a ${email} como Super Administrador?\n\nEsto le dará acceso completo al sistema y la capacidad de gestionar todas las tiendas.`,
-      )
-    ) {
-      return;
-    }
-
-    try {
-      const token = await getToken();
-      const response = await fetch("/api/admin/set-superadmin", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify({ email }),
-      });
-
-      if (!response.ok) {
-        throw new Error("Error al promover usuario");
-      }
-
-      toast.success("Usuario promovido a Super Admin correctamente");
-      fetchData();
-    } catch (error) {
-      console.error("Error promoting to superadmin:", error);
-      toast.error("Error al promover usuario a Super Admin");
     }
   };
 
@@ -360,9 +327,7 @@ export default function SuperAdminPage() {
     );
   }
 
-  const userEmail = user?.emailAddresses[0]?.emailAddress || "";
-  const isSuperAdmin =
-    currentUserProfile?.is_superadmin || userEmail === "admin@neurai.dev";
+  const isSuperAdmin = !!currentUserProfile?.is_superadmin;
 
   if (!isSuperAdmin) {
     return (
@@ -1367,16 +1332,6 @@ export default function SuperAdminPage() {
                                 )}
                               </Button>
                             )}
-                            <Button
-                              size="sm"
-                              variant="secondary"
-                              onClick={() =>
-                                handlePromoteToSuperAdmin(store.email)
-                              }
-                              title="Promover a Super Admin"
-                            >
-                              <Shield className="h-4 w-4" />
-                            </Button>
                           </div>
                         </td>
                       </tr>

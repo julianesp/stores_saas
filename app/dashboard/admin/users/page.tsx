@@ -127,32 +127,6 @@ export default function UsersManagementPage() {
     }
   };
 
-  const handlePromoteToSuperAdmin = async (email: string) => {
-    if (!confirm(`¿Promover a ${email} como Super Administrador?\n\nEsta acción dará acceso total al sistema.`)) {
-      return;
-    }
-
-    try {
-      const response = await fetch('/api/admin/set-superadmin', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ email }),
-      });
-
-      if (!response.ok) {
-        throw new Error('Error al promover usuario');
-      }
-
-      toast.success('Usuario promovido a Super Admin correctamente');
-      fetchData();
-    } catch (error) {
-      console.error('Error promoting to superadmin:', error);
-      toast.error('Error al promover usuario a Super Admin');
-    }
-  };
-
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
@@ -368,16 +342,6 @@ export default function UsersManagementPage() {
                               >
                                 <Store className="h-4 w-4 mr-1" />
                                 {usr.store_enabled ? 'Tienda ON' : 'Tienda OFF'}
-                              </Button>
-                            )}
-                            {!usr.is_superadmin && (
-                              <Button
-                                size="sm"
-                                variant="secondary"
-                                onClick={() => handlePromoteToSuperAdmin(usr.email)}
-                                title="Promover a Super Admin"
-                              >
-                                <Crown className="h-4 w-4" />
                               </Button>
                             )}
                             {!usr.is_superadmin && usr.id !== currentUserProfile?.id && (
