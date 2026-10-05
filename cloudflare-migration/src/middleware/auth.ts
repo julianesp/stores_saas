@@ -61,6 +61,46 @@ function isAllowedClerkIssuer(issuer: string, env: Env): boolean {
   }
 }
 
+// Margen tras la fecha de vencimiento antes de bloquear en el Worker. El front
+// marca "expired" desde la medianoche (hora local) del día siguiente; con 24 h
+// el Worker nunca bloquea antes que la UI.
+const EXPIRY_GRACE_MS = 24 * 60 * 60 * 1000;
+
+/**
+ * Estado real de la suscripción según las FECHAS, no solo el texto guardado.
+ * Antes solo el front (al abrir el dashboard) pasaba trial/active → expired;
+ * si el dueño no volvía a entrar, el estado quedaba en "trial" para siempre y
+ * sus empleados o una llamada directa a la API seguían con acceso gratis.
+ */
+function effectiveSubscriptionStatus(p: {
+  subscription_status: string;
+  trial_end_date?: string | null;
+  next_billing_date?: string | null;
+}): string {
+  const limit =
+    p.subscription_status === 'trial' ? p.trial_end_date :
+    p.subscription_status === 'active' ? p.next_billing_date :
+    null;
+  if (!limit) return p.subscription_status;
+  const end = new Date(limit).getTime();
+  if (Number.isNaN(end)) return p.subscription_status;
+  return Date.now() > end + EXPIRY_GRACE_MS ? 'expired' : p.subscription_status;
+}
+
+async function markExpired(env: Env, profileId: string): Promise<void> {
+  try {
+    await env.DB
+      .prepare(
+        `UPDATE user_profiles SET subscription_status = 'expired', updated_at = ?
+         WHERE id = ? AND subscription_status IN ('trial', 'active')`
+      )
+      .bind(new Date().toISOString(), profileId)
+      .run();
+  } catch (error) {
+    console.error('[auth] No se pudo marcar la suscripción como expirada:', error);
+  }
+}
+
 export async function authMiddleware(c: Context<AppEnv>, next: Next) {
   // Peticiones internas del servidor (webhooks de ePayco, crons) autenticadas
   // con X-Webhook-Secret en lugar de un token de Clerk. Solo se acepta si
@@ -285,20 +325,20 @@ export async function authMiddleware(c: Context<AppEnv>, next: Next) {
 
     // IMPORTANT: Get user_profile.id to use as tenant_id for FK constraints
     // The products table has FK to user_profiles, not to tenants table
-    let userProfile = null;
+    let userProfile: { id: string; is_superadmin: number; subscription_status: string; trial_end_date?: string | null; next_billing_date?: string | null } | null = null;
 
     if (userProfileId) {
       // We already have the userProfileId from tenant selection logic
       userProfile = await c.env.DB
-        .prepare('SELECT id, is_superadmin, subscription_status FROM user_profiles WHERE id = ?')
+        .prepare('SELECT id, is_superadmin, subscription_status, trial_end_date, next_billing_date FROM user_profiles WHERE id = ?')
         .bind(userProfileId)
-        .first<{ id: string; is_superadmin: number; subscription_status: string }>();
+        .first<{ id: string; is_superadmin: number; subscription_status: string; trial_end_date?: string | null; next_billing_date?: string | null }>();
     } else {
       // Fallback to clerk_user_id lookup — also check clerk_user_id_test for dev environment
       userProfile = await c.env.DB
-        .prepare('SELECT id, is_superadmin, subscription_status FROM user_profiles WHERE clerk_user_id = ? OR clerk_user_id_test = ?')
+        .prepare('SELECT id, is_superadmin, subscription_status, trial_end_date, next_billing_date FROM user_profiles WHERE clerk_user_id = ? OR clerk_user_id_test = ?')
         .bind(clerkUserId, clerkUserId)
-        .first<{ id: string; is_superadmin: number; subscription_status: string }>();
+        .first<{ id: string; is_superadmin: number; subscription_status: string; trial_end_date?: string | null; next_billing_date?: string | null }>();
     }
 
     if (!userProfile) {
@@ -439,7 +479,10 @@ export async function authMiddleware(c: Context<AppEnv>, next: Next) {
     const pathname = new URL(c.req.url).pathname;
     const isExemptPath = isSubscriptionExemptPath(pathname);
     if (userProfile.is_superadmin !== 1 && !isTeamMember && !isExemptPath) {
-      const userSubscriptionStatus = userProfile.subscription_status;
+      const userSubscriptionStatus = effectiveSubscriptionStatus(userProfile);
+      if (userSubscriptionStatus !== userProfile.subscription_status) {
+        c.executionCtx.waitUntil(markExpired(c.env, userProfile.id));
+      }
       if (userSubscriptionStatus === 'expired' || userSubscriptionStatus === 'canceled') {
         return c.json({
           success: false,
@@ -452,12 +495,15 @@ export async function authMiddleware(c: Context<AppEnv>, next: Next) {
     // If user is a team member, verify the OWNER's subscription instead
     if (isTeamMember && userProfileId && !isExemptPath) {
       const ownerProfile = await c.env.DB
-        .prepare('SELECT subscription_status FROM user_profiles WHERE id = ?')
+        .prepare('SELECT subscription_status, trial_end_date, next_billing_date FROM user_profiles WHERE id = ?')
         .bind(userProfileId)
-        .first<{ subscription_status: string }>();
+        .first<{ subscription_status: string; trial_end_date: string | null; next_billing_date: string | null }>();
 
       if (ownerProfile) {
-        const ownerSubscriptionStatus = ownerProfile.subscription_status;
+        const ownerSubscriptionStatus = effectiveSubscriptionStatus(ownerProfile);
+        if (ownerSubscriptionStatus !== ownerProfile.subscription_status) {
+          c.executionCtx.waitUntil(markExpired(c.env, userProfileId));
+        }
         if (ownerSubscriptionStatus === 'expired' || ownerSubscriptionStatus === 'canceled') {
           return c.json({
             success: false,

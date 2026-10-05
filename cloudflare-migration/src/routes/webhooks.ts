@@ -393,23 +393,18 @@ app.post('/wompi', async (c) => {
         });
       }
 
-      // Si el pago fue declinado o tiene error, marcar como expirado
+      // Pago rechazado / con error / anulado: NO tocar la suscripción. Un
+      // intento fallido no quita los días ya pagados o de prueba; el acceso
+      // termina solo cuando vence la fecha (lo aplica authMiddleware).
       if (status === 'DECLINED' || status === 'ERROR' || status === 'VOIDED') {
-        await c.env.DB.prepare(
-          `UPDATE user_profiles SET
-            subscription_status = 'expired',
-            updated_at = ?
-          WHERE id = ?`
-        ).bind(new Date().toISOString(), userProfileResult.id).run();
-
-        console.log(`⚠️  Subscription marked as expired for user: ${userProfileResult.id}`);
+        console.log(`⚠️  Payment ${status} for user ${userProfileResult.id}; subscription unchanged`);
 
         return c.json<APIResponse>({
           success: true,
-          message: 'Subscription marked as expired',
+          message: 'Payment not approved; subscription unchanged',
           data: {
             userId: userProfileResult.id,
-            status: 'expired',
+            status: userProfileResult.subscription_status,
           },
         });
       }
