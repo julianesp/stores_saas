@@ -22,7 +22,9 @@ app.post('/subscription-reminders', async (c) => {
   const db = c.env.DB;
 
   try {
-    // Obtener usuarios con suscripción activa o en trial que vence pronto
+    // Obtener usuarios con suscripción activa o en trial que vence en los
+    // próximos 7 días. Solo mientras aún no ha vencido (> 0): si la fecha ya
+    // pasó y el estado sigue en trial/active, no enviar "vence en -N días".
     const users = await db
       .prepare(
         `SELECT id, clerk_user_id, email, full_name, subscription_status,
@@ -30,8 +32,10 @@ app.post('/subscription-reminders', async (c) => {
          FROM user_profiles
          WHERE subscription_status IN ('trial', 'active')
            AND (
-             (subscription_status = 'trial' AND julianday(trial_end_date) - julianday('now') <= 7)
-             OR (subscription_status = 'active' AND julianday(next_billing_date) - julianday('now') <= 7)
+             (subscription_status = 'trial'
+               AND julianday(trial_end_date) - julianday('now') BETWEEN 0.0001 AND 7)
+             OR (subscription_status = 'active'
+               AND julianday(next_billing_date) - julianday('now') BETWEEN 0.0001 AND 7)
            )`
       )
       .all();
