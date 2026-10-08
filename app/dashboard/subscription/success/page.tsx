@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { formatCurrency } from '@/lib/utils';
 import { toast } from 'sonner';
+import { formatEpaycoDate, type SubscriptionReceipt } from '@/lib/subscription-receipt-pdf';
 
 function SuccessContent() {
   const router = useRouter();
@@ -17,11 +18,9 @@ function SuccessContent() {
   const refPayco = searchParams.get('x_ref_payco') || searchParams.get('ref_payco');
   const transactionId = searchParams.get('x_transaction_id') || searchParams.get('transaction_id');
   const amount = searchParams.get('x_amount') || searchParams.get('amount');
-  const currency = searchParams.get('x_currency_code') || searchParams.get('currency_code') || 'COP';
   const transactionDate = searchParams.get('x_transaction_date') || searchParams.get('transaction_date');
   const approvalCode = searchParams.get('x_approval_code') || searchParams.get('approval_code');
   const franchise = searchParams.get('x_franchise') || searchParams.get('franchise');
-  const cardNumber = searchParams.get('x_card_number') || searchParams.get('card_number');
 
   useEffect(() => {
     if (!autoRedirect) return;
@@ -34,73 +33,75 @@ function SuccessContent() {
     return () => clearTimeout(timeout);
   }, [router, autoRedirect]);
 
-  const handleDownloadReceipt = () => {
-    setAutoRedirect(false);
+  // La redirección de ePayco casi solo trae ref_payco: los datos reales del
+  // comprobante (monto, fecha, aprobación, pagador) se piden al servidor, que los
+  // valida con ePayco y comprueba que el pago es de esta cuenta.
+  const [receipt, setReceipt] = useState<SubscriptionReceipt | null>(null);
+  const [receiptError, setReceiptError] = useState<string | null>(
+    refPayco ? null : 'Falta la referencia del pago'
+  );
+  const [building, setBuilding] = useState(false);
 
-    const receiptData = {
-      title: 'RECIBO DE PAGO - SUSCRIPCIÓN',
-      date: transactionDate || new Date().toLocaleString('es-CO'),
-      transactionId: transactionId || 'N/A',
-      reference: refPayco || 'N/A',
-      amount: amount || '0',
-      currency: currency,
-      approvalCode: approvalCode || 'N/A',
-      paymentMethod: franchise || 'Nequi/Tarjeta',
-      cardNumber: cardNumber || 'N/A',
-      status: 'APROBADO',
-      merchant: 'Tienda POS',
-      service: 'Suscripción Plan Básico',
+  useEffect(() => {
+    if (!refPayco) return;
+    let cancelled = false;
+    fetch(`/api/subscription/receipt?ref_payco=${encodeURIComponent(refPayco)}`)
+      .then(async (res) => {
+        const json = await res.json().catch(() => ({}));
+        if (cancelled) return;
+        if (res.ok) setReceipt(json as SubscriptionReceipt);
+        else setReceiptError(json?.error || 'No se pudo cargar el comprobante');
+      })
+      .catch(() => {
+        if (!cancelled) setReceiptError('No se pudo cargar el comprobante');
+      });
+    return () => {
+      cancelled = true;
     };
+  }, [refPayco]);
 
-    // Crear contenido de texto para descargar
-    const receiptText = `
-═══════════════════════════════════════
-    ${receiptData.title}
-═══════════════════════════════════════
-
-DETALLES DE LA TRANSACCIÓN
-───────────────────────────────────────
-Fecha:              ${receiptData.date}
-ID Transacción:     ${receiptData.transactionId}
-Referencia:         ${receiptData.reference}
-Código Aprobación:  ${receiptData.approvalCode}
-
-INFORMACIÓN DEL PAGO
-───────────────────────────────────────
-Servicio:           ${receiptData.service}
-Monto:              ${formatCurrency(parseFloat(receiptData.amount))}
-Método de Pago:     ${receiptData.paymentMethod}
-${receiptData.cardNumber !== 'N/A' ? `Tarjeta:            ${receiptData.cardNumber}` : ''}
-Estado:             ${receiptData.status} ✓
-
-COMERCIO
-───────────────────────────────────────
-Nombre:             ${receiptData.merchant}
-
-═══════════════════════════════════════
-    Gracias por tu pago
-    www.tienda-pos.vercel.app
-═══════════════════════════════════════
-    `;
-
-    // Crear y descargar archivo
-    const blob = new Blob([receiptText], { type: 'text/plain;charset=utf-8' });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.href = url;
-    link.download = `recibo-${transactionId || refPayco || 'pago'}.txt`;
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    URL.revokeObjectURL(url);
-
-    toast.success('Recibo descargado correctamente');
-  };
-
-  const handlePrint = () => {
+  const buildPdf = async () => {
     setAutoRedirect(false);
-    window.print();
+    if (!receipt) {
+      toast.error(receiptError || 'El comprobante aún se está cargando, intenta en un momento');
+      return null;
+    }
+    setBuilding(true);
+    try {
+      const { generateSubscriptionReceiptPDF } = await import('@/lib/subscription-receipt-pdf');
+      return await generateSubscriptionReceiptPDF(receipt);
+    } catch (error) {
+      console.error('Error generando el comprobante:', error);
+      toast.error('No se pudo generar el PDF');
+      return null;
+    } finally {
+      setBuilding(false);
+    }
   };
+
+  const handleDownloadReceipt = async () => {
+    const doc = await buildPdf();
+    if (!doc || !receipt) return;
+    doc.save(`comprobante-posib-${receipt.refPayco}.pdf`);
+    toast.success('Comprobante descargado');
+  };
+
+  const handlePrint = async () => {
+    const doc = await buildPdf();
+    if (!doc) return;
+    doc.autoPrint();
+    window.open(doc.output('bloburl'), '_blank');
+  };
+
+  const shownAmount = receipt ? receipt.amount : amount ? parseFloat(amount) : null;
+  const shownApproval = receipt?.approvalCode || approvalCode;
+  const shownMethod = receipt?.paymentMethod || franchise;
+  const shownTransactionId = receipt?.transactionId || transactionId;
+  const shownDate = receipt?.transactionDate
+    ? formatEpaycoDate(receipt.transactionDate)
+    : transactionDate
+      ? new Date(transactionDate).toLocaleString('es-CO')
+      : null;
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-green-50 to-brand-light/50 flex items-center justify-center p-4">
@@ -127,42 +128,42 @@ Nombre:             ${receiptData.merchant}
               Detalles de la Transacción
             </h3>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-sm">
-              {transactionId && (
+              {shownTransactionId && (
                 <div>
                   <p className="text-gray-500">ID de Transacción</p>
-                  <p className="font-mono font-semibold">{transactionId}</p>
+                  <p className="font-mono font-semibold">{shownTransactionId}</p>
                 </div>
               )}
               {refPayco && (
                 <div>
                   <p className="text-gray-500">Referencia ePayco</p>
-                  <p className="font-mono font-semibold">{refPayco}</p>
+                  <p className="font-mono font-semibold">{receipt?.refPayco || refPayco}</p>
                 </div>
               )}
-              {amount && (
+              {shownAmount != null && (
                 <div>
                   <p className="text-gray-500">Monto Pagado</p>
                   <p className="font-semibold text-green-600 text-lg">
-                    {formatCurrency(parseFloat(amount))}
+                    {formatCurrency(shownAmount)}
                   </p>
                 </div>
               )}
-              {approvalCode && (
+              {shownApproval && (
                 <div>
                   <p className="text-gray-500">Código de Aprobación</p>
-                  <p className="font-mono font-semibold">{approvalCode}</p>
+                  <p className="font-mono font-semibold">{shownApproval}</p>
                 </div>
               )}
-              {franchise && (
+              {shownMethod && (
                 <div>
                   <p className="text-gray-500">Método de Pago</p>
-                  <p className="font-semibold">{franchise}</p>
+                  <p className="font-semibold">{shownMethod}</p>
                 </div>
               )}
-              {transactionDate && (
+              {shownDate && (
                 <div>
                   <p className="text-gray-500">Fecha de Transacción</p>
-                  <p className="font-semibold">{new Date(transactionDate).toLocaleString('es-CO')}</p>
+                  <p className="font-semibold">{shownDate}</p>
                 </div>
               )}
             </div>
@@ -183,9 +184,10 @@ Nombre:             ${receiptData.merchant}
                 variant="outline"
                 className="w-full"
                 size="lg"
+                disabled={building || (!receipt && !receiptError)}
               >
                 <Download className="mr-2 h-5 w-5" />
-                Descargar Recibo
+                {receipt || receiptError ? 'Descargar PDF' : 'Cargando...'}
               </Button>
 
               <Button
@@ -193,6 +195,7 @@ Nombre:             ${receiptData.merchant}
                 variant="outline"
                 className="w-full"
                 size="lg"
+                disabled={building || (!receipt && !receiptError)}
               >
                 <Printer className="mr-2 h-5 w-5" />
                 Imprimir
