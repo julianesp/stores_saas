@@ -5,7 +5,6 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { Plus, Search, Edit, Trash2, Package, Tag, Tags, Camera, AlertTriangle, Download, Layers } from 'lucide-react';
 import { toast } from 'sonner';
-// import { HelpCircle } from 'lucide-react'; // COMENTADO: Tour deshabilitado
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -21,9 +20,6 @@ import { RepeatedNamesModal } from '@/components/products/repeated-names-modal';
 import { findDuplicateGroups, findRepeatedNameGroups } from '@/lib/duplicate-helpers';
 import { exportProductsToExcel, exportProductsToCSV } from '@/lib/excel-export';
 import { useBusinessType } from '@/hooks/useBusinessType';
-// COMENTADO: Tour deshabilitado
-// import { useTour } from '@/hooks/useTour';
-// import { productsTourConfig } from '@/lib/tour-configs';
 
 // La API devuelve `images` como un string JSON (ej: '["https://..."]').
 // Esta función lo convierte en un array real de URLs, soportando también
@@ -74,9 +70,6 @@ export default function ProductsPage() {
   // Grupos de productos repetidos (para el badge y el modal de revisión)
   const duplicateGroups = useMemo(() => findDuplicateGroups(products), [products]);
   const repeatedNameGroups = useMemo(() => findRepeatedNameGroups(products), [products]);
-
-  // COMENTADO: Tour deshabilitado
-  // const { startTour, hasSeenTour } = useTour(productsTourConfig, true, userId || undefined);
 
   useEffect(() => {
     fetchProducts();
@@ -343,17 +336,6 @@ export default function ProductsPage() {
               </span>
             )}
           </Button>
-          {/* COMENTADO: Botón de ayuda/tour deshabilitado
-          <Button
-            variant="outline"
-            onClick={startTour}
-            className="flex-1 sm:flex-none"
-            title="Ver guía interactiva"
-          >
-            <HelpCircle className="h-4 w-4 sm:mr-2" />
-            <span className="hidden sm:inline">Ayuda</span>
-          </Button>
-          */}
           <Button
             data-guide="products-outofstock"
             variant={showOutOfStock ? "default" : "outline"}

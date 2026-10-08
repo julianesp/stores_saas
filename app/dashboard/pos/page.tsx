@@ -67,9 +67,6 @@ import {
   readCachedCollection,
   queueSale,
 } from "@/lib/offline-store";
-// COMENTADO: Tour deshabilitado
-// import { useTour } from '@/hooks/useTour';
-// import { posTourConfig } from '@/lib/tour-configs';
 
 interface CartItem {
   product: Product;
@@ -153,9 +150,6 @@ export default function POSPage() {
     new Set(),
   );
   const cartIconRef = useRef<HTMLDivElement>(null);
-
-  // COMENTADO: Tour deshabilitado
-  // const { startTour } = useTour(posTourConfig, true, userId || undefined);
 
   const handleCreateCustomer = async () => {
     // Validar nombre
