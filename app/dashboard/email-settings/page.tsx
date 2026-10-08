@@ -202,7 +202,7 @@ export default function EmailSettingsPage() {
       </div>
 
       <Tabs defaultValue="settings" className="space-y-6">
-        <div className="overflow-x-auto pb-2">
+        <div data-guide="email-tabs" className="overflow-x-auto pb-2">
           <TabsList className="inline-flex w-auto min-w-full lg:min-w-0">
             <TabsTrigger value="settings" className="shrink-0">
               <Mail className="h-4 w-4 lg:mr-2" />
@@ -234,7 +234,7 @@ export default function EmailSettingsPage() {
         {/* Tab: Configuración Básica */}
         <TabsContent value="settings" className="space-y-6">
           {/* Reportes Diarios */}
-          <Card>
+          <Card data-guide="email-daily">
             <CardHeader>
               <div className="flex items-center gap-2">
                 <FileText className="h-5 w-5" />
@@ -300,7 +300,7 @@ export default function EmailSettingsPage() {
           </Card>
 
           {/* Ofertas a los clientes */}
-          <Card>
+          <Card data-guide="email-offers">
             <CardHeader>
               <div className="flex items-center gap-2">
                 <Sparkles className="h-5 w-5" />

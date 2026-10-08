@@ -297,7 +297,7 @@ export default function ProductsPage() {
           <p className="text-gray-500 text-sm md:text-base">Gestiona el inventario de {bt.vocabulary.itemPlural.toLowerCase()}</p>
         </div>
         <div className="flex flex-wrap gap-2">
-          <Button variant="outline" onClick={handleExportExcel} className="flex-1 sm:flex-none" title="Exportar productos a Excel">
+          <Button data-guide="products-export" variant="outline" onClick={handleExportExcel} className="flex-1 sm:flex-none" title="Exportar productos a Excel">
             <Download className="mr-2 h-4 w-4" />
             <span className="hidden sm:inline">Excel</span>
             <span className="sm:hidden">Excel</span>
@@ -307,12 +307,13 @@ export default function ProductsPage() {
             <span className="hidden sm:inline">CSV</span>
             <span className="sm:hidden">CSV</span>
           </Button>
-          <Button variant="outline" onClick={() => setShowCategoryModal(true)} className="flex-1 sm:flex-none">
+          <Button data-guide="products-categories" variant="outline" onClick={() => setShowCategoryModal(true)} className="flex-1 sm:flex-none">
             <Tag className="mr-2 h-4 w-4" />
             <span className="hidden sm:inline">Categorías</span>
             <span className="sm:hidden">Cat.</span>
           </Button>
           <Button
+            data-guide="products-duplicates"
             variant={duplicateGroups.length > 0 ? "default" : "outline"}
             onClick={() => setShowDuplicatesModal(true)}
             className="flex-1 sm:flex-none"
@@ -354,6 +355,7 @@ export default function ProductsPage() {
           </Button>
           */}
           <Button
+            data-guide="products-outofstock"
             variant={showOutOfStock ? "default" : "outline"}
             onClick={() => {
               setShowOutOfStock(!showOutOfStock);
@@ -372,14 +374,14 @@ export default function ProductsPage() {
               </span>
             )}
           </Button>
-          <Link href="/dashboard/products/quick-add" className="flex-1 sm:flex-none">
+          <Link href="/dashboard/products/quick-add" data-guide="products-quick" className="flex-1 sm:flex-none">
             <Button variant="outline" className="w-full">
               <Camera className="mr-2 h-4 w-4" />
               <span className="hidden sm:inline">Agregar Rápido</span>
               <span className="sm:hidden">Rápido</span>
             </Button>
           </Link>
-          <Link href="/dashboard/products/new" className="flex-1 sm:flex-none">
+          <Link href="/dashboard/products/new" data-guide="products-new" className="flex-1 sm:flex-none">
             <Button className="w-full">
               <Plus className="mr-2 h-4 w-4" />
               {bt.vocabulary.itemSingular} nuevo
@@ -391,7 +393,7 @@ export default function ProductsPage() {
       <Card>
         <CardHeader>
           <div className="flex items-center gap-4">
-            <div className="flex-1 relative">
+            <div data-guide="products-search" className="flex-1 relative">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
               <Input
                 placeholder="Buscar por nombre o código de barras..."

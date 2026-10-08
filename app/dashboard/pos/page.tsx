@@ -1729,6 +1729,7 @@ export default function POSPage() {
         <div className="lg:col-span-2 space-y-4 order-2 lg:order-1">
           {/* Búsqueda por código de barras */}
           <Card
+            data-guide="pos-scan"
             className={`border-2 shadow-lg transition-all duration-300 ${
               scanSuccess
                 ? "border-brand bg-brand-light/50"
@@ -1876,7 +1877,7 @@ export default function POSPage() {
           </Card>
 
           {/* Búsqueda de productos */}
-          <Card>
+          <Card data-guide="pos-search">
             <CardHeader className="pb-3">
               <div className="relative">
                 <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
@@ -2060,7 +2061,7 @@ export default function POSPage() {
 
         {/* Panel derecho - Carrito */}
         <div className="space-y-4 order-1 lg:order-2">
-          <Card className="lg:sticky lg:top-0">
+          <Card data-guide="pos-cart" className="lg:sticky lg:top-0">
             <CardHeader className="pb-3">
               <CardTitle className="flex items-center gap-2 text-base md:text-lg">
                 <div ref={cartIconRef} className="relative">
@@ -2088,7 +2089,7 @@ export default function POSPage() {
             </CardHeader>
             <CardContent>
               {/* Selector de Cliente */}
-              <div className="mb-4 pb-4 border-b">
+              <div data-guide="pos-customer" className="mb-4 pb-4 border-b">
                 {selectedCustomer ? (
                   <div className="space-y-2">
                     <div className="bg-brand-light/50 border border-brand/40 rounded-lg p-3">
@@ -2555,7 +2556,7 @@ export default function POSPage() {
                       </span>
                     </div>
 
-                    <div className="space-y-1.5 md:space-y-2">
+                    <div data-guide="pos-payment" className="space-y-1.5 md:space-y-2">
                       <label className="text-xs md:text-sm font-medium">
                         Método de Pago:
                       </label>
@@ -2606,6 +2607,7 @@ export default function POSPage() {
                     )}
 
                     <Button
+                      data-guide="pos-checkout"
                       className="w-full text-sm md:text-base"
                       size="lg"
                       onClick={() => {

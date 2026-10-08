@@ -284,18 +284,22 @@ export default function ConfigPage() {
       <PosReviewCard />
 
       {/* QR de pagos para cobrar en el POS */}
-      <PaymentQrConfig />
+      <div data-guide="config-qr">
+        <PaymentQrConfig />
+      </div>
 
       {/* Alertas por Telegram (productos próximos a vencer) */}
-      <TelegramConfig />
+      <div data-guide="config-telegram">
+        <TelegramConfig />
+      </div>
 
       {/* Copia de seguridad de ventas a Google Drive */}
-      <div id="google-drive">
+      <div id="google-drive" data-guide="config-backup">
         <GoogleDriveBackupConfig />
       </div>
 
       {/* Estado del Sistema - Temporalmente oculto */}
-      <Card>
+      <Card data-guide="config-loyalty">
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <Award className="h-5 w-5 text-yellow-600" />
@@ -463,7 +467,7 @@ export default function ConfigPage() {
       </Card>
 
       {/* Configuración de IA - API Key de Gemini */}
-      <Card>
+      <Card data-guide="config-ai">
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <Brain className="h-5 w-5 text-purple-600" />

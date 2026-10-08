@@ -61,19 +61,19 @@ export default function CustomersPage() {
           <p className="text-gray-500 text-sm md:text-base">Gestiona tu base de clientes</p>
         </div>
         <div className="flex flex-wrap gap-2 w-full sm:w-auto">
-          <Button variant="outline" onClick={handleExportExcel} className="flex-1 sm:flex-none" title="Exportar clientes a Excel">
+          <Button data-guide="customers-export" variant="outline" onClick={handleExportExcel} className="flex-1 sm:flex-none" title="Exportar clientes a Excel">
             <Download className="mr-2 h-4 w-4" />Excel
           </Button>
           <Button variant="outline" onClick={handleExportCSV} className="flex-1 sm:flex-none" title="Exportar clientes a CSV">
             <Download className="mr-2 h-4 w-4" />CSV
           </Button>
-          <Link href="/dashboard/customers/new" className="flex-1 sm:flex-none">
+          <Link href="/dashboard/customers/new" data-guide="customers-new" className="flex-1 sm:flex-none">
             <Button className="w-full"><Plus className="mr-2 h-4 w-4" />Nuevo Cliente</Button>
           </Link>
         </div>
       </div>
 
-      <Card>
+      <Card data-guide="customers-list">
         <CardContent className="pt-6">
           {customers.length === 0 ? (
             <div className="text-center py-8">

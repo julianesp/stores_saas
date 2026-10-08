@@ -446,7 +446,7 @@ export default function DashboardPage() {
       </div>
 
       {/* Accesos rápidos — acciones que el tendero hace a diario */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+      <div data-guide="dash-shortcuts" className="grid grid-cols-2 lg:grid-cols-4 gap-3">
         <Link href="/dashboard/pos" className="group">
           <div className="flex items-center gap-3 p-4 rounded-xl bg-brand text-white shadow-sm hover:bg-brand-hover transition-colors h-full">
             <ShoppingCart className="h-6 w-6 flex-shrink-0" />
@@ -482,7 +482,7 @@ export default function DashboardPage() {
       </div>
 
       {/* Ganancia de hoy — cuánto ganó realmente el tendero (venta − costo) */}
-      <Link href="/dashboard/rentabilidad" className="block group">
+      <Link href="/dashboard/rentabilidad" data-guide="dash-profit" className="block group">
         <Card className="border-2 border-emerald-200 bg-gradient-to-r from-emerald-50 to-green-50 hover:border-emerald-300 hover:shadow-md transition-all">
           <CardContent className="pt-6">
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
@@ -532,7 +532,7 @@ export default function DashboardPage() {
       </Link>
 
       {/* Métricas principales */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 md:gap-4">
+      <div data-guide="dash-stats" className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 md:gap-4">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Ventas de Hoy</CardTitle>
@@ -804,7 +804,7 @@ export default function DashboardPage() {
       )}
 
       {/* Alertas y acciones rápidas */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-3 md:gap-4">
+      <div data-guide="dash-alerts" className="grid grid-cols-1 md:grid-cols-2 gap-3 md:gap-4">
         <Card>
           <CardHeader className="pb-3">
             <CardTitle className="text-base md:text-lg">

@@ -269,6 +269,7 @@ export default function DebtorsPage() {
           </p>
         </div>
         <Button
+          data-guide="debtors-export"
           onClick={handleExportToExcel}
           disabled={exporting || debtors.length === 0}
           className="bg-green-600 hover:bg-green-700 flex items-center gap-2"
@@ -288,7 +289,7 @@ export default function DebtorsPage() {
       </div>
 
       {/* Resumen de deuda total */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+      <div data-guide="debtors-summary" className="grid grid-cols-1 md:grid-cols-3 gap-4">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Deuda Total</CardTitle>
@@ -325,7 +326,7 @@ export default function DebtorsPage() {
       </div>
 
       {/* Barra de búsqueda */}
-      <Card>
+      <Card data-guide="debtors-search">
         <CardContent className="pt-6">
           <div className="flex items-center space-x-2">
             <Search className="h-5 w-5 text-gray-400" />
@@ -341,7 +342,7 @@ export default function DebtorsPage() {
       </Card>
 
       {/* Lista de deudores */}
-      <Card>
+      <Card data-guide="debtors-list">
         <CardContent className="pt-6">
           {loading ? (
             <div className="text-center py-8">

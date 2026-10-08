@@ -581,7 +581,7 @@ export default function WebOrdersPage() {
                     </p>
                   )}
 
-                  <div className="flex flex-wrap gap-2 pt-4 border-t">
+                  <div data-guide="orders-actions" className="flex flex-wrap gap-2 pt-4 border-t">
                     <Button
                       variant="outline"
                       size="sm"
@@ -663,7 +663,7 @@ export default function WebOrdersPage() {
         </Card>
       ) : (
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-          <TabsList className="grid w-full grid-cols-3">
+          <TabsList data-guide="orders-tabs" className="grid w-full grid-cols-3">
             <TabsTrigger value="pendiente" className="relative">
               Pendientes
               {pendingOrders.length > 0 && (

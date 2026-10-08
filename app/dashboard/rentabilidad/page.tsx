@@ -223,6 +223,7 @@ export default function RentabilidadPage() {
 
       {/* Hoy vs Ayer */}
       <Card
+        data-guide="profit-today"
         className={
           isFlat
             ? 'border-gray-200'
@@ -271,7 +272,7 @@ export default function RentabilidadPage() {
       </Card>
 
       {/* Selector de período */}
-      <div className="flex flex-wrap gap-2">
+      <div data-guide="profit-period" className="flex flex-wrap gap-2">
         {PERIODS.map((p) => (
           <Button
             key={p.id}
@@ -285,7 +286,7 @@ export default function RentabilidadPage() {
       </div>
 
       {/* Tarjetas de totales */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+      <div data-guide="profit-totals" className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         <Card>
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium text-gray-500 flex items-center gap-1">
@@ -375,7 +376,7 @@ export default function RentabilidadPage() {
       )}
 
       {/* Ranking de productos por ganancia */}
-      <Card>
+      <Card data-guide="profit-ranking">
         <CardHeader>
           <CardTitle className="text-lg">
             Qué productos te dejan más plata

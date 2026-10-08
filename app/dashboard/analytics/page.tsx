@@ -301,7 +301,7 @@ export default function AnalyticsPage() {
 
       {/* Tabs para diferentes secciones */}
       <Tabs defaultValue="overview" className="w-full">
-        <div className="overflow-x-auto pb-2">
+        <div data-guide="ai-tabs" className="overflow-x-auto pb-2">
           <TabsList className="inline-flex w-auto min-w-full lg:min-w-0">
             <TabsTrigger value="overview" className="shrink-0">
               <BarChart className="h-4 w-4 lg:mr-2" />

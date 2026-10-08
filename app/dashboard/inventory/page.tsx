@@ -204,7 +204,7 @@ function InventoryContent() {
       />
 
       {/* Estadísticas */}
-      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6">
+      <div data-guide="inventory-stats" className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">
@@ -259,7 +259,7 @@ function InventoryContent() {
       </div>
 
       {/* Filtros */}
-      <Card>
+      <Card data-guide="inventory-filters">
         <CardContent className="pt-6">
           <div className="flex flex-col gap-4">
             <div className="flex flex-col md:flex-row gap-4">
@@ -326,7 +326,7 @@ function InventoryContent() {
       </Card>
 
       {/* Tabla de inventario */}
-      <Card>
+      <Card data-guide="inventory-list">
         <CardHeader>
           <CardTitle>Productos en Inventario</CardTitle>
         </CardHeader>

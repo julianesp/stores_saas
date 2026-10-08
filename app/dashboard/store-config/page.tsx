@@ -316,7 +316,7 @@ export default function StoreConfigPage() {
             Configura tu tienda para vender por internet
           </p>
         </div>
-        <div className="fixed top-[130px] right-6 z-40 flex flex-col items-center gap-2">
+        <div data-guide="store-save" className="fixed top-[130px] right-6 z-40 flex flex-col items-center gap-2">
           {storeEnabled && storeSlug && (
             <Button
               variant="outline"
@@ -333,7 +333,7 @@ export default function StoreConfigPage() {
       </div>
 
       {/* Estado de la tienda */}
-      <Card>
+      <Card data-guide="store-status">
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <Store className="h-5 w-5" />
@@ -364,7 +364,7 @@ export default function StoreConfigPage() {
       </Card>
 
       {/* Información básica */}
-      <Card>
+      <Card data-guide="store-info">
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <Store className="h-5 w-5" />
@@ -441,7 +441,7 @@ export default function StoreConfigPage() {
       </Card>
 
       {/* Personalización */}
-      <Card>
+      <Card data-guide="store-look">
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <Palette className="h-5 w-5" />
@@ -575,7 +575,7 @@ export default function StoreConfigPage() {
       </Card>
 
       {/* Redes sociales y contacto */}
-      <Card>
+      <Card data-guide="store-contact">
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <Share2 className="h-5 w-5" />
@@ -727,7 +727,7 @@ export default function StoreConfigPage() {
       </Card>
 
       {/* Opciones de entrega */}
-      <Card>
+      <Card data-guide="store-delivery">
         <CardHeader>
           <CardTitle>Opciones de Entrega</CardTitle>
         </CardHeader>

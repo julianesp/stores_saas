@@ -423,7 +423,7 @@ export default function SubscriptionPageWompi() {
       )}
 
       {/* Método de pago aceptado */}
-      <Card>
+      <Card data-guide="sub-payments">
         <CardHeader>
           <CardTitle className="text-lg">Métodos de pago aceptados</CardTitle>
         </CardHeader>
@@ -471,7 +471,7 @@ export default function SubscriptionPageWompi() {
       </Card>
 
       {/* Plan */}
-      <Card id="plan-basico" className="border-brand/40 border-2 scroll-mt-24">
+      <Card id="plan-basico" data-guide="sub-plan" className="border-brand/40 border-2 scroll-mt-24">
         <CardHeader className="pb-3">
           <div className="flex items-center justify-between">
             <CardTitle className="text-xl flex items-center gap-2">
@@ -588,7 +588,7 @@ export default function SubscriptionPageWompi() {
       </div>
 
       {/* Complemento de pago: Tienda Online (único addon que se cobra aparte) */}
-      <div className="mt-10">
+      <div data-guide="sub-addons" className="mt-10">
         <h2 className="text-2xl font-bold mb-4">Complemento Opcional</h2>
         <p className="text-gray-600 mb-6">
           La Tienda Online es el único complemento que se paga aparte. Actívala

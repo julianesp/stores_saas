@@ -566,7 +566,7 @@ export default function SalesPage() {
 
         {/* Botones de Exportación e Importación */}
         <div className="flex flex-col sm:flex-row gap-2">
-          <Link href="/dashboard/sales/import">
+          <Link href="/dashboard/sales/import" data-guide="sales-import">
             <Button variant="outline" className="text-sm w-full">
               <Upload className="mr-2 h-4 w-4" />
               Importar de Siigo
@@ -574,6 +574,7 @@ export default function SalesPage() {
           </Link>
 
           <Button
+            data-guide="sales-export"
             variant="outline"
             onClick={handleExportAll}
             disabled={sales.length === 0}
@@ -607,7 +608,7 @@ export default function SalesPage() {
 
 
       {/* Filtros */}
-      <Card>
+      <Card data-guide="sales-filters">
         <CardContent className="pt-6">
           <div className="space-y-4">
             <div className="flex flex-wrap gap-2">
@@ -689,7 +690,7 @@ export default function SalesPage() {
       </Card>
 
       {/* Resumen */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 md:gap-4">
+      <div data-guide="sales-summary" className="grid grid-cols-1 sm:grid-cols-3 gap-3 md:gap-4">
         <Card>
           <CardContent className="pt-4 md:pt-6">
             <div className="text-xl md:text-2xl font-bold">{sales.length}</div>
@@ -717,7 +718,7 @@ export default function SalesPage() {
       </div>
 
       {/* Lista de ventas */}
-      <Card>
+      <Card data-guide="sales-list">
         <CardContent className="pt-6">
           {loading ? (
             <div className="text-center py-8">Cargando ventas...</div>
