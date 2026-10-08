@@ -20,6 +20,7 @@ import {
 } from "@/lib/cloudflare-subscription-helpers";
 import { SubscriptionStatus } from "@/lib/types";
 import { usePageTracking } from "@/lib/hooks/use-analytics";
+import { setSelectedTenantId } from "@/lib/cloudflare-api";
 import { TenantProvider, useTenant } from "@/lib/tenant-context";
 import { GuideProvider } from "@/components/guide/GuideProvider";
 import styles from "./styles/Layout.module.scss";
@@ -126,6 +127,16 @@ function DashboardLayoutInner({
               }
             }
 
+            if (storesResponse.ok && stores.length === 0) {
+              // El Worker respondió bien pero el usuario no tiene tiendas listadas
+              // (p. ej. un dueño que aún no configuró el nombre de su tienda). Un
+              // tenant guardado aquí sería de OTRA cuenta que usó este navegador:
+              // enviarlo da 403 y el perfil no carga ("No pudimos verificar tu
+              // sesión") aunque la cuenta solo esté vencida. Se quita para que el
+              // Worker use la tienda propia; más abajo se fija con profile.id.
+              setSelectedTenantId(null);
+            }
+
             if (stores.length > 0) {
               // Verificar si tiene acceso como team member a alguna tienda
               teamMemberStores = stores.filter(
@@ -194,10 +205,18 @@ function DashboardLayoutInner({
 
           // Esperamos el perfil y el init en paralelo (init no aporta datos, solo
           // garantiza existencia; su fallo ya quedó registrado arriba).
-          const [profile] = await Promise.all([
+          let [profile] = await Promise.all([
             getUserProfileByClerkId(getToken),
             initProfilePromise,
           ]);
+
+          // Si el perfil no cargó con un tenant guardado, puede ser de otra cuenta
+          // de este navegador (el Worker responde 403). Reintentar una vez con la
+          // tienda propia antes de mostrar el error de conexión.
+          if (!profile && localStorage.getItem("selected_tenant_id")) {
+            setSelectedTenantId(null);
+            profile = await getUserProfileByClerkId(getToken);
+          }
 
           // Poblar la caché de perfil que lee el Sidebar (PROFILE_CACHE_KEY),
           // para que NO tenga que llamar de nuevo a /api/user/init-profile en el
