@@ -21,6 +21,7 @@ import {
 import { SubscriptionStatus } from "@/lib/types";
 import { usePageTracking } from "@/lib/hooks/use-analytics";
 import { TenantProvider, useTenant } from "@/lib/tenant-context";
+import { GuideProvider } from "@/components/guide/GuideProvider";
 import styles from "./styles/Layout.module.scss";
 
 interface UserStore {
@@ -343,6 +344,7 @@ function DashboardLayoutInner({
 
   return (
     <OfflineProvider>
+      <GuideProvider nudgesEnabled={!loading && !isSuperAdmin}>
       <NoIndexMeta />
       {/* Modal de notificación de trial - solo se muestra para usuarios en trial (no team members) */}
       {!loading && !isSuperAdmin && !isTeamMember &&
@@ -434,6 +436,7 @@ function DashboardLayoutInner({
         {/* Invitación a instalar la PWA + bienvenida tras instalar. */}
         {!isSuperAdmin && <PWAInstallPrompt />}
       </div>
+      </GuideProvider>
     </OfflineProvider>
   );
 }

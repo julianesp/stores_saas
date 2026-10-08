@@ -1,0 +1,206 @@
+/* Movimiento de la guía de uso.
+   - Solo transform/opacity (y clip/grid-rows donde se indica).
+   - Transiciones (no keyframes) en todo lo que se abre/cierra: si el tendero
+     cierra a mitad de la animación, se devuelve desde donde va.
+   - Entrada con ease-out fuerte; salida más corta que la entrada.
+   - prefers-reduced-motion: sin desplazamientos, solo fundidos. */
+
+.root {
+  --ease-out: cubic-bezier(0.23, 1, 0.32, 1);
+  --ease-in-out: cubic-bezier(0.77, 0, 0.175, 1);
+}
+
+/* ---------- Superficies flotantes (aviso, panel, píldora) ---------- */
+
+.float {
+  transform-origin: bottom right;
+  transition:
+    opacity 260ms var(--ease-out),
+    transform 260ms var(--ease-out);
+}
+
+.float[data-state="closed"] {
+  opacity: 0;
+  transform: translateY(10px) scale(0.98);
+  transition-duration: 160ms;
+  pointer-events: none;
+}
+
+.float[data-state="open"] {
+  opacity: 1;
+  transform: none;
+}
+
+/* ---------- Botones: respuesta al presionar ---------- */
+
+.press {
+  transition: transform 160ms var(--ease-out);
+}
+
+.press:active {
+  transform: scale(0.97);
+}
+
+/* ---------- Selector "Mira cómo / Hazlo tú" ---------- */
+
+.segment {
+  position: relative;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+}
+
+.segmentThumb {
+  position: absolute;
+  inset: 3px auto 3px 3px;
+  width: calc(50% - 3px);
+  border-radius: 9px;
+  transition: transform 220ms var(--ease-in-out);
+}
+
+.segment[data-value="steps"] .segmentThumb {
+  transform: translateX(100%);
+}
+
+/* ---------- Cambio de pestaña dentro del panel ---------- */
+
+.pane {
+  animation: paneIn 220ms var(--ease-out) both;
+}
+
+@keyframes paneIn {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+}
+
+/* Texto del paso de la demo: fundido corto con un poco de desenfoque para que
+   el cambio de texto se lea como una sola transformación. */
+.caption {
+  animation: captionIn 240ms var(--ease-out) both;
+}
+
+@keyframes captionIn {
+  from {
+    opacity: 0;
+    filter: blur(2px);
+    transform: translateY(3px);
+  }
+}
+
+/* ---------- Pasos: acordeón ---------- */
+
+.collapse {
+  display: grid;
+  grid-template-rows: 0fr;
+  transition: grid-template-rows 220ms var(--ease-out);
+}
+
+.collapse[data-open="true"] {
+  grid-template-rows: 1fr;
+}
+
+.collapse > * {
+  overflow: hidden;
+}
+
+/* ---------- Señalar en pantalla ---------- */
+
+.spot {
+  position: fixed;
+  left: 0;
+  top: 0;
+  pointer-events: none;
+  border-radius: 12px;
+  box-shadow:
+    0 0 0 2px var(--brand),
+    0 0 0 6px rgb(0 124 128 / 0.18);
+  transition:
+    opacity 220ms var(--ease-out),
+    scale 220ms var(--ease-out);
+}
+
+.spot[data-state="closed"] {
+  opacity: 0;
+  scale: 1.04;
+  transition-duration: 150ms;
+}
+
+.spot[data-state="open"] {
+  opacity: 1;
+  scale: 1;
+}
+
+/* Dos pulsos suaves al aparecer para que el ojo lo encuentre; luego quieto. */
+.spot::after {
+  content: "";
+  position: absolute;
+  inset: -2px;
+  border-radius: inherit;
+  border: 2px solid var(--brand);
+  opacity: 0;
+  animation: spotPulse 1100ms var(--ease-out) 200ms 2;
+}
+
+@keyframes spotPulse {
+  0% {
+    opacity: 0.55;
+    transform: scale(1);
+  }
+  100% {
+    opacity: 0;
+    transform: scale(1.08);
+  }
+}
+
+/* ---------- Lista del centro de ayuda ---------- */
+
+.stagger {
+  animation: staggerIn 260ms var(--ease-out) both;
+  animation-delay: calc(var(--i, 0) * 30ms);
+}
+
+@keyframes staggerIn {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .row {
+    transition: background-color 150ms ease;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .float,
+  .float[data-state="closed"] {
+    transform: none;
+  }
+  .segmentThumb,
+  .collapse {
+    transition: none;
+  }
+  .pane,
+  .caption,
+  .stagger {
+    animation-name: fadeOnly;
+  }
+  .spot::after {
+    animation: none;
+  }
+  .spot,
+  .spot[data-state="closed"] {
+    scale: 1;
+  }
+  .press:active {
+    transform: none;
+  }
+}
+
+@keyframes fadeOnly {
+  from {
+    opacity: 0;
+  }
+}

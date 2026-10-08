@@ -1,12 +1,12 @@
 /**
- * Preferencia de ayudas visuales (tours guiados), guardada POR DISPOSITIVO en
- * localStorage. No se sincroniza entre equipos: cada navegador tiene la suya,
- * coherente con cómo el hook useTour marca los tours ya vistos.
+ * Preferencia de los avisos de la guía de uso (components/guide/), guardada
+ * POR DISPOSITIVO en localStorage. No se sincroniza entre equipos: cada
+ * navegador tiene la suya, igual que el progreso de lib/guide/guide-progress.ts.
  *
- * - Por defecto las ayudas automáticas están ACTIVAS (un tendero nuevo ve el
- *   tour la primera vez que entra a una página).
- * - El tendero puede desactivarlas desde el botón flotante de ayuda; entonces
- *   los tours dejan de aparecer solos, pero puede lanzarlos a mano cuando quiera.
+ * - Por defecto están ACTIVOS (un tendero nuevo ve un aviso pequeño la primera
+ *   vez que entra a cada sección).
+ * - El tendero puede apagarlos desde la guía de uso (botón de ayuda); entonces
+ *   el aviso deja de salir solo, pero las guías siguen disponibles a mano.
  */
 
 const AUTO_HELP_KEY = 'help_auto_enabled';
