@@ -497,11 +497,8 @@ export default function DashboardPage() {
                     {formatCurrency(dailyProfit?.profit ?? 0)}
                   </p>
                   <p className="text-xs text-gray-600 mt-1">
-                    Vendiste {formatCurrency(dailyProfit?.revenue ?? 0)} · costo{" "}
-                    {formatCurrency(dailyProfit?.cost ?? 0)}
-                    {(dailyProfit?.revenue ?? 0) > 0
-                      ? ` · margen ${(dailyProfit?.margin ?? 0).toFixed(0)}%`
-                      : ""}
+                    Vendiste {formatCurrency(dailyProfit?.revenue ?? 0)} y te
+                    costó {formatCurrency(dailyProfit?.cost ?? 0)}
                   </p>
                 </div>
               </div>
@@ -524,102 +521,120 @@ export default function DashboardPage() {
         </Card>
       </Link>
 
-      {/* Métricas principales */}
+      {/* Métricas principales: cada tarjeta lleva a su detalle */}
       <div data-guide="dash-stats" className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 md:gap-4">
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Ventas de Hoy</CardTitle>
-            <DollarSign className="h-4 w-4 text-green-600" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">
-              {new Intl.NumberFormat("es-CO", {
-                style: "currency",
-                currency: "COP",
-                minimumFractionDigits: 0,
-              }).format(metrics.dailySales)}
-            </div>
-            <p className="text-xs text-gray-500 mt-1">
-              {metrics.dailySales > 0 ? "Ventas del día" : "Sin ventas hoy"}
-            </p>
-          </CardContent>
-        </Card>
+        <Link href="/dashboard/sales?filter=today" title="Ver las ventas de hoy" className="group block">
+          <Card className="h-full transition-all group-hover:border-brand group-hover:shadow-md">
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Ventas de Hoy</CardTitle>
+              <DollarSign className="h-4 w-4 text-green-600" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">
+                {new Intl.NumberFormat("es-CO", {
+                  style: "currency",
+                  currency: "COP",
+                  minimumFractionDigits: 0,
+                }).format(metrics.dailySales)}
+              </div>
+              <p className="text-xs text-gray-500 mt-1 flex items-center justify-between gap-2">
+                {metrics.dailySales > 0 ? "Ventas del día" : "Sin ventas hoy"}
+                <ArrowRight className="h-3.5 w-3.5 shrink-0 text-gray-400 transition-transform group-hover:translate-x-0.5 group-hover:text-brand" />
+              </p>
+            </CardContent>
+          </Card>
+        </Link>
 
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Órdenes Hoy</CardTitle>
-            <ShoppingCart className="h-4 w-4 text-brand" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{metrics.todayOrders}</div>
-            <p className="text-xs text-gray-500 mt-1">
-              {metrics.todayOrders > 0
-                ? "Órdenes completadas"
-                : "Sin órdenes hoy"}
-            </p>
-          </CardContent>
-        </Card>
+        <Link href="/dashboard/sales?filter=today" title="Ver las ventas de hoy" className="group block">
+          <Card className="h-full transition-all group-hover:border-brand group-hover:shadow-md">
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Órdenes Hoy</CardTitle>
+              <ShoppingCart className="h-4 w-4 text-brand" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">{metrics.todayOrders}</div>
+              <p className="text-xs text-gray-500 mt-1 flex items-center justify-between gap-2">
+                {metrics.todayOrders > 0
+                  ? "Órdenes completadas"
+                  : "Sin órdenes hoy"}
+                <ArrowRight className="h-3.5 w-3.5 shrink-0 text-gray-400 transition-transform group-hover:translate-x-0.5 group-hover:text-brand" />
+              </p>
+            </CardContent>
+          </Card>
+        </Link>
 
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">
-              Total Productos
-            </CardTitle>
-            <Package className="h-4 w-4 text-purple-600" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{metrics.totalProducts}</div>
-            <p className="text-xs text-gray-500 mt-1">
-              {metrics.lowStockProducts > 0
-                ? `${metrics.lowStockProducts} con cantidad baja`
-                : "Inventario saludable"}
-            </p>
-          </CardContent>
-        </Card>
+        <Link href="/dashboard/inventory" title="Ver el inventario" className="group block">
+          <Card className="h-full transition-all group-hover:border-brand group-hover:shadow-md">
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">
+                Total Productos
+              </CardTitle>
+              <Package className="h-4 w-4 text-purple-600" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">{metrics.totalProducts}</div>
+              <p className="text-xs text-gray-500 mt-1 flex items-center justify-between gap-2">
+                {metrics.lowStockProducts > 0
+                  ? `${metrics.lowStockProducts} con cantidad baja`
+                  : "Inventario saludable"}
+                <ArrowRight className="h-3.5 w-3.5 shrink-0 text-gray-400 transition-transform group-hover:translate-x-0.5 group-hover:text-brand" />
+              </p>
+            </CardContent>
+          </Card>
+        </Link>
 
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Cantidad Baja</CardTitle>
-            <AlertTriangle className="h-4 w-4 text-orange-600" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{metrics.lowStockProducts}</div>
-            <p className="text-xs text-gray-500 mt-1">Requieren reposición</p>
-          </CardContent>
-        </Card>
+        <Link href="/dashboard/inventory?lowStock=true" title="Ver los productos con cantidad baja" className="group block">
+          <Card className="h-full transition-all group-hover:border-brand group-hover:shadow-md">
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Cantidad Baja</CardTitle>
+              <AlertTriangle className="h-4 w-4 text-orange-600" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">{metrics.lowStockProducts}</div>
+              <p className="text-xs text-gray-500 mt-1 flex items-center justify-between gap-2">Requieren reposición  <ArrowRight className="h-3.5 w-3.5 shrink-0 text-gray-400 transition-transform group-hover:translate-x-0.5 group-hover:text-brand" />
+              </p>
+            </CardContent>
+          </Card>
+        </Link>
 
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">
-              Clientes Activos
-            </CardTitle>
-            <Users className="h-4 w-4 text-indigo-600" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{metrics.activeCustomers}</div>
-            <p className="text-xs text-gray-500 mt-1">Este mes</p>
-          </CardContent>
-        </Card>
+        <Link href="/dashboard/customers" title="Ver los clientes" className="group block">
+          <Card className="h-full transition-all group-hover:border-brand group-hover:shadow-md">
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">
+                Clientes Activos
+              </CardTitle>
+              <Users className="h-4 w-4 text-indigo-600" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">{metrics.activeCustomers}</div>
+              <p className="text-xs text-gray-500 mt-1 flex items-center justify-between gap-2">Este mes  <ArrowRight className="h-3.5 w-3.5 shrink-0 text-gray-400 transition-transform group-hover:translate-x-0.5 group-hover:text-brand" />
+              </p>
+            </CardContent>
+          </Card>
+        </Link>
 
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">
-              Crecimiento Mensual
-            </CardTitle>
-            <TrendingUp className="h-4 w-4 text-green-600" />
-          </CardHeader>
-          <CardContent>
-            <div
-              className={`text-2xl font-bold ${metrics.monthlyGrowth >= 0 ? "text-green-600" : "text-red-600"}`}
-            >
-              {metrics.monthlyGrowth >= 0 ? "+" : ""}
-              {metrics.monthlyGrowth}%
-            </div>
-            <p className="text-xs text-gray-500 mt-1">
-              Comparado al mes pasado
-            </p>
-          </CardContent>
-        </Card>
+        <Link href="/dashboard/sales?filter=month" title="Ver las ventas de este mes" className="group block">
+          <Card className="h-full transition-all group-hover:border-brand group-hover:shadow-md">
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">
+                Crecimiento Mensual
+              </CardTitle>
+              <TrendingUp className="h-4 w-4 text-green-600" />
+            </CardHeader>
+            <CardContent>
+              <div
+                className={`text-2xl font-bold ${metrics.monthlyGrowth >= 0 ? "text-green-600" : "text-red-600"}`}
+              >
+                {metrics.monthlyGrowth >= 0 ? "+" : ""}
+                {metrics.monthlyGrowth}%
+              </div>
+              <p className="text-xs text-gray-500 mt-1 flex items-center justify-between gap-2">
+                Comparado al mes pasado
+                <ArrowRight className="h-3.5 w-3.5 shrink-0 text-gray-400 transition-transform group-hover:translate-x-0.5 group-hover:text-brand" />
+              </p>
+            </CardContent>
+          </Card>
+        </Link>
       </div>
 
       {/* Fiado / Deudores — dolor #1 de la tienda de barrio */}

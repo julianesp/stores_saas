@@ -1,6 +1,7 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, Suspense } from "react";
+import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { useAuth, useUser } from "@clerk/nextjs";
 import { format } from "date-fns";
@@ -49,13 +50,20 @@ import { InvoiceModal } from "@/components/sales/invoice-modal";
 import Swal from "@/lib/sweetalert";
 import SwalOriginal from "sweetalert2";
 
-export default function SalesPage() {
+// Filtros de fecha que se pueden pedir por la URL (?filter=today), p. ej. desde el Panel de control
+const URL_FILTERS = ["all", "today", "week", "month"];
+
+function SalesContent() {
+  const searchParams = useSearchParams();
   const { getToken } = useAuth();
   const { user } = useUser();
 
   const [sales, setSales] = useState<SaleWithRelations[]>([]);
   const [loading, setLoading] = useState(true);
-  const [filter, setFilter] = useState("all"); // all, today, week, month
+  const [filter, setFilter] = useState(() => {
+    const fromUrl = searchParams.get("filter");
+    return fromUrl && URL_FILTERS.includes(fromUrl) ? fromUrl : "all";
+  }); // all, today, week, month
   const [selectedSales, setSelectedSales] = useState<Set<string>>(new Set());
   const [customStartDate, setCustomStartDate] = useState("");
   const [customEndDate, setCustomEndDate] = useState("");
@@ -1333,5 +1341,19 @@ export default function SalesPage() {
         </div>
       )}
     </div>
+  );
+}
+
+export default function SalesPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="flex items-center justify-center h-64">
+          <p className="text-gray-500">Cargando ventas...</p>
+        </div>
+      }
+    >
+      <SalesContent />
+    </Suspense>
   );
 }
