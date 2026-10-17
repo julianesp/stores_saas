@@ -1741,7 +1741,7 @@ export default function POSPage() {
                   >
                     <Scan className="h-6 w-6 text-white" />
                   </div>
-                  <div>
+                  <div className="flex-1 min-w-0">
                     <h4 className="font-bold text-lg text-gray-900">
                       {scanSuccess
                         ? "✓ Producto Agregado"
@@ -1753,49 +1753,47 @@ export default function POSPage() {
                         : "Selecciona tu método de escaneo"}
                     </p>
                   </div>
-                </div>
 
-                {/* Botones de selección de método de escaneo */}
-                {!showBarcodeInput && !showCameraScanner && (
-                  <div className="grid grid-cols-2 gap-3">
-                    <Button
-                      type="button"
-                      size="lg"
-                      onClick={() => {
-                        setShowBarcodeInput(true);
-                        // Auto-enfocar el input después de un pequeño delay
-                        setTimeout(() => barcodeRef.current?.focus(), 100);
-                      }}
-                      className="h-20 md:h-24 bg-brand hover:bg-brand-hover transition-colors flex-col gap-2"
-                      title="Escanear con lector USB"
-                    >
-                      <Scan className="h-6 w-6 md:h-8 md:w-8" />
-                      <div className="text-center">
-                        <div className="text-sm md:text-base font-semibold">
+                  {/* Botones de selección de método de escaneo (solo ícono, texto debajo) */}
+                  {!showBarcodeInput && !showCameraScanner && (
+                    <div className="flex items-start gap-3 shrink-0">
+                      <div className="flex flex-col items-center gap-1">
+                        <Button
+                          type="button"
+                          size="icon"
+                          onClick={() => {
+                            setShowBarcodeInput(true);
+                            // Auto-enfocar el input después de un pequeño delay
+                            setTimeout(() => barcodeRef.current?.focus(), 100);
+                          }}
+                          className="h-11 w-11 bg-brand hover:bg-brand-hover transition-colors"
+                          title="Escanear con lector USB"
+                          aria-label="Escanear con lector USB"
+                        >
+                          <Scan className="h-5 w-5" />
+                        </Button>
+                        <span className="text-[11px] font-medium text-gray-600 leading-none">
                           Lector USB
-                        </div>
-                        {/* <div className="text-xs opacity-90">Conectado</div> */}
+                        </span>
                       </div>
-                    </Button>
-                    <Button
-                      type="button"
-                      size="lg"
-                      onClick={() => setShowCameraScanner(true)}
-                      className="h-20 md:h-24 bg-brand hover:bg-brand-hover transition-colors flex-col gap-2"
-                      title="Escanear con cámara"
-                    >
-                      <Camera className="h-6 w-6 md:h-8 md:w-8" />
-                      <div className="text-center">
-                        <div className="text-sm md:text-base font-semibold">
+                      <div className="flex flex-col items-center gap-1">
+                        <Button
+                          type="button"
+                          size="icon"
+                          onClick={() => setShowCameraScanner(true)}
+                          className="h-11 w-11 bg-brand hover:bg-brand-hover transition-colors"
+                          title="Escanear con cámara"
+                          aria-label="Escanear con cámara"
+                        >
+                          <Camera className="h-5 w-5" />
+                        </Button>
+                        <span className="text-[11px] font-medium text-gray-600 leading-none">
                           Cámara
-                        </div>
-                        <div className="text-xs opacity-90">
-                          Del dispositivo
-                        </div>
+                        </span>
                       </div>
-                    </Button>
-                  </div>
-                )}
+                    </div>
+                  )}
+                </div>
 
                 {/* Formulario de escaneo con lector USB */}
                 {showBarcodeInput && (
