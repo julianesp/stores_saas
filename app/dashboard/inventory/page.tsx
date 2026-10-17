@@ -3,6 +3,8 @@
 import { useState, useEffect, useMemo, Suspense } from "react";
 import { useAuth } from "@clerk/nextjs";
 import { useSearchParams } from "next/navigation";
+import Image from "next/image";
+import Link from "next/link";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -21,6 +23,8 @@ import {
   Minus,
   CalendarClock,
   Tags,
+  ArrowUpDown,
+  X,
 } from "lucide-react";
 import { formatCurrency } from "@/lib/utils";
 import { getExpirationInfo, type ExpirationSeverity } from "@/lib/expiration-helpers";
@@ -35,6 +39,36 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+
+// Foto principal del producto. `images` puede llegar como arreglo o como JSON en texto.
+const getProductThumbnail = (product: Product): string | undefined => {
+  let images: unknown = product.images;
+  if (typeof images === "string") {
+    try {
+      images = JSON.parse(images);
+    } catch {
+      images = [];
+    }
+  }
+  if (Array.isArray(images) && images.length > 0) {
+    return images[product.main_image_index ?? 0] || images[0];
+  }
+  return product.image_url || undefined;
+};
+
+// Margen sobre el precio de venta: cuánto de cada peso vendido es ganancia.
+// Se usa para el color de la ganancia por unidad (rojo si es muy poca).
+// null cuando no hay costo o precio registrado (no se puede calcular).
+const getMarginPercent = (product: Product): number | null => {
+  if (!product.cost_price || !product.sale_price) return null;
+  return ((product.sale_price - product.cost_price) / product.sale_price) * 100;
+};
+
+const marginClass = (margin: number): string => {
+  if (margin < 10) return "text-red-600";
+  if (margin < 20) return "text-amber-600";
+  return "text-green-600";
+};
 
 function InventoryContent() {
   const { getToken } = useAuth();
@@ -83,33 +117,66 @@ function InventoryContent() {
     }
   };
 
-  const filteredProducts = products.filter((product) => {
+  // Búsqueda y categoría: base de las tarjetas de arriba. Los filtros de cantidad baja
+  // y por vencer solo afectan la tabla, para que las tarjetas no cambien al tocarlas.
+  const baseProducts = products.filter((product) => {
     const matchesSearch =
       product.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
       product.barcode?.toLowerCase().includes(searchTerm.toLowerCase());
     const matchesCategory =
       !filterCategory || product.category_id === filterCategory;
+    return matchesSearch && matchesCategory;
+  });
+
+  const filteredProducts = baseProducts.filter((product) => {
     const matchesLowStock =
       !showLowStockOnly || product.stock <= product.min_stock;
     const matchesExpiring =
       !showExpiringOnly || getExpirationInfo(product).needsAttention;
-    return matchesSearch && matchesCategory && matchesLowStock && matchesExpiring;
+    return matchesLowStock && matchesExpiring;
   });
+
+  // La columna de vencimiento solo se muestra si algún producto tiene fecha
+  const showExpirationColumn = filteredProducts.some(
+    (p) => getExpirationInfo(p).severity !== "none",
+  );
+
+  const hasActiveFilters =
+    !!searchTerm || !!filterCategory || showLowStockOnly || showExpiringOnly;
+
+  const clearFilters = () => {
+    setSearchTerm("");
+    setFilterCategory("");
+    setShowLowStockOnly(false);
+    setShowExpiringOnly(false);
+  };
+
+  // Tarjetas de arriba: al tocarlas filtran la tabla (y al tocarlas de nuevo, quitan el filtro)
+  const showAllProducts = () => {
+    setShowLowStockOnly(false);
+    setShowExpiringOnly(false);
+  };
+  const toggleLowStockFilter = () => {
+    setShowLowStockOnly((prev) => !prev);
+    setShowExpiringOnly(false);
+  };
+  const toggleExpiringFilter = () => {
+    setShowExpiringOnly((prev) => !prev);
+    setShowLowStockOnly(false);
+  };
 
   const repeatedNameGroups = useMemo(
     () => findRepeatedNameGroups(products),
-    [products]
+    [products],
   );
 
-  const lowStockProducts = filteredProducts.filter(
-    (p) => p.stock <= p.min_stock
+  const lowStockProducts = baseProducts.filter((p) => p.stock <= p.min_stock);
+  const expiringProducts = baseProducts.filter(
+    (p) => getExpirationInfo(p).needsAttention,
   );
-  const expiringProducts = filteredProducts.filter(
-    (p) => getExpirationInfo(p).needsAttention
-  );
-  const totalValue = filteredProducts.reduce(
+  const totalValue = baseProducts.reduce(
     (sum, p) => sum + p.stock * p.cost_price,
-    0
+    0,
   );
 
   // Función para abrir el modal de edición
@@ -205,18 +272,28 @@ function InventoryContent() {
 
       {/* Estadísticas */}
       <div data-guide="inventory-stats" className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6">
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">
-              Total Productos
-            </CardTitle>
-            <Package className="h-4 w-4 text-gray-500" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{filteredProducts.length}</div>
-            <p className="text-xs text-gray-500">productos en inventario</p>
-          </CardContent>
-        </Card>
+        <button
+          type="button"
+          onClick={showAllProducts}
+          aria-pressed={!showLowStockOnly && !showExpiringOnly}
+          title="Ver todos los productos"
+          className="text-left rounded-lg cursor-pointer transition-shadow hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand"
+        >
+          <Card
+            className={`h-full ${!showLowStockOnly && !showExpiringOnly ? "border-brand ring-1 ring-brand" : ""}`}
+          >
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">
+                Total Productos
+              </CardTitle>
+              <Package className="h-4 w-4 text-gray-500" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">{baseProducts.length}</div>
+              <p className="text-xs text-gray-500">productos en inventario</p>
+            </CardContent>
+          </Card>
+        </button>
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
@@ -231,31 +308,69 @@ function InventoryContent() {
           </CardContent>
         </Card>
 
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Cantidad Baja</CardTitle>
-            <AlertTriangle className="h-4 w-4 text-orange-500" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-orange-600">
-              {lowStockProducts.length}
-            </div>
-            <p className="text-xs text-gray-500">productos con cantidad baja</p>
-          </CardContent>
-        </Card>
+        <button
+          type="button"
+          onClick={toggleLowStockFilter}
+          aria-pressed={showLowStockOnly}
+          title={
+            showLowStockOnly
+              ? "Quitar filtro"
+              : "Ver solo productos con cantidad baja"
+          }
+          className="text-left rounded-lg cursor-pointer transition-shadow hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange-500"
+        >
+          <Card
+            className={`h-full ${showLowStockOnly ? "border-orange-500 ring-1 ring-orange-500 bg-orange-50" : ""}`}
+          >
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">
+                Cantidad Baja
+              </CardTitle>
+              <AlertTriangle className="h-4 w-4 text-orange-500" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold text-orange-600">
+                {lowStockProducts.length}
+              </div>
+              <p className="text-xs text-gray-500">
+                {showLowStockOnly
+                  ? "mostrando solo estos · toca para quitar"
+                  : "toca para verlos"}
+              </p>
+            </CardContent>
+          </Card>
+        </button>
 
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Por Vencer</CardTitle>
-            <CalendarClock className="h-4 w-4 text-yellow-600" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-yellow-600">
-              {expiringProducts.length}
-            </div>
-            <p className="text-xs text-gray-500">productos próximos a vencer</p>
-          </CardContent>
-        </Card>
+        <button
+          type="button"
+          onClick={toggleExpiringFilter}
+          aria-pressed={showExpiringOnly}
+          title={
+            showExpiringOnly
+              ? "Quitar filtro"
+              : "Ver solo productos próximos a vencer"
+          }
+          className="text-left rounded-lg cursor-pointer transition-shadow hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-yellow-500"
+        >
+          <Card
+            className={`h-full ${showExpiringOnly ? "border-yellow-500 ring-1 ring-yellow-500 bg-yellow-50" : ""}`}
+          >
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Por Vencer</CardTitle>
+              <CalendarClock className="h-4 w-4 text-yellow-600" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold text-yellow-600">
+                {expiringProducts.length}
+              </div>
+              <p className="text-xs text-gray-500">
+                {showExpiringOnly
+                  ? "mostrando solo estos · toca para quitar"
+                  : "toca para verlos"}
+              </p>
+            </CardContent>
+          </Card>
+        </button>
       </div>
 
       {/* Filtros */}
@@ -335,32 +450,56 @@ function InventoryContent() {
             <div className="text-center py-12">
               <Package className="mx-auto h-12 w-12 text-gray-400" />
               <p className="mt-4 text-gray-500">
-                No hay productos en el inventario
+                {hasActiveFilters
+                  ? "Ningún producto coincide con los filtros"
+                  : "No hay productos en el inventario"}
               </p>
-              <Button
-                className="mt-4"
-                onClick={() =>
-                  (window.location.href = "/dashboard/products/new")
-                }
-              >
-                Agregar Producto
-              </Button>
+              {hasActiveFilters ? (
+                <Button
+                  className="mt-4"
+                  variant="outline"
+                  onClick={clearFilters}
+                >
+                  Quitar filtros
+                </Button>
+              ) : (
+                <Button
+                  className="mt-4"
+                  onClick={() =>
+                    (window.location.href = "/dashboard/products/new")
+                  }
+                >
+                  Agregar Producto
+                </Button>
+              )}
             </div>
           ) : (
+            // Columnas compactas para que la tabla quepa sin desplazamiento horizontal en
+            // pantallas de laptop: código va bajo el nombre, y mínimo y estado van con el stock.
+            // overflow-x-auto queda solo como respaldo para celulares.
             <div className="overflow-x-auto">
-              <table className="w-full">
+              <table className="w-full text-sm">
                 <thead>
-                  <tr className="border-b">
-                    <th className="text-left p-4 font-medium">Producto</th>
-                    <th className="text-left p-4 font-medium">Código</th>
-                    <th className="text-right p-4 font-medium">Disponible</th>
-                    <th className="text-right p-4 font-medium">Mín.</th>
-                    <th className="text-right p-4 font-medium">Costo</th>
-                    <th className="text-right p-4 font-medium">Venta</th>
-                    <th className="text-right p-4 font-medium">Valor Total</th>
-                    <th className="text-center p-4 font-medium">Estado</th>
-                    <th className="text-center p-4 font-medium">Vencimiento</th>
-                    <th className="text-center p-4 font-medium">Acciones</th>
+                  <tr className="border-b text-gray-600">
+                    <th className="text-left px-3 py-3 font-medium">
+                      Producto
+                    </th>
+                    <th className="text-right px-3 py-3 font-medium">
+                      Disponible
+                    </th>
+                    <th className="text-right px-3 py-3 font-medium">Costo</th>
+                    <th className="text-right px-3 py-3 font-medium">Venta</th>
+                    <th className="text-right px-3 py-3 font-medium whitespace-nowrap">
+                      Valor total
+                    </th>
+                    {showExpirationColumn && (
+                      <th className="text-center px-3 py-3 font-medium">
+                        Vencimiento
+                      </th>
+                    )}
+                    <th className="text-center px-3 py-3 font-medium">
+                      Acciones
+                    </th>
                   </tr>
                 </thead>
                 <tbody>
@@ -368,90 +507,157 @@ function InventoryContent() {
                     const isLowStock = product.stock <= product.min_stock;
                     const totalValue = product.stock * product.cost_price;
                     const expInfo = getExpirationInfo(product);
+                    const thumbnail = getProductThumbnail(product);
+                    const margin = getMarginPercent(product);
+                    const categoryName = categories.find(
+                      (c) => c.id === product.category_id,
+                    )?.name;
 
                     return (
                       <tr
                         key={product.id}
-                        className="border-b hover:bg-gray-50"
+                        className={`border-b ${
+                          isLowStock
+                            ? "bg-orange-50 hover:bg-orange-100"
+                            : "hover:bg-gray-50"
+                        }`}
                       >
-                        <td className="p-4">
-                          <div>
-                            <div className="font-medium">{product.name}</div>
-                            {product.category_id && (
-                              <div className="text-sm text-gray-500">
-                                {
-                                  categories.find(
-                                    (c) => c.id === product.category_id
-                                  )?.name
-                                }
+                        <td className="px-3 py-3">
+                          <div className="flex items-center gap-3">
+                            <div className="relative h-10 w-10 shrink-0 overflow-hidden rounded border bg-gray-100">
+                              {thumbnail ? (
+                                <Image
+                                  src={thumbnail}
+                                  alt={product.name}
+                                  fill
+                                  sizes="40px"
+                                  className="object-contain p-0.5"
+                                  loading="lazy"
+                                />
+                              ) : (
+                                <div className="flex h-full w-full items-center justify-center">
+                                  <Package className="h-5 w-5 text-gray-400" />
+                                </div>
+                              )}
+                            </div>
+                            <div className="min-w-0">
+                              <div className="font-medium text-base leading-snug">
+                                {product.name}
                               </div>
-                            )}
+                              {(categoryName || product.barcode) && (
+                                <div className="text-xs text-gray-500">
+                                  {categoryName}
+                                  {categoryName && product.barcode && " · "}
+                                  {product.barcode && (
+                                    <span className="font-mono">
+                                      {product.barcode}
+                                    </span>
+                                  )}
+                                </div>
+                              )}
+                            </div>
                           </div>
                         </td>
-                        <td className="p-4 text-black text-sm">
-                          {product.barcode || "-"}
+                        <td className="px-3 py-3 text-right whitespace-nowrap">
+                          <div
+                            className={`text-base font-semibold ${isLowStock ? "text-orange-700" : ""}`}
+                          >
+                            {product.stock}
+                          </div>
+                          <div
+                            className={`text-xs ${isLowStock ? "text-orange-700 font-medium" : "text-gray-500"}`}
+                          >
+                            {isLowStock && (
+                              <AlertTriangle className="mr-0.5 inline h-3 w-3 -translate-y-px" />
+                            )}
+                            {isLowStock ? "Bajo · " : ""}mín.{" "}
+                            {product.min_stock}
+                          </div>
                         </td>
-                        <td className="p-4 text-right font-medium">
-                          {product.stock}
-                        </td>
-                        <td className="p-4 text-right text-black">
-                          {product.min_stock}
-                        </td>
-                        <td className="p-4 text-right">
+                        <td className="px-3 py-3 text-right whitespace-nowrap">
                           {formatCurrency(product.cost_price)}
                         </td>
-                        <td className="p-4 text-right">
-                          {formatCurrency(product.sale_price)}
+                        <td className="px-3 py-3 text-right whitespace-nowrap">
+                          <div>{formatCurrency(product.sale_price)}</div>
+                          {margin !== null && (
+                            <div
+                              className={`text-xs font-medium ${marginClass(margin)}`}
+                              title={`Por cada unidad vendida a ${formatCurrency(product.sale_price)} que te costó ${formatCurrency(product.cost_price)}`}
+                            >
+                              {product.sale_price >= product.cost_price
+                                ? `Ganas ${formatCurrency(product.sale_price - product.cost_price)} c/u`
+                                : `Pierdes ${formatCurrency(product.cost_price - product.sale_price)} c/u`}
+                            </div>
+                          )}
                         </td>
-                        <td className="p-4 text-right font-medium">
+                        <td className="px-3 py-3 text-right font-medium whitespace-nowrap">
                           {formatCurrency(totalValue)}
                         </td>
-                        <td className="p-4 text-center">
-                          {isLowStock ? (
-                            <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium bg-orange-100 text-orange-800">
-                              <AlertTriangle className="h-3 w-3 text-black" />
-                              Bajo
-                            </span>
-                          ) : (
-                            <span className="inline-flex px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800">
-                              Normal
-                            </span>
-                          )}
-                        </td>
-                        <td className="p-4 text-center">
-                          {expInfo.severity === "none" ? (
-                            <span className="text-xs text-gray-400">—</span>
-                          ) : expInfo.severity === "ok" ? (
-                            <span className="text-xs text-gray-500">
-                              {expInfo.label}
-                            </span>
-                          ) : (
-                            <span
-                              className={`inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium ${expirationBadgeClass(
-                                expInfo.severity
-                              )}`}
+                        {showExpirationColumn && (
+                          <td className="px-3 py-3 text-center">
+                            {expInfo.severity === "none" ? (
+                              <span className="text-xs text-gray-400">—</span>
+                            ) : expInfo.severity === "ok" ? (
+                              <span className="text-xs text-gray-500">
+                                {expInfo.label}
+                              </span>
+                            ) : (
+                              <span
+                                className={`inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium ${expirationBadgeClass(
+                                  expInfo.severity,
+                                )}`}
+                              >
+                                <CalendarClock className="h-3 w-3" />
+                                {expInfo.label}
+                              </span>
+                            )}
+                          </td>
+                        )}
+                        <td className="px-3 py-3 text-center">
+                          <div className="flex items-center justify-center gap-2">
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => handleEditStock(product)}
+                              title="Ajustar stock"
+                              className="gap-1.5 whitespace-nowrap"
                             >
-                              <CalendarClock className="h-3 w-3" />
-                              {expInfo.label}
-                            </span>
-                          )}
-                        </td>
-                        <td className="p-4 text-center">
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            onClick={() => handleEditStock(product)}
-                            className="gap-2"
-                          >
-                            <Edit className="h-3 w-3 text-black" />
-                            Ajustar Stock
-                          </Button>
+                              <ArrowUpDown className="h-3 w-3" />
+                              Ajustar
+                            </Button>
+                            <Link
+                              href={`/dashboard/products/${product.id}`}
+                              title="Editar producto (precio, categoría, mínimo...)"
+                              aria-label={`Editar ${product.name}`}
+                              className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-md border border-gray-300 text-gray-700 hover:border-brand hover:text-brand"
+                            >
+                              <Edit className="h-3.5 w-3.5" />
+                            </Link>
+                          </div>
                         </td>
                       </tr>
                     );
                   })}
                 </tbody>
               </table>
+            </div>
+          )}
+          {products.length > 0 && (
+            <div className="mt-4 flex flex-wrap items-center justify-between gap-2 text-sm text-gray-500">
+              <span>
+                Mostrando {filteredProducts.length} de {products.length}{" "}
+                {products.length === 1 ? "producto" : "productos"}
+              </span>
+              {hasActiveFilters && (
+                <button
+                  type="button"
+                  onClick={clearFilters}
+                  className="inline-flex items-center gap-1 font-medium text-brand hover:underline cursor-pointer"
+                >
+                  <X className="h-3.5 w-3.5" />
+                  Quitar filtros
+                </button>
+              )}
             </div>
           )}
         </CardContent>
