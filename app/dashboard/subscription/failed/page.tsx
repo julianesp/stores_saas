@@ -128,7 +128,7 @@ function FailedContent() {
               className="w-full"
               size="lg"
             >
-              Volver al Dashboard
+              Volver al panel de control
             </Button>
           </div>
 

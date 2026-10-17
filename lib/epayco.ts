@@ -47,7 +47,7 @@ export const SUBSCRIPTION_PLANS = [
       'Detección de patrones de compra',
       'Optimización automática de inventario',
       'Alertas inteligentes',
-      'Dashboard con insights IA',
+      'Panel de control con insights IA',
     ],
   },
   {

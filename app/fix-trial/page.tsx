@@ -164,7 +164,7 @@ export default function FixTrialPage() {
                     ✅ Ahora tienes <strong>{result.daysRemaining} días</strong> de acceso completo
                   </p>
                   <p className="text-xs text-green-700 mt-2">
-                    Redirigiendo al dashboard...
+                    Redirigiendo al panel de control...
                   </p>
                 </div>
               )}
@@ -175,7 +175,7 @@ export default function FixTrialPage() {
                   variant="outline"
                   className="w-full"
                 >
-                  Volver al Dashboard
+                  Volver al panel de control
                 </Button>
               )}
             </div>

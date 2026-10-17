@@ -7,7 +7,7 @@ import { Permission, PermissionGroup, RoleDefinition, TeamMember, UserProfile } 
 export const PERMISSION_GROUPS: PermissionGroup[] = [
   {
     id: 'dashboard',
-    name: 'Dashboard y Reportes',
+    name: 'Panel de control y reportes',
     description: 'Acceso al panel principal y reportes de ventas',
     permissions: ['view_dashboard', 'view_reports', 'export_reports'],
   },
@@ -386,7 +386,7 @@ export function validateCustomPermissions(permissions: Permission[]): {
  */
 export const PERMISSION_LABELS: Record<Permission, string> = {
   // Dashboard
-  view_dashboard: 'Ver Dashboard',
+  view_dashboard: 'Ver panel de control',
   view_reports: 'Ver Reportes',
   export_reports: 'Exportar Reportes',
   // POS

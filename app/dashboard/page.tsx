@@ -226,7 +226,7 @@ export default function DashboardPage() {
             <Crown className="h-6 w-6 md:h-8 md:w-8 text-purple-600" />
             <div>
               <h1 className="text-2xl md:text-3xl font-bold tracking-tight">
-                Dashboard del SaaS
+                Panel de control del SaaS
               </h1>
               <p className="text-gray-500 text-sm md:text-base">
                 Vista general del negocio multi-tenant

@@ -207,7 +207,7 @@ function SuccessContent() {
               size="lg"
               onClick={() => router.push('/dashboard')}
             >
-              Ir al Dashboard
+              Ir al panel de control
             </Button>
 
             {autoRedirect && (

@@ -112,7 +112,7 @@ export default function StoreConfigPage() {
           html: message.html,
           showCancelButton: true,
           confirmButtonText: "Ver Planes de Suscripción",
-          cancelButtonText: "Volver al Dashboard",
+          cancelButtonText: "Volver al panel de control",
           confirmButtonColor: "#8B5CF6",
           cancelButtonColor: "#6B7280",
           allowOutsideClick: false,

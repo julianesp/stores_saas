@@ -485,7 +485,7 @@ export default function SuperAdminPage() {
       <div className="flex items-center gap-3">
         <Shield className="h-8 w-8 text-brand" />
         <div>
-          <h1 className="text-3xl font-bold">Dashboard del SaaS</h1>
+          <h1 className="text-3xl font-bold">Panel de control del SaaS</h1>
           <p className="text-black">Vista general del negocio multi-tenant</p>
         </div>
       </div>

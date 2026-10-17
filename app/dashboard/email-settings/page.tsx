@@ -180,7 +180,7 @@ export default function EmailSettingsPage() {
                   size="lg"
                   className="w-full sm:w-auto"
                 >
-                  Volver al Dashboard
+                  Volver al panel de control
                 </Button>
               </div>
             </div>

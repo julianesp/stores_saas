@@ -225,7 +225,7 @@ export function dailyReportTemplate(data: DailyReportData): string {
       </p>
 
       <div style="text-align: center;">
-        <a href="https://posib.dev/dashboard/analytics" class="button">Ver Dashboard</a>
+        <a href="https://posib.dev/dashboard/analytics" class="button">Ver panel de control</a>
       </div>
     </div>
   `;

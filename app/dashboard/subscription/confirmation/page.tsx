@@ -501,7 +501,7 @@ function ConfirmationContent() {
 
                   <Link href="/dashboard">
                     <Button size="lg" className="w-full bg-green-600 hover:bg-green-700">
-                      Ir al Dashboard
+                      Ir al panel de control
                     </Button>
                   </Link>
 

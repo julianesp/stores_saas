@@ -159,7 +159,7 @@ export default function AcceptInvitationContent() {
               onClick={() => router.push("/dashboard")}
               className="w-full"
             >
-              Volver al Dashboard
+              Volver al panel de control
             </Button>
           </CardContent>
         </Card>
@@ -177,7 +177,7 @@ export default function AcceptInvitationContent() {
               <CardTitle className="text-green-900">Invitación Aceptada</CardTitle>
             </div>
             <CardDescription className="text-green-700">
-              Te has unido exitosamente al equipo. Redirigiendo al dashboard...
+              Te has unido exitosamente al equipo. Redirigiendo al panel de control...
             </CardDescription>
           </CardHeader>
         </Card>

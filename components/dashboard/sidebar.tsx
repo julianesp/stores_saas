@@ -49,7 +49,7 @@ import { getHiddenModules, getBusinessType } from "@/lib/business-types";
 // Menú para Super Administradores (gestión del SaaS)
 const superAdminMenuItems = [
   {
-    title: "Dashboard General",
+    title: "Panel de control general",
     href: "/dashboard",
     icon: LayoutDashboard,
   },
@@ -109,7 +109,7 @@ const superAdminMenuItems = [
 const defaultStoreMenuItems = [
   {
     id: "dashboard",
-    title: "Dashboard",
+    title: "Panel de control",
     href: "/dashboard",
     icon: LayoutDashboard,
     roles: ["admin", "cajero"],
