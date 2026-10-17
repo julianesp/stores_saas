@@ -16,6 +16,8 @@ import {
   Package,
   Scan,
   Camera,
+  ChevronLeft,
+  ChevronRight,
 } from "lucide-react";
 // import { HelpCircle } from 'lucide-react'; // COMENTADO: Tour deshabilitado
 import { Button } from "@/components/ui/button";
@@ -78,6 +80,37 @@ interface CartItem {
   effectivePrice?: number; // Precio efectivo (por unidad o paquete)
 }
 
+type PosPaymentMethod =
+  "efectivo" | "nequi" | "tarjeta" | "transferencia" | "credito";
+
+// Venta en espera: cada pestaña del POS guarda su propio carrito, cliente y pago,
+// para atender a varios clientes a la vez sin perder lo que ya se marcó.
+interface HeldSale {
+  id: string;
+  number: number;
+  cart: CartItem[];
+  customer: Customer | null;
+  paymentMethod: PosPaymentMethod;
+  creditDays: number;
+  canRedeem: boolean;
+  applyDiscount: boolean;
+  discountAmount: number;
+}
+
+const MAX_HELD_SALES = 8;
+
+const newHeldSale = (number: number, id?: string): HeldSale => ({
+  id: id ?? `venta-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+  number,
+  cart: [],
+  customer: null,
+  paymentMethod: "efectivo",
+  creditDays: 7,
+  canRedeem: false,
+  applyDiscount: false,
+  discountAmount: 0,
+});
+
 export default function POSPage() {
   const { getToken } = useAuth();
 
@@ -88,9 +121,8 @@ export default function POSPage() {
   const [searchTerm, setSearchTerm] = useState("");
   const [barcodeInput, setBarcodeInput] = useState("");
   const [activeOffers, setActiveOffers] = useState<Offer[]>([]);
-  const [paymentMethod, setPaymentMethod] = useState<
-    "efectivo" | "nequi" | "tarjeta" | "transferencia" | "credito"
-  >("efectivo");
+  const [paymentMethod, setPaymentMethod] =
+    useState<PosPaymentMethod>("efectivo");
   const [creditDays, setCreditDays] = useState<number>(7); // Plazo por defecto: 7 días
   const [processing, setProcessing] = useState(false);
   // Modal de cobro con QR (Nequi/Daviplata/transferencia)
@@ -150,6 +182,244 @@ export default function POSPage() {
     new Set(),
   );
   const cartIconRef = useRef<HTMLDivElement>(null);
+
+  // Ventas en espera (pestañas). La pestaña activa vive en los estados de arriba
+  // (cart, selectedCustomer, paymentMethod...); heldSales guarda las demás.
+  const [heldSales, setHeldSales] = useState<HeldSale[]>(() => [
+    newHeldSale(1, "venta-1"),
+  ]);
+  const [activeSaleId, setActiveSaleId] = useState("venta-1");
+  const [heldSalesRestored, setHeldSalesRestored] = useState(false);
+  const heldSalesRef = useRef(heldSales);
+  const activeSaleIdRef = useRef(activeSaleId);
+  useEffect(() => {
+    heldSalesRef.current = heldSales;
+    activeSaleIdRef.current = activeSaleId;
+  }, [heldSales, activeSaleId]);
+  // Stock más reciente por producto. El carrito guarda una copia del producto y,
+  // con varias ventas abiertas, otra pestaña pudo vender del mismo producto.
+  const latestStockRef = useRef<Map<string, number>>(new Map());
+
+  const heldSalesStorageKey = () =>
+    `pos_held_sales_${user?.id ?? "anon"}_${getSelectedTenantId() ?? "default"}`;
+
+  const snapshotActiveSale = () => ({
+    cart,
+    customer: selectedCustomer,
+    paymentMethod,
+    creditDays,
+    canRedeem,
+    applyDiscount,
+    discountAmount,
+  });
+
+  const withFreshStock = (items: CartItem[]) =>
+    items.map((item) => {
+      const stock = latestStockRef.current.get(item.product.id);
+      return stock === undefined
+        ? item
+        : { ...item, product: { ...item.product, stock } };
+    });
+
+  const loadHeldSale = (sale: HeldSale) => {
+    setCart(withFreshStock(sale.cart));
+    setSelectedCustomer(sale.customer);
+    setPaymentMethod(sale.paymentMethod);
+    setCreditDays(sale.creditDays);
+    setCanRedeem(sale.canRedeem);
+    setApplyDiscount(sale.applyDiscount);
+    setDiscountAmount(sale.discountAmount);
+    setActiveSaleId(sale.id);
+    setShowCustomerSearch(false);
+    setCustomerSearchTerm("");
+    setTimeout(() => barcodeRef.current?.focus(), 50);
+  };
+
+  const switchHeldSale = (id: string) => {
+    if (id === activeSaleId || processing) return;
+    const target = heldSales.find((s) => s.id === id);
+    if (!target) return;
+    setHeldSales((prev) =>
+      prev.map((s) =>
+        s.id === activeSaleId ? { ...s, ...snapshotActiveSale() } : s,
+      ),
+    );
+    loadHeldSale(target);
+  };
+
+  const addHeldSale = () => {
+    if (processing) return;
+    if (heldSales.length >= MAX_HELD_SALES) {
+      Swal.warning(
+        `Puedes tener hasta ${MAX_HELD_SALES} ventas abiertas a la vez`,
+        "Demasiadas ventas abiertas",
+      );
+      return;
+    }
+    const fresh = newHeldSale(Math.max(...heldSales.map((s) => s.number)) + 1);
+    setHeldSales((prev) => [
+      ...prev.map((s) =>
+        s.id === activeSaleId ? { ...s, ...snapshotActiveSale() } : s,
+      ),
+      fresh,
+    ]);
+    loadHeldSale(fresh);
+  };
+
+  // Quita una pestaña. Si era la activa, pasa a la vecina; si era la última, deja una vacía.
+  // Usa refs porque se llama también al terminar una venta (después de un await).
+  const removeHeldSale = (id: string) => {
+    const current = heldSalesRef.current;
+    let remaining = current.filter((s) => s.id !== id);
+    // Si queda una sola venta, la numeración vuelve a empezar ("Cliente 1")
+    if (remaining.length === 1) remaining = [{ ...remaining[0], number: 1 }];
+    if (remaining.length === 0) {
+      const fresh = newHeldSale(1);
+      setHeldSales([fresh]);
+      loadHeldSale(fresh);
+      return;
+    }
+    setHeldSales(remaining);
+    if (id === activeSaleIdRef.current) {
+      const index = current.findIndex((s) => s.id === id);
+      loadHeldSale(remaining[Math.min(index, remaining.length - 1)]);
+    }
+  };
+
+  const closeHeldSale = async (id: string) => {
+    if (processing) return;
+    const sale = heldSales.find((s) => s.id === id);
+    if (!sale) return;
+    const isActive = id === activeSaleId;
+    const items = isActive ? cart : sale.cart;
+    const customer = isActive ? selectedCustomer : sale.customer;
+    if (items.length > 0) {
+      const confirmed = await Swal.confirm(
+        items.length === 1
+          ? "Se descartará el producto de esta venta."
+          : `Se descartarán los ${items.length} productos de esta venta.`,
+        `¿Cerrar la venta de ${customer?.name ?? `Cliente ${sale.number}`}?`,
+        { confirmText: "Sí, cerrar" },
+      );
+      if (!confirmed) return;
+    }
+    removeHeldSale(id);
+  };
+
+  // Tira de pestañas: se desplaza de lado sin barra visible, con flechas laterales
+  const tabsScrollRef = useRef<HTMLDivElement>(null);
+  const [tabsScroll, setTabsScroll] = useState({
+    overflow: false,
+    left: false,
+    right: false,
+  });
+
+  const updateTabsScroll = useCallback(() => {
+    const el = tabsScrollRef.current;
+    if (!el) return;
+    const next = {
+      overflow: el.scrollWidth > el.clientWidth + 1,
+      left: el.scrollLeft > 1,
+      right: el.scrollLeft + el.clientWidth < el.scrollWidth - 1,
+    };
+    setTabsScroll((prev) =>
+      prev.overflow === next.overflow &&
+      prev.left === next.left &&
+      prev.right === next.right
+        ? prev
+        : next,
+    );
+  }, []);
+
+  const scrollTabs = (direction: -1 | 1) => {
+    const el = tabsScrollRef.current;
+    if (!el) return;
+    el.scrollBy({ left: direction * el.clientWidth * 0.7, behavior: "smooth" });
+  };
+
+  useEffect(() => {
+    const el = tabsScrollRef.current;
+    if (!el) return;
+    const observer = new ResizeObserver(updateTabsScroll);
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, [updateTabsScroll]);
+
+  // Al cambiar o abrir una venta, dejar su pestaña a la vista
+  useEffect(() => {
+    const frame = requestAnimationFrame(() => {
+      tabsScrollRef.current
+        ?.querySelector(`[data-sale-id="${activeSaleId}"]`)
+        ?.scrollIntoView({
+          block: "nearest",
+          inline: "nearest",
+          behavior: "smooth",
+        });
+      updateTabsScroll();
+    });
+    return () => cancelAnimationFrame(frame);
+  }, [activeSaleId, heldSales.length, updateTabsScroll]);
+
+  // Restaurar las ventas abiertas guardadas en este navegador (por cuenta y tienda)
+  useEffect(() => {
+    if (!user?.id) return;
+    try {
+      const raw = localStorage.getItem(heldSalesStorageKey());
+      if (raw) {
+        const data = JSON.parse(raw) as {
+          activeId?: string;
+          sales?: HeldSale[];
+        };
+        if (Array.isArray(data.sales) && data.sales.length > 0) {
+          // Restaurar desde localStorage solo puede hacerse tras montar (SSR)
+          // eslint-disable-next-line react-hooks/set-state-in-effect
+          setHeldSales(data.sales);
+          loadHeldSale(
+            data.sales.find((s) => s.id === data.activeId) ?? data.sales[0],
+          );
+        }
+      }
+    } catch {
+      // Sin acceso a localStorage: se arranca con una venta vacía
+    }
+    setHeldSalesRestored(true);
+    // Solo al cargar la cuenta
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user?.id]);
+
+  // Guardar las ventas abiertas para no perderlas si se recarga la página
+  useEffect(() => {
+    if (!heldSalesRestored) return;
+    try {
+      const sales = heldSales.map((s) =>
+        s.id === activeSaleId ? { ...s, ...snapshotActiveSale() } : s,
+      );
+      const hasContent =
+        sales.length > 1 || sales.some((s) => s.cart.length > 0 || s.customer);
+      if (hasContent) {
+        localStorage.setItem(
+          heldSalesStorageKey(),
+          JSON.stringify({ activeId: activeSaleId, sales }),
+        );
+      } else {
+        localStorage.removeItem(heldSalesStorageKey());
+      }
+    } catch {
+      // Sin acceso a localStorage: las ventas siguen en memoria
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [
+    heldSalesRestored,
+    heldSales,
+    activeSaleId,
+    cart,
+    selectedCustomer,
+    paymentMethod,
+    creditDays,
+    canRedeem,
+    applyDiscount,
+    discountAmount,
+  ]);
 
   const handleCreateCustomer = async () => {
     // Validar nombre
@@ -276,6 +546,8 @@ export default function POSPage() {
       // Guardar en caché para poder consultar productos sin conexión.
       cacheCollection("products", data);
 
+      latestStockRef.current = new Map(data.map((p) => [p.id, p.stock]));
+
       // Verificar si hay productos en el sistema (antes de filtrar por stock)
       setHasAnyProducts(data.length > 0);
 
@@ -293,6 +565,7 @@ export default function POSPage() {
           ...p,
           sell_by_unit: !!p.sell_by_unit,
         }));
+        latestStockRef.current = new Map(data.map((p) => [p.id, p.stock]));
         setHasAnyProducts(data.length > 0);
         const productsInStock = data.filter((p) => p.stock > 0);
         productsInStock.sort((a, b) => a.name.localeCompare(b.name));
@@ -947,6 +1220,7 @@ export default function POSPage() {
       setCanRedeem(false);
       setApplyDiscount(false);
       setDiscountAmount(0);
+      removeHeldSale(activeSaleIdRef.current); // La venta terminó: cerrar su pestaña
       fetchProducts(); // Recargar desde caché (ya con stock descontado)
       barcodeRef.current?.focus();
     } catch (error) {
@@ -1171,6 +1445,10 @@ export default function POSPage() {
       // Actualizar el stock de los productos
       for (const cartItem of cart) {
         const unitsPerPackage = cartItem.product.units_per_package || 1;
+        // Partir del stock más reciente: otra venta en espera pudo vender de este producto
+        const currentStock =
+          latestStockRef.current.get(cartItem.product.id) ??
+          cartItem.product.stock;
 
         // Calcular cuánto descontar del stock según si es venta por unidades o paquetes
         // IMPORTANTE: El stock SIEMPRE está en paquetes para TODOS los productos
@@ -1180,11 +1458,11 @@ export default function POSPage() {
           // Venta por unidades: convertir las unidades vendidas a paquetes
           const unitsSold = cartItem.quantity;
           const packagesSold = unitsSold / unitsPerPackage;
-          newStock = cartItem.product.stock - packagesSold;
+          newStock = currentStock - packagesSold;
 
           console.log("🔄 Venta por unidades:", {
             producto: cartItem.product.name,
-            stockAnterior: cartItem.product.stock,
+            stockAnterior: currentStock,
             unidadesVendidas: unitsSold,
             unidadesPorPaquete: unitsPerPackage,
             paquetesDescontados: packagesSold,
@@ -1193,11 +1471,11 @@ export default function POSPage() {
           });
         } else {
           // Venta por paquetes: descontar directamente
-          newStock = cartItem.product.stock - cartItem.quantity;
+          newStock = currentStock - cartItem.quantity;
 
           console.log("📦 Venta por paquetes:", {
             producto: cartItem.product.name,
-            stockAnterior: cartItem.product.stock,
+            stockAnterior: currentStock,
             paquetesVendidos: cartItem.quantity,
             nuevoStock: newStock,
           });
@@ -1210,6 +1488,7 @@ export default function POSPage() {
           },
           getToken,
         );
+        latestStockRef.current.set(cartItem.product.id, newStock);
 
         // TODO: Implementar API endpoint para inventory_movements
         // Por ahora la cantidad se actualiza pero no se registra el movimiento de inventario
@@ -1464,6 +1743,7 @@ export default function POSPage() {
       setCanRedeem(false);
       setApplyDiscount(false);
       setDiscountAmount(0);
+      removeHeldSale(activeSaleIdRef.current); // La venta terminó: cerrar su pestaña
       fetchProducts(); // Actualizar inventario
       barcodeRef.current?.focus();
     } catch (error) {
@@ -2054,8 +2334,119 @@ export default function POSPage() {
 
         {/* Panel derecho - Carrito */}
         <div className="space-y-4 order-1 lg:order-2">
-          <Card data-guide="pos-cart" className="lg:sticky lg:top-0">
+          <Card data-guide="pos-cart" className="relative lg:sticky lg:top-0">
+            {/* Nueva venta: en la esquina de la tarjeta para dejar la fila a las pestañas */}
+            <button
+              type="button"
+              onClick={addHeldSale}
+              disabled={processing}
+              aria-label="Nueva venta"
+              title="Nueva venta"
+              className="absolute -top-2.5 -right-2.5 z-10 flex h-7 w-7 cursor-pointer items-center justify-center rounded-full bg-brand text-white shadow-md ring-2 ring-white transition-transform hover:scale-110 hover:bg-brand-hover disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:scale-100"
+            >
+              <Plus className="h-4 w-4" />
+            </button>
             <CardHeader className="pb-3">
+              {/* Ventas en espera: una pestaña por cliente */}
+              {/* Las flechas van en el margen de la tarjeta para dejar todo el ancho a las pestañas */}
+              <div className="relative pb-3 mb-1 border-b">
+                {tabsScroll.overflow && (
+                  <button
+                    type="button"
+                    onClick={() => scrollTabs(-1)}
+                    disabled={!tabsScroll.left}
+                    aria-label="Ver ventas anteriores"
+                    title="Ver ventas anteriores"
+                    className="absolute top-[calc(50%-0.375rem)] -translate-y-1/2 -left-5 z-10 flex h-6 w-6 items-center justify-center rounded-full border-2 border-brand bg-white text-brand shadow-sm hover:bg-brand-light disabled:border-gray-200 disabled:text-gray-300 disabled:shadow-none disabled:hover:bg-white"
+                  >
+                    <ChevronLeft className="h-3.5 w-3.5" strokeWidth={3} />
+                  </button>
+                )}
+                <div
+                  ref={tabsScrollRef}
+                  role="tablist"
+                  aria-label="Ventas abiertas"
+                  onScroll={updateTabsScroll}
+                  className="flex w-full items-center gap-1.5 overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+                >
+                  {heldSales.map((sale) => {
+                    const isActive = sale.id === activeSaleId;
+                    const items = isActive ? cart : sale.cart;
+                    const customer = isActive
+                      ? selectedCustomer
+                      : sale.customer;
+                    const count = items.reduce((n, i) => n + i.quantity, 0);
+                    const fullLabel =
+                      customer?.name ?? `Cliente ${sale.number}`;
+                    const canClose =
+                      heldSales.length > 1 || items.length > 0 || !!customer;
+                    return (
+                      <div
+                        key={sale.id}
+                        data-sale-id={sale.id}
+                        className={`flex items-center shrink-0 rounded-lg border text-xs md:text-sm transition-colors ${
+                          isActive
+                            ? "bg-brand border-brand text-white"
+                            : "bg-white border-gray-300 text-gray-700 hover:border-brand"
+                        }`}
+                      >
+                        <button
+                          type="button"
+                          role="tab"
+                          aria-selected={isActive}
+                          onClick={() => switchHeldSale(sale.id)}
+                          disabled={processing}
+                          title={fullLabel}
+                          className={`flex items-center gap-1.5 py-1.5 pl-2.5 ${canClose ? "pr-1" : "pr-2.5"} max-w-36 disabled:cursor-not-allowed`}
+                        >
+                          <span className="truncate font-medium">
+                            {customer ? customer.name.split(" ")[0] : fullLabel}
+                          </span>
+                          {count > 0 && (
+                            <span
+                              className={`rounded-full px-1.5 text-[10px] font-bold leading-4 ${
+                                isActive
+                                  ? "bg-white/25 text-white"
+                                  : "bg-brand-light text-brand"
+                              }`}
+                            >
+                              {count}
+                            </span>
+                          )}
+                        </button>
+                        {canClose && (
+                          <button
+                            type="button"
+                            onClick={() => closeHeldSale(sale.id)}
+                            disabled={processing}
+                            aria-label={`Cerrar venta de ${fullLabel}`}
+                            title="Cerrar esta venta"
+                            className={`mr-1 rounded p-0.5 disabled:cursor-not-allowed ${
+                              isActive
+                                ? "hover:bg-white/20"
+                                : "hover:bg-gray-100"
+                            }`}
+                          >
+                            <X className="h-3.5 w-3.5" />
+                          </button>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+                {tabsScroll.overflow && (
+                  <button
+                    type="button"
+                    onClick={() => scrollTabs(1)}
+                    disabled={!tabsScroll.right}
+                    aria-label="Ver más ventas"
+                    title="Ver más ventas"
+                    className="absolute top-[calc(50%-0.375rem)] -translate-y-1/2 -right-5 z-10 flex h-6 w-6 items-center justify-center rounded-full border-2 border-brand bg-white text-brand shadow-sm hover:bg-brand-light disabled:border-gray-200 disabled:text-gray-300 disabled:shadow-none disabled:hover:bg-white"
+                  >
+                    <ChevronRight className="h-3.5 w-3.5" strokeWidth={3} />
+                  </button>
+                )}
+              </div>
               <CardTitle className="flex items-center gap-2 text-base md:text-lg">
                 <div ref={cartIconRef} className="relative">
                   <ShoppingCart
