@@ -14,13 +14,196 @@ interface InvoiceData {
 }
 
 /**
- * Genera un PDF de la factura
+ * Formato de la factura: hoja carta o tira para impresora térmica
+ * (58 mm es la de los datáfonos/POS con impresora integrada; 80 mm la de mostrador).
  */
-export async function generateInvoicePDF(data: InvoiceData): Promise<jsPDF> {
+export type InvoiceFormat = 'carta' | 'tira58' | 'tira80';
+
+export const INVOICE_FORMATS: { id: InvoiceFormat; label: string }[] = [
+  { id: 'carta', label: 'Carta' },
+  { id: 'tira58', label: 'Tira 58 mm' },
+  { id: 'tira80', label: 'Tira 80 mm' },
+];
+
+/** Ancho del papel en mm para los formatos de tira (null para carta) */
+export function getTicketWidthMm(invoiceFormat: InvoiceFormat): number | null {
+  if (invoiceFormat === 'tira58') return 58;
+  if (invoiceFormat === 'tira80') return 80;
+  return null;
+}
+
+const PAYMENT_METHOD_LABELS: Record<string, string> = {
+  efectivo: 'Efectivo',
+  nequi: 'Nequi',
+  tarjeta: 'Tarjeta',
+  transferencia: 'Transferencia',
+  credito: 'Crédito',
+};
+
+/** Cantidad legible de un ítem (paquetes o unidades sueltas) */
+function getQuantityText(item: SaleItemWithProduct): string {
+  if (item.product?.sell_by_unit && item.product?.units_per_package) {
+    if (item.quantity < 1) {
+      // Venta vieja: convertir de paquetes a unidades
+      return `${item.quantity * item.product.units_per_package} ${item.product.unit_name || 'und'}`;
+    }
+    const unitsPerPackage = item.product.units_per_package;
+    if (item.quantity >= unitsPerPackage && item.quantity % unitsPerPackage === 0) {
+      const packages = item.quantity / unitsPerPackage;
+      return `${packages} ${item.product.package_name || 'paquete'}${packages > 1 ? 's' : ''}`;
+    }
+    return `${item.quantity} ${item.product.unit_name || 'unidad'}${item.quantity > 1 ? 'es' : ''}`;
+  }
+  return item.quantity.toString();
+}
+
+/**
+ * Dibuja la factura en formato tira (ancho de impresora térmica) y devuelve
+ * la altura usada, para luego crear el documento con el largo exacto.
+ */
+function drawTicket(doc: jsPDF, data: InvoiceData, widthMm: number): number {
+  const { sale, saleItems, customer, storeInfo, cashierName } = data;
+  const margin = 3;
+  const right = widthMm - margin;
+  const center = widthMm / 2;
+  const contentWidth = widthMm - margin * 2;
+  // En 58 mm la letra va un punto más pequeña para que quepan los precios
+  const base = widthMm <= 58 ? 7.5 : 8.5;
+  const lineHeight = base * 0.45;
+  let y = margin + 3;
+
+  const separator = () => {
+    y += 1;
+    doc.setLineDashPattern([0.8, 0.8], 0);
+    doc.line(margin, y, right, y);
+    doc.setLineDashPattern([], 0);
+    y += lineHeight + 0.5;
+  };
+  const centered = (text: string, size = base, bold = false) => {
+    doc.setFontSize(size);
+    doc.setFont('helvetica', bold ? 'bold' : 'normal');
+    const lines: string[] = doc.splitTextToSize(text, contentWidth);
+    lines.forEach((line) => {
+      doc.text(line, center, y, { align: 'center' });
+      y += size * 0.45;
+    });
+  };
+  // Etiqueta a la izquierda y valor a la derecha; si no caben juntos (p. ej. un
+  // nombre largo), el valor baja a las líneas siguientes alineado a la derecha.
+  const row = (label: string, value: string, size = base, bold = false) => {
+    doc.setFontSize(size);
+    doc.setFont('helvetica', bold ? 'bold' : 'normal');
+    doc.text(label, margin, y);
+    const labelWidth = doc.getTextWidth(label) + 2;
+    if (labelWidth + doc.getTextWidth(value) <= contentWidth) {
+      doc.text(value, right, y, { align: 'right' });
+      y += size * 0.45;
+      return;
+    }
+    y += size * 0.45;
+    const valueLines: string[] = doc.splitTextToSize(value, contentWidth);
+    valueLines.forEach((line) => {
+      doc.text(line, right, y, { align: 'right' });
+      y += size * 0.45;
+    });
+  };
+
+  // Encabezado de la tienda
+  centered(storeInfo.full_name || 'TIENDA POS', base + 3, true);
+  y += 0.5;
+  if (storeInfo.phone) centered(`Tel: ${storeInfo.phone}`);
+  separator();
+
+  // Datos de la factura
+  row('Factura', `#${sale.sale_number}`, base, true);
+  row('Fecha', format(new Date(sale.created_at), 'dd/MM/yyyy HH:mm'));
+  if (cashierName) row('Atendió', cashierName);
+  if (customer) {
+    row('Cliente', customer.name);
+    if (customer.phone) row('Tel', customer.phone);
+    if (customer.id_number) row('ID', customer.id_number);
+  }
+  separator();
+
+  // Productos: nombre en su línea y debajo "cantidad x precio ... subtotal"
+  saleItems.forEach((item) => {
+    doc.setFontSize(base);
+    doc.setFont('helvetica', 'bold');
+    const nameLines: string[] = doc.splitTextToSize(item.product?.name || 'Producto', contentWidth);
+    nameLines.forEach((line) => {
+      doc.text(line, margin, y);
+      y += lineHeight;
+    });
+    row(`${getQuantityText(item)} x ${formatCurrency(item.unit_price)}`, formatCurrency(item.subtotal));
+    if (item.discount > 0) row('  Descuento', `- ${formatCurrency(item.discount)}`, base - 1);
+    y += 0.8;
+  });
+  separator();
+
+  // Totales
+  const subtotalAmount = saleItems.reduce((sum, item) => sum + item.subtotal, 0);
+  row('Subtotal', formatCurrency(subtotalAmount));
+  if (sale.discount > 0) row('Descuento', `- ${formatCurrency(sale.discount)}`);
+  if (sale.tax > 0) row('IVA', formatCurrency(sale.tax));
+  if (sale.shipping_cost && sale.shipping_cost > 0) row('Envío', formatCurrency(sale.shipping_cost));
+  y += 0.8;
+  row('TOTAL', formatCurrency(sale.total), base + 3, true);
+  separator();
+
+  // Pago
+  row('Pago', PAYMENT_METHOD_LABELS[sale.payment_method] || sale.payment_method);
+  if (sale.payment_reference) row('Ref.', sale.payment_reference);
+  if (sale.payment_method === 'credito' && sale.amount_pending && sale.amount_pending > 0) {
+    row('Abonado', formatCurrency(sale.amount_paid || 0));
+    row('Saldo pendiente', formatCurrency(sale.amount_pending), base, true);
+    if (sale.due_date) row('Vence', format(new Date(sale.due_date), 'dd/MM/yyyy'));
+  }
+  if (sale.points_earned && sale.points_earned > 0) {
+    y += 0.8;
+    centered(`¡Ganaste ${sale.points_earned} puntos!`, base, true);
+  }
+
+  // Notas
+  if (sale.notes) {
+    separator();
+    doc.setFontSize(base - 0.5);
+    doc.setFont('helvetica', 'normal');
+    const notesLines: string[] = doc.splitTextToSize(sale.notes, contentWidth);
+    notesLines.forEach((line) => {
+      doc.text(line, margin, y);
+      y += lineHeight;
+    });
+  }
+
+  // Pie
+  separator();
+  centered('¡Gracias por su compra!', base, true);
+  centered('Comprobante de compra', base - 1);
+
+  return y + margin;
+}
+
+/**
+ * Genera un PDF de la factura en el formato elegido (carta por defecto)
+ */
+export async function generateInvoicePDF(
+  data: InvoiceData,
+  invoiceFormat: InvoiceFormat = 'carta'
+): Promise<jsPDF> {
   const { sale, saleItems, customer, storeInfo, cashierName } = data;
 
   // Carga diferida de jspdf (~400KB): solo al generar una factura.
   const jsPDF = (await import('jspdf')).default;
+
+  const ticketWidth = getTicketWidthMm(invoiceFormat);
+  if (ticketWidth) {
+    // Primero se mide el largo en una hoja muy alta y luego se crea la tira exacta
+    const draft = new jsPDF({ unit: 'mm', format: [ticketWidth, 2000] });
+    const height = drawTicket(draft, data, ticketWidth);
+    const ticket = new jsPDF({ unit: 'mm', format: [ticketWidth, Math.max(height, ticketWidth + 1)] });
+    drawTicket(ticket, data, ticketWidth);
+    return ticket;
+  }
 
   // Crear documento PDF (tamaño carta)
   const doc = new jsPDF({

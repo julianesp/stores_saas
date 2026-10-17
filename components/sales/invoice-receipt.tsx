@@ -12,14 +12,164 @@ interface InvoiceReceiptProps {
   customer?: Customer | null;
   storeInfo: UserProfile;
   cashierName?: string;
+  /** Ancho en mm de la tira térmica (58 u 80). Sin valor: factura tamaño carta */
+  ticketWidthMm?: number | null;
 }
+
+const PAYMENT_METHOD_LABELS: Record<string, string> = {
+  efectivo: 'Efectivo',
+  nequi: 'Nequi',
+  tarjeta: 'Tarjeta',
+  transferencia: 'Transferencia',
+  credito: 'Crédito',
+};
+
+/** Cantidad legible de un ítem para la tira (paquetes o unidades sueltas) */
+function ticketQuantity(item: SaleItemWithProduct): string {
+  if (item.product?.sell_by_unit && item.product?.units_per_package) {
+    const unitsPerPackage = item.product.units_per_package;
+    if (item.quantity < 1) {
+      return `${+(item.quantity * unitsPerPackage).toFixed(2)} ${item.product.unit_name || 'und'}`;
+    }
+    if (item.quantity >= unitsPerPackage && item.quantity % unitsPerPackage === 0) {
+      const packages = item.quantity / unitsPerPackage;
+      return `${packages} ${item.product.package_name || 'paquete'}${packages > 1 ? 's' : ''}`;
+    }
+    return `${item.quantity} ${item.product.unit_name || 'unidad'}${item.quantity > 1 ? 'es' : ''}`;
+  }
+  return Number.isInteger(item.quantity) ? `${item.quantity}` : item.quantity.toFixed(2);
+}
+
+/**
+ * Factura en formato tira para impresora térmica (58 u 80 mm): una sola columna,
+ * letra pequeña, sin colores de fondo y con líneas punteadas como separador.
+ */
+const TicketReceipt = forwardRef<
+  HTMLDivElement,
+  Omit<InvoiceReceiptProps, 'ticketWidthMm'> & { widthMm: number }
+>(({ sale, saleItems, customer, storeInfo, cashierName, widthMm }, ref) => {
+  const subtotalAmount = saleItems.reduce((sum, item) => sum + item.subtotal, 0);
+  const fontSize = widthMm <= 58 ? 11 : 12;
+  const separator = <div style={{ borderTop: '1px dashed #000', margin: '6px 0' }} />;
+  // La etiqueta nunca se aplasta; si el valor es largo (p. ej. un nombre), baja de línea
+  const Row = ({ label, value, bold }: { label: string; value: string; bold?: boolean }) => (
+    <div style={{ display: 'flex', justifyContent: 'space-between', gap: 6, fontWeight: bold ? 700 : 400 }}>
+      <span style={{ flexShrink: label.length <= 16 ? 0 : 1 }}>{label}</span>
+      <span style={{ textAlign: 'right', whiteSpace: value.length <= 14 ? 'nowrap' : 'normal', minWidth: 0 }}>
+        {value}
+      </span>
+    </div>
+  );
+
+  return (
+    <div
+      ref={ref}
+      className="keep-light mx-auto"
+      style={{
+        width: `${widthMm}mm`,
+        padding: '3mm',
+        boxSizing: 'border-box',
+        background: '#ffffff',
+        color: '#000000',
+        fontFamily: 'monospace',
+        fontSize,
+        lineHeight: 1.35,
+        wordBreak: 'break-word',
+      }}
+    >
+      <div style={{ textAlign: 'center' }}>
+        <div style={{ fontSize: fontSize + 4, fontWeight: 700 }}>
+          {storeInfo.full_name || 'TIENDA POS'}
+        </div>
+        {storeInfo.phone && <div>Tel: {storeInfo.phone}</div>}
+      </div>
+      {separator}
+
+      <Row label="Factura" value={`#${sale.sale_number}`} bold />
+      <Row label="Fecha" value={format(new Date(sale.created_at), 'dd/MM/yyyy HH:mm')} />
+      {cashierName && <Row label="Atendió" value={cashierName} />}
+      {customer && (
+        <>
+          <Row label="Cliente" value={customer.name} />
+          {customer.phone && <Row label="Tel" value={customer.phone} />}
+          {customer.id_number && <Row label="ID" value={customer.id_number} />}
+        </>
+      )}
+      {separator}
+
+      {saleItems.map((item, index) => (
+        <div key={index} style={{ marginBottom: 4 }}>
+          <div style={{ fontWeight: 700 }}>{item.product?.name || 'Producto'}</div>
+          <Row
+            label={`${ticketQuantity(item)} x ${formatCurrency(item.unit_price)}`}
+            value={formatCurrency(item.subtotal)}
+          />
+          {item.discount > 0 && <Row label="  Descuento" value={`- ${formatCurrency(item.discount)}`} />}
+        </div>
+      ))}
+      {separator}
+
+      <Row label="Subtotal" value={formatCurrency(subtotalAmount)} />
+      {(sale.discount || 0) > 0 && <Row label="Descuento" value={`- ${formatCurrency(sale.discount)}`} />}
+      {(sale.tax || 0) > 0 && <Row label="IVA" value={formatCurrency(sale.tax)} />}
+      {(sale.shipping_cost || 0) > 0 && <Row label="Envío" value={formatCurrency(sale.shipping_cost || 0)} />}
+      <div style={{ fontSize: fontSize + 3, marginTop: 4 }}>
+        <Row label="TOTAL" value={formatCurrency(sale.total)} bold />
+      </div>
+      {separator}
+
+      <Row label="Pago" value={PAYMENT_METHOD_LABELS[sale.payment_method] || sale.payment_method} />
+      {sale.payment_reference && <Row label="Ref." value={sale.payment_reference} />}
+      {sale.payment_method === 'credito' && !!sale.amount_pending && sale.amount_pending > 0 && (
+        <>
+          <Row label="Abonado" value={formatCurrency(sale.amount_paid || 0)} />
+          <Row label="Saldo pendiente" value={formatCurrency(sale.amount_pending)} bold />
+          {sale.due_date && <Row label="Vence" value={format(new Date(sale.due_date), 'dd/MM/yyyy')} />}
+        </>
+      )}
+      {!!sale.points_earned && sale.points_earned > 0 && (
+        <div style={{ textAlign: 'center', fontWeight: 700, marginTop: 4 }}>
+          ¡Ganaste {sale.points_earned} puntos!
+        </div>
+      )}
+
+      {sale.notes && (
+        <>
+          {separator}
+          <div>{sale.notes}</div>
+        </>
+      )}
+
+      {separator}
+      <div style={{ textAlign: 'center' }}>
+        <div style={{ fontWeight: 700 }}>¡Gracias por su compra!</div>
+        <div style={{ fontSize: fontSize - 1 }}>Comprobante de compra</div>
+      </div>
+    </div>
+  );
+});
+TicketReceipt.displayName = 'TicketReceipt';
 
 /**
  * Componente de Factura/Recibo
  * Se puede imprimir y generar como PDF
  */
 export const InvoiceReceipt = forwardRef<HTMLDivElement, InvoiceReceiptProps>(
-  ({ sale, saleItems, customer, storeInfo, cashierName }, ref) => {
+  ({ sale, saleItems, customer, storeInfo, cashierName, ticketWidthMm }, ref) => {
+    if (ticketWidthMm) {
+      return (
+        <TicketReceipt
+          ref={ref}
+          sale={sale}
+          saleItems={saleItems}
+          customer={customer}
+          storeInfo={storeInfo}
+          cashierName={cashierName}
+          widthMm={ticketWidthMm}
+        />
+      );
+    }
+
     // Formatear fecha y hora
     const saleDate = new Date(sale.created_at);
     const formattedDate = format(saleDate, "dd 'de' MMMM 'de' yyyy", { locale: es });

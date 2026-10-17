@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef } from "react";
+import { useEffect, useRef } from "react";
 import { useAuth } from "@clerk/nextjs";
 import { useReactToPrint } from "react-to-print";
 import {
@@ -15,6 +15,9 @@ import { InvoiceReceipt } from "./invoice-receipt";
 import {
   generateInvoicePDF,
   shareViaWhatsApp,
+  getTicketWidthMm,
+  INVOICE_FORMATS,
+  type InvoiceFormat,
 } from "@/lib/invoice-helpers";
 import { Sale, SaleItemWithProduct, Customer, UserProfile } from "@/lib/types";
 import { Download, Printer, MessageCircle } from "lucide-react";
@@ -31,6 +34,8 @@ interface InvoiceModalProps {
   cashierName?: string;
 }
 
+const INVOICE_FORMAT_KEY = "invoice_format";
+
 export function InvoiceModal({
   open,
   onOpenChange,
@@ -43,12 +48,51 @@ export function InvoiceModal({
   const invoiceRef = useRef<HTMLDivElement>(null);
   const { getToken } = useAuth();
   const [phoneNumber, setPhoneNumber] = useState(customer?.phone || "");
+  // Carta o tira térmica; se recuerda en este navegador (la impresora es del equipo)
+  const [invoiceFormat, setInvoiceFormat] = useState<InvoiceFormat>("carta");
+  const ticketWidthMm = getTicketWidthMm(invoiceFormat);
 
-  // Configurar impresión
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem(INVOICE_FORMAT_KEY) as InvoiceFormat | null;
+      if (saved && INVOICE_FORMATS.some((f) => f.id === saved)) {
+        // Solo se puede leer localStorage después de montar (SSR)
+        // eslint-disable-next-line react-hooks/set-state-in-effect
+        setInvoiceFormat(saved);
+      }
+    } catch {
+      // Sin acceso a localStorage: queda en carta
+    }
+  }, []);
+
+  const changeInvoiceFormat = (next: InvoiceFormat) => {
+    setInvoiceFormat(next);
+    try {
+      localStorage.setItem(INVOICE_FORMAT_KEY, next);
+    } catch {
+      // Sin acceso a localStorage: solo cambia en esta factura
+    }
+  };
+
+  // Configurar impresión: en tira la hoja mide lo que mide el papel y el largo es libre
   const handlePrint = useReactToPrint({
     contentRef: invoiceRef,
     documentTitle: `Factura-${sale.sale_number}`,
-    pageStyle: `
+    pageStyle: ticketWidthMm
+      ? `
+      @page {
+        size: ${ticketWidthMm}mm auto;
+        margin: 0;
+      }
+      @media print {
+        html, body {
+          width: ${ticketWidthMm}mm;
+          margin: 0;
+          padding: 0;
+        }
+      }
+    `
+      : `
       @page {
         size: letter;
         margin: 10mm;
@@ -65,13 +109,16 @@ export function InvoiceModal({
   // Generar y descargar PDF
   const handleDownloadPDF = async () => {
     try {
-      const doc = await generateInvoicePDF({
-        sale,
-        saleItems,
-        customer,
-        storeInfo,
-        cashierName,
-      });
+      const doc = await generateInvoicePDF(
+        {
+          sale,
+          saleItems,
+          customer,
+          storeInfo,
+          cashierName,
+        },
+        invoiceFormat,
+      );
 
       doc.save(`Factura-${sale.sale_number}.pdf`);
       toast.success("PDF descargado correctamente");
@@ -138,8 +185,36 @@ export function InvoiceModal({
           </DialogTitle>
         </DialogHeader>
 
+        {/* Formato: carta o tira para la impresora térmica */}
+        <div className="flex flex-wrap items-center gap-2">
+          <span className="text-sm font-medium text-gray-700">Formato:</span>
+          <div className="inline-flex rounded-lg border border-gray-300 p-0.5" role="radiogroup" aria-label="Formato de la factura">
+            {INVOICE_FORMATS.map((f) => (
+              <button
+                key={f.id}
+                type="button"
+                role="radio"
+                aria-checked={invoiceFormat === f.id}
+                onClick={() => changeInvoiceFormat(f.id)}
+                className={`cursor-pointer rounded-md px-3 py-1.5 text-sm font-medium transition-colors ${
+                  invoiceFormat === f.id
+                    ? "bg-brand text-white"
+                    : "text-gray-700 hover:bg-gray-100"
+                }`}
+              >
+                {f.label}
+              </button>
+            ))}
+          </div>
+          {ticketWidthMm && (
+            <span className="text-xs text-gray-500">
+              Para impresora térmica de {ticketWidthMm} mm
+            </span>
+          )}
+        </div>
+
         {/* Vista previa de la factura (con scroll) — lo más importante primero */}
-        <div className="flex-1 overflow-y-auto">
+        <div className={`flex-1 overflow-y-auto ${ticketWidthMm ? "bg-gray-100 py-4" : ""}`}>
           <InvoiceReceipt
             ref={invoiceRef}
             sale={sale}
@@ -147,6 +222,7 @@ export function InvoiceModal({
             customer={customer}
             storeInfo={storeInfo}
             cashierName={cashierName}
+            ticketWidthMm={ticketWidthMm}
           />
         </div>
 
