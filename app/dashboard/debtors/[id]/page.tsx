@@ -35,6 +35,7 @@ import {
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
 import Swal from 'sweetalert2';
+import { PageGlossary } from "@/components/dashboard/page-glossary";
 
 export default function DebtorDetailPage() {
   const params = useParams();
@@ -623,6 +624,29 @@ export default function DebtorDetailPage() {
           </Card>
         </div>
       )}
+
+      {/* Explicación en palabras sencillas de los datos de esta página */}
+      <PageGlossary
+        storageKey="debtor-detail"
+        items={[
+          {
+            term: "Límite de crédito",
+            meaning: "Lo máximo que le fías.",
+          },
+          {
+            term: "Crédito disponible",
+            meaning: "Lo que aún le puedes fiar. Negativo: ya pasó el límite.",
+          },
+          {
+            term: "Registrar pago",
+            meaning: "Paga toda la deuda de esa venta.",
+          },
+          {
+            term: "Abonar",
+            meaning: "Paga solo una parte.",
+          },
+        ]}
+      />
     </div>
   );
 }

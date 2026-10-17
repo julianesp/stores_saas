@@ -37,6 +37,7 @@ import {
   type TemporalComparison,
   type ProactiveAlert,
 } from '@/lib/advanced-analytics-helpers';
+import { PageGlossary } from "@/components/dashboard/page-glossary";
 
 const COLORS = ['#2563eb', '#059669', '#f59e0b', '#dc2626', '#8b5cf6'];
 
@@ -348,6 +349,37 @@ export default function AdvancedMetricsDashboard() {
           </CardContent>
         </Card>
       )}
+
+      {/* Explicación en palabras sencillas de los datos de esta página */}
+      <PageGlossary
+        storageKey="analytics-advanced"
+        items={[
+          {
+            term: "Margen",
+            meaning: "De cada $100 vendidos, cuánto es ganancia.",
+          },
+          {
+            term: "ROI",
+            meaning: "Lo que ganas por cada $100 invertidos en mercancía.",
+          },
+          {
+            term: "LTV",
+            meaning: "Lo que te compra cada cliente, en promedio.",
+          },
+          {
+            term: "CAC",
+            meaning: "Costo aproximado de conseguir un cliente (estimado, no exacto).",
+          },
+          {
+            term: "LTV / CAC",
+            meaning: "De 3 en adelante es muy bueno.",
+          },
+          {
+            term: "Clientes recurrentes",
+            meaning: "Los que volvieron a comprar.",
+          },
+        ]}
+      />
     </div>
   );
 }

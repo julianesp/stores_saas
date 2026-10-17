@@ -41,6 +41,7 @@ import {
 import { Product } from "@/lib/cloudflare-api";
 import { differenceInDays } from "date-fns";
 import Link from "next/link";
+import { PageGlossary } from "@/components/dashboard/page-glossary";
 
 export default function DashboardPage() {
   const { user } = useUser();
@@ -937,6 +938,34 @@ export default function DashboardPage() {
           </CardContent>
         </Card>
       </div>
+      {/* Explicación en palabras sencillas de los datos de esta página */}
+      <PageGlossary
+        storageKey="dashboard"
+        items={[
+          {
+            term: "Ganancia de hoy",
+            meaning:
+              "Lo vendido hoy menos lo que te costó. Es lo que de verdad ganaste.",
+          },
+          {
+            term: "Ventas de hoy",
+            meaning: "Toda la plata vendida hoy, sin restar costos.",
+          },
+          {
+            term: "Órdenes hoy",
+            meaning: "Cuántas ventas hiciste hoy.",
+          },
+          {
+            term: "Clientes activos",
+            meaning: "Clientes registrados que compraron este mes.",
+          },
+          {
+            term: "Crecimiento mensual",
+            meaning:
+              "Este mes contra todo el mes pasado. Al inicio del mes suele salir negativo.",
+          },
+        ]}
+      />
     </div>
   );
 }

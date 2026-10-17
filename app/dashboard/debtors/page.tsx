@@ -14,6 +14,7 @@ import { buildWhatsAppLink, buildDebtReminderMessage } from '@/lib/whatsapp';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { toast } from 'sonner';
+import { PageGlossary } from "@/components/dashboard/page-glossary";
 
 type SaleWithItems = Sale & { items?: SaleItemWithProduct[] };
 
@@ -566,6 +567,25 @@ export default function DebtorsPage() {
           )}
         </CardContent>
       </Card>
+
+      {/* Explicación en palabras sencillas de los datos de esta página */}
+      <PageGlossary
+        storageKey="debtors"
+        items={[
+          {
+            term: "Deuda actual",
+            meaning: "Lo que te debe hoy, ya restados los abonos.",
+          },
+          {
+            term: "Deuda promedio",
+            meaning: "Lo que debe cada cliente, en promedio.",
+          },
+          {
+            term: "Recordatorios",
+            meaning: "Avisarle por WhatsApp o correo lo que debe.",
+          },
+        ]}
+      />
     </div>
   );
 }

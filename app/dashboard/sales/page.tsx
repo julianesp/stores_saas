@@ -49,6 +49,7 @@ import {
 import { InvoiceModal } from "@/components/sales/invoice-modal";
 import Swal from "@/lib/sweetalert";
 import SwalOriginal from "sweetalert2";
+import { PageGlossary } from "@/components/dashboard/page-glossary";
 
 // Filtros de fecha que se pueden pedir por la URL (?filter=today), p. ej. desde el Panel de control
 const URL_FILTERS = ["all", "today", "week", "month"];
@@ -1340,6 +1341,25 @@ function SalesContent() {
           </div>
         </div>
       )}
+
+      {/* Explicación en palabras sencillas de los datos de esta página */}
+      <PageGlossary
+        storageKey="sales"
+        items={[
+          {
+            term: "Monto total",
+            meaning: "Suma de lo vendido, sin restar costos.",
+          },
+          {
+            term: "Promedio por venta",
+            meaning: "Cuánto gasta un cliente por compra, en promedio.",
+          },
+          {
+            term: "Estado",
+            meaning: "En el fiado: pendiente (no ha pagado), parcial (abonó) o pagado.",
+          },
+        ]}
+      />
     </div>
   );
 }

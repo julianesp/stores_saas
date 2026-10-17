@@ -10,6 +10,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { getCustomers } from '@/lib/cloudflare-api';
 import { Customer } from '@/lib/types';
 import { exportCustomersToExcel, exportCustomersToCSV } from '@/lib/excel-export';
+import { PageGlossary } from "@/components/dashboard/page-glossary";
 
 export default function CustomersPage() {
   const { getToken } = useAuth();
@@ -155,6 +156,17 @@ export default function CustomersPage() {
           )}
         </CardContent>
       </Card>
+
+      {/* Explicación en palabras sencillas de los datos de esta página */}
+      <PageGlossary
+        storageKey="customers"
+        items={[
+          {
+            term: "Puntos",
+            meaning: "Se ganan comprando. Con 100 puntos, 10% de descuento.",
+          },
+        ]}
+      />
     </div>
   );
 }

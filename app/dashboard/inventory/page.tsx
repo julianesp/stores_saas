@@ -39,6 +39,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { PageGlossary } from "@/components/dashboard/page-glossary";
 
 // Foto principal del producto. `images` puede llegar como arreglo o como JSON en texto.
 const getProductThumbnail = (product: Product): string | undefined => {
@@ -802,6 +803,48 @@ function InventoryContent() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Explicación en palabras sencillas de los datos de esta página */}
+      <PageGlossary
+        storageKey="inventory"
+        items={[
+          {
+            term: "Ganas $ c/u",
+            meaning:
+              "Precio de venta menos costo. Compras a $2.000 y vendes a $4.000: ganas $2.000.",
+          },
+          {
+            term: "Colores",
+            meaning: (
+              <>
+                <span className="font-medium text-green-600">Verde</span> ganas
+                bien, <span className="font-medium text-amber-600">ámbar</span>{" "}
+                ganas poco,{" "}
+                <span className="font-medium text-red-600">rojo</span> casi nada
+                o pierdes.
+              </>
+            ),
+          },
+          {
+            term: "Mín.",
+            meaning:
+              "Cantidad mínima. Al llegar a ella sale “Bajo”: toca pedir.",
+          },
+          {
+            term: "Valor total",
+            meaning: "Plata invertida: unidades × costo.",
+          },
+          {
+            term: "Por vencer",
+            meaning: "Vence en menos de 30 días o ya venció.",
+          },
+          {
+            term: "Ajustar",
+            meaning:
+              "Cambia la cantidad sin vender: llegó mercancía o algo se dañó.",
+          },
+        ]}
+      />
     </div>
   );
 }

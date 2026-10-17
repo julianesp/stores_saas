@@ -19,6 +19,7 @@ import { getSales, getProducts, Product } from '@/lib/cloudflare-api';
 import { SaleWithRelations } from '@/lib/types';
 import { formatCurrency } from '@/lib/utils';
 import { getItemCost, getItemRevenue, startOfDay } from '@/lib/profit-helpers';
+import { PageGlossary } from '@/components/dashboard/page-glossary';
 
 type Period = 'today' | 'week' | 'month' | '3months' | 'all';
 
@@ -526,6 +527,20 @@ export default function RentabilidadPage() {
           </p>
         </CardContent>
       </Card>
+      {/* Explicación en palabras sencillas de los datos de esta página */}
+      <PageGlossary
+        storageKey="rentabilidad"
+        items={[
+          { term: 'Ingresos', meaning: 'Plata que entró por ventas.' },
+          { term: 'Costo', meaning: 'Lo que te costó lo vendido.' },
+          { term: 'Ganancia', meaning: 'Ingresos menos costo.' },
+          { term: 'Margen', meaning: 'De cada $100 vendidos, cuánto es ganancia.' },
+          {
+            term: 'Por debajo del costo',
+            meaning: 'Lo vendes más barato de lo que te cuesta: pierdes plata.',
+          },
+        ]}
+      />
     </div>
   );
 }
