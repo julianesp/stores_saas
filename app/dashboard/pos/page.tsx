@@ -1294,7 +1294,7 @@ export default function POSPage() {
 
       // Mostrar mensaje personalizado - SIEMPRE con opción de factura
       let htmlContent = `
-        <p class="text-lg mb-2">Venta #${sale.sale_number}</p>
+        <p class="text-sm text-gray-500 mb-1">Venta #${sale.sale_number}</p>
       `;
 
       // Mostrar información de productos con ofertas
@@ -1343,10 +1343,10 @@ export default function POSPage() {
           `
               : ""
           }
-          <p class="text-2xl font-bold text-brand mb-3">Total: ${formatCurrency(
+          <p class="text-xl font-bold text-brand mb-2">Total: ${formatCurrency(
             total,
           )}</p>
-          <div class="bg-brand-light/50 border border-brand/40 rounded-lg p-3 mb-2">
+          <div class="bg-brand-light/50 border border-brand/40 rounded-lg px-3 py-2 mb-2">
             <p class="text-sm text-gray-600">Cliente: <strong>${
               selectedCustomer.name
             }</strong></p>
@@ -1387,9 +1387,9 @@ export default function POSPage() {
           const dueDate = new Date();
           dueDate.setDate(dueDate.getDate() + creditDays);
           htmlContent += `
-            <div class="bg-brand-light/50 border border-brand/40 rounded-lg p-3 mt-2">
+            <div class="bg-brand-light/50 border border-brand/40 rounded-lg px-3 py-2">
               <p class="text-sm font-semibold text-brand">💳 Venta a Crédito (${creditDays} ${creditDays === 1 ? "día" : "días"})</p>
-              <p class="text-xs text-gray-600 mt-1">Fecha de vencimiento: ${dueDate.toLocaleDateString(
+              <p class="text-xs text-gray-600 mt-0.5">Fecha de vencimiento: ${dueDate.toLocaleDateString(
                 "es-CO",
               )}</p>
             </div>
@@ -1398,7 +1398,7 @@ export default function POSPage() {
       } else {
         // Sin cliente seleccionado
         htmlContent += `
-          <p class="text-2xl font-bold text-brand mb-3">Total: ${formatCurrency(
+          <p class="text-xl font-bold text-brand mb-2">Total: ${formatCurrency(
             total,
           )}</p>
         `;
@@ -1406,7 +1406,7 @@ export default function POSPage() {
 
       // Agregar botón para generar factura (PARA TODAS LAS VENTAS)
       htmlContent += `
-        <div class="mt-4 pt-3 border-t border-gray-200">
+        <div class="mt-3 pt-3 border-t border-gray-200">
           <button id="generate-invoice-btn" class="w-full bg-brand hover:bg-brand-hover text-white font-semibold py-2 px-4 rounded flex items-center justify-center gap-2">
             📄 Generar Factura
           </button>
@@ -1421,6 +1421,7 @@ export default function POSPage() {
         html: htmlContent,
         icon: "success",
         confirmButtonText: "Aceptar",
+        customClass: { popup: "swal-sale-popup" },
         didOpen: () => {
           // Agregar evento al botón de factura
           const invoiceBtn = document.getElementById("generate-invoice-btn");
