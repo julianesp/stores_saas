@@ -30,6 +30,7 @@ import {
   AlertCircle,
   CheckCircle,
   Receipt,
+  HandCoins,
 } from 'lucide-react';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
@@ -48,6 +49,8 @@ export default function DebtorDetailPage() {
   const [paymentHistory, setPaymentHistory] = useState<CreditPaymentData[]>([]);
   const [loading, setLoading] = useState(true);
   const [showPaymentModal, setShowPaymentModal] = useState(false);
+  // 'pago' = pagar el saldo completo; 'abono' = pago parcial
+  const [paymentMode, setPaymentMode] = useState<'pago' | 'abono'>('pago');
   const [showCreditLimitModal, setShowCreditLimitModal] = useState(false);
 
   // Form states
@@ -84,12 +87,14 @@ export default function DebtorDetailPage() {
     }
   };
 
-  const handleSaleClick = async (sale: SaleWithRelations) => {
+  const handleSaleClick = async (sale: SaleWithRelations, mode: 'pago' | 'abono' = 'pago') => {
     setSelectedSale(sale);
+    setPaymentMode(mode);
     const history = await getCreditPaymentHistory(sale.id, getToken);
     setPaymentHistory(history);
     setShowPaymentModal(true);
-    setPaymentAmount(sale.amount_pending?.toString() || '0');
+    // En un abono el tendero escribe cuánto le entregaron; en un pago va el saldo completo
+    setPaymentAmount(mode === 'abono' ? '' : sale.amount_pending?.toString() || '0');
   };
 
   const handleRegisterPayment = async () => {
@@ -125,10 +130,17 @@ export default function DebtorDetailPage() {
         getToken
       );
 
+      const remaining = (selectedSale.amount_pending || 0) - amount;
       Swal.fire({
         icon: 'success',
-        title: 'Pago registrado',
-        text: 'El pago se ha registrado correctamente',
+        title: paymentMode === 'abono' ? 'Abono registrado' : 'Pago registrado',
+        text:
+          remaining > 0
+            ? `Se abonaron $${amount.toLocaleString('es-CO')}. Saldo pendiente: $${remaining.toLocaleString('es-CO')}`
+            : 'La deuda de esta venta quedó saldada',
+        // Se cierra solo; el tendero puede cerrarlo antes con OK
+        timer: 3000,
+        timerProgressBar: true,
       });
 
       setShowPaymentModal(false);
@@ -410,14 +422,24 @@ export default function DebtorDetailPage() {
                     </div>
                   )}
 
-                  {/* Botón de Registrar Pago */}
-                  <Button
-                    onClick={() => handleSaleClick(sale)}
-                    className="w-full bg-brand hover:bg-brand-hover text-white font-semibold"
-                  >
-                    <DollarSign className="h-4 w-4 mr-2" />
-                    Registrar Pago
-                  </Button>
+                  {/* Botones de Registrar Pago (saldo completo) y Abonar (pago parcial) */}
+                  <div className="flex gap-2">
+                    <Button
+                      onClick={() => handleSaleClick(sale, 'pago')}
+                      className="flex-1 bg-brand hover:bg-brand-hover text-white font-semibold"
+                    >
+                      <DollarSign className="h-4 w-4 mr-2" />
+                      Registrar Pago
+                    </Button>
+                    <Button
+                      variant="outline"
+                      onClick={() => handleSaleClick(sale, 'abono')}
+                      className="flex-1 border-brand text-brand hover:bg-brand-light font-semibold"
+                    >
+                      <HandCoins className="h-4 w-4 mr-2" />
+                      Abonar
+                    </Button>
+                  </div>
                 </div>
               ))}
             </div>
@@ -430,7 +452,9 @@ export default function DebtorDetailPage() {
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
           <Card className="w-full max-w-2xl max-h-[90vh] overflow-y-auto">
             <CardHeader>
-              <CardTitle>Registrar Pago - Venta #{selectedSale.sale_number}</CardTitle>
+              <CardTitle>
+                {paymentMode === 'abono' ? 'Abonar' : 'Registrar Pago'} - Venta #{selectedSale.sale_number}
+              </CardTitle>
             </CardHeader>
             <CardContent className="space-y-6">
               {/* Información de la venta */}
@@ -480,7 +504,9 @@ export default function DebtorDetailPage() {
               {/* Formulario de pago */}
               <div className="space-y-4">
                 <div>
-                  <Label htmlFor="amount">Monto a Pagar</Label>
+                  <Label htmlFor="amount">
+                    {paymentMode === 'abono' ? '¿Cuánto abona?' : 'Monto a Pagar'}
+                  </Label>
                   <Input
                     id="amount"
                     type="number"
@@ -490,7 +516,20 @@ export default function DebtorDetailPage() {
                     placeholder="0"
                     min="0"
                     step="1000"
+                    autoFocus={paymentMode === 'abono'}
                   />
+                  {paymentMode === 'abono' && parseFloat(paymentAmount) > 0 && (
+                    <p className="text-sm text-gray-500 mt-1">
+                      Quedaría debiendo:{' '}
+                      <span className="font-semibold text-red-600">
+                        $
+                        {Math.max(
+                          (selectedSale.amount_pending || 0) - parseFloat(paymentAmount),
+                          0
+                        ).toLocaleString('es-CO')}
+                      </span>
+                    </p>
+                  )}
                 </div>
 
                 <div>
@@ -521,7 +560,7 @@ export default function DebtorDetailPage() {
 
               <div className="flex gap-2">
                 <Button onClick={handleRegisterPayment} className="flex-1">
-                  Registrar Pago
+                  {paymentMode === 'abono' ? 'Registrar Abono' : 'Registrar Pago'}
                 </Button>
                 <Button
                   variant="outline"
