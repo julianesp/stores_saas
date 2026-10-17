@@ -284,11 +284,8 @@ export default function ProductsPage() {
       />
 
       <div className="space-y-6">
-        <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4">
-        <div>
-          <h1 className="text-2xl md:text-3xl font-bold">{bt.vocabulary.itemPlural}</h1>
-          <p className="text-gray-500 text-sm md:text-base">Gestiona el inventario de {bt.vocabulary.itemPlural.toLowerCase()}</p>
-        </div>
+        {/* Sin título: el menú lateral ya indica en qué sección se está */}
+        <div className="flex flex-col sm:flex-row sm:justify-end sm:items-center gap-4">
         <div className="flex flex-wrap gap-2">
           <Button data-guide="products-export" variant="outline" onClick={handleExportExcel} className="flex-1 sm:flex-none" title="Exportar productos a Excel">
             <Download className="mr-2 h-4 w-4" />

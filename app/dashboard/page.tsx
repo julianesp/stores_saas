@@ -422,16 +422,9 @@ export default function DashboardPage() {
 
   return (
     <div className="space-y-4 md:space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl md:text-3xl font-bold tracking-tight">
-            Dashboard
-          </h1>
-          <p className="text-gray-500 text-sm md:text-base">
-            Resumen general de tu tienda
-          </p>
-        </div>
-        {metrics.totalProducts === 0 && (
+      {/* Sin título: el menú lateral ya indica en qué sección se está */}
+      {metrics.totalProducts === 0 && (
+        <div className="flex justify-end">
           <Button
             onClick={handleSeedProducts}
             disabled={seeding}
@@ -442,8 +435,8 @@ export default function DashboardPage() {
             <Database className="h-4 w-4" />
             {seeding ? "Creando..." : "Crear Productos Demo"}
           </Button>
-        )}
-      </div>
+        </div>
+      )}
 
       {/* Accesos rápidos — acciones que el tendero hace a diario */}
       <div data-guide="dash-shortcuts" className="grid grid-cols-2 lg:grid-cols-4 gap-3">
