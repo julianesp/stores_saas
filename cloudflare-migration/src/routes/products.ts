@@ -30,6 +30,13 @@ interface Product {
   unit_name?: string;
   package_name?: string;
   price_per_unit?: number;
+  // Campos tipo Siigo / facturación electrónica (migración 027)
+  tax_rate?: number;
+  tax_label?: string;
+  sale_price_2?: number;
+  factory_reference?: string;
+  track_inventory?: number;
+  is_active?: number;
   created_at: string;
   updated_at: string;
 }
@@ -132,6 +139,12 @@ app.post('/', async (c) => {
       unit_name: body.unit_name || 'unidad',
       package_name: body.package_name || 'paquete',
       price_per_unit: body.price_per_unit || 0,
+      tax_rate: Number(body.tax_rate) || 0,
+      tax_label: body.tax_label || null,
+      sale_price_2: body.sale_price_2 ? Number(body.sale_price_2) : null,
+      factory_reference: body.factory_reference || null,
+      track_inventory: body.track_inventory === false || body.track_inventory === 0 ? 0 : 1,
+      is_active: body.is_active === false || body.is_active === 0 ? 0 : 1,
     };
 
     await tenantDB.insert('products', productData);
@@ -176,8 +189,10 @@ app.put('/:id', async (c) => {
       updateData.images = JSON.stringify(updateData.images);
     }
     // SQLite no acepta boolean, convertir sell_by_unit a integer
-    if (typeof updateData.sell_by_unit === 'boolean') {
-      updateData.sell_by_unit = updateData.sell_by_unit ? 1 : 0;
+    for (const key of ['sell_by_unit', 'track_inventory', 'is_active']) {
+      if (typeof updateData[key] === 'boolean') {
+        updateData[key] = updateData[key] ? 1 : 0;
+      }
     }
 
     // Update product
@@ -195,6 +210,167 @@ app.put('/:id', async (c) => {
     return c.json<APIResponse>({
       success: false,
       error: error.message || 'Failed to update product',
+    }, 500);
+  }
+});
+
+// POST /api/products/import - Importar catálogo en lote (ej. "Listado de productos" de Siigo)
+//
+// Recibe `products[]` ya normalizados por el front (lib/siigo-products-import.ts),
+// en tandas de pocos cientos para no pasar el límite de CPU del Worker.
+//   - Match por código de barras (barcode). Sin código => siempre se crea.
+//   - Si ya existe: se actualiza el catálogo (nombre, precios, categoría, impuesto...)
+//     solo cuando `update_existing` es true; el stock y el costo NO se tocan.
+//   - Categorías por nombre: se crean las que no existan.
+app.post('/import', async (c) => {
+  const tenant: Tenant = c.get('tenant');
+
+  try {
+    const body = await c.req.json();
+    const items: any[] = body.products;
+    const updateExisting = !!body.update_existing;
+
+    if (!Array.isArray(items) || items.length === 0) {
+      return c.json<APIResponse>({
+        success: false,
+        error: 'Missing required field: products (non-empty array)',
+      }, 400);
+    }
+    if (items.length > 500) {
+      return c.json<APIResponse>({
+        success: false,
+        error: 'Máximo 500 productos por tanda',
+      }, 400);
+    }
+
+    const db = c.env.DB;
+    const now = new Date().toISOString();
+
+    // --- Categorías: resolver por nombre (sin distinguir mayúsculas) y crear las nuevas ---
+    const { results: cats } = await db
+      .prepare('SELECT id, name FROM categories WHERE tenant_id = ?')
+      .bind(tenant.id)
+      .all<{ id: string; name: string }>();
+    const categoryByName = new Map<string, string>();
+    for (const cat of cats || []) categoryByName.set(cat.name.trim().toLowerCase(), cat.id);
+
+    const newCategoryStmts: D1PreparedStatement[] = [];
+    let categoriesCreated = 0;
+    for (const item of items) {
+      const catName = String(item.category_name || '').trim();
+      if (!catName || categoryByName.has(catName.toLowerCase())) continue;
+      const id = generateId('cat');
+      categoryByName.set(catName.toLowerCase(), id);
+      newCategoryStmts.push(
+        db.prepare(
+          'INSERT INTO categories (id, tenant_id, name, description, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?)'
+        ).bind(id, tenant.id, catName, null, now, now)
+      );
+      categoriesCreated++;
+    }
+    if (newCategoryStmts.length > 0) await db.batch(newCategoryStmts);
+
+    // --- Productos existentes con esos códigos (consultas por lotes: D1 admite ~100 parámetros) ---
+    const codes = [...new Set(
+      items.map((i) => String(i.barcode || '').trim()).filter(Boolean)
+    )];
+    const existingByCode = new Map<string, string>();
+    for (let i = 0; i < codes.length; i += 90) {
+      const slice = codes.slice(i, i + 90);
+      const { results } = await db
+        .prepare(
+          `SELECT id, barcode FROM products WHERE tenant_id = ? AND barcode IN (${slice.map(() => '?').join(', ')})`
+        )
+        .bind(tenant.id, ...slice)
+        .all<{ id: string; barcode: string }>();
+      for (const r of results || []) existingByCode.set(String(r.barcode).trim(), r.id);
+    }
+
+    const result = {
+      created: 0,
+      updated: 0,
+      skipped: 0,
+      categoriesCreated,
+      errors: [] as Array<{ code: string; name: string; error: string }>,
+    };
+
+    const stmts: D1PreparedStatement[] = [];
+    for (const item of items) {
+      const code = String(item.barcode || '').trim();
+      const name = String(item.name || '').trim();
+      const salePrice = Number(item.sale_price);
+      if (!name || !Number.isFinite(salePrice) || salePrice < 0) {
+        result.errors.push({ code, name, error: 'Falta nombre o precio de venta' });
+        continue;
+      }
+
+      const catName = String(item.category_name || '').trim();
+      const fields = {
+        name,
+        description: item.description || null,
+        category_id: catName ? categoryByName.get(catName.toLowerCase()) || null : null,
+        sale_price: salePrice,
+        sale_price_2: item.sale_price_2 ? Number(item.sale_price_2) : null,
+        min_stock: Math.max(0, Math.round(Number(item.min_stock) || 0)),
+        tax_rate: Number(item.tax_rate) || 0,
+        tax_label: item.tax_label || null,
+        factory_reference: item.factory_reference || null,
+        track_inventory: item.track_inventory === false || item.track_inventory === 0 ? 0 : 1,
+        is_active: item.is_active === false || item.is_active === 0 ? 0 : 1,
+      };
+
+      const existingId = code ? existingByCode.get(code) : undefined;
+      if (existingId) {
+        if (!updateExisting) {
+          result.skipped++;
+          continue;
+        }
+        const cols = Object.keys(fields);
+        stmts.push(
+          db.prepare(
+            `UPDATE products SET ${cols.map((k) => `${k} = ?`).join(', ')}, updated_at = ? WHERE id = ? AND tenant_id = ?`
+          ).bind(...Object.values(fields), now, existingId, tenant.id)
+        );
+        result.updated++;
+        continue;
+      }
+
+      const row: Record<string, any> = {
+        id: generateId('prod'),
+        tenant_id: tenant.id,
+        barcode: code || null,
+        ...fields,
+        cost_price: Math.max(0, Number(item.cost_price) || 0),
+        stock: Math.max(0, Number(item.stock) || 0),
+        sell_by_unit: 0,
+        units_per_package: 1,
+        unit_name: 'unidad',
+        package_name: 'paquete',
+        price_per_unit: 0,
+        created_at: now,
+        updated_at: now,
+      };
+      const cols = Object.keys(row);
+      stmts.push(
+        db.prepare(
+          `INSERT INTO products (${cols.join(', ')}) VALUES (${cols.map(() => '?').join(', ')})`
+        ).bind(...Object.values(row))
+      );
+      if (code) existingByCode.set(code, row.id); // evita duplicar si el código se repite en la tanda
+      result.created++;
+    }
+
+    if (stmts.length > 0) await db.batch(stmts);
+
+    return c.json<APIResponse<typeof result>>({
+      success: true,
+      data: result,
+    });
+  } catch (error: any) {
+    console.error('Error importing products:', error);
+    return c.json<APIResponse>({
+      success: false,
+      error: error.message || 'Failed to import products',
     }, 500);
   }
 });
@@ -451,7 +627,7 @@ app.get('/low-stock', async (c) => {
 
     // Products where stock <= min_stock
     const products = await tenantDB.raw<Product>(
-      `SELECT * FROM products WHERE tenant_id = ? AND stock <= min_stock ORDER BY (stock - min_stock) ASC`,
+      `SELECT * FROM products WHERE tenant_id = ? AND stock <= min_stock AND COALESCE(track_inventory, 1) = 1 ORDER BY (stock - min_stock) ASC`,
       []
     );
 

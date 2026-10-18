@@ -44,6 +44,8 @@ import {
   Sale,
   SaleItemWithProduct,
   UserProfile,
+  tracksInventory,
+  isProductActive,
 } from "@/lib/types";
 import { formatCurrency } from "@/lib/utils";
 import {
@@ -98,6 +100,10 @@ interface HeldSale {
 }
 
 const MAX_HELD_SALES = 8;
+
+/** Se muestra en el POS: activo y con stock (o sin control de inventario). */
+const isSellable = (p: Product) =>
+  isProductActive(p) && (p.stock > 0 || !tracksInventory(p));
 
 const newHeldSale = (number: number, id?: string): HeldSale => ({
   id: id ?? `venta-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
@@ -551,8 +557,8 @@ export default function POSPage() {
       // Verificar si hay productos en el sistema (antes de filtrar por stock)
       setHasAnyProducts(data.length > 0);
 
-      // Filtrar productos con stock > 0
-      const productsInStock = data.filter((p) => p.stock > 0);
+      // Productos vendibles: activos y con stock (o sin control de inventario)
+      const productsInStock = data.filter(isSellable);
       // Ordenar por nombre manualmente
       productsInStock.sort((a, b) => a.name.localeCompare(b.name));
       setProducts(productsInStock);
@@ -567,7 +573,7 @@ export default function POSPage() {
         }));
         latestStockRef.current = new Map(data.map((p) => [p.id, p.stock]));
         setHasAnyProducts(data.length > 0);
-        const productsInStock = data.filter((p) => p.stock > 0);
+        const productsInStock = data.filter(isSellable);
         productsInStock.sort((a, b) => a.name.localeCompare(b.name));
         setProducts(productsInStock);
       }
@@ -660,7 +666,7 @@ export default function POSPage() {
         );
 
         // Si se encuentra pero no tiene stock
-        if (product && product.stock <= 0) {
+        if (product && product.stock <= 0 && tracksInventory(product)) {
           console.log("❌ [LECTOR USB] Producto encontrado pero sin stock");
           Swal.error(
             "Producto sin stock",
@@ -773,7 +779,7 @@ export default function POSPage() {
         );
 
         // Si se encuentra pero no tiene stock
-        if (product && product.stock <= 0) {
+        if (product && product.stock <= 0 && tracksInventory(product)) {
           console.log(
             "❌ [CÁMARA] Producto encontrado pero sin stock:",
             product.name,
@@ -883,9 +889,11 @@ export default function POSPage() {
       const effectivePrice = finalIsUnitSale
         ? pricePerUnit
         : product.sale_price;
-      const availableStock = finalIsUnitSale
-        ? Math.floor(product.stock * unitsPerPackage) // Unidades disponibles
-        : Math.floor(product.stock); // Paquetes completos disponibles
+      const availableStock = !tracksInventory(product)
+        ? Infinity // Sin control de inventario: se vende aunque no haya stock
+        : finalIsUnitSale
+          ? Math.floor(product.stock * unitsPerPackage) // Unidades disponibles
+          : Math.floor(product.stock); // Paquetes completos disponibles
 
       if (existing) {
         const newQuantity = existing.quantity + quantity;
@@ -1061,9 +1069,11 @@ export default function POSPage() {
 
           // Calcular stock disponible según el tipo de venta
           const unitsPerPackage = item.product.units_per_package || 1;
-          const availableStock = item.isUnitSale
-            ? Math.floor(item.product.stock * unitsPerPackage)
-            : Math.floor(item.product.stock);
+          const availableStock = !tracksInventory(item.product)
+            ? Infinity
+            : item.isUnitSale
+              ? Math.floor(item.product.stock * unitsPerPackage)
+              : Math.floor(item.product.stock);
 
           if (newQuantity > availableStock) {
             const unitLabel = item.isUnitSale
@@ -1097,9 +1107,11 @@ export default function POSPage() {
 
           // Calcular stock disponible según el tipo de venta
           const unitsPerPackage = item.product.units_per_package || 1;
-          const availableStock = item.isUnitSale
-            ? Math.floor(item.product.stock * unitsPerPackage)
-            : Math.floor(item.product.stock);
+          const availableStock = !tracksInventory(item.product)
+            ? Infinity
+            : item.isUnitSale
+              ? Math.floor(item.product.stock * unitsPerPackage)
+              : Math.floor(item.product.stock);
 
           if (quantity > availableStock) {
             const unitLabel = item.isUnitSale

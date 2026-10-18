@@ -274,7 +274,8 @@ app.post('/', async (c) => {
     for (const item of body.items) {
       // Get current product
       const product = await tenantDB.getById<any>('products', item.product_id);
-      if (product) {
+      // track_inventory = 0: producto sin control de inventario (se vende sin stock)
+      if (product && product.track_inventory !== 0) {
         const newStock = product.stock - item.quantity;
         await tenantDB.update('products', item.product_id, {
           stock: newStock
@@ -581,7 +582,7 @@ app.put('/:id', async (c) => {
       // Descontar stock de cada producto
       for (const item of items) {
         const product = await tenantDB.getById<any>('products', item.product_id);
-        if (product) {
+        if (product && product.track_inventory !== 0) {
           const newStock = product.stock - item.quantity;
 
           // Validar que hay suficiente stock
@@ -664,7 +665,7 @@ app.delete('/:id', async (c) => {
     // Restaurar el stock de cada producto
     for (const item of saleItems) {
       const product = await tenantDB.getById<any>('products', item.product_id);
-      if (product) {
+      if (product && product.track_inventory !== 0) {
         // Restaurar el stock (sumar la cantidad que se había vendido)
         const restoredStock = product.stock + item.quantity;
         await tenantDB.update('products', item.product_id, {

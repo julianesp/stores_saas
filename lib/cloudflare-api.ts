@@ -248,6 +248,14 @@ export interface Product {
   package_name?: string;  // Nombre del paquete (ej: 'cubeta', 'caja')
   price_per_unit?: number;  // Precio por unidad suelta
 
+  // Campos tipo Siigo / facturación electrónica (migración 027)
+  tax_rate?: number;  // % de impuesto (0, 5, 19; 8 = INC). El precio de venta YA lo incluye
+  tax_label?: string;  // Texto del impuesto tal como viene de Siigo (ej. "IVA 19%")
+  sale_price_2?: number;  // Segundo precio de venta (lista 2 de Siigo, ej. mayorista)
+  factory_reference?: string;  // Referencia de fábrica
+  track_inventory?: number | boolean;  // 0 = se vende aunque no tenga stock (no se controla inventario)
+  is_active?: number | boolean;  // 0 = inactivo (no aparece en el POS)
+
   created_at: string;
   updated_at: string;
 }
@@ -281,6 +289,45 @@ export async function updateProduct(id: string, data: Partial<Product>, getToken
   const result = await fetchAPI<Product>(`/api/products/${id}`, getToken, {
     method: 'PUT',
     body: JSON.stringify(data),
+  });
+  invalidateProductsCache();
+  return result;
+}
+
+export interface ImportProductRow {
+  barcode?: string | null;
+  name: string;
+  description?: string | null;
+  category_name?: string | null;
+  sale_price: number;
+  sale_price_2?: number | null;
+  cost_price?: number;
+  stock?: number;
+  min_stock?: number;
+  tax_rate?: number;
+  tax_label?: string | null;
+  factory_reference?: string | null;
+  track_inventory?: boolean;
+  is_active?: boolean;
+}
+
+export interface ImportProductsResult {
+  created: number;
+  updated: number;
+  skipped: number;
+  categoriesCreated: number;
+  errors: Array<{ code: string; name: string; error: string }>;
+}
+
+/** Importa una tanda (máx. 500) de productos. Ver POST /api/products/import del Worker. */
+export async function importProducts(
+  products: ImportProductRow[],
+  updateExisting: boolean,
+  getToken: GetTokenFn
+): Promise<ImportProductsResult> {
+  const result = await fetchAPI<ImportProductsResult>('/api/products/import', getToken, {
+    method: 'POST',
+    body: JSON.stringify({ products, update_existing: updateExisting }),
   });
   invalidateProductsCache();
   return result;

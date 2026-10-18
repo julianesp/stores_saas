@@ -475,7 +475,7 @@ app.post('/daily-summary', async (c) => {
       const lowStock = await db
         .prepare(
           `SELECT name, stock FROM products
-           WHERE tenant_id = ? AND stock <= min_stock
+           WHERE tenant_id = ? AND stock <= min_stock AND COALESCE(track_inventory, 1) = 1
            ORDER BY stock ASC LIMIT 8`
         )
         .bind(tenant.id)

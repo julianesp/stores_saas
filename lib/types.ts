@@ -183,8 +183,25 @@ export interface Product {
   unit_name?: string;
   package_name?: string;
   price_per_unit?: number;
+  // Campos tipo Siigo / facturación electrónica
+  tax_rate?: number; // % de impuesto incluido en el precio (0, 5, 19; 8 = INC)
+  tax_label?: string | null;
+  sale_price_2?: number | null;
+  factory_reference?: string | null;
+  track_inventory?: number | boolean; // 0 = se vende sin controlar stock
+  is_active?: number | boolean; // 0 = inactivo
   created_at: string;
   updated_at: string;
+}
+
+/** El producto controla inventario (por defecto sí; Siigo "Inventariable"). */
+export function tracksInventory(p: { track_inventory?: number | boolean }): boolean {
+  return p.track_inventory !== 0 && p.track_inventory !== false;
+}
+
+/** El producto está activo (por defecto sí). */
+export function isProductActive(p: { is_active?: number | boolean }): boolean {
+  return p.is_active !== 0 && p.is_active !== false;
 }
 
 export interface ProductWithRelations extends Product {

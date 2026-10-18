@@ -19,6 +19,8 @@
  * POS de posib no las representa; solo se conserva el IVA/INC como `tax`.
  */
 
+import { readXlsxRowsSimple } from "./xlsx-simple-reader";
+
 async function loadExcelJS() {
   return (await import("exceljs")).default;
 }
@@ -146,7 +148,7 @@ const COLUMN_SYNONYMS: Record<string, string[]> = {
 };
 
 /** Normaliza texto: minúsculas, sin acentos, colapsa espacios, sin puntuación. */
-function normalize(text: string): string {
+export function normalize(text: string): string {
   return text
     .toString()
     .normalize("NFD")
@@ -158,7 +160,7 @@ function normalize(text: string): string {
 }
 
 /** Convierte un valor de celda a número, tolerando "$", ".", "," y formato COP. */
-function toNumber(value: unknown): number {
+export function toNumber(value: unknown): number {
   if (value == null || value === "") return 0;
   if (typeof value === "number") return value;
   let s = value.toString().trim().replace(/\$/g, "").replace(/\s/g, "");
@@ -271,7 +273,7 @@ function detectHeader(
 }
 
 /** Lee el archivo a una matriz de filas (array de arrays). */
-async function readWorkbookRows(file: ArrayBuffer, isCsv: boolean): Promise<unknown[][]> {
+export async function readWorkbookRows(file: ArrayBuffer, isCsv: boolean): Promise<unknown[][]> {
   const ExcelJSLib = await loadExcelJS();
   const workbook = new ExcelJSLib.Workbook();
   if (isCsv) {
@@ -279,8 +281,15 @@ async function readWorkbookRows(file: ArrayBuffer, isCsv: boolean): Promise<unkn
     const text = new TextDecoder("utf-8").decode(file);
     return parseCsv(text);
   }
-  await workbook.xlsx.load(file);
+  try {
+    await workbook.xlsx.load(file);
+  } catch (error) {
+    // Siigo exporta xlsx no estándar que ExcelJS no abre: usar el lector simple.
+    console.warn("ExcelJS no pudo leer el archivo, usando lector simple:", error);
+    return readXlsxRowsSimple(file);
+  }
   const sheet = workbook.worksheets[0];
+  if (!sheet) return readXlsxRowsSimple(file);
   const rows: unknown[][] = [];
   sheet.eachRow({ includeEmpty: false }, (row) => {
     const values = row.values as unknown[]; // index 0 es null en ExcelJS

@@ -21,7 +21,7 @@ import {
   createSupplier,
   type Product as ApiProduct,
 } from "@/lib/cloudflare-api";
-import { Category, Supplier, Product } from "@/lib/types";
+import { Category, Supplier, Product, tracksInventory, isProductActive } from "@/lib/types";
 import { getBusinessType, type BusinessType } from "@/lib/business-types";
 
 // Payload que envía el formulario: usa el modelo de dominio (`images` como
@@ -64,7 +64,22 @@ const productSchema = z.object({
   unit_name: z.string().optional().or(z.literal("")),
   package_name: z.string().optional().or(z.literal("")),
   price_per_unit: z.number().min(0).optional().or(z.undefined()),
+
+  // Facturación / campos tipo Siigo
+  tax_rate: z.number().min(0).max(100).optional(),
+  sale_price_2: z.number().min(0).optional().or(z.undefined()),
+  factory_reference: z.string().optional().or(z.literal("")),
+  track_inventory: z.boolean().optional(),
+  is_active: z.boolean().optional(),
 });
+
+// Impuestos que maneja una tienda en Colombia (el precio de venta los incluye).
+const TAX_OPTIONS = [
+  { rate: 0, label: "Sin IVA (excluido / exento)" },
+  { rate: 5, label: "IVA 5%" },
+  { rate: 19, label: "IVA 19%" },
+  { rate: 8, label: "Impuesto al consumo (INC) 8%" },
+];
 
 type ProductFormData = z.infer<typeof productSchema>;
 
@@ -128,8 +143,13 @@ export function ProductForm({ initialData, productId }: ProductFormProps) {
           unit_name: initialData.unit_name || undefined,
           package_name: initialData.package_name || undefined,
           price_per_unit: initialData.price_per_unit || undefined,
+          tax_rate: initialData.tax_rate || 0,
+          sale_price_2: initialData.sale_price_2 || undefined,
+          factory_reference: initialData.factory_reference || "",
+          track_inventory: tracksInventory(initialData),
+          is_active: isProductActive(initialData),
         }
-      : {},
+      : { tax_rate: 0, track_inventory: true, is_active: true },
   });
 
   // Log errors when they change
@@ -483,6 +503,24 @@ export function ProductForm({ initialData, productId }: ProductFormProps) {
         productData.expiration_date = undefined;
       }
 
+      // Impuesto: conservar el texto original (ej. el de Siigo) si la tarifa no cambió.
+      const taxRate = Number(productData.tax_rate) || 0;
+      productData.tax_rate = taxRate;
+      productData.tax_label =
+        taxRate === 0
+          ? null
+          : initialData?.tax_label && initialData.tax_rate === taxRate
+            ? initialData.tax_label
+            : taxRate === 8
+              ? "INC 8%"
+              : `IVA ${taxRate}%`;
+      if (!productData.sale_price_2 || Number.isNaN(productData.sale_price_2)) {
+        productData.sale_price_2 = null;
+      }
+      if (!productData.factory_reference) {
+        productData.factory_reference = null;
+      }
+
       // Limpiar campos de venta por unidades si está desactivado
       if (!productData.sell_by_unit) {
         productData.units_per_package = undefined;
@@ -834,6 +872,45 @@ export function ProductForm({ initialData, productId }: ProductFormProps) {
             </div>
           </div>
 
+          {/* Facturación: lo que Siigo / la DIAN piden por producto */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div className="space-y-2">
+              <Label htmlFor="tax_rate">Impuesto (IVA)</Label>
+              <select
+                id="tax_rate"
+                {...register("tax_rate", { setValueAs: (value) => Number(value) || 0 })}
+                className="w-full h-9 rounded-md border border-gray-300 px-3 text-sm"
+              >
+                {TAX_OPTIONS.map((t) => (
+                  <option key={t.rate} value={t.rate}>
+                    {t.label}
+                  </option>
+                ))}
+              </select>
+              <p className="text-xs text-gray-500">El precio de venta ya lo incluye.</p>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="sale_price_2">Precio de Venta 2 (opcional)</Label>
+              <Input
+                id="sale_price_2"
+                type="number"
+                inputMode="decimal"
+                {...register("sale_price_2", {
+                  setValueAs: (value) => (value === "" || value == null ? undefined : Number(value)),
+                })}
+                placeholder="Ej. precio por mayor"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="factory_reference">Referencia de fábrica</Label>
+              <Input
+                id="factory_reference"
+                {...register("factory_reference")}
+                placeholder="Opcional"
+              />
+            </div>
+          </div>
+
           {/* Sección de Venta por Unidades */}
           <Card className="border-brand/40 bg-brand-light/50/30">
             <CardHeader>
@@ -954,6 +1031,35 @@ export function ProductForm({ initialData, productId }: ProductFormProps) {
               )}
             </CardContent>
           </Card>
+
+          <div className="space-y-2">
+            <label className="flex items-start gap-3 p-3 rounded-lg border bg-white cursor-pointer">
+              <input
+                type="checkbox"
+                {...register("track_inventory")}
+                className="mt-0.5 h-5 w-5 rounded border-gray-300"
+              />
+              <span>
+                <span className="font-medium text-sm">Controlar inventario</span>
+                <span className="block text-xs text-gray-500">
+                  Desmarcado: se puede vender aunque no haya unidades registradas (no se lleva la cuenta del stock).
+                </span>
+              </span>
+            </label>
+            <label className="flex items-start gap-3 p-3 rounded-lg border bg-white cursor-pointer">
+              <input
+                type="checkbox"
+                {...register("is_active")}
+                className="mt-0.5 h-5 w-5 rounded border-gray-300"
+              />
+              <span>
+                <span className="font-medium text-sm">Producto activo</span>
+                <span className="block text-xs text-gray-500">
+                  Desmarcado: no aparece en la caja, pero se conserva con su historial.
+                </span>
+              </span>
+            </label>
+          </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="space-y-2">

@@ -206,7 +206,7 @@ app.post('/daily-reports', async (c) => {
           `SELECT name, stock as current_stock, min_stock
            FROM products
            WHERE tenant_id = ?
-             AND stock <= min_stock
+             AND stock <= min_stock AND COALESCE(track_inventory, 1) = 1
            ORDER BY (stock - min_stock) ASC
            LIMIT 5`
         )

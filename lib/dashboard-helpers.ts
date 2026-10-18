@@ -1,5 +1,6 @@
 import { GetTokenFn, getProducts, getSales, getCustomers, Product } from './cloudflare-api';
 import { computeProfit, startOfDay, ProfitSummary } from './profit-helpers';
+import { tracksInventory } from './types';
 
 export interface DashboardMetrics {
   dailySales: number;
@@ -48,7 +49,7 @@ export async function getDashboardMetrics(getToken: GetTokenFn): Promise<Dashboa
 
     // Calcular productos con stock bajo (incluyendo los que tienen stock 0)
     const lowStockProducts = allProducts.filter(
-      p => p.stock <= p.min_stock
+      p => tracksInventory(p) && p.stock <= p.min_stock
     ).length;
 
     // Obtener todas las ventas
@@ -253,7 +254,7 @@ export async function getInventoryAlerts(getToken: GetTokenFn): Promise<Inventor
 
     // Productos con stock bajo (incluyendo los que tienen stock 0)
     const lowStockProducts = allProducts.filter(
-      p => p.stock <= p.min_stock
+      p => tracksInventory(p) && p.stock <= p.min_stock
     ).map(p => ({
       name: p.name,
       stock: p.stock,

@@ -13,7 +13,7 @@ import {
   getCategories,
   updateProduct,
 } from "@/lib/cloudflare-api";
-import { Product, Category } from "@/lib/types";
+import { Product, Category, tracksInventory } from "@/lib/types";
 import {
   Package,
   AlertTriangle,
@@ -131,7 +131,8 @@ function InventoryContent() {
 
   const filteredProducts = baseProducts.filter((product) => {
     const matchesLowStock =
-      !showLowStockOnly || product.stock <= product.min_stock;
+      !showLowStockOnly ||
+      (tracksInventory(product) && product.stock <= product.min_stock);
     const matchesExpiring =
       !showExpiringOnly || getExpirationInfo(product).needsAttention;
     return matchesLowStock && matchesExpiring;
@@ -171,7 +172,9 @@ function InventoryContent() {
     [products],
   );
 
-  const lowStockProducts = baseProducts.filter((p) => p.stock <= p.min_stock);
+  const lowStockProducts = baseProducts.filter(
+    (p) => tracksInventory(p) && p.stock <= p.min_stock,
+  );
   const expiringProducts = baseProducts.filter(
     (p) => getExpirationInfo(p).needsAttention,
   );
@@ -505,7 +508,9 @@ function InventoryContent() {
                 </thead>
                 <tbody>
                   {filteredProducts.map((product) => {
-                    const isLowStock = product.stock <= product.min_stock;
+                    const isLowStock =
+                      tracksInventory(product) &&
+                      product.stock <= product.min_stock;
                     const totalValue = product.stock * product.cost_price;
                     const expInfo = getExpirationInfo(product);
                     const thumbnail = getProductThumbnail(product);

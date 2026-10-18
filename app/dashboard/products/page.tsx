@@ -3,14 +3,14 @@
 import { useState, useEffect, useMemo } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
-import { Plus, Search, Edit, Trash2, Package, Tag, Tags, Camera, AlertTriangle, Download, Layers } from 'lucide-react';
+import { Plus, Search, Edit, Trash2, Package, Tag, Tags, Camera, AlertTriangle, Download, Layers, FileSpreadsheet } from 'lucide-react';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { useAuth } from '@clerk/nextjs';
 import { getProducts, deleteProduct as deleteProductAPI, checkProductHasSales, getCategories } from '@/lib/cloudflare-api';
-import { Product, ProductWithRelations, Category, Supplier } from '@/lib/types';
+import { Product, ProductWithRelations, Category, Supplier, tracksInventory } from '@/lib/types';
 import { formatCurrency } from '@/lib/utils';
 import Swal from '@/lib/sweetalert';
 import SwalOriginal from 'sweetalert2';
@@ -254,12 +254,12 @@ export default function ProductsPage() {
     const matchesSearch = product.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
       product.barcode?.toLowerCase().includes(searchTerm.toLowerCase());
     const matchesCategory = selectedCategory === 'all' || product.category_id === selectedCategory;
-    const matchesOutOfStock = !showOutOfStock || product.stock === 0;
+    const matchesOutOfStock = !showOutOfStock || (product.stock === 0 && tracksInventory(product));
     return matchesSearch && matchesCategory && matchesOutOfStock;
   });
 
   // Calcular productos agotados (stock = 0)
-  const outOfStockCount = products.filter(p => p.stock === 0).length;
+  const outOfStockCount = products.filter(p => p.stock === 0 && tracksInventory(p)).length;
 
   return (
     <>
@@ -353,6 +353,13 @@ export default function ProductsPage() {
               </span>
             )}
           </Button>
+          <Link href="/dashboard/products/import" className="flex-1 sm:flex-none">
+            <Button variant="outline" className="w-full">
+              <FileSpreadsheet className="mr-2 h-4 w-4" />
+              <span className="hidden sm:inline">Importar de Siigo</span>
+              <span className="sm:hidden">Siigo</span>
+            </Button>
+          </Link>
           <Link href="/dashboard/products/quick-add" data-guide="products-quick" className="flex-1 sm:flex-none">
             <Button variant="outline" className="w-full">
               <Camera className="mr-2 h-4 w-4" />
@@ -470,12 +477,15 @@ export default function ProductsPage() {
                         <td className="py-3 px-4 text-right">
                           <span
                             className={`inline-block px-2 py-1 rounded text-sm ${
-                              product.stock <= product.min_stock
+                              !tracksInventory(product)
+                                ? 'bg-gray-100 text-gray-600'
+                                : product.stock <= product.min_stock
                                 ? 'bg-red-100 text-red-800'
                                 : 'bg-green-100 text-green-800'
                             }`}
+                            title={!tracksInventory(product) ? 'Se vende sin controlar unidades' : undefined}
                           >
-                            {formatEggStock(product.stock, product.name)}
+                            {!tracksInventory(product) ? 'Sin control' : formatEggStock(product.stock, product.name)}
                           </span>
                         </td>
                         <td className="py-3 px-4">
@@ -537,7 +547,9 @@ export default function ProductsPage() {
                               <p>
                                 <span
                                   className={`inline-block px-2 py-1 rounded text-xs ${
-                                    product.stock <= product.min_stock
+                                    !tracksInventory(product)
+                                      ? 'bg-gray-100 text-gray-600'
+                                      : product.stock <= product.min_stock
                                       ? 'bg-red-100 text-red-800'
                                       : 'bg-green-100 text-green-800'
                                   }`}
