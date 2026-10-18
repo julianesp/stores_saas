@@ -54,6 +54,11 @@ function normalizeImages(
   return fallbackUrl ? [fallbackUrl] : undefined;
 }
 
+// Ningún producto de tienda vale menos de esto; por debajo suele ser un precio
+// mal digitado (ej. 2 en vez de 2.000) o un producto sin precio.
+const SUSPICIOUS_PRICE = 50;
+const needsPriceReview = (p: { sale_price: number }) => p.sale_price < SUSPICIOUS_PRICE;
+
 export default function ProductsPage() {
   const { getToken, userId } = useAuth();
   const bt = useBusinessType();
@@ -63,6 +68,7 @@ export default function ProductsPage() {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
   const [showOutOfStock, setShowOutOfStock] = useState(false);
+  const [showPriceReview, setShowPriceReview] = useState(false);
   const [showCategoryModal, setShowCategoryModal] = useState(false);
   const [showDuplicatesModal, setShowDuplicatesModal] = useState(false);
   const [showRepeatedNamesModal, setShowRepeatedNamesModal] = useState(false);
@@ -255,8 +261,12 @@ export default function ProductsPage() {
       product.barcode?.toLowerCase().includes(searchTerm.toLowerCase());
     const matchesCategory = selectedCategory === 'all' || product.category_id === selectedCategory;
     const matchesOutOfStock = !showOutOfStock || (product.stock === 0 && tracksInventory(product));
-    return matchesSearch && matchesCategory && matchesOutOfStock;
+    const matchesPriceReview = !showPriceReview || needsPriceReview(product);
+    return matchesSearch && matchesCategory && matchesOutOfStock && matchesPriceReview;
   });
+
+  // Precios por revisar: en $0 o sospechosamente bajos (ej. importados de Siigo "en miles")
+  const priceReviewCount = products.filter(needsPriceReview).length;
 
   // Calcular productos agotados (stock = 0)
   const outOfStockCount = products.filter(p => p.stock === 0 && tracksInventory(p)).length;
@@ -353,6 +363,23 @@ export default function ProductsPage() {
               </span>
             )}
           </Button>
+          {(priceReviewCount > 0 || showPriceReview) && (
+            <Button
+              variant={showPriceReview ? "default" : "outline"}
+              onClick={() => setShowPriceReview(!showPriceReview)}
+              className="flex-1 sm:flex-none"
+              title={`Productos con precio menor a ${formatCurrency(SUSPICIOUS_PRICE)}`}
+            >
+              <Tag className="mr-2 h-4 w-4" />
+              <span className="hidden sm:inline">Precios por revisar</span>
+              <span className="sm:hidden">Precios</span>
+              {priceReviewCount > 0 && (
+                <span className="ml-1.5 bg-amber-500 text-white text-xs rounded-full px-2 py-0.5">
+                  {priceReviewCount}
+                </span>
+              )}
+            </Button>
+          )}
           <Link href="/dashboard/products/import" className="flex-1 sm:flex-none">
             <Button variant="outline" className="w-full">
               <FileSpreadsheet className="mr-2 h-4 w-4" />

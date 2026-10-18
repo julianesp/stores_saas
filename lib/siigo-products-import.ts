@@ -63,6 +63,30 @@ export interface ToImportOptions {
   addTaxToPrice: boolean;
   /** Importar todo sin control de inventario (el tendero no lleva stock). */
   noInventory: boolean;
+  /** Multiplicar por 1.000 los precios menores a $50 (guardados "en miles" en Siigo). */
+  fixThousands: boolean;
+}
+
+/**
+ * Precios por debajo de esto se consideran escritos en miles (ej. 2 = $2.000).
+ * En el catálogo real de una tienda no hay productos de $1 a $49, y sí muchos
+ * de $100–$400 (dulces, cubos), que quedan intactos.
+ */
+export const THOUSANDS_THRESHOLD = 50;
+
+export function looksLikeThousands(p: SiigoProductRow): boolean {
+  const base = p.price1 > 0 ? p.price1 : p.price2;
+  return base > 0 && base < THOUSANDS_THRESHOLD;
+}
+
+/**
+ * Excel le agrega ".00" a códigos de barras numéricos ("606110957779.00").
+ * Solo se limpia en códigos largos (8+ dígitos = código de barras real): en los
+ * internos cortos "20" y "20,0" son productos distintos en Siigo.
+ */
+function cleanCode(code: string): string {
+  const m = code.match(/^(\d{8,})[.,]0+$/);
+  return m ? m[1] : code;
 }
 
 // Encabezados ya normalizados (sin acentos, minúsculas) -> campo interno.
@@ -161,7 +185,7 @@ export async function parseSiigoProductsFile(file: File): Promise<SiigoProductsP
   for (let r = headerRow + 1; r < rows.length; r++) {
     const row = rows[r] ?? [];
     const rowNumber = r + 1;
-    const code = cellText(get(row, "code"));
+    const code = cleanCode(cellText(get(row, "code")));
     const name = cellText(get(row, "name"));
     // Filas vacías y pie del reporte ("Procesado en: ...", celda combinada en todas las columnas).
     if (!code && !name) continue;
@@ -173,7 +197,7 @@ export async function parseSiigoProductsFile(file: File): Promise<SiigoProductsP
       continue;
     }
     if (code && seenCodes.has(code)) {
-      warnings.push({ row: rowNumber, reason: `Código ${code} repetido — se omite "${name}"` });
+      warnings.push({ row: rowNumber, reason: `Código ${code} repetido — se omite "${name}" (queda el primero)` });
       continue;
     }
     if (code) seenCodes.add(code);
@@ -216,27 +240,33 @@ export async function parseSiigoProductsFile(file: File): Promise<SiigoProductsP
   return { products, warnings, businessName, nit };
 }
 
-/** Precio final (con impuesto) que se guardará en posib. */
-export function finalSalePrice(p: SiigoProductRow, addTaxToPrice: boolean): number {
-  const base = p.price1 > 0 ? p.price1 : p.price2;
-  if (addTaxToPrice && p.taxRate > 0 && !p.taxIncluded) {
-    return Math.round(base * (1 + p.taxRate / 100));
+type PriceOptions = Pick<ToImportOptions, "addTaxToPrice" | "fixThousands">;
+
+function adjustPrice(value: number, p: SiigoProductRow, opts: PriceOptions): number {
+  let price = opts.fixThousands && value > 0 && value < THOUSANDS_THRESHOLD ? value * 1000 : value;
+  if (opts.addTaxToPrice && p.taxRate > 0 && !p.taxIncluded) {
+    price = Math.round(price * (1 + p.taxRate / 100));
   }
-  return base;
+  // Sin redondear a pesos: un 3,5 de Siigo debe llegar como 3,5 (= $3.500) para que el tendero lo entienda.
+  return Math.round(price * 100) / 100;
+}
+
+/** Precio final (con impuesto) que se guardará en posib. */
+export function finalSalePrice(p: SiigoProductRow, opts: PriceOptions): number {
+  return adjustPrice(p.price1 > 0 ? p.price1 : p.price2, p, opts);
 }
 
 /** Convierte las filas de Siigo al formato de POST /api/products/import. */
 export function toImportRows(products: SiigoProductRow[], opts: ToImportOptions): ImportProductRow[] {
   return products.map((p) => {
-    const addTax = opts.addTaxToPrice && p.taxRate > 0 && !p.taxIncluded;
     const price2 = p.price1 > 0 && p.price2 > 0 ? p.price2 : 0;
     return {
       barcode: p.code || null,
       name: p.name,
       description: p.description,
       category_name: p.category,
-      sale_price: finalSalePrice(p, opts.addTaxToPrice),
-      sale_price_2: price2 ? (addTax ? Math.round(price2 * (1 + p.taxRate / 100)) : price2) : null,
+      sale_price: finalSalePrice(p, opts),
+      sale_price_2: price2 ? adjustPrice(price2, p, opts) : null,
       stock: Math.max(0, p.balance ?? 0),
       min_stock: p.minStock,
       tax_rate: p.taxRate,

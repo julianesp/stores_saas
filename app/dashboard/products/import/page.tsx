@@ -18,6 +18,7 @@ import { toast } from "sonner";
 import {
   parseSiigoProductsFile,
   finalSalePrice,
+  looksLikeThousands,
   toImportRows,
   type SiigoProductsParseResult,
 } from "@/lib/siigo-products-import";
@@ -35,6 +36,8 @@ export default function ImportProductsPage() {
   const [parsed, setParsed] = useState<SiigoProductsParseResult | null>(null);
   const [noInventory, setNoInventory] = useState(false);
   const [addTaxToPrice, setAddTaxToPrice] = useState(true);
+  const [fixThousands, setFixThousands] = useState(false);
+  const priceOpts = { addTaxToPrice, fixThousands };
   const [updateExisting, setUpdateExisting] = useState(false);
   const [search, setSearch] = useState("");
   const [progress, setProgress] = useState<{ done: number; total: number } | null>(null);
@@ -52,6 +55,7 @@ export default function ImportProductsPage() {
       inactive: products.filter((p) => !p.active).length,
       withPrice2: products.filter((p) => p.price1 > 0 && p.price2 > 0).length,
       notInventoriable: products.filter((p) => !p.inventoriable).length,
+      inThousands: products.filter(looksLikeThousands),
     };
   }, [products]);
 
@@ -100,7 +104,7 @@ export default function ImportProductsPage() {
 
   const handleImport = async () => {
     if (products.length === 0) return;
-    const rows = toImportRows(products, { addTaxToPrice, noInventory });
+    const rows = toImportRows(products, { addTaxToPrice, noInventory, fixThousands });
     const total: ImportProductsResult = {
       created: 0,
       updated: 0,
@@ -245,6 +249,38 @@ export default function ImportProductsPage() {
                   "Luego puedes activar el control de inventario producto por producto."
                 }
               />
+              {stats.inThousands.length > 0 && (
+                <div>
+                  <Option
+                    checked={fixThousands}
+                    onChange={setFixThousands}
+                    title={`${stats.inThousands.length} precio(s) parecen estar escritos en miles`}
+                    detail={
+                      "En Siigo estos productos valen menos de $50 (ej. 2 en vez de 2.000). " +
+                      "Sin marcar, se importan tal cual y el tendero los revisa en Productos → \"Precios por revisar\". " +
+                      "Marcado, se multiplican por 1.000 al importar."
+                    }
+                  />
+                  <ul className="mt-2 ml-7 text-xs text-muted-foreground space-y-0.5 max-h-32 overflow-y-auto">
+                    {stats.inThousands.slice(0, 50).map((p) => (
+                      <li key={p.row}>
+                        {p.name}: {(p.price1 || p.price2).toLocaleString("es-CO")}
+                        {fixThousands && (
+                          <>
+                            {" → "}
+                            <span className="font-medium text-foreground">
+                              {formatCurrency(finalSalePrice(p, priceOpts))}
+                            </span>
+                          </>
+                        )}
+                      </li>
+                    ))}
+                    {stats.inThousands.length > 50 && (
+                      <li>…y {stats.inThousands.length - 50} más.</li>
+                    )}
+                  </ul>
+                </div>
+              )}
               {stats.taxNotIncluded.length > 0 && (
                 <div>
                   <Option
@@ -259,9 +295,9 @@ export default function ImportProductsPage() {
                   <ul className="mt-2 ml-7 text-xs text-muted-foreground space-y-0.5 max-h-32 overflow-y-auto">
                     {stats.taxNotIncluded.map((p) => (
                       <li key={p.row}>
-                        {p.name}: {formatCurrency(p.price1 || p.price2)} →{" "}
+                        {p.name}: {p.price1 || p.price2} →{" "}
                         <span className="font-medium text-foreground">
-                          {formatCurrency(finalSalePrice(p, addTaxToPrice))}
+                          {formatCurrency(finalSalePrice(p, priceOpts))}
                         </span>{" "}
                         ({p.taxLabel})
                       </li>
@@ -352,7 +388,7 @@ export default function ImportProductsPage() {
                           )}
                         </td>
                         <td className="py-2 text-right font-medium">
-                          {formatCurrency(finalSalePrice(p, addTaxToPrice))}
+                          {formatCurrency(finalSalePrice(p, priceOpts))}
                         </td>
                       </tr>
                     ))}
