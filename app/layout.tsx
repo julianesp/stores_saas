@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import { ClerkProvider } from '@clerk/nextjs';
+import { esMX } from '@clerk/localizations';
 import Script from 'next/script';
 import "./globals.css";
 import { Analytics } from "@vercel/analytics/next"
@@ -157,7 +158,9 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <ClerkProvider>
+    // Español para todo lo que dibuja Clerk (menú de usuario, inicio de sesión, cuenta).
+    // No hay variante es-CO; es-MX es la más cercana.
+    <ClerkProvider localization={esMX}>
       <html lang="es" suppressHydrationWarning>
         <head>
           <script dangerouslySetInnerHTML={{ __html: THEME_INIT_SCRIPT }} />
