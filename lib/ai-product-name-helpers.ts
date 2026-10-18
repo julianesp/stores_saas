@@ -3,7 +3,7 @@
 
 const SYSTEM_GEMINI_API_KEY = process.env.GEMINI_API_KEY;
 const GEMINI_API_URL =
-  'https://generativelanguage.googleapis.com/v1/models/gemini-2.5-flash:generateContent';
+  'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent';
 
 export interface SuggestNameResult {
   /** Nombre sugerido; vacío si la foto no permite leer el empaque. */

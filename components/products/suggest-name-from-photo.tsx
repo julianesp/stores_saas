@@ -4,6 +4,7 @@ import { useRef, useState } from 'react';
 import { Camera, Check, Loader2, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
+import { tenantHeaders } from '@/lib/cloudflare-api';
 
 const MAX_SIDE_PX = 1024;
 
@@ -39,7 +40,7 @@ export function SuggestNameFromPhoto({ currentName, onUse }: SuggestNameFromPhot
       const imageBase64 = await resizeToJpegBase64(file);
       const res = await fetch('/api/ai/suggest-product-name', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: tenantHeaders(),
         body: JSON.stringify({ imageBase64, mimeType: 'image/jpeg', currentName }),
       });
       const data = await res.json();

@@ -5,6 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Brain, Sparkles, RefreshCw, AlertTriangle } from 'lucide-react';
 import { toast } from 'sonner';
+import { tenantHeaders } from '@/lib/cloudflare-api';
 
 interface AIInsightsSectionProps {
   salesData: {
@@ -87,9 +88,7 @@ export function AIInsightsSection({ salesData, customerData, daysAnalyzed }: AII
 
       const response = await fetch('/api/ai/insights', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers: tenantHeaders(),
         body: JSON.stringify({
           salesData,
           customerData,
