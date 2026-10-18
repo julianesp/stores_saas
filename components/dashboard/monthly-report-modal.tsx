@@ -4,32 +4,39 @@ import { useEffect, useState } from "react";
 import { useAuth } from "@clerk/nextjs";
 import { CheckCircle2, Download, FileBarChart, Loader2, X } from "lucide-react";
 import { toast } from "sonner";
-import { getProducts, getSales, getSelectedTenantId, getUserProfile } from "@/lib/cloudflare-api";
+import {
+  getMonthlyReportDownloads,
+  getProducts,
+  getSales,
+  getSelectedTenantId,
+  getUserProfile,
+  markMonthlyReportDownloaded,
+} from "@/lib/cloudflare-api";
 import {
   buildMonthlyReport,
   downloadMonthlyReportPdf,
   hasSalesIn,
+  isDownloadedLocally,
+  markDownloadedLocally,
   monthKey,
   monthLabel,
   previousMonth,
   type MonthlyReport,
 } from "@/lib/monthly-sales-report";
 
-// Descargado: no se vuelve a ofrecer ese mes (por navegador).
-const downloadedKey = (tenant: string, month: string) => `posib:monthly-report:downloaded:${tenant}:${month}`;
 // "Mostrar más tarde" o cerrar: no molesta más en esta sesión; vuelve al abrir el sistema otra vez.
 const laterKey = (tenant: string, month: string) => `posib:monthly-report:later:${tenant}:${month}`;
 
-function readFlag(storage: "local" | "session", key: string): boolean {
+function isLater(key: string): boolean {
   try {
-    return (storage === "local" ? localStorage : sessionStorage).getItem(key) === "1";
+    return sessionStorage.getItem(key) === "1";
   } catch {
     return false;
   }
 }
-function writeFlag(storage: "local" | "session", key: string) {
+function markLater(key: string) {
   try {
-    (storage === "local" ? localStorage : sessionStorage).setItem(key, "1");
+    sessionStorage.setItem(key, "1");
   } catch {
     /* sin almacenamiento: el aviso puede volver a salir, no es grave */
   }
@@ -40,7 +47,7 @@ const cop = (v: number) => `$${Math.round(v).toLocaleString("es-CO")}`;
 /**
  * Al abrir el sistema durante el mes, ofrece descargar el informe de ventas del
  * mes anterior. Sigue apareciendo cada vez que se abre el sistema hasta que el
- * tendero lo descargue.
+ * tendero lo descargue (en cualquier dispositivo: se registra en el Worker).
  */
 export function MonthlyReportModal() {
   const { getToken } = useAuth();
@@ -54,15 +61,21 @@ export function MonthlyReportModal() {
   const key = monthKey(month);
 
   const close = () => {
-    if (!downloaded) writeFlag("session", laterKey(tenant, key));
+    if (!downloaded) markLater(laterKey(tenant, key));
     setOpen(false);
   };
 
   useEffect(() => {
-    if (readFlag("local", downloadedKey(tenant, key)) || readFlag("session", laterKey(tenant, key))) return;
+    if (isDownloadedLocally(tenant, key) || isLater(laterKey(tenant, key))) return;
     let cancelled = false;
     (async () => {
       try {
+        // ¿Ya lo descargó en otro dispositivo?
+        const downloadedMonths = await getMonthlyReportDownloads(getToken);
+        if (downloadedMonths?.includes(key)) {
+          markDownloadedLocally(tenant, key);
+          return;
+        }
         const [sales, products, profile] = await Promise.all([
           getSales(getToken),
           getProducts(getToken),
@@ -97,8 +110,9 @@ export function MonthlyReportModal() {
     setDownloading(true);
     try {
       await downloadMonthlyReportPdf(report);
-      writeFlag("local", downloadedKey(tenant, key));
+      markDownloadedLocally(tenant, key);
       setDownloaded(true);
+      await markMonthlyReportDownloaded(key, getToken);
     } catch (err) {
       console.error("Error generando el informe mensual:", err);
       toast.error("No se pudo generar el informe. Intente de nuevo.");

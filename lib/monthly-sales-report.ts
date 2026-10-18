@@ -50,6 +50,30 @@ export function monthLabel(m: ReportMonth): string {
   return `${MONTHS[m.month]} ${m.year}`;
 }
 
+// --- Meses ya descargados -----------------------------------------------------
+// La fuente principal es el Worker (tabla monthly_report_downloads, vale en todos
+// los dispositivos). El navegador guarda una copia para no esperar la red y por
+// si el Worker no responde.
+
+const localDownloadKey = (tenant: string, month: string) =>
+  `posib:monthly-report:downloaded:${tenant}:${month}`;
+
+export function isDownloadedLocally(tenant: string, month: string): boolean {
+  try {
+    return localStorage.getItem(localDownloadKey(tenant, month)) === "1";
+  } catch {
+    return false;
+  }
+}
+
+export function markDownloadedLocally(tenant: string, month: string): void {
+  try {
+    localStorage.setItem(localDownloadKey(tenant, month), "1");
+  } catch {
+    /* sin almacenamiento: queda solo el registro del Worker */
+  }
+}
+
 /**
  * Fecha de una venta. SQLite guarda datetime('now') en UTC sin zona
  * ("2026-10-18 15:30:00"); se interpreta como UTC y se pasa a hora local.
@@ -99,6 +123,30 @@ export interface MonthlyReport {
   reorder: ProductLine[];
   idle: { count: number; value: number; examples: string[] };
   tips: string[];
+}
+
+export interface MonthSummary {
+  month: ReportMonth;
+  key: string;
+  salesCount: number;
+  revenue: number;
+}
+
+/** Meses con ventas, del más reciente al más antiguo, con su resumen. */
+export function monthsWithSales(sales: Sale[]): MonthSummary[] {
+  const byKey = new Map<string, MonthSummary>();
+  for (const sale of sales) {
+    if (!isValidSale(sale)) continue;
+    const d = saleDate(sale.created_at);
+    if (Number.isNaN(d.getTime())) continue;
+    const month = { year: d.getFullYear(), month: d.getMonth() };
+    const key = monthKey(month);
+    const entry = byKey.get(key) ?? { month, key, salesCount: 0, revenue: 0 };
+    entry.salesCount++;
+    entry.revenue += Number(sale.total) || 0;
+    byKey.set(key, entry);
+  }
+  return [...byKey.values()].sort((a, b) => b.key.localeCompare(a.key));
 }
 
 export function hasSalesIn(sales: Sale[], m: ReportMonth): boolean {

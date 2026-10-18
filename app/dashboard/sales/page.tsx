@@ -16,6 +16,7 @@ import {
   Printer,
   Trash2,
   Upload,
+  FileBarChart,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -575,6 +576,12 @@ function SalesContent() {
 
         {/* Botones de Exportación e Importación */}
         <div className="flex flex-col sm:flex-row gap-2">
+          <Link href="/dashboard/sales/informes">
+            <Button variant="outline" className="text-sm w-full">
+              <FileBarChart className="mr-2 h-4 w-4" />
+              Informes mensuales
+            </Button>
+          </Link>
           <Link href="/dashboard/sales/import" data-guide="sales-import">
             <Button variant="outline" className="text-sm w-full">
               <Upload className="mr-2 h-4 w-4" />

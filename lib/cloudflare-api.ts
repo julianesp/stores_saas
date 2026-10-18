@@ -328,6 +328,31 @@ export interface ImportProductsResult {
   errors: Array<{ code: string; name: string; error: string }>;
 }
 
+/**
+ * Meses ('YYYY-MM') cuyo informe mensual de ventas ya descargó la tienda.
+ * Devuelve null si no se pudo consultar (el llamador usa lo guardado en el navegador).
+ */
+export async function getMonthlyReportDownloads(getToken: GetTokenFn): Promise<string[] | null> {
+  try {
+    const data = await fetchAPI<{ months: string[] }>('/api/monthly-reports/downloads', getToken);
+    return data.months ?? [];
+  } catch {
+    return null;
+  }
+}
+
+/** Registra que la tienda descargó el informe de ese mes (no falla si no se puede). */
+export async function markMonthlyReportDownloaded(month: string, getToken: GetTokenFn): Promise<void> {
+  try {
+    await fetchAPI('/api/monthly-reports/downloads', getToken, {
+      method: 'POST',
+      body: JSON.stringify({ month }),
+    });
+  } catch (error) {
+    console.warn('No se pudo registrar la descarga del informe:', error);
+  }
+}
+
 /** Importa una tanda (máx. 500) de productos. Ver POST /api/products/import del Worker. */
 export async function importProducts(
   products: ImportProductRow[],

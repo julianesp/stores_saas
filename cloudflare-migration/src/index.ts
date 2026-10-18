@@ -14,6 +14,7 @@ import productsRoutes from './routes/products';
 import customersRoutes from './routes/customers';
 import salesRoutes from './routes/sales';
 import categoriesRoutes from './routes/categories';
+import monthlyReportsRoutes from './routes/monthly-reports';
 import suppliersRoutes from './routes/suppliers';
 import purchaseOrdersRoutes from './routes/purchase-orders';
 import debtorsRoutes from './routes/debtors';
@@ -346,6 +347,7 @@ app.route('/api/telegram-recipients', telegramRecipientsRoutes);
 app.route('/api/business-type-prices', businessTypePricesRoutes);
 // Respaldo a Drive - rutas del tendero (autenticadas)
 app.route('/api/backup', backupAuth);
+app.route('/api/monthly-reports', monthlyReportsRoutes);
 
 // 404 handler
 app.notFound((c) => {
