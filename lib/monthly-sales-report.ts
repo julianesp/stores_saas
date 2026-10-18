@@ -1,0 +1,584 @@
+/**
+ * Informe mensual de ventas para el tendero (PDF).
+ *
+ * Se ofrece al abrir el sistema durante el mes siguiente (ver
+ * components/dashboard/monthly-report-modal.tsx). Analiza las ventas del mes
+ * cerrado y responde lo que más le sirve a una tienda de barrio:
+ *   - cuánto vendió y ganó, comparado con el mes anterior;
+ *   - qué productos no le pueden faltar (los más vendidos) y cuáles pedir ya;
+ *   - qué días y horas se vende más, cómo le pagan y cuánto quedó fiado;
+ *   - qué mercancía no se movió (plata quieta).
+ *
+ * Todo se calcula en el navegador con las ventas y productos ya cacheados.
+ */
+
+import type jsPDF from "jspdf";
+import type { Product, Sale, SaleItem } from "./cloudflare-api";
+import { getItemCost, getItemRevenue } from "./profit-helpers";
+import { tracksInventory } from "./types";
+
+const MONTHS = [
+  "enero", "febrero", "marzo", "abril", "mayo", "junio",
+  "julio", "agosto", "septiembre", "octubre", "noviembre", "diciembre",
+];
+const WEEKDAYS = ["domingo", "lunes", "martes", "miércoles", "jueves", "viernes", "sábado"];
+const PAYMENT_LABELS: Record<string, string> = {
+  efectivo: "Efectivo",
+  nequi: "Nequi",
+  daviplata: "Daviplata",
+  tarjeta: "Tarjeta",
+  transferencia: "Transferencia",
+  credito: "Fiado (crédito)",
+};
+
+/** Mes del informe: año y mes (0-11) en hora local de la tienda. */
+export interface ReportMonth {
+  year: number;
+  month: number;
+}
+
+export function previousMonth(today = new Date()): ReportMonth {
+  const d = new Date(today.getFullYear(), today.getMonth() - 1, 1);
+  return { year: d.getFullYear(), month: d.getMonth() };
+}
+
+export function monthKey(m: ReportMonth): string {
+  return `${m.year}-${String(m.month + 1).padStart(2, "0")}`;
+}
+
+export function monthLabel(m: ReportMonth): string {
+  return `${MONTHS[m.month]} ${m.year}`;
+}
+
+/**
+ * Fecha de una venta. SQLite guarda datetime('now') en UTC sin zona
+ * ("2026-10-18 15:30:00"); se interpreta como UTC y se pasa a hora local.
+ */
+export function saleDate(createdAt: string): Date {
+  const hasZone = /[zZ]|[+-]\d{2}:?\d{2}$/.test(createdAt);
+  return new Date(hasZone ? createdAt : `${createdAt.replace(" ", "T")}Z`);
+}
+
+function inMonth(sale: Sale, m: ReportMonth): boolean {
+  const d = saleDate(sale.created_at);
+  return d.getFullYear() === m.year && d.getMonth() === m.month;
+}
+
+const isValidSale = (s: Sale) => s.status !== "cancelada";
+
+export interface ProductLine {
+  productId: string;
+  name: string;
+  units: number;
+  revenue: number;
+  profit: number | null;
+  /** Unidades actuales (null = sin control de inventario o producto borrado). */
+  stock: number | null;
+  /** Días que alcanza el stock al ritmo de venta del mes. */
+  daysOfCover: number | null;
+}
+
+export interface MonthlyReport {
+  month: ReportMonth;
+  storeName: string | null;
+  salesCount: number;
+  revenue: number;
+  /** null si casi ningún producto vendido tiene costo de compra. */
+  profit: number | null;
+  avgTicket: number;
+  unitsSold: number;
+  previous: { revenue: number; salesCount: number } | null;
+  bestDay: { date: Date; revenue: number } | null;
+  byWeekday: Array<{ day: string; revenue: number; count: number }>;
+  byTimeOfDay: Array<{ label: string; revenue: number; count: number }>;
+  byPayment: Array<{ label: string; revenue: number; count: number }>;
+  credit: { count: number; total: number; pending: number };
+  topByUnits: ProductLine[];
+  topByRevenue: ProductLine[];
+  topByProfit: ProductLine[];
+  reorder: ProductLine[];
+  idle: { count: number; value: number; examples: string[] };
+  tips: string[];
+}
+
+export function hasSalesIn(sales: Sale[], m: ReportMonth): boolean {
+  return sales.some((s) => isValidSale(s) && inMonth(s, m));
+}
+
+export function buildMonthlyReport(
+  allSales: Sale[],
+  products: Product[],
+  m: ReportMonth,
+  storeName: string | null,
+): MonthlyReport {
+  const productsById = new Map(products.map((p) => [p.id, p]));
+  const sales = allSales.filter((s) => isValidSale(s) && inMonth(s, m));
+  const daysInMonth = new Date(m.year, m.month + 1, 0).getDate();
+
+  const prevMonth = { year: m.month === 0 ? m.year - 1 : m.year, month: (m.month + 11) % 12 };
+  const prevSales = allSales.filter((s) => isValidSale(s) && inMonth(s, prevMonth));
+
+  const revenue = sales.reduce((sum, s) => sum + (Number(s.total) || 0), 0);
+
+  // Por producto
+  const lines = new Map<string, ProductLine & { costKnown: boolean }>();
+  let unitsSold = 0;
+  let costedRevenue = 0;
+  let itemsRevenue = 0;
+  let totalCost = 0;
+  for (const sale of sales) {
+    for (const item of (sale.items ?? []) as Array<SaleItem & { product?: { name?: string } }>) {
+      const product = productsById.get(item.product_id);
+      const qty = Number(item.quantity) || 0;
+      const itemRevenue = getItemRevenue(item);
+      const cost = getItemCost(item, product);
+      const costKnown = !!product && (product.cost_price || 0) > 0;
+      unitsSold += qty;
+      itemsRevenue += itemRevenue;
+      if (costKnown) {
+        costedRevenue += itemRevenue;
+        totalCost += cost;
+      }
+      const line = lines.get(item.product_id) ?? {
+        productId: item.product_id,
+        name: product?.name ?? item.product?.name ?? "Producto borrado",
+        units: 0,
+        revenue: 0,
+        profit: 0,
+        stock: product && tracksInventory(product) ? Number(product.stock) || 0 : null,
+        daysOfCover: null,
+        costKnown,
+      };
+      line.units += qty;
+      line.revenue += itemRevenue;
+      line.profit = costKnown && line.profit !== null ? line.profit + itemRevenue - cost : null;
+      lines.set(item.product_id, line);
+    }
+  }
+  for (const line of lines.values()) {
+    const perDay = line.units / daysInMonth;
+    line.daysOfCover = line.stock !== null && perDay > 0 ? line.stock / perDay : null;
+  }
+  const allLines = [...lines.values()];
+  // La ganancia solo es confiable si la mayoría de lo vendido tiene costo de compra.
+  const profit = itemsRevenue > 0 && costedRevenue / itemsRevenue >= 0.6 ? costedRevenue - totalCost : null;
+
+  const topByUnits = [...allLines].sort((a, b) => b.units - a.units).slice(0, 15);
+  const topByRevenue = [...allLines].sort((a, b) => b.revenue - a.revenue).slice(0, 10);
+  const topByProfit = allLines
+    .filter((l) => l.profit !== null && l.profit > 0)
+    .sort((a, b) => (b.profit ?? 0) - (a.profit ?? 0))
+    .slice(0, 10);
+  // Pedir ya: de los 40 más vendidos, los que alcanzan para menos de una semana.
+  const reorder = [...allLines]
+    .sort((a, b) => b.units - a.units)
+    .slice(0, 40)
+    .filter((l) => l.daysOfCover !== null && l.daysOfCover < 7)
+    .sort((a, b) => (a.daysOfCover ?? 0) - (b.daysOfCover ?? 0))
+    .slice(0, 15);
+
+  // Por día
+  const byDate = new Map<string, { date: Date; revenue: number }>();
+  const weekday = WEEKDAYS.map((day) => ({ day, revenue: 0, count: 0 }));
+  const slots = [
+    { label: "Madrugada (antes de 7 a. m.)", from: 0, to: 7 },
+    { label: "Mañana (7 a. m. a 12 m.)", from: 7, to: 12 },
+    { label: "Tarde (12 m. a 6 p. m.)", from: 12, to: 18 },
+    { label: "Noche (después de 6 p. m.)", from: 18, to: 24 },
+  ].map((s) => ({ ...s, revenue: 0, count: 0 }));
+  const payments = new Map<string, { label: string; revenue: number; count: number }>();
+  const credit = { count: 0, total: 0, pending: 0 };
+  for (const sale of sales) {
+    const d = saleDate(sale.created_at);
+    const total = Number(sale.total) || 0;
+    const key = d.toDateString();
+    const day = byDate.get(key) ?? { date: d, revenue: 0 };
+    day.revenue += total;
+    byDate.set(key, day);
+    weekday[d.getDay()].revenue += total;
+    weekday[d.getDay()].count++;
+    const slot = slots.find((s) => d.getHours() >= s.from && d.getHours() < s.to)!;
+    slot.revenue += total;
+    slot.count++;
+    const method = String(sale.payment_method || "efectivo");
+    const pay = payments.get(method) ?? { label: PAYMENT_LABELS[method] ?? method, revenue: 0, count: 0 };
+    pay.revenue += total;
+    pay.count++;
+    payments.set(method, pay);
+    if (method === "credito") {
+      credit.count++;
+      credit.total += total;
+      credit.pending += Number(sale.amount_pending ?? (sale.payment_status === "pagado" ? 0 : total)) || 0;
+    }
+  }
+  const bestDay = [...byDate.values()].sort((a, b) => b.revenue - a.revenue)[0] ?? null;
+
+  // Plata quieta: productos con unidades que no se vendieron en todo el mes.
+  const idleProducts = products.filter(
+    (p) => tracksInventory(p) && (Number(p.stock) || 0) > 0 && !lines.has(p.id),
+  );
+  const idleValue = idleProducts.reduce(
+    (sum, p) => sum + (Number(p.stock) || 0) * (Number(p.cost_price) || 0),
+    0,
+  );
+  const idle = {
+    count: idleProducts.length,
+    value: idleValue,
+    examples: [...idleProducts]
+      .sort((a, b) => b.stock * (b.cost_price || 0) - a.stock * (a.cost_price || 0))
+      .slice(0, 5)
+      .map((p) => p.name),
+  };
+
+  const previous = prevSales.length
+    ? { revenue: prevSales.reduce((sum, s) => sum + (Number(s.total) || 0), 0), salesCount: prevSales.length }
+    : null;
+
+  const report: MonthlyReport = {
+    month: m,
+    storeName,
+    salesCount: sales.length,
+    revenue,
+    profit,
+    avgTicket: sales.length ? revenue / sales.length : 0,
+    unitsSold,
+    previous,
+    bestDay,
+    byWeekday: [...weekday.slice(1), weekday[0]], // lunes a domingo
+    byTimeOfDay: slots.filter((s) => s.count > 0),
+    byPayment: [...payments.values()].sort((a, b) => b.revenue - a.revenue),
+    credit,
+    topByUnits,
+    topByRevenue,
+    topByProfit,
+    reorder,
+    idle,
+    tips: [],
+  };
+  report.tips = buildTips(report);
+  return report;
+}
+
+const cop = (v: number) =>
+  `$${Math.round(v).toLocaleString("es-CO")}`;
+const num = (v: number) => Math.round(v).toLocaleString("es-CO");
+
+function buildTips(r: MonthlyReport): string[] {
+  const tips: string[] = [];
+  if (r.reorder.length > 0) {
+    tips.push(
+      `Pida ya ${r.reorder.slice(0, 3).map((l) => l.name).join(", ")}: con lo que hay no alcanza para una semana.`,
+    );
+  }
+  if (r.topByUnits.length > 0) {
+    tips.push(
+      `Nunca deje agotar ${r.topByUnits.slice(0, 3).map((l) => l.name).join(", ")}: son lo que más le compran.`,
+    );
+  }
+  const bestWeekday = [...r.byWeekday].sort((a, b) => b.revenue - a.revenue)[0];
+  if (bestWeekday && bestWeekday.revenue > 0) {
+    tips.push(`El ${bestWeekday.day} es el día de más ventas: tenga la tienda bien surtida desde el día anterior.`);
+  }
+  if (r.idle.count > 0 && r.idle.value > 0) {
+    tips.push(
+      `Hay ${cop(r.idle.value)} en mercancía que no se vendió en el mes. Póngala en oferta o compre menos de esos productos.`,
+    );
+  }
+  if (r.credit.pending > 0) {
+    tips.push(`Quedan ${cop(r.credit.pending)} fiados por cobrar de este mes. Revise la lista de deudores.`);
+  }
+  if (r.profit === null) {
+    tips.push("Agregue el precio de compra a sus productos para ver cuánto gana realmente cada mes.");
+  }
+  if (r.previous && r.previous.revenue > 0) {
+    const change = ((r.revenue - r.previous.revenue) / r.previous.revenue) * 100;
+    if (change <= -10) {
+      tips.push("Las ventas bajaron frente al mes anterior. Revise si le faltó algún producto de los más vendidos.");
+    }
+  }
+  return tips;
+}
+
+// ---------------------------------------------------------------------------
+// PDF
+// ---------------------------------------------------------------------------
+
+const BRAND: [number, number, number] = [0, 124, 128]; // --brand #007c80
+const BRAND_LIGHT: [number, number, number] = [230, 244, 244]; // --brand-light
+const INK: [number, number, number] = [31, 41, 55];
+const MUTED: [number, number, number] = [107, 114, 128];
+const WARN: [number, number, number] = [180, 83, 9];
+
+export async function downloadMonthlyReportPdf(r: MonthlyReport): Promise<void> {
+  const doc = await buildMonthlyReportPdf(r);
+  doc.save(`Informe de ventas ${monthLabel(r.month)}.pdf`);
+}
+
+export async function buildMonthlyReportPdf(r: MonthlyReport): Promise<jsPDF> {
+  const JsPDF = (await import("jspdf")).default;
+  const doc: jsPDF = new JsPDF({ unit: "mm", format: "a4" });
+  const W = doc.internal.pageSize.getWidth();
+  const H = doc.internal.pageSize.getHeight();
+  const M = 16;
+  let y = 0;
+
+  const ensure = (needed: number) => {
+    if (y + needed > H - 16) {
+      doc.addPage();
+      y = 18;
+    }
+  };
+  const text = (value: string, x: number, size = 10, color = INK, style: "normal" | "bold" = "normal") => {
+    doc.setFont("helvetica", style);
+    doc.setFontSize(size);
+    doc.setTextColor(...color);
+    doc.text(value, x, y);
+  };
+  const paragraph = (value: string, size = 10, color = INK) => {
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(size);
+    doc.setTextColor(...color);
+    const rows = doc.splitTextToSize(value, W - 2 * M) as string[];
+    ensure(rows.length * size * 0.45 + 2);
+    doc.text(rows, M, y);
+    y += rows.length * size * 0.45 + 2;
+  };
+  const section = (title: string, subtitle?: string) => {
+    ensure(22);
+    y += 6;
+    doc.setFillColor(...BRAND);
+    doc.rect(M, y - 4.2, 1.6, 5.6, "F");
+    text(title, M + 4, 13, INK, "bold");
+    y += 5;
+    if (subtitle) {
+      paragraph(subtitle, 9, MUTED);
+    }
+    y += 1;
+  };
+  /** Tabla simple: columnas con ancho y alineación. */
+  const table = (
+    headers: string[],
+    rows: string[][],
+    widths: number[],
+    align: Array<"left" | "right">,
+    highlight?: (row: number) => boolean,
+  ) => {
+    const lineH = 6.2;
+    const drawHeader = () => {
+      doc.setFillColor(...BRAND_LIGHT);
+      doc.rect(M, y - 4.3, W - 2 * M, lineH, "F");
+      let x = M + 2;
+      headers.forEach((h, i) => {
+        doc.setFont("helvetica", "bold");
+        doc.setFontSize(8.5);
+        doc.setTextColor(...BRAND);
+        const cx = align[i] === "right" ? x + widths[i] - 2 : x;
+        doc.text(h, cx, y, { align: align[i] });
+        x += widths[i];
+      });
+      y += lineH;
+    };
+    ensure(lineH * 2);
+    drawHeader();
+    rows.forEach((row, r) => {
+      if (y + lineH > H - 16) {
+        doc.addPage();
+        y = 18;
+        drawHeader();
+      }
+      let x = M + 2;
+      row.forEach((cell, i) => {
+        doc.setFont("helvetica", i === 0 ? "bold" : "normal");
+        doc.setFontSize(9);
+        doc.setTextColor(...(highlight?.(r) && i === row.length - 1 ? WARN : INK));
+        const maxW = widths[i] - 3;
+        const value = (doc.splitTextToSize(cell, maxW) as string[])[0] ?? "";
+        const cx = align[i] === "right" ? x + widths[i] - 2 : x;
+        doc.text(value, cx, y, { align: align[i] });
+        x += widths[i];
+      });
+      doc.setDrawColor(229, 231, 235);
+      doc.line(M, y + 2, W - M, y + 2);
+      y += lineH;
+    });
+    y += 2;
+  };
+
+  // Encabezado de marca
+  doc.setFillColor(...BRAND);
+  doc.rect(0, 0, W, 34, "F");
+  y = 14;
+  text("INFORME MENSUAL DE VENTAS", M, 9, [255, 255, 255], "bold");
+  y = 24;
+  const title = monthLabel(r.month);
+  text(title.charAt(0).toUpperCase() + title.slice(1), M, 20, [255, 255, 255], "bold");
+  if (r.storeName) {
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(12);
+    doc.setTextColor(255, 255, 255);
+    doc.text(r.storeName, W - M, 24, { align: "right" });
+  }
+  y = 46;
+
+  // Resumen en cifras
+  const change =
+    r.previous && r.previous.revenue > 0 ? ((r.revenue - r.previous.revenue) / r.previous.revenue) * 100 : null;
+  const cards: Array<[string, string, string?]> = [
+    ["Vendió", cop(r.revenue), change === null ? undefined : `${change >= 0 ? "+" : ""}${change.toFixed(0)}% vs. mes anterior`],
+    ["Ventas", num(r.salesCount), `Promedio ${cop(r.avgTicket)} por venta`],
+    r.profit !== null
+      ? ["Ganó (estimado)", cop(r.profit), `Margen ${r.revenue > 0 ? ((r.profit / r.revenue) * 100).toFixed(0) : 0}%`]
+      : ["Unidades vendidas", num(r.unitsSold), undefined],
+  ];
+  const cardW = (W - 2 * M - 8) / 3;
+  cards.forEach(([label, value, note], i) => {
+    const x = M + i * (cardW + 4);
+    doc.setFillColor(...BRAND_LIGHT);
+    doc.roundedRect(x, y - 6, cardW, 24, 2, 2, "F");
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(8.5);
+    doc.setTextColor(...MUTED);
+    doc.text(label, x + 4, y);
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(15);
+    doc.setTextColor(...BRAND);
+    doc.text(value, x + 4, y + 8);
+    if (note) {
+      doc.setFont("helvetica", "normal");
+      doc.setFontSize(7.5);
+      doc.setTextColor(...MUTED);
+      doc.text(note, x + 4, y + 14);
+    }
+  });
+  y += 26;
+  if (r.bestDay) {
+    paragraph(
+      `Su mejor día fue el ${WEEKDAYS[r.bestDay.date.getDay()]} ${r.bestDay.date.getDate()} de ${MONTHS[r.bestDay.date.getMonth()]}, con ${cop(r.bestDay.revenue)} en ventas.`,
+      10,
+      INK,
+    );
+  }
+
+  if (r.tips.length > 0) {
+    section("Lo más importante para este mes");
+    r.tips.forEach((tip) => {
+      doc.setFont("helvetica", "normal");
+      doc.setFontSize(10);
+      const rows = doc.splitTextToSize(tip, W - 2 * M - 6) as string[];
+      ensure(rows.length * 4.5 + 2);
+      doc.setFillColor(...BRAND);
+      doc.circle(M + 1.2, y - 1.2, 0.9, "F");
+      doc.setTextColor(...INK);
+      doc.text(rows, M + 5, y);
+      y += rows.length * 4.5 + 2;
+    });
+  }
+
+  // Lo que no le debe faltar
+  section(
+    "Productos que no le deben faltar",
+    "Los que más unidades vendió en el mes. Si alguno se agota, pierde ventas.",
+  );
+  table(
+    ["Producto", "Unidades", "Vendido", "Hay hoy", "Alcanza para"],
+    r.topByUnits.map((l) => [
+      l.name,
+      num(l.units),
+      cop(l.revenue),
+      l.stock === null ? "Sin control" : num(l.stock),
+      l.daysOfCover === null ? "—" : l.daysOfCover < 1 ? "Menos de 1 día" : `${Math.floor(l.daysOfCover)} días`,
+    ]),
+    [72, 22, 30, 24, 30],
+    ["left", "right", "right", "right", "right"],
+    (i) => (r.topByUnits[i].daysOfCover ?? 99) < 7,
+  );
+
+  if (r.reorder.length > 0) {
+    section("Pedir ya", "De los más vendidos, estos no alcanzan para una semana con las unidades que hay.");
+    table(
+      ["Producto", "Vende al día", "Hay hoy", "Alcanza para"],
+      r.reorder.map((l) => {
+        const perDay = l.units / new Date(r.month.year, r.month.month + 1, 0).getDate();
+        return [
+          l.name,
+          perDay < 1 ? perDay.toFixed(1).replace(".", ",") : num(perDay),
+          num(l.stock ?? 0),
+          (l.daysOfCover ?? 0) < 1 ? "Menos de 1 día" : `${Math.floor(l.daysOfCover ?? 0)} días`,
+        ];
+      }),
+      [92, 28, 28, 30],
+      ["left", "right", "right", "right"],
+      () => true,
+    );
+  }
+
+  section("Los que más plata dejaron en ventas");
+  table(
+    ["Producto", "Unidades", "Vendido"],
+    r.topByRevenue.map((l) => [l.name, num(l.units), cop(l.revenue)]),
+    [118, 30, 30],
+    ["left", "right", "right"],
+  );
+
+  if (r.topByProfit.length > 0) {
+    section("Los que más ganancia dejaron", "Ganancia = lo vendido menos el precio de compra actual.");
+    table(
+      ["Producto", "Vendido", "Ganancia"],
+      r.topByProfit.map((l) => [l.name, cop(l.revenue), cop(l.profit ?? 0)]),
+      [118, 30, 30],
+      ["left", "right", "right"],
+    );
+  }
+
+  section("Cuándo vende más");
+  table(
+    ["Día", "Ventas", "Vendido"],
+    r.byWeekday.map((d) => [d.day.charAt(0).toUpperCase() + d.day.slice(1), num(d.count), cop(d.revenue)]),
+    [118, 30, 30],
+    ["left", "right", "right"],
+  );
+  if (r.byTimeOfDay.length > 0) {
+    table(
+      ["Horario", "Ventas", "Vendido"],
+      r.byTimeOfDay.map((s) => [s.label, num(s.count), cop(s.revenue)]),
+      [118, 30, 30],
+      ["left", "right", "right"],
+    );
+  }
+
+  section("Cómo le pagaron");
+  table(
+    ["Forma de pago", "Ventas", "Total"],
+    r.byPayment.map((p) => [p.label, num(p.count), cop(p.revenue)]),
+    [118, 30, 30],
+    ["left", "right", "right"],
+  );
+  if (r.credit.count > 0) {
+    paragraph(
+      `Fió ${num(r.credit.count)} ${r.credit.count === 1 ? "venta" : "ventas"} por ${cop(r.credit.total)}; de eso quedan ${cop(r.credit.pending)} por cobrar.`,
+    );
+  }
+
+  if (r.idle.count > 0) {
+    section(
+      "Mercancía que no se movió",
+      "Productos con unidades en la tienda que no se vendieron ni una vez en el mes.",
+    );
+    paragraph(
+      `${num(r.idle.count)} ${r.idle.count === 1 ? "producto" : "productos"}${r.idle.value > 0 ? `, con ${cop(r.idle.value)} invertidos (a precio de compra)` : ""}. ${r.idle.examples.length > 0 ? `Por ejemplo: ${r.idle.examples.join(", ")}.` : ""}`,
+    );
+  }
+
+  // Pie en cada página
+  const pages = doc.getNumberOfPages();
+  for (let i = 1; i <= pages; i++) {
+    doc.setPage(i);
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(8);
+    doc.setTextColor(...MUTED);
+    doc.text(`posib.dev · Informe de ${monthLabel(r.month)}`, M, H - 8);
+    doc.text(`Página ${i} de ${pages}`, W - M, H - 8, { align: "right" });
+  }
+
+  return doc;
+}
