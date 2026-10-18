@@ -387,7 +387,7 @@ export default function ProductsPage() {
               <span className="sm:hidden">Revisar</span>
             </Button>
           </Link>
-          <Link href="/dashboard/products/import" className="flex-1 sm:flex-none">
+          <Link href="/dashboard/products/import" data-guide="products-import" className="flex-1 sm:flex-none">
             <Button variant="outline" className="w-full">
               <FileSpreadsheet className="mr-2 h-4 w-4" />
               <span className="hidden sm:inline">Importar productos</span>

@@ -2,6 +2,7 @@ import {
   BarChart3,
   Brain,
   CreditCard,
+  FileSpreadsheet,
   LayoutDashboard,
   Mail,
   Package,
@@ -25,6 +26,8 @@ import {
  * - `sceneId` reutiliza la demo animada del home (components/landing/
  *   process-showcase/scenes.tsx) como "video" de cómo se hace.
  * - El orden del arreglo es el orden sugerido para aprender.
+ * - Las pantallas que no están en el menú (p. ej. importar) usan `menuHref`
+ *   con la sección del menú de la que dependen.
  */
 
 export interface GuideStep {
@@ -40,6 +43,8 @@ export interface Guide {
   title: string;
   summary: string;
   href: string;
+  /** Entrada del menú que da acceso a esta guía, si `href` no está en el menú. */
+  menuHref?: string;
   icon: LucideIcon;
   /** Si es true, solo aplica en la ruta exacta (para /dashboard). */
   exact?: boolean;
@@ -117,8 +122,57 @@ export const GUIDES: Guide[] = [
         text: "Si un producto quedó dos veces, aquí lo detectamos y te ayudamos a unirlo o renombrarlo.",
         target: "products-duplicates",
       },
+      {
+        title: "¿Venías de Siigo u otro sistema?",
+        text: "Con Importar productos traes todo tu catálogo de una vez desde el Excel de tu sistema anterior.",
+        target: "products-import",
+      },
     ],
     tip: "Si al vender escaneas algo que no está registrado, puedes crearlo ahí mismo sin salir de la venta.",
+  },
+  {
+    id: "importar-productos",
+    title: "Importar productos de Siigo",
+    summary: "Trae tu catálogo completo desde un Excel, sin digitarlo.",
+    href: "/dashboard/products/import",
+    menuHref: "/dashboard/products",
+    icon: FileSpreadsheet,
+    steps: [
+      {
+        title: "Exporta la lista en Siigo",
+        text: "En Siigo entra a Inventario → Productos y usa Exportar a Excel. De otro sistema sirve cualquier Excel o CSV con nombre, código y precio.",
+      },
+      {
+        title: "Sube el archivo",
+        text: "Toca la zona punteada o arrastra el archivo. Se lee en tu equipo: nada se guarda hasta que tú lo confirmes.",
+        target: "products-import-drop",
+      },
+      {
+        title: "Mira las gráficas",
+        text: "La primera muestra cuántos productos hay por categoría. La segunda, cuántos necesitan atención: precios en miles, IVA sin incluir, inactivos o sin unidades.",
+        target: "products-import-charts",
+        missing: "Aparece cuando subas el archivo.",
+      },
+      {
+        title: "Elige las opciones",
+        text: "Cada barra de la gráfica tiene su opción aquí. Si en Siigo no llevabas inventario, deja marcado «Vender sin controlar inventario».",
+        target: "products-import-options",
+        missing: "Aparece cuando subas el archivo.",
+      },
+      {
+        title: "Revisa algunos productos",
+        text: "Busca un par de productos que conozcas y confirma que el precio es el que cobras.",
+        target: "products-import-preview",
+        missing: "Aparece cuando subas el archivo.",
+      },
+      {
+        title: "Importa",
+        text: "Se suben por tandas; verás el avance en el botón. Si se corta el internet, vuelve a importar el mismo archivo: lo ya subido no se repite.",
+        target: "products-import-button",
+        missing: "Aparece cuando subas el archivo.",
+      },
+    ],
+    tip: "Después revisa Productos → «Precios por revisar» para corregir los que quedaron en miles.",
   },
   {
     id: "vender",
@@ -243,6 +297,44 @@ export const GUIDES: Guide[] = [
         target: "sales-export",
       },
     ],
+  },
+  {
+    id: "importar-ventas",
+    title: "Importar ventas de Siigo",
+    summary: "Pasa tus facturas anteriores para no perder el historial.",
+    href: "/dashboard/sales/import",
+    menuHref: "/dashboard/sales",
+    icon: FileSpreadsheet,
+    steps: [
+      {
+        title: "Exporta las ventas en Siigo",
+        text: "Descarga en Excel el reporte de ventas con el detalle de productos: una fila por cada producto vendido. Elige el rango de fechas que quieras traer.",
+      },
+      {
+        title: "Sube el archivo",
+        text: "Toca la zona punteada o arrastra el archivo. Las filas de una misma factura se juntan solas.",
+        target: "sales-import-drop",
+      },
+      {
+        title: "Confirma con las gráficas",
+        text: "Mira lo vendido por mes y por forma de pago. Si falta un mes o un total no se parece a lo que vendiste, el reporte de Siigo está incompleto.",
+        target: "sales-import-charts",
+        missing: "Aparece cuando subas el archivo.",
+      },
+      {
+        title: "Revisa las facturas",
+        text: "Número, fecha, cliente y total de cada factura, tal como quedarán en posib.",
+        target: "sales-import-preview",
+        missing: "Aparece cuando subas el archivo.",
+      },
+      {
+        title: "Importa",
+        text: "Las ventas entran como historial: no tocan tu inventario. Los productos y clientes que no existan se crean.",
+        target: "sales-import-button",
+        missing: "Aparece cuando subas el archivo.",
+      },
+    ],
+    tip: "Si subes el mismo archivo dos veces no se duplica nada: las facturas ya importadas se omiten.",
   },
   {
     id: "inventario",
@@ -457,9 +549,10 @@ export const GUIDES: Guide[] = [
 
 export function findGuideForPath(pathname: string | null): Guide | undefined {
   if (!pathname) return undefined;
-  return GUIDES.find((g) =>
+  // La más específica gana: /dashboard/sales/import es de "importar-ventas", no de "ventas".
+  return GUIDES.filter((g) =>
     g.exact ? pathname === g.href : pathname === g.href || pathname.startsWith(`${g.href}/`),
-  );
+  ).sort((a, b) => b.href.length - a.href.length)[0];
 }
 
 export function getGuide(id: string): Guide | undefined {

@@ -22,7 +22,7 @@ import s from "./guide.module.css";
 function availableGuides(): Guide[] {
   const menu = document.querySelector("aside");
   if (!menu || !menu.querySelector('a[href^="/dashboard"]')) return GUIDES;
-  return GUIDES.filter((g) => menu.querySelector(`a[href="${g.href}"]`));
+  return GUIDES.filter((g) => menu.querySelector(`a[href="${g.menuHref ?? g.href}"]`));
 }
 
 function GuideRow({
