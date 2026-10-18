@@ -25,9 +25,13 @@ import {
 import { importProducts, type ImportProductsResult } from "@/lib/cloudflare-api";
 import { reviewFromSiigo } from "@/lib/catalog-review";
 import { CatalogReviewReport } from "@/components/products/catalog-review-report";
+import { ImportBarChart, topWithOthers } from "@/components/import/import-chart";
+import { ImportSteps } from "@/components/import/import-steps";
 
 // Tandas pequeñas: el Worker tiene poco tiempo de CPU por petición.
 const BATCH_SIZE = 250;
+
+const STEPS = ["Exporta de Siigo", "Sube el archivo", "Revisa y elige opciones", "Importa"];
 
 export default function ImportProductsPage() {
   const { getToken } = useAuth();
@@ -62,6 +66,31 @@ export default function ImportProductsPage() {
       inThousands: products.filter(looksLikeThousands),
     };
   }, [products]);
+
+  const byCategory = useMemo(() => {
+    const counts = new Map<string, number>();
+    for (const p of products) {
+      const label = p.category ?? "Sin categoría";
+      counts.set(label, (counts.get(label) ?? 0) + 1);
+    }
+    return topWithOthers(
+      [...counts.entries()].map(([label, value]) => ({ label, value })),
+      8,
+      "Otras categorías",
+    );
+  }, [products]);
+
+  // Lo que conviene mirar antes de importar (un producto puede estar en varias).
+  const toCheck = useMemo(
+    () =>
+      [
+        { label: "Precio en miles", value: stats.inThousands.length },
+        { label: "IVA sin incluir", value: stats.taxNotIncluded.length },
+        { label: "Inactivos", value: stats.inactive },
+        { label: "Sin unidades", value: noInventory ? 0 : products.length - stats.withStock },
+      ].filter((p) => p.value > 0),
+    [stats, noInventory, products.length],
+  );
 
   const visible = useMemo(() => {
     const q = search.trim().toLowerCase();
@@ -143,6 +172,7 @@ export default function ImportProductsPage() {
   };
 
   const importing = progress !== null;
+  const currentStep = result ? STEPS.length : products.length > 0 ? 2 : fileName ? 1 : 0;
 
   return (
     <div className="space-y-6">
@@ -162,10 +192,13 @@ export default function ImportProductsPage() {
         </div>
       </div>
 
+      <ImportSteps steps={STEPS} current={currentStep} guideId="importar-productos" />
+
       {/* Zona de carga */}
       <Card>
         <CardContent className="pt-6">
           <div
+            data-guide="products-import-drop"
             className="border-2 border-dashed rounded-lg p-8 text-center cursor-pointer hover:bg-muted/50 transition-colors"
             onClick={() => !importing && fileInputRef.current?.click()}
             onDragOver={(e) => e.preventDefault()}
@@ -210,7 +243,7 @@ export default function ImportProductsPage() {
       {parsed && products.length > 0 && !result && (
         <>
           {/* Resumen */}
-          <Card>
+          <Card data-guide="products-import-charts">
             <CardHeader>
               <CardTitle className="text-base">
                 {parsed.businessName ?? "Catálogo a importar"}
@@ -236,11 +269,32 @@ export default function ImportProductsPage() {
                     `${stats.notInventoriable} marcado(s) "no inventariable".`}
                 </p>
               )}
+              <div className="mt-6 grid gap-6 md:grid-cols-2">
+                <ImportBarChart
+                  title="Productos por categoría"
+                  description="Las categorías que no existan en posib se crean solas."
+                  data={byCategory}
+                  horizontal
+                />
+                {toCheck.length > 0 ? (
+                  <ImportBarChart
+                    title="Para revisar antes de importar"
+                    description="Cada caso tiene su opción abajo, en «Antes de importar»."
+                    data={toCheck}
+                    horizontal
+                  />
+                ) : (
+                  <div className="flex items-center gap-2 self-center rounded-lg bg-muted/50 p-4 text-sm">
+                    <CheckCircle2 className="h-5 w-5 shrink-0 text-green-600" />
+                    Precios, IVA y estados se ven bien: no hay nada que corregir antes de importar.
+                  </div>
+                )}
+              </div>
             </CardContent>
           </Card>
 
           {/* Opciones */}
-          <Card>
+          <Card data-guide="products-import-options">
             <CardHeader>
               <CardTitle className="text-base">Antes de importar</CardTitle>
             </CardHeader>
@@ -359,10 +413,10 @@ export default function ImportProductsPage() {
           {showReview && review && <CatalogReviewReport review={review} />}
 
           {/* Previsualización */}
-          <Card>
+          <Card data-guide="products-import-preview">
             <CardHeader className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
               <CardTitle className="text-base">Previsualización</CardTitle>
-              <Button onClick={handleImport} disabled={importing}>
+              <Button data-guide="products-import-button" onClick={handleImport} disabled={importing}>
                 {importing ? (
                   <>
                     <Loader2 className="w-4 h-4 mr-2 animate-spin" />
@@ -428,7 +482,7 @@ export default function ImportProductsPage() {
 
       {/* Resultado */}
       {result && (
-        <Card className="border-green-300">
+        <Card className="border-green-300" data-guide="products-import-result">
           <CardHeader>
             <CardTitle className="text-base flex items-center gap-2 text-green-700">
               <CheckCircle2 className="w-5 h-5" />
