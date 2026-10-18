@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef } from "react";
+import { useMemo, useState, useRef } from "react";
 import Link from "next/link";
 import { useAuth } from "@clerk/nextjs";
 import {
@@ -20,6 +20,8 @@ import {
   type SiigoImportInvoice,
 } from "@/lib/siigo-import";
 import { importSales, type ImportSalesResult } from "@/lib/cloudflare-api";
+import { ImportBarChart, type ChartPoint } from "@/components/import/import-chart";
+import { ImportSteps } from "@/components/import/import-steps";
 
 const PAYMENT_LABELS: Record<string, string> = {
   efectivo: "Efectivo",
@@ -29,6 +31,46 @@ const PAYMENT_LABELS: Record<string, string> = {
   transferencia: "Transferencia",
   credito: "Crédito",
 };
+
+const STEPS = ["Exporta de Siigo", "Sube el archivo", "Revisa las gráficas", "Importa"];
+
+const MONTHS = ["ene", "feb", "mar", "abr", "may", "jun", "jul", "ago", "sep", "oct", "nov", "dic"];
+
+/**
+ * Total vendido por período: por mes, o por día si todo cae en un mismo mes
+ * (un archivo de pocas semanas se ve mejor día a día).
+ */
+function salesByPeriod(invoices: SiigoImportInvoice[]): { byDay: boolean; points: ChartPoint[] } {
+  const dated = invoices.filter((inv) => inv.date);
+  const months = new Set(dated.map((inv) => inv.date!.slice(0, 7)));
+  const byDay = months.size === 1;
+  const totals = new Map<string, number>();
+  for (const inv of dated) {
+    const key = byDay ? inv.date!.slice(0, 10) : inv.date!.slice(0, 7);
+    totals.set(key, (totals.get(key) ?? 0) + inv.total);
+  }
+  const points = [...totals.entries()]
+    .sort(([a], [b]) => a.localeCompare(b))
+    .map(([key, value]) => {
+      const [y, m, d] = key.split("-");
+      const label = byDay ? `${Number(d)} ${MONTHS[Number(m) - 1]}` : `${MONTHS[Number(m) - 1]} ${y}`;
+      return { label, value };
+    });
+  const undated = invoices.filter((inv) => !inv.date).reduce((sum, inv) => sum + inv.total, 0);
+  if (undated > 0) points.push({ label: "Sin fecha", value: undated });
+  return { byDay, points };
+}
+
+function salesByPayment(invoices: SiigoImportInvoice[]): ChartPoint[] {
+  const totals = new Map<string, number>();
+  for (const inv of invoices) {
+    const label = PAYMENT_LABELS[inv.payment_method] ?? inv.payment_method;
+    totals.set(label, (totals.get(label) ?? 0) + inv.total);
+  }
+  return [...totals.entries()]
+    .map(([label, value]) => ({ label, value }))
+    .sort((a, b) => b.value - a.value);
+}
 
 export default function ImportSalesPage() {
   const { getToken } = useAuth();
@@ -115,6 +157,10 @@ export default function ImportSalesPage() {
 
   const totalGeneral = invoices.reduce((sum, inv) => sum + inv.total, 0);
   const totalItems = invoices.reduce((sum, inv) => sum + inv.items.length, 0);
+  const byPeriod = useMemo(() => salesByPeriod(invoices), [invoices]);
+  const byPayment = useMemo(() => salesByPayment(invoices), [invoices]);
+  const dates = invoices.map((inv) => inv.date).filter((d): d is string => !!d).sort();
+  const currentStep = result ? STEPS.length : invoices.length > 0 ? 2 : fileName ? 1 : 0;
 
   return (
     <div className="space-y-6">
@@ -134,10 +180,13 @@ export default function ImportSalesPage() {
         </div>
       </div>
 
+      <ImportSteps steps={STEPS} current={currentStep} guideId="importar-ventas" />
+
       {/* Zona de carga */}
       <Card>
         <CardContent className="pt-6">
           <div
+            data-guide="sales-import-drop"
             className="border-2 border-dashed rounded-lg p-8 text-center cursor-pointer hover:bg-muted/50 transition-colors"
             onClick={() => fileInputRef.current?.click()}
             onDragOver={(e) => e.preventDefault()}
@@ -166,7 +215,8 @@ export default function ImportSalesPage() {
                   {fileName ?? "Haz clic o arrastra el archivo de Siigo aquí"}
                 </p>
                 <p className="text-xs text-muted-foreground">
-                  Formatos aceptados: Excel (.xlsx) o CSV
+                  En Siigo, exporta a Excel el reporte de ventas con el detalle
+                  de productos (una fila por producto). Acepta .xlsx o .csv.
                 </p>
               </div>
             )}
@@ -220,9 +270,40 @@ export default function ImportSalesPage() {
         </Card>
       )}
 
+      {/* Gráficas: para ver de un vistazo si el archivo es el correcto */}
+      {invoices.length > 0 && !result && (
+        <Card data-guide="sales-import-charts">
+          <CardHeader>
+            <CardTitle className="text-base">¿Es el archivo correcto?</CardTitle>
+            <p className="text-sm text-muted-foreground">
+              {dates.length > 0
+                ? `Ventas del ${formatDate(dates[0])} al ${formatDate(dates[dates.length - 1])}. `
+                : ""}
+              Si un mes falta o se ve muy distinto a lo que vendiste, revisa el
+              reporte en Siigo antes de importar.
+            </p>
+          </CardHeader>
+          <CardContent className="grid gap-6 md:grid-cols-2">
+            <ImportBarChart
+              title={byPeriod.byDay ? "Vendido por día" : "Vendido por mes"}
+              description={`Total ${formatCurrency(totalGeneral)}`}
+              data={byPeriod.points}
+              money
+            />
+            <ImportBarChart
+              title="Vendido por forma de pago"
+              description="Lo que Siigo no trae como Nequi, tarjeta o crédito queda como efectivo."
+              data={byPayment}
+              money
+              horizontal
+            />
+          </CardContent>
+        </Card>
+      )}
+
       {/* Previsualización */}
       {invoices.length > 0 && !result && (
-        <Card>
+        <Card data-guide="sales-import-preview">
           <CardHeader className="flex flex-row items-center justify-between">
             <div>
               <CardTitle className="text-base">
@@ -232,7 +313,7 @@ export default function ImportSalesPage() {
                 {totalItems} ítems · Total {formatCurrency(totalGeneral)}
               </p>
             </div>
-            <Button onClick={handleImport} disabled={importing}>
+            <Button data-guide="sales-import-button" onClick={handleImport} disabled={importing}>
               {importing ? (
                 <>
                   <Loader2 className="w-4 h-4 mr-2 animate-spin" />
@@ -300,7 +381,7 @@ export default function ImportSalesPage() {
 
       {/* Resultado de la importación */}
       {result && (
-        <Card className="border-green-300">
+        <Card className="border-green-300" data-guide="sales-import-result">
           <CardHeader>
             <CardTitle className="text-base flex items-center gap-2 text-green-700">
               <CheckCircle2 className="w-5 h-5" />
@@ -354,6 +435,11 @@ export default function ImportSalesPage() {
       )}
     </div>
   );
+}
+
+function formatDate(iso: string) {
+  const [y, m, d] = iso.slice(0, 10).split("-");
+  return `${Number(d)} ${MONTHS[Number(m) - 1]} ${y}`;
 }
 
 function Stat({ label, value }: { label: string; value: number }) {

@@ -25,6 +25,7 @@
     "@zxing/browser": "^0.1.5",
     "@zxing/library": "^0.21.3",
     "browser-image-compression": "^2.0.2",
+    "chart.js": "^4.5.1",
     "class-variance-authority": "^0.7.1",
     "cloudinary": "^2.8.0",
     "clsx": "^2.1.1",
