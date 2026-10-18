@@ -173,6 +173,9 @@ export function toNumber(value: unknown): number {
   } else if (hasComma) {
     // Solo coma -> decimal
     s = s.replace(",", ".");
+  } else if (/^-?\d{1,3}(\.\d{3})+$/.test(s)) {
+    // Solo puntos en grupos de 3 -> separador de miles ("2.500" = 2500, "1.234.567")
+    s = s.replace(/\./g, "");
   }
   // Si solo hay puntos, los tratamos como separador de miles cuando parecen
   // grupos de 3 (evita convertir "12.5" mal); si es un único punto con <=2

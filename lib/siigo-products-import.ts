@@ -1,5 +1,10 @@
 /**
- * Parser del "Listado de productos / Servicios" exportado desde Siigo.
+ * Parser de listas de productos exportadas desde otros sistemas POS.
+ *
+ * Nació para el "Listado de productos / Servicios" de Siigo (abajo su mapeo
+ * exacto), pero reconoce también los encabezados comunes de otros sistemas y
+ * de hojas hechas a mano ("Código de barras", "Precio venta", "Existencias",
+ * "Costo", "% IVA"...; ver HEADERS). Solo exige nombre y código o precio.
  *
  * Es el catálogo con el que Siigo factura (incluida la facturación electrónica
  * DIAN). Columnas que trae el reporte y cómo se pasan a posib:
@@ -48,6 +53,8 @@ export interface SiigoProductRow {
   minStock: number;
   price1: number;
   price2: number;
+  /** Costo de compra (Siigo no lo trae; otros sistemas sí). */
+  cost: number;
 }
 
 export interface SiigoProductsParseResult {
@@ -90,23 +97,45 @@ function cleanCode(code: string): string {
 }
 
 // Encabezados ya normalizados (sin acentos, minúsculas) -> campo interno.
+// Primero los de Siigo y después variantes de otros sistemas POS (Alegra, Loggro,
+// Vendty, hojas de Excel hechas a mano...). Si dos columnas sirven para el mismo
+// campo, gana la que coincide con el sinónimo más arriba en la lista.
 const HEADERS: Record<string, string[]> = {
-  type: ["tipo"],
-  code: ["codigo", "codigo producto", "cod"],
-  name: ["nombre", "nombre producto", "descripcion"],
+  type: ["tipo", "tipo producto", "tipo de producto"],
+  code: [
+    "codigo", "codigo de barras", "codigo barras", "cod barras", "barcode", "ean",
+    "codigo producto", "codigo del producto", "sku", "cod", "id producto",
+  ],
+  name: [
+    "nombre", "nombre producto", "nombre del producto", "producto", "articulo",
+    "nombre articulo", "item", "descripcion",
+  ],
   factoryReference: ["referencia fabrica", "referencia de fabrica", "referencia"],
-  category: ["categoria", "linea", "grupo"],
-  status: ["estado"],
-  tax1: ["impuesto cargo", "impuesto cargo 1", "impuesto"],
-  tax2: ["impuesto cargo 2"],
-  description: ["descripcion larga"],
-  taxIncluded: ["es incluido", "iva incluido", "impuesto incluido"],
-  inventoriable: ["inventariable"],
-  balance: ["saldo cantidades", "saldo", "existencias", "cantidad"],
+  category: ["categoria", "categoria producto", "linea", "grupo", "familia", "departamento", "seccion"],
+  status: ["estado", "activo"],
+  tax1: [
+    "impuesto cargo", "impuesto cargo 1", "impuesto", "iva", "% iva", "porcentaje iva",
+    "tarifa iva", "iva %", "tasa iva",
+  ],
+  tax2: ["impuesto cargo 2", "inc", "impoconsumo", "impuesto al consumo"],
+  description: ["descripcion larga", "detalle", "observaciones"],
+  taxIncluded: ["es incluido", "iva incluido", "impuesto incluido", "precio incluye iva", "incluye iva"],
+  inventoriable: ["inventariable", "controla inventario", "maneja inventario"],
+  balance: [
+    "saldo cantidades", "saldo", "existencias", "existencia", "stock", "cantidad",
+    "cantidad disponible", "inventario", "unidades", "stock actual",
+  ],
   visible: ["visible en facturas de venta", "visible en facturas"],
-  minStock: ["stock minimo"],
-  price1: ["precio de venta 1", "precio venta 1", "precio de venta", "precio"],
-  price2: ["precio de venta 2", "precio venta 2"],
+  minStock: ["stock minimo", "cantidad minima", "inventario minimo", "minimo", "existencia minima"],
+  price1: [
+    "precio de venta 1", "precio venta 1", "precio de venta", "precio venta", "precio",
+    "valor venta", "precio al publico", "pvp", "precio unitario", "valor unitario", "precio 1",
+  ],
+  price2: ["precio de venta 2", "precio venta 2", "precio 2", "precio mayorista", "precio por mayor"],
+  cost: [
+    "costo", "costo unitario", "precio de compra", "precio compra", "precio costo",
+    "valor compra", "costo promedio", "ultimo costo",
+  ],
 };
 
 /** Texto plano de una celda de ExcelJS (texto enriquecido, fórmulas, hipervínculos). */
@@ -132,25 +161,45 @@ function cellNumber(value: unknown): number {
 
 const isYes = (value: unknown) => /^(si|s|yes|1|true)$/.test(normalize(cellText(value)));
 
-/** "IVA 19%" -> 19 ; "INC 8 %" -> 8 ; "Excluido" -> 0 */
+/** "IVA 19%" -> 19 ; "INC 8 %" -> 8 ; "19" -> 19 ; "0,19" -> 19 ; "Excluido" -> 0 */
 function parseTaxRate(label: string): number {
   const m = label.match(/(\d+(?:[.,]\d+)?)\s*%/);
-  return m ? parseFloat(m[1].replace(",", ".")) : 0;
+  if (m) return parseFloat(m[1].replace(",", "."));
+  // Otros sistemas exportan solo el número: 19 o 0,19.
+  if (/^\d+(?:[.,]\d+)?$/.test(label.trim())) {
+    const value = parseFloat(label.trim().replace(",", "."));
+    return value > 0 && value < 1 ? Math.round(value * 100) : value <= 100 ? value : 0;
+  }
+  return 0;
 }
 
 function detectHeader(rows: unknown[][]): { headerRow: number; columns: Record<string, number> } | null {
   for (let r = 0; r < Math.min(rows.length, 20); r++) {
     const row = rows[r] ?? [];
     const columns: Record<string, number> = {};
+    const rank: Record<string, number> = {};
     for (let c = 0; c < row.length; c++) {
       const header = normalize(cellText(row[c]));
       if (!header) continue;
       // Coincidencia exacta: "impuesto cargo" y "impuesto cargo 2" son columnas distintas.
       for (const [field, names] of Object.entries(HEADERS)) {
-        if (columns[field] == null && names.includes(header)) columns[field] = c;
+        const idx = names.indexOf(header);
+        if (idx >= 0 && (rank[field] == null || idx < rank[field])) {
+          columns[field] = c;
+          rank[field] = idx;
+        }
       }
     }
-    if (columns.code != null && columns.name != null) return { headerRow: r, columns };
+    // Una columna no puede ser nombre y descripción a la vez.
+    if (columns.description != null && columns.description === columns.name) delete columns.description;
+    // Sin columna de código, algunos sistemas usan la "Referencia" como código.
+    if (columns.code == null && columns.factoryReference != null) {
+      columns.code = columns.factoryReference;
+      delete columns.factoryReference;
+    }
+    if (columns.name != null && (columns.code != null || columns.price1 != null)) {
+      return { headerRow: r, columns };
+    }
   }
   return null;
 }
@@ -162,7 +211,7 @@ export async function parseSiigoProductsFile(file: File): Promise<SiigoProductsP
   const header = detectHeader(rows);
   if (!header) {
     throw new Error(
-      'No se encontraron las columnas "Código" y "Nombre". ¿Es el "Listado de productos / Servicios" de Siigo?',
+      'No se encontraron las columnas del nombre y el código (o el precio) de los productos. Revisa que la primera hoja del archivo sea la lista de productos.',
     );
   }
   const { headerRow, columns } = header;
@@ -204,7 +253,14 @@ export async function parseSiigoProductsFile(file: File): Promise<SiigoProductsP
 
     const tax1 = cellText(get(row, "tax1"));
     const tax2 = cellText(get(row, "tax2"));
-    const taxLabel = [tax1, tax2].filter(Boolean).join(" + ") || null;
+    // Otros sistemas traen solo el número ("19"): se arma la etiqueta "IVA 19%" / "INC 8%".
+    const labelFor = (raw: string, kind: string) => {
+      if (!raw) return "";
+      if (!/^\d+(?:[.,]\d+)?$/.test(raw)) return raw;
+      const rate = parseTaxRate(raw);
+      return rate > 0 ? `${kind} ${rate}%` : "";
+    };
+    const taxLabel = [labelFor(tax1, "IVA"), labelFor(tax2, "INC")].filter(Boolean).join(" + ") || null;
     const type = cellText(get(row, "type")) || "Producto";
     const status = normalize(cellText(get(row, "status")));
     const visibleRaw = cellText(get(row, "visible"));
@@ -218,7 +274,8 @@ export async function parseSiigoProductsFile(file: File): Promise<SiigoProductsP
       name,
       factoryReference: cellText(get(row, "factoryReference")) || null,
       category: cellText(get(row, "category")) || null,
-      active: (!status || status === "activo") && (!visibleRaw || isYes(visibleRaw)),
+      active:
+        (!status || status === "activo" || isYes(status)) && (!visibleRaw || isYes(visibleRaw)),
       taxLabel,
       taxRate: parseTaxRate(tax1) + parseTaxRate(tax2),
       description: cellText(get(row, "description")) || null,
@@ -229,6 +286,7 @@ export async function parseSiigoProductsFile(file: File): Promise<SiigoProductsP
       minStock: Math.max(0, cellNumber(get(row, "minStock"))),
       price1: cellNumber(get(row, "price1")),
       price2: cellNumber(get(row, "price2")),
+      cost: Math.max(0, cellNumber(get(row, "cost"))),
     };
 
     if (product.price1 <= 0 && product.price2 <= 0) {
@@ -267,6 +325,7 @@ export function toImportRows(products: SiigoProductRow[], opts: ToImportOptions)
       category_name: p.category,
       sale_price: finalSalePrice(p, opts),
       sale_price_2: price2 ? adjustPrice(price2, p, opts) : null,
+      cost_price: p.cost,
       stock: Math.max(0, p.balance ?? 0),
       min_stock: p.minStock,
       tax_rate: p.taxRate,

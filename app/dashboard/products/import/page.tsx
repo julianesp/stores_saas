@@ -23,6 +23,8 @@ import {
   type SiigoProductsParseResult,
 } from "@/lib/siigo-products-import";
 import { importProducts, type ImportProductsResult } from "@/lib/cloudflare-api";
+import { reviewFromSiigo } from "@/lib/catalog-review";
+import { CatalogReviewReport } from "@/components/products/catalog-review-report";
 
 // Tandas pequeñas: el Worker tiene poco tiempo de CPU por petición.
 const BATCH_SIZE = 250;
@@ -40,10 +42,12 @@ export default function ImportProductsPage() {
   const priceOpts = { addTaxToPrice, fixThousands };
   const [updateExisting, setUpdateExisting] = useState(false);
   const [search, setSearch] = useState("");
+  const [showReview, setShowReview] = useState(false);
   const [progress, setProgress] = useState<{ done: number; total: number } | null>(null);
   const [result, setResult] = useState<ImportProductsResult | null>(null);
 
   const products = useMemo(() => parsed?.products ?? [], [parsed]);
+  const review = useMemo(() => (parsed ? reviewFromSiigo(parsed) : null), [parsed]);
 
   const stats = useMemo(() => {
     const withTax = products.filter((p) => p.taxRate > 0);
@@ -77,6 +81,7 @@ export default function ImportProductsPage() {
     setResult(null);
     setProgress(null);
     setSearch("");
+    setShowReview(false);
   };
 
   const handleFile = async (file: File) => {
@@ -86,7 +91,7 @@ export default function ImportProductsPage() {
     try {
       const res = await parseSiigoProductsFile(file);
       setParsed(res);
-      // Si casi nada tiene saldo positivo, el negocio no lleva inventario en Siigo.
+      // Si casi nada tiene saldo positivo, el negocio no lleva inventario en el sistema anterior.
       const withStock = res.products.filter((p) => (p.balance ?? 0) > 0).length;
       setNoInventory(res.products.length > 0 && withStock / res.products.length < 0.2);
       if (res.products.length === 0) {
@@ -149,10 +154,10 @@ export default function ImportProductsPage() {
           </Button>
         </Link>
         <div>
-          <h1 className="text-2xl font-bold">Importar productos desde Siigo</h1>
+          <h1 className="text-2xl font-bold">Importar productos</h1>
           <p className="text-sm text-muted-foreground">
-            Sube el &quot;Listado de productos / Servicios&quot; exportado desde Siigo (.xlsx). Se
-            pasan códigos, nombres, categorías, precios, IVA y stock.
+            Trae tu lista de productos desde Siigo u otro sistema POS: sube el Excel (.xlsx) o CSV
+            exportado. Se pasan códigos, nombres, categorías, precios, IVA y unidades.
           </p>
         </div>
       </div>
@@ -190,10 +195,11 @@ export default function ImportProductsPage() {
               <div className="flex flex-col items-center gap-2">
                 <Upload className="w-8 h-8 text-muted-foreground" />
                 <p className="font-medium break-all">
-                  {fileName ?? "Haz clic o arrastra el archivo de Siigo aquí"}
+                  {fileName ?? "Haz clic o arrastra aquí el archivo de productos"}
                 </p>
                 <p className="text-xs text-muted-foreground">
-                  En Siigo: Inventario → Productos → Exportar a Excel
+                  En Siigo: Inventario → Productos → Exportar a Excel. En otros sistemas, busca
+                  &quot;Exportar productos&quot; o &quot;Exportar inventario&quot;.
                 </p>
               </div>
             )}
@@ -207,7 +213,7 @@ export default function ImportProductsPage() {
           <Card>
             <CardHeader>
               <CardTitle className="text-base">
-                {parsed.businessName ?? "Catálogo de Siigo"}
+                {parsed.businessName ?? "Catálogo a importar"}
                 {parsed.nit && (
                   <span className="ml-2 text-sm font-normal text-muted-foreground">
                     NIT {parsed.nit}
@@ -220,14 +226,14 @@ export default function ImportProductsPage() {
                 <Stat label="Productos" value={products.length} />
                 <Stat label="Categorías" value={stats.categories} />
                 <Stat label="Con IVA" value={stats.withTax.length} />
-                <Stat label="Con stock en Siigo" value={stats.withStock} />
+                <Stat label="Con unidades" value={stats.withStock} />
               </div>
               {(stats.inactive > 0 || stats.withPrice2 > 0 || stats.notInventoriable > 0) && (
                 <p className="text-xs text-muted-foreground mt-3">
                   {stats.inactive > 0 && `${stats.inactive} inactivo(s) (no saldrán en la caja). `}
                   {stats.withPrice2 > 0 && `${stats.withPrice2} con segundo precio de venta. `}
                   {stats.notInventoriable > 0 &&
-                    `${stats.notInventoriable} marcado(s) "no inventariable" en Siigo.`}
+                    `${stats.notInventoriable} marcado(s) "no inventariable".`}
                 </p>
               )}
             </CardContent>
@@ -244,7 +250,7 @@ export default function ImportProductsPage() {
                 onChange={setNoInventory}
                 title="Vender sin controlar inventario"
                 detail={
-                  `Solo ${stats.withStock} de ${products.length} productos tienen unidades en Siigo. ` +
+                  `Solo ${stats.withStock} de ${products.length} productos tienen unidades en el archivo. ` +
                   "Con esta opción todos se pueden vender en la caja aunque no tengan stock cargado. " +
                   "Luego puedes activar el control de inventario producto por producto."
                 }
@@ -256,7 +262,7 @@ export default function ImportProductsPage() {
                     onChange={setFixThousands}
                     title={`${stats.inThousands.length} precio(s) parecen estar escritos en miles`}
                     detail={
-                      "En Siigo estos productos valen menos de $100 (ej. 2 en vez de 2.000). " +
+                      "En el archivo estos productos valen menos de $100 (ej. 2 en vez de 2.000). " +
                       "Sin marcar, se importan tal cual y el tendero los revisa en Productos → \"Precios por revisar\". " +
                       "Marcado, se multiplican por 1.000 al importar."
                     }
@@ -288,7 +294,7 @@ export default function ImportProductsPage() {
                     onChange={setAddTaxToPrice}
                     title={`Sumar el IVA al precio de ${stats.taxNotIncluded.length} producto(s)`}
                     detail={
-                      'En Siigo estos productos tienen el IVA "no incluido": Siigo lo suma al facturar. ' +
+                      'En el archivo estos productos tienen el IVA "no incluido": el sistema anterior lo suma al facturar. ' +
                       "En posib el precio de venta es el que paga el cliente, con IVA."
                     }
                   />
@@ -334,6 +340,23 @@ export default function ImportProductsPage() {
               </CardContent>
             </Card>
           )}
+
+          {/* Revisión para el tendero */}
+          <Card>
+            <CardContent className="pt-6 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+              <div>
+                <p className="font-medium">Revisión para el tendero</p>
+                <p className="text-sm text-muted-foreground">
+                  Un informe corto con lo que está bien y lo que conviene arreglar. Se puede descargar en
+                  PDF o mandar por WhatsApp.
+                </p>
+              </div>
+              <Button variant={showReview ? "default" : "outline"} onClick={() => setShowReview(!showReview)}>
+                {showReview ? "Ocultar revisión" : "Ver revisión"}
+              </Button>
+            </CardContent>
+          </Card>
+          {showReview && review && <CatalogReviewReport review={review} />}
 
           {/* Previsualización */}
           <Card>

@@ -53,6 +53,15 @@ export function getSelectedTenantId(): string | null {
   return localStorage.getItem('selected_tenant_id');
 }
 
+/** Cabeceras para las rutas propias de Next (/api/ai/...): JSON + tienda activa. */
+export function tenantHeaders(): Record<string, string> {
+  const tenantId = getSelectedTenantId();
+  return {
+    'Content-Type': 'application/json',
+    ...(tenantId ? { 'X-Tenant-ID': tenantId } : {}),
+  };
+}
+
 /**
  * Set the selected tenant ID in localStorage
  */

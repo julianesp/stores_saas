@@ -3,7 +3,7 @@
 import { useState, useEffect, useMemo } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
-import { Plus, Search, Edit, Trash2, Package, Tag, Tags, Camera, AlertTriangle, Download, Layers, FileSpreadsheet } from 'lucide-react';
+import { Plus, Search, Edit, Trash2, Package, Tag, Tags, Camera, AlertTriangle, Download, Layers, FileSpreadsheet, ClipboardCheck } from 'lucide-react';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -380,11 +380,18 @@ export default function ProductsPage() {
               )}
             </Button>
           )}
+          <Link href="/dashboard/products/review" className="flex-1 sm:flex-none">
+            <Button variant="outline" className="w-full">
+              <ClipboardCheck className="mr-2 h-4 w-4" />
+              <span className="hidden sm:inline">Revisar catálogo</span>
+              <span className="sm:hidden">Revisar</span>
+            </Button>
+          </Link>
           <Link href="/dashboard/products/import" className="flex-1 sm:flex-none">
             <Button variant="outline" className="w-full">
               <FileSpreadsheet className="mr-2 h-4 w-4" />
-              <span className="hidden sm:inline">Importar de Siigo</span>
-              <span className="sm:hidden">Siigo</span>
+              <span className="hidden sm:inline">Importar productos</span>
+              <span className="sm:hidden">Importar</span>
             </Button>
           </Link>
           <Link href="/dashboard/products/quick-add" data-guide="products-quick" className="flex-1 sm:flex-none">
