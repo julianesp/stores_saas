@@ -56,7 +56,7 @@ function normalizeImages(
 
 // Ningún producto de tienda vale menos de esto; por debajo suele ser un precio
 // mal digitado (ej. 2 en vez de 2.000) o un producto sin precio.
-const SUSPICIOUS_PRICE = 50;
+const SUSPICIOUS_PRICE = 100;
 const needsPriceReview = (p: { sale_price: number }) => p.sale_price < SUSPICIOUS_PRICE;
 
 export default function ProductsPage() {

@@ -63,16 +63,16 @@ export interface ToImportOptions {
   addTaxToPrice: boolean;
   /** Importar todo sin control de inventario (el tendero no lleva stock). */
   noInventory: boolean;
-  /** Multiplicar por 1.000 los precios menores a $50 (guardados "en miles" en Siigo). */
+  /** Multiplicar por 1.000 los precios menores a $100 (guardados "en miles" en Siigo). */
   fixThousands: boolean;
 }
 
 /**
  * Precios por debajo de esto se consideran escritos en miles (ej. 2 = $2.000).
- * En el catálogo real de una tienda no hay productos de $1 a $49, y sí muchos
+ * En el catálogo real de una tienda no hay productos de $1 a $99 (la moneda más pequeña en uso es la de $100), y sí muchos
  * de $100–$400 (dulces, cubos), que quedan intactos.
  */
-export const THOUSANDS_THRESHOLD = 50;
+export const THOUSANDS_THRESHOLD = 100;
 
 export function looksLikeThousands(p: SiigoProductRow): boolean {
   const base = p.price1 > 0 ? p.price1 : p.price2;

@@ -256,7 +256,7 @@ export default function ImportProductsPage() {
                     onChange={setFixThousands}
                     title={`${stats.inThousands.length} precio(s) parecen estar escritos en miles`}
                     detail={
-                      "En Siigo estos productos valen menos de $50 (ej. 2 en vez de 2.000). " +
+                      "En Siigo estos productos valen menos de $100 (ej. 2 en vez de 2.000). " +
                       "Sin marcar, se importan tal cual y el tendero los revisa en Productos → \"Precios por revisar\". " +
                       "Marcado, se multiplican por 1.000 al importar."
                     }
