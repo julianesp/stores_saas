@@ -1,6 +1,6 @@
 'use client';
 
-import { useSyncExternalStore } from 'react';
+import { useEffect, useState, useSyncExternalStore } from 'react';
 import { useUser } from '@clerk/nextjs';
 import dynamic from 'next/dynamic';
 import { Menu } from 'lucide-react';
@@ -44,8 +44,51 @@ function useGreeting() {
   return { saludo, fecha };
 }
 
+const prefersReducedMotion = () =>
+  typeof window !== 'undefined' && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+/**
+ * Escribe la fecha y luego el saludo letra por letra, con un cursor que
+ * desaparece al terminar. Solo al montar (una vez por carga del sistema, el
+ * header no se desmonta al navegar). Con movimiento reducido se muestra de una.
+ */
+function TypedGreeting({ fecha, saludo }: { fecha: string; saludo: string }) {
+  const total = fecha.length + saludo.length;
+  const [count, setCount] = useState(() => (prefersReducedMotion() ? total : 0));
+
+  useEffect(() => {
+    if (count >= total) return;
+    // La fecha va rápida; pausa breve antes del saludo, que va más pausado.
+    const delay = count < fecha.length ? 22 : count === fecha.length ? 260 : 55;
+    const timer = setTimeout(() => setCount((c) => c + 1), delay);
+    return () => clearTimeout(timer);
+  }, [count, total, fecha.length]);
+
+  const typingFecha = count < fecha.length;
+  const done = count >= total;
+
+  return (
+    <>
+      {/* Los lectores de pantalla leen la frase completa (aria-label), no letra por letra. */}
+      <p className="h-4 text-xs text-gray-500 first-letter:uppercase" aria-label={fecha}>
+        <span aria-hidden="true">{fecha.slice(0, count)}</span>
+        {typingFecha && <span className="typing-caret" aria-hidden="true" />}
+      </p>
+      <h2
+        className="truncate text-lg md:text-[1.6rem] font-semibold leading-tight text-gray-900"
+        aria-label={saludo}
+      >
+        <span aria-hidden="true">{saludo.slice(0, Math.max(0, count - fecha.length))}</span>
+        {!typingFecha && !done && <span className="typing-caret" aria-hidden="true" />}
+        {/* Reserva la altura de la línea mientras aún no hay letras. */}
+        {count <= fecha.length && <span aria-hidden="true">&nbsp;</span>}
+      </h2>
+    </>
+  );
+}
+
 export function Header({ onMenuClick }: HeaderProps) {
-  const { user } = useUser();
+  const { user, isLoaded } = useUser();
   const greeting = useGreeting();
   const name = user?.firstName || user?.emailAddresses[0]?.emailAddress?.split('@')[0];
 
@@ -63,10 +106,19 @@ export function Header({ onMenuClick }: HeaderProps) {
 
       {/* Saludo con la fecha: oculto en móvil para dar espacio a las acciones. */}
       <div className="hidden sm:block flex-1 min-w-0">
-        <p className="text-xs text-gray-500 first-letter:uppercase h-4">{greeting?.fecha}</p>
-        <h2 className="truncate text-lg md:text-[1.6rem] font-semibold leading-tight text-gray-900">
-          {greeting ? `${greeting.saludo}, ${name ?? ''}` : `Hola, ${name ?? ''}`}
-        </h2>
+        {greeting && isLoaded ? (
+          <TypedGreeting
+            key={`${greeting.fecha}|${greeting.saludo}|${name ?? ''}`}
+            fecha={greeting.fecha}
+            saludo={name ? `${greeting.saludo}, ${name}` : greeting.saludo}
+          />
+        ) : (
+          // Mientras carga el usuario: mismo alto, sin texto (evita un "Hola," que luego cambia).
+          <>
+            <p className="h-4" />
+            <h2 className="text-lg md:text-[1.6rem] font-semibold leading-tight">&nbsp;</h2>
+          </>
+        )}
       </div>
 
       {/* En móvil, empujar las acciones a la derecha (el saludo está oculto). */}

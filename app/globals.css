@@ -369,6 +369,22 @@ html[data-theme] {
   --tooth-color: var(--card);
 }
 
+/* Cursor del saludo escrito letra por letra (header). */
+.app-shell .typing-caret {
+  display: inline-block;
+  width: 2px;
+  height: 0.95em;
+  margin-left: 2px;
+  vertical-align: -0.1em;
+  background: var(--brand);
+  animation: typing-caret-blink 0.9s steps(1) infinite;
+}
+@keyframes typing-caret-blink {
+  50% {
+    opacity: 0;
+  }
+}
+
 /* Scroll del sidebar a tono con el riel claro/oscuro. */
 .app-shell .custom-scrollbar {
   scrollbar-color: var(--shell-line) transparent;
