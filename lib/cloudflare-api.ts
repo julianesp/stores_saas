@@ -184,6 +184,9 @@ interface ListCacheEntry<T> {
 function createCachedList<T>(endpoint: string, ttlMs = LIST_CACHE_TTL_MS) {
   let cache: ListCacheEntry<T> | null = null;
   let inflight: { tenantId: string | null; promise: Promise<T> } | null = null;
+  // Sube en cada invalidate(): una lectura que empezó antes (p. ej. la lista con
+  // la venta que se acaba de borrar) no debe guardar sus datos viejos en caché.
+  let generation = 0;
 
   const load = async (
     getToken: GetTokenFn,
@@ -205,13 +208,14 @@ function createCachedList<T>(endpoint: string, ttlMs = LIST_CACHE_TTL_MS) {
       return inflight.promise;
     }
 
+    const startedAt = generation;
     const promise = fetchAPI<T>(endpoint, getToken)
       .then((data) => {
-        cache = { tenantId, data, at: Date.now() };
+        if (startedAt === generation) cache = { tenantId, data, at: Date.now() };
         return data;
       })
       .finally(() => {
-        if (inflight && inflight.tenantId === tenantId) inflight = null;
+        if (inflight?.promise === promise) inflight = null;
       });
 
     inflight = { tenantId, promise };
@@ -219,6 +223,7 @@ function createCachedList<T>(endpoint: string, ttlMs = LIST_CACHE_TTL_MS) {
   };
 
   const invalidate = () => {
+    generation++;
     cache = null;
     inflight = null;
   };

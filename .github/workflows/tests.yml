@@ -1,0 +1,23 @@
+name: Pruebas
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  jest:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 12
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      # Las pruebas de rutas del Worker usan Hono, que es dependencia de cloudflare-migration.
+      - run: npm ci --prefix cloudflare-migration --ignore-scripts
+      - run: pnpm test --ci
