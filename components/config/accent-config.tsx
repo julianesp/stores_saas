@@ -27,13 +27,17 @@ import { cn } from '@/lib/utils';
  * dashboard (claro y oscuro) y se guarda en el perfil de la tienda para que el
  * tendero y su equipo lo vean igual en cualquier dispositivo.
  */
-export function AccentConfig() {
+/**
+ * Elegir un color: se aplica de inmediato y se guarda en el perfil de la tienda.
+ * Lo usan el selector de Configuración y el anuncio de la nueva interfaz.
+ */
+export function useChooseAccent() {
   const { getToken } = useAuth();
   const current = useSyncExternalStore(subscribeAccent, readStoredAccent, () => DEFAULT_ACCENT);
   const [saving, setSaving] = useState<string | null>(null);
 
-  const choose = async (id: string) => {
-    if (id === current) return;
+  const choose = async (id: string): Promise<boolean> => {
+    if (id === current) return true;
     const previous = current;
     setAccent(id); // se aplica de inmediato en esta pantalla
     setSaving(id);
@@ -42,16 +46,24 @@ export function AccentConfig() {
       if (!profile?.id) throw new Error('Perfil no disponible');
       await updateUserProfile(profile.id, { ui_accent: id }, getToken);
       toast.success(`Color "${findAccent(id).name}" guardado para tu tienda`);
+      return true;
     } catch (error) {
       console.error('No se pudo guardar el color en el perfil:', error);
       // El color queda aplicado en este dispositivo aunque no se haya podido sincronizar.
       toast.warning('Color aplicado en este dispositivo. No se pudo guardar en tu cuenta.', {
         action: { label: 'Deshacer', onClick: () => setAccent(previous) },
       });
+      return false;
     } finally {
       setSaving(null);
     }
   };
+
+  return { current, saving, choose };
+}
+
+export function AccentConfig() {
+  const { current, saving, choose } = useChooseAccent();
 
   return (
     <Card>

@@ -1,9 +1,12 @@
+import fs from 'node:fs';
 import { defineConfig, devices } from '@playwright/test';
-import { loadEnvConfig } from '@next/env';
 
 // Mismas variables que `pnpm dev` (.env.local): las claves de Clerk de desarrollo
 // y, opcionalmente, E2E_CLERK_USER_EMAIL / E2E_PRODUCT para las pruebas con sesión.
-loadEnvConfig(process.cwd());
+// process.loadEnvFile no pisa variables ya definidas en el entorno.
+for (const file of ['.env.local', '.env']) {
+  if (fs.existsSync(file)) process.loadEnvFile(file);
+}
 
 export const AUTH_FILE = 'e2e/.auth/user.json';
 const PORT = Number(process.env.E2E_PORT || 3000);

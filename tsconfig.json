@@ -40,6 +40,8 @@
   "exclude": [
     "node_modules",
     "cloudflare-migration",
-    "tests/worker"
+    "tests/worker",
+    "e2e",
+    "playwright.config.ts"
   ]
 }

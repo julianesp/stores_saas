@@ -132,6 +132,7 @@ export function MonthlyReportModal() {
 
   return (
     <div
+      data-blocking-modal
       className="fixed inset-0 z-[70] flex items-center justify-center bg-black/40 backdrop-blur-sm p-4"
       onClick={close}
     >

@@ -8,6 +8,7 @@ import { Header } from "@/components/dashboard/header";
 import { StoreQuickAccess } from "@/components/dashboard/store-quick-access";
 import { PWAInstallPrompt } from "@/components/dashboard/pwa-install-prompt";
 import { MonthlyReportModal } from "@/components/dashboard/monthly-report-modal";
+import { NewInterfaceAnnouncement } from "@/components/dashboard/new-interface-announcement";
 import { TrialBanner } from "@/components/subscription/trial-banner";
 import { SubscriptionExpiredModal } from "@/components/subscription/expired-modal";
 import { ConnectionErrorModal } from "@/components/subscription/connection-error-modal";
@@ -472,6 +473,11 @@ function DashboardLayoutInner({
 
         {/* Informe de ventas del mes anterior: solo el dueño, hasta que lo descargue. */}
         {!loading && !isTeamMember && <MonthlyReportModal />}
+
+        {/* Anuncio de la nueva interfaz y del color por tienda: dueños con cuenta activa o en prueba. */}
+        {!loading && !isTeamMember && !isSuperAdmin && subscriptionInfo?.canAccess && (
+          <NewInterfaceAnnouncement />
+        )}
       </div>
       </GuideProvider>
     </OfflineProvider>
