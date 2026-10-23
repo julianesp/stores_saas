@@ -3,401 +3,401 @@
    Tailwind a tonos oscuros. Ver el script para los criterios. */
 @media screen {
   html[data-theme="dark"] .bg-white:not(.keep-light, .keep-light *, .landing-root *) {
-    background-color: #252932;
+    background-color: #221f1a;
   }
   
   html[data-theme="dark"] .hover\:bg-white:not(.keep-light, .keep-light *, .landing-root *):hover {
-    background-color: #2d323c;
+    background-color: #2b2722;
   }
   
   html[data-theme="dark"] .bg-white\/50:not(.keep-light, .keep-light *, .landing-root *) {
-    background-color: rgb(37 41 50 / 0.5);
+    background-color: rgb(34 31 26 / 0.5);
   }
   
   html[data-theme="dark"] .bg-white\/80:not(.keep-light, .keep-light *, .landing-root *) {
-    background-color: rgb(37 41 50 / 0.8);
+    background-color: rgb(34 31 26 / 0.8);
   }
   
   html[data-theme="dark"] .bg-white\/90:not(.keep-light, .keep-light *, .landing-root *) {
-    background-color: rgb(37 41 50 / 0.9);
+    background-color: rgb(34 31 26 / 0.9);
   }
   
   html[data-theme="dark"] .bg-white\/95:not(.keep-light, .keep-light *, .landing-root *) {
-    background-color: rgb(37 41 50 / 0.95);
+    background-color: rgb(34 31 26 / 0.95);
   }
   
   html[data-theme="dark"] .bg-gray-50:not(.keep-light, .keep-light *, .landing-root *),
   html[data-theme="dark"] .disabled\:bg-gray-50:not(.keep-light, .keep-light *, .landing-root *):disabled,
   html[data-theme="dark"] .data-\[state\=open\]\:bg-gray-50:not(.keep-light, .keep-light *, .landing-root *)[data-state="open"] {
-    background-color: #1c1f26;
+    background-color: #181612;
   }
   
   html[data-theme="dark"] .hover\:bg-gray-50:not(.keep-light, .keep-light *, .landing-root *):hover {
-    background-color: #2d323c;
+    background-color: #2b2722;
   }
   
   html[data-theme="dark"] .bg-gray-100:not(.keep-light, .keep-light *, .landing-root *),
   html[data-theme="dark"] .disabled\:bg-gray-100:not(.keep-light, .keep-light *, .landing-root *):disabled,
   html[data-theme="dark"] .data-\[state\=open\]\:bg-gray-100:not(.keep-light, .keep-light *, .landing-root *)[data-state="open"] {
-    background-color: #2d323c;
+    background-color: #2b2722;
   }
   
   html[data-theme="dark"] .hover\:bg-gray-100:not(.keep-light, .keep-light *, .landing-root *):hover {
-    background-color: #333945;
+    background-color: #312d27;
   }
   
   html[data-theme="dark"] .bg-gray-200:not(.keep-light, .keep-light *, .landing-root *),
   html[data-theme="dark"] .disabled\:bg-gray-200:not(.keep-light, .keep-light *, .landing-root *):disabled,
   html[data-theme="dark"] .data-\[state\=open\]\:bg-gray-200:not(.keep-light, .keep-light *, .landing-root *)[data-state="open"] {
-    background-color: #383e4a;
+    background-color: #36312b;
   }
   
   html[data-theme="dark"] .hover\:bg-gray-200:not(.keep-light, .keep-light *, .landing-root *):hover {
-    background-color: #3e4553;
+    background-color: #3c3730;
   }
   
   html[data-theme="dark"] .bg-gray-300:not(.keep-light, .keep-light *, .landing-root *),
   html[data-theme="dark"] .disabled\:bg-gray-300:not(.keep-light, .keep-light *, .landing-root *):disabled,
   html[data-theme="dark"] .data-\[state\=open\]\:bg-gray-300:not(.keep-light, .keep-light *, .landing-root *)[data-state="open"] {
-    background-color: #454c5a;
+    background-color: #443e36;
   }
   
   html[data-theme="dark"] .hover\:bg-gray-300:not(.keep-light, .keep-light *, .landing-root *):hover {
-    background-color: #4b5362;
+    background-color: #4a433b;
   }
   
   html[data-theme="dark"] .border-gray-100:not(.keep-light, .keep-light *, .landing-root *) {
-    border-color: #2e333d;
+    border-color: #2c2823;
   }
   
   html[data-theme="dark"] .border-gray-200:not(.keep-light, .keep-light *, .landing-root *) {
-    border-color: #3b414d;
+    border-color: #3a352e;
   }
   
   html[data-theme="dark"] .border-gray-300:not(.keep-light, .keep-light *, .landing-root *) {
-    border-color: #4a5261;
+    border-color: #4a443b;
   }
   
   html[data-theme="dark"] .border-gray-400:not(.keep-light, .keep-light *, .landing-root *) {
-    border-color: #5c6575;
+    border-color: #5d564b;
   }
   
   html[data-theme="dark"] .hover\:border-gray-300:not(.keep-light, .keep-light *, .landing-root *):hover {
-    border-color: #5c6575;
+    border-color: #5d564b;
   }
   
   html[data-theme="dark"] .hover\:border-gray-400:not(.keep-light, .keep-light *, .landing-root *):hover {
-    border-color: #6d7789;
+    border-color: #6f675b;
   }
   
   html[data-theme="dark"] .text-gray-500:not(.keep-light, .keep-light *, .landing-root *),
   html[data-theme="dark"] .disabled\:text-gray-500:not(.keep-light, .keep-light *, .landing-root *):disabled,
   html[data-theme="dark"] .placeholder\:text-gray-500:not(.keep-light, .keep-light *, .landing-root *)::placeholder,
   html[data-theme="dark"] .data-\[state\=open\]\:text-gray-500:not(.keep-light, .keep-light *, .landing-root *)[data-state="open"] {
-    color: #a0abbb;
+    color: #a89f90;
   }
   
   html[data-theme="dark"] .hover\:text-gray-500:not(.keep-light, .keep-light *, .landing-root *):hover,
   html[data-theme="dark"] .group-hover\:text-gray-500:not(.keep-light, .keep-light *, .landing-root *):is(:where(.group):hover *) {
-    color: #a0abbb;
+    color: #a89f90;
   }
   
   html[data-theme="dark"] .text-gray-600:not(.keep-light, .keep-light *, .landing-root *),
   html[data-theme="dark"] .disabled\:text-gray-600:not(.keep-light, .keep-light *, .landing-root *):disabled,
   html[data-theme="dark"] .placeholder\:text-gray-600:not(.keep-light, .keep-light *, .landing-root *)::placeholder,
   html[data-theme="dark"] .data-\[state\=open\]\:text-gray-600:not(.keep-light, .keep-light *, .landing-root *)[data-state="open"] {
-    color: #bcc5d1;
+    color: #c2b9aa;
   }
   
   html[data-theme="dark"] .hover\:text-gray-600:not(.keep-light, .keep-light *, .landing-root *):hover,
   html[data-theme="dark"] .group-hover\:text-gray-600:not(.keep-light, .keep-light *, .landing-root *):is(:where(.group):hover *) {
-    color: #bcc5d1;
+    color: #c2b9aa;
   }
   
   html[data-theme="dark"] .text-gray-700:not(.keep-light, .keep-light *, .landing-root *),
   html[data-theme="dark"] .disabled\:text-gray-700:not(.keep-light, .keep-light *, .landing-root *):disabled,
   html[data-theme="dark"] .placeholder\:text-gray-700:not(.keep-light, .keep-light *, .landing-root *)::placeholder,
   html[data-theme="dark"] .data-\[state\=open\]\:text-gray-700:not(.keep-light, .keep-light *, .landing-root *)[data-state="open"] {
-    color: #d3dae3;
+    color: #d8d0c3;
   }
   
   html[data-theme="dark"] .hover\:text-gray-700:not(.keep-light, .keep-light *, .landing-root *):hover,
   html[data-theme="dark"] .group-hover\:text-gray-700:not(.keep-light, .keep-light *, .landing-root *):is(:where(.group):hover *) {
-    color: #d3dae3;
+    color: #d8d0c3;
   }
   
   html[data-theme="dark"] .text-gray-800:not(.keep-light, .keep-light *, .landing-root *),
   html[data-theme="dark"] .disabled\:text-gray-800:not(.keep-light, .keep-light *, .landing-root *):disabled,
   html[data-theme="dark"] .placeholder\:text-gray-800:not(.keep-light, .keep-light *, .landing-root *)::placeholder,
   html[data-theme="dark"] .data-\[state\=open\]\:text-gray-800:not(.keep-light, .keep-light *, .landing-root *)[data-state="open"] {
-    color: #e6edf3;
+    color: #ece6da;
   }
   
   html[data-theme="dark"] .hover\:text-gray-800:not(.keep-light, .keep-light *, .landing-root *):hover,
   html[data-theme="dark"] .group-hover\:text-gray-800:not(.keep-light, .keep-light *, .landing-root *):is(:where(.group):hover *) {
-    color: #e6edf3;
+    color: #ece6da;
   }
   
   html[data-theme="dark"] .text-gray-900:not(.keep-light, .keep-light *, .landing-root *),
   html[data-theme="dark"] .disabled\:text-gray-900:not(.keep-light, .keep-light *, .landing-root *):disabled,
   html[data-theme="dark"] .placeholder\:text-gray-900:not(.keep-light, .keep-light *, .landing-root *)::placeholder,
   html[data-theme="dark"] .data-\[state\=open\]\:text-gray-900:not(.keep-light, .keep-light *, .landing-root *)[data-state="open"] {
-    color: #f0f3f7;
+    color: #f5f0e6;
   }
   
   html[data-theme="dark"] .hover\:text-gray-900:not(.keep-light, .keep-light *, .landing-root *):hover,
   html[data-theme="dark"] .group-hover\:text-gray-900:not(.keep-light, .keep-light *, .landing-root *):is(:where(.group):hover *) {
-    color: #f0f3f7;
+    color: #f5f0e6;
   }
   
   html[data-theme="dark"] .text-gray-950:not(.keep-light, .keep-light *, .landing-root *),
   html[data-theme="dark"] .disabled\:text-gray-950:not(.keep-light, .keep-light *, .landing-root *):disabled,
   html[data-theme="dark"] .placeholder\:text-gray-950:not(.keep-light, .keep-light *, .landing-root *)::placeholder,
   html[data-theme="dark"] .data-\[state\=open\]\:text-gray-950:not(.keep-light, .keep-light *, .landing-root *)[data-state="open"] {
-    color: #f0f3f7;
+    color: #f5f0e6;
   }
   
   html[data-theme="dark"] .hover\:text-gray-950:not(.keep-light, .keep-light *, .landing-root *):hover,
   html[data-theme="dark"] .group-hover\:text-gray-950:not(.keep-light, .keep-light *, .landing-root *):is(:where(.group):hover *) {
-    color: #f0f3f7;
+    color: #f5f0e6;
   }
   
   html[data-theme="dark"] .from-gray-50:not(.keep-light, .keep-light *, .landing-root *) {
-    --tw-gradient-from: #1c1f26;
+    --tw-gradient-from: #181612;
   }
   
   html[data-theme="dark"] .via-gray-50:not(.keep-light, .keep-light *, .landing-root *) {
-    --tw-gradient-via: #1c1f26;
+    --tw-gradient-via: #181612;
   }
   
   html[data-theme="dark"] .to-gray-50:not(.keep-light, .keep-light *, .landing-root *) {
-    --tw-gradient-to: #1c1f26;
+    --tw-gradient-to: #181612;
   }
   
   html[data-theme="dark"] .from-gray-100:not(.keep-light, .keep-light *, .landing-root *) {
-    --tw-gradient-from: #2d323c;
+    --tw-gradient-from: #2b2722;
   }
   
   html[data-theme="dark"] .via-gray-100:not(.keep-light, .keep-light *, .landing-root *) {
-    --tw-gradient-via: #2d323c;
+    --tw-gradient-via: #2b2722;
   }
   
   html[data-theme="dark"] .to-gray-100:not(.keep-light, .keep-light *, .landing-root *) {
-    --tw-gradient-to: #2d323c;
+    --tw-gradient-to: #2b2722;
   }
   
   html[data-theme="dark"] .from-gray-200:not(.keep-light, .keep-light *, .landing-root *) {
-    --tw-gradient-from: #383e4a;
+    --tw-gradient-from: #36312b;
   }
   
   html[data-theme="dark"] .via-gray-200:not(.keep-light, .keep-light *, .landing-root *) {
-    --tw-gradient-via: #383e4a;
+    --tw-gradient-via: #36312b;
   }
   
   html[data-theme="dark"] .to-gray-200:not(.keep-light, .keep-light *, .landing-root *) {
-    --tw-gradient-to: #383e4a;
+    --tw-gradient-to: #36312b;
   }
   
   html[data-theme="dark"] .bg-slate-50:not(.keep-light, .keep-light *, .landing-root *),
   html[data-theme="dark"] .disabled\:bg-slate-50:not(.keep-light, .keep-light *, .landing-root *):disabled,
   html[data-theme="dark"] .data-\[state\=open\]\:bg-slate-50:not(.keep-light, .keep-light *, .landing-root *)[data-state="open"] {
-    background-color: #1c1f26;
+    background-color: #181612;
   }
   
   html[data-theme="dark"] .hover\:bg-slate-50:not(.keep-light, .keep-light *, .landing-root *):hover {
-    background-color: #2d323c;
+    background-color: #2b2722;
   }
   
   html[data-theme="dark"] .bg-slate-100:not(.keep-light, .keep-light *, .landing-root *),
   html[data-theme="dark"] .disabled\:bg-slate-100:not(.keep-light, .keep-light *, .landing-root *):disabled,
   html[data-theme="dark"] .data-\[state\=open\]\:bg-slate-100:not(.keep-light, .keep-light *, .landing-root *)[data-state="open"] {
-    background-color: #2d323c;
+    background-color: #2b2722;
   }
   
   html[data-theme="dark"] .hover\:bg-slate-100:not(.keep-light, .keep-light *, .landing-root *):hover {
-    background-color: #333945;
+    background-color: #312d27;
   }
   
   html[data-theme="dark"] .bg-slate-200:not(.keep-light, .keep-light *, .landing-root *),
   html[data-theme="dark"] .disabled\:bg-slate-200:not(.keep-light, .keep-light *, .landing-root *):disabled,
   html[data-theme="dark"] .data-\[state\=open\]\:bg-slate-200:not(.keep-light, .keep-light *, .landing-root *)[data-state="open"] {
-    background-color: #383e4a;
+    background-color: #36312b;
   }
   
   html[data-theme="dark"] .hover\:bg-slate-200:not(.keep-light, .keep-light *, .landing-root *):hover {
-    background-color: #3e4553;
+    background-color: #3c3730;
   }
   
   html[data-theme="dark"] .bg-slate-300:not(.keep-light, .keep-light *, .landing-root *),
   html[data-theme="dark"] .disabled\:bg-slate-300:not(.keep-light, .keep-light *, .landing-root *):disabled,
   html[data-theme="dark"] .data-\[state\=open\]\:bg-slate-300:not(.keep-light, .keep-light *, .landing-root *)[data-state="open"] {
-    background-color: #454c5a;
+    background-color: #443e36;
   }
   
   html[data-theme="dark"] .hover\:bg-slate-300:not(.keep-light, .keep-light *, .landing-root *):hover {
-    background-color: #4b5362;
+    background-color: #4a433b;
   }
   
   html[data-theme="dark"] .border-slate-100:not(.keep-light, .keep-light *, .landing-root *) {
-    border-color: #2e333d;
+    border-color: #2c2823;
   }
   
   html[data-theme="dark"] .border-slate-200:not(.keep-light, .keep-light *, .landing-root *) {
-    border-color: #3b414d;
+    border-color: #3a352e;
   }
   
   html[data-theme="dark"] .border-slate-300:not(.keep-light, .keep-light *, .landing-root *) {
-    border-color: #4a5261;
+    border-color: #4a443b;
   }
   
   html[data-theme="dark"] .border-slate-400:not(.keep-light, .keep-light *, .landing-root *) {
-    border-color: #5c6575;
+    border-color: #5d564b;
   }
   
   html[data-theme="dark"] .hover\:border-slate-300:not(.keep-light, .keep-light *, .landing-root *):hover {
-    border-color: #5c6575;
+    border-color: #5d564b;
   }
   
   html[data-theme="dark"] .hover\:border-slate-400:not(.keep-light, .keep-light *, .landing-root *):hover {
-    border-color: #6d7789;
+    border-color: #6f675b;
   }
   
   html[data-theme="dark"] .text-slate-500:not(.keep-light, .keep-light *, .landing-root *),
   html[data-theme="dark"] .disabled\:text-slate-500:not(.keep-light, .keep-light *, .landing-root *):disabled,
   html[data-theme="dark"] .placeholder\:text-slate-500:not(.keep-light, .keep-light *, .landing-root *)::placeholder,
   html[data-theme="dark"] .data-\[state\=open\]\:text-slate-500:not(.keep-light, .keep-light *, .landing-root *)[data-state="open"] {
-    color: #a0abbb;
+    color: #a89f90;
   }
   
   html[data-theme="dark"] .hover\:text-slate-500:not(.keep-light, .keep-light *, .landing-root *):hover,
   html[data-theme="dark"] .group-hover\:text-slate-500:not(.keep-light, .keep-light *, .landing-root *):is(:where(.group):hover *) {
-    color: #a0abbb;
+    color: #a89f90;
   }
   
   html[data-theme="dark"] .text-slate-600:not(.keep-light, .keep-light *, .landing-root *),
   html[data-theme="dark"] .disabled\:text-slate-600:not(.keep-light, .keep-light *, .landing-root *):disabled,
   html[data-theme="dark"] .placeholder\:text-slate-600:not(.keep-light, .keep-light *, .landing-root *)::placeholder,
   html[data-theme="dark"] .data-\[state\=open\]\:text-slate-600:not(.keep-light, .keep-light *, .landing-root *)[data-state="open"] {
-    color: #bcc5d1;
+    color: #c2b9aa;
   }
   
   html[data-theme="dark"] .hover\:text-slate-600:not(.keep-light, .keep-light *, .landing-root *):hover,
   html[data-theme="dark"] .group-hover\:text-slate-600:not(.keep-light, .keep-light *, .landing-root *):is(:where(.group):hover *) {
-    color: #bcc5d1;
+    color: #c2b9aa;
   }
   
   html[data-theme="dark"] .text-slate-700:not(.keep-light, .keep-light *, .landing-root *),
   html[data-theme="dark"] .disabled\:text-slate-700:not(.keep-light, .keep-light *, .landing-root *):disabled,
   html[data-theme="dark"] .placeholder\:text-slate-700:not(.keep-light, .keep-light *, .landing-root *)::placeholder,
   html[data-theme="dark"] .data-\[state\=open\]\:text-slate-700:not(.keep-light, .keep-light *, .landing-root *)[data-state="open"] {
-    color: #d3dae3;
+    color: #d8d0c3;
   }
   
   html[data-theme="dark"] .hover\:text-slate-700:not(.keep-light, .keep-light *, .landing-root *):hover,
   html[data-theme="dark"] .group-hover\:text-slate-700:not(.keep-light, .keep-light *, .landing-root *):is(:where(.group):hover *) {
-    color: #d3dae3;
+    color: #d8d0c3;
   }
   
   html[data-theme="dark"] .text-slate-800:not(.keep-light, .keep-light *, .landing-root *),
   html[data-theme="dark"] .disabled\:text-slate-800:not(.keep-light, .keep-light *, .landing-root *):disabled,
   html[data-theme="dark"] .placeholder\:text-slate-800:not(.keep-light, .keep-light *, .landing-root *)::placeholder,
   html[data-theme="dark"] .data-\[state\=open\]\:text-slate-800:not(.keep-light, .keep-light *, .landing-root *)[data-state="open"] {
-    color: #e6edf3;
+    color: #ece6da;
   }
   
   html[data-theme="dark"] .hover\:text-slate-800:not(.keep-light, .keep-light *, .landing-root *):hover,
   html[data-theme="dark"] .group-hover\:text-slate-800:not(.keep-light, .keep-light *, .landing-root *):is(:where(.group):hover *) {
-    color: #e6edf3;
+    color: #ece6da;
   }
   
   html[data-theme="dark"] .text-slate-900:not(.keep-light, .keep-light *, .landing-root *),
   html[data-theme="dark"] .disabled\:text-slate-900:not(.keep-light, .keep-light *, .landing-root *):disabled,
   html[data-theme="dark"] .placeholder\:text-slate-900:not(.keep-light, .keep-light *, .landing-root *)::placeholder,
   html[data-theme="dark"] .data-\[state\=open\]\:text-slate-900:not(.keep-light, .keep-light *, .landing-root *)[data-state="open"] {
-    color: #f0f3f7;
+    color: #f5f0e6;
   }
   
   html[data-theme="dark"] .hover\:text-slate-900:not(.keep-light, .keep-light *, .landing-root *):hover,
   html[data-theme="dark"] .group-hover\:text-slate-900:not(.keep-light, .keep-light *, .landing-root *):is(:where(.group):hover *) {
-    color: #f0f3f7;
+    color: #f5f0e6;
   }
   
   html[data-theme="dark"] .text-slate-950:not(.keep-light, .keep-light *, .landing-root *),
   html[data-theme="dark"] .disabled\:text-slate-950:not(.keep-light, .keep-light *, .landing-root *):disabled,
   html[data-theme="dark"] .placeholder\:text-slate-950:not(.keep-light, .keep-light *, .landing-root *)::placeholder,
   html[data-theme="dark"] .data-\[state\=open\]\:text-slate-950:not(.keep-light, .keep-light *, .landing-root *)[data-state="open"] {
-    color: #f0f3f7;
+    color: #f5f0e6;
   }
   
   html[data-theme="dark"] .hover\:text-slate-950:not(.keep-light, .keep-light *, .landing-root *):hover,
   html[data-theme="dark"] .group-hover\:text-slate-950:not(.keep-light, .keep-light *, .landing-root *):is(:where(.group):hover *) {
-    color: #f0f3f7;
+    color: #f5f0e6;
   }
   
   html[data-theme="dark"] .from-slate-50:not(.keep-light, .keep-light *, .landing-root *) {
-    --tw-gradient-from: #1c1f26;
+    --tw-gradient-from: #181612;
   }
   
   html[data-theme="dark"] .via-slate-50:not(.keep-light, .keep-light *, .landing-root *) {
-    --tw-gradient-via: #1c1f26;
+    --tw-gradient-via: #181612;
   }
   
   html[data-theme="dark"] .to-slate-50:not(.keep-light, .keep-light *, .landing-root *) {
-    --tw-gradient-to: #1c1f26;
+    --tw-gradient-to: #181612;
   }
   
   html[data-theme="dark"] .from-slate-100:not(.keep-light, .keep-light *, .landing-root *) {
-    --tw-gradient-from: #2d323c;
+    --tw-gradient-from: #2b2722;
   }
   
   html[data-theme="dark"] .via-slate-100:not(.keep-light, .keep-light *, .landing-root *) {
-    --tw-gradient-via: #2d323c;
+    --tw-gradient-via: #2b2722;
   }
   
   html[data-theme="dark"] .to-slate-100:not(.keep-light, .keep-light *, .landing-root *) {
-    --tw-gradient-to: #2d323c;
+    --tw-gradient-to: #2b2722;
   }
   
   html[data-theme="dark"] .from-slate-200:not(.keep-light, .keep-light *, .landing-root *) {
-    --tw-gradient-from: #383e4a;
+    --tw-gradient-from: #36312b;
   }
   
   html[data-theme="dark"] .via-slate-200:not(.keep-light, .keep-light *, .landing-root *) {
-    --tw-gradient-via: #383e4a;
+    --tw-gradient-via: #36312b;
   }
   
   html[data-theme="dark"] .to-slate-200:not(.keep-light, .keep-light *, .landing-root *) {
-    --tw-gradient-to: #383e4a;
+    --tw-gradient-to: #36312b;
   }
   
   html[data-theme="dark"] .from-white:not(.keep-light, .keep-light *, .landing-root *) {
-    --tw-gradient-from: #252932;
+    --tw-gradient-from: #221f1a;
   }
   
   html[data-theme="dark"] .via-white:not(.keep-light, .keep-light *, .landing-root *) {
-    --tw-gradient-via: #252932;
+    --tw-gradient-via: #221f1a;
   }
   
   html[data-theme="dark"] .to-white:not(.keep-light, .keep-light *, .landing-root *) {
-    --tw-gradient-to: #252932;
+    --tw-gradient-to: #221f1a;
   }
   
   html[data-theme="dark"] .text-black:not(.keep-light, .keep-light *, .landing-root *),
   html[data-theme="dark"] .hover\:text-black:not(.keep-light, .keep-light *, .landing-root *):hover,
   html[data-theme="dark"] .group-hover\:text-black:not(.keep-light, .keep-light *, .landing-root *):is(:where(.group):hover *) {
-    color: #e6edf3;
+    color: #ece6da;
   }
   
   html[data-theme="dark"] .focus\:ring-gray-950:not(.keep-light, .keep-light *, .landing-root *):focus,
   html[data-theme="dark"] .focus-visible\:ring-gray-950:not(.keep-light, .keep-light *, .landing-root *):focus-visible {
-    --tw-ring-color: #a0abbb;
+    --tw-ring-color: #a89f90;
   }
   
   html[data-theme="dark"] .text-brand:not(.keep-light, .keep-light *, .landing-root *),
   html[data-theme="dark"] .hover\:text-brand:not(.keep-light, .keep-light *, .landing-root *):hover,
   html[data-theme="dark"] .group-hover\:text-brand:not(.keep-light, .keep-light *, .landing-root *):is(:where(.group):hover *),
   html[data-theme="dark"] .hover\:text-brand-hover:not(.keep-light, .keep-light *, .landing-root *):hover {
-    color: #2fb8bd;
+    color: var(--brand-text-dark, #3cc4c9);
   }
   
   html[data-theme="dark"] .bg-red-50:not(.keep-light, .keep-light *, .landing-root *) {

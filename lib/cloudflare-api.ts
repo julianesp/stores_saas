@@ -744,6 +744,8 @@ export interface UserProfile {
   phone?: string;
   // QR de pagos del tendero (Nequi/Daviplata/Bre-B) para cobrar en el POS
   payment_qr_url?: string;
+  // Color del sistema elegido por el tendero (id de lib/accent.ts). Migración 029.
+  ui_accent?: string;
   is_superadmin?: boolean;
   // Clasificación de tienda (ver lib/business-types.ts)
   business_type?: BusinessTypeId;

@@ -3,6 +3,20 @@
  */
 
 export async function registerServiceWorker() {
+  // En desarrollo el SW sirve chunks viejos de Turbopack (errores de hidratación,
+  // estilos que no se actualizan): se desregistra en vez de registrarlo.
+  if (process.env.NODE_ENV === 'development') {
+    if ('serviceWorker' in navigator) {
+      const registrations = await navigator.serviceWorker.getRegistrations();
+      await Promise.all(registrations.map((r) => r.unregister()));
+      if ('caches' in window) {
+        const keys = await caches.keys();
+        await Promise.all(keys.map((k) => caches.delete(k)));
+      }
+    }
+    return undefined;
+  }
+
   if ('serviceWorker' in navigator) {
     try {
       const registration = await navigator.serviceWorker.register(

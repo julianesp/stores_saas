@@ -5,7 +5,12 @@ const Card = forwardRef<HTMLDivElement, HTMLAttributes<HTMLDivElement>>(
   ({ className, ...props }, ref) => (
     <div
       ref={ref}
-      className={cn('rounded-lg border border-gray-200 bg-white text-gray-950 shadow-sm', className)}
+      className={cn(
+        // Ficha de papel (.card-paper en globals.css): filete cálido + sombra teñida.
+        // Va en @layer components para que cualquier border-*/shadow-* de la página la sobrescriba.
+        'card-paper rounded-2xl border bg-white text-gray-950',
+        className
+      )}
       {...props}
     />
   )

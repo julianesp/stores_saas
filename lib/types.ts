@@ -44,6 +44,9 @@ export interface UserProfile {
   // QR de pagos del tendero (Nequi/Daviplata/Bre-B) para cobrar en el POS
   payment_qr_url?: string;
 
+  // Color del sistema elegido por el tendero (id de lib/accent.ts). Migración 029.
+  ui_accent?: string;
+
   // Configuración del Storefront (Tienda Online)
   store_slug?: string; // URL única de la tienda (ej: mi-tienda)
   store_name?: string; // Nombre público de la tienda

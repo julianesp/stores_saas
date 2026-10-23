@@ -47,13 +47,13 @@ export function RefreshProfileButton() {
   return (
     <Button
       variant="ghost"
-      size="sm"
+      size="icon"
       onClick={handleRefresh}
       disabled={loading}
-      className="gap-2"
+      title={loading ? 'Actualizando…' : 'Actualizar perfil'}
+      aria-label="Actualizar perfil"
     >
       <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
-      {loading ? 'Actualizando...' : 'Actualizar Perfil'}
     </Button>
   );
 }

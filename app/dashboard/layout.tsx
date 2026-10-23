@@ -22,6 +22,7 @@ import {
 import { SubscriptionStatus } from "@/lib/types";
 import { usePageTracking } from "@/lib/hooks/use-analytics";
 import { setSelectedTenantId } from "@/lib/cloudflare-api";
+import { readStoredAccent, setAccent } from "@/lib/accent";
 import { TenantProvider, useTenant } from "@/lib/tenant-context";
 import { GuideProvider } from "@/components/guide/GuideProvider";
 import styles from "./styles/Layout.module.scss";
@@ -74,6 +75,13 @@ function DashboardLayoutInner({
 
   // Rastrear automáticamente todas las visitas a páginas
   usePageTracking();
+
+  // La piel del sistema (.app-shell) va también en <body>: los modales y menús
+  // que se montan en un portal (Radix, SweetAlert, Clerk) quedan fuera del árbol.
+  useEffect(() => {
+    document.body.classList.add("app-shell");
+    return () => document.body.classList.remove("app-shell");
+  }, []);
 
   useEffect(() => {
     async function checkAccess() {
@@ -243,6 +251,12 @@ function DashboardLayoutInner({
           const isSuperAdminUser = !!profile?.is_superadmin;
           setIsSuperAdmin(isSuperAdminUser);
 
+          // Color del sistema guardado en el perfil de la tienda: así el tendero (y
+          // su equipo) lo ven en cualquier dispositivo, no solo donde lo eligió.
+          if (profile?.ui_accent && profile.ui_accent !== readStoredAccent()) {
+            setAccent(profile.ui_accent);
+          }
+
           // Verificar addons próximos a vencer (solo para owners, no para team members ni superadmin)
           if (profile && !isSuperAdminUser && !userIsTeamMember && profile.subscription_status === 'active') {
             const today = new Date();
@@ -371,7 +385,7 @@ function DashboardLayoutInner({
         // Ocultar para la cuenta de demostración (julii1295@gmail.com)
         user?.emailAddresses[0]?.emailAddress !== "julii1295@gmail.com" &&
         <TrialNotificationWrapper />}
-      <div className="flex h-screen overflow-hidden">
+      <div className="app-shell flex h-screen overflow-hidden">
         <Sidebar />
 
         {/* Mobile sidebar overlay */}
@@ -391,7 +405,7 @@ function DashboardLayoutInner({
           </div>
         )}
 
-        <div className="flex flex-col flex-1 min-w-0 overflow-hidden text-black">
+        <div className="flex flex-col flex-1 min-w-0 overflow-hidden text-gray-900">
           {/* Mostrar banner solo cuando queden 3 días o menos (trial o suscripción activa) */}
           {!loading &&
             !isSuperAdmin &&
@@ -425,7 +439,7 @@ function DashboardLayoutInner({
             }}
           />
 
-          <main className="flex-1 min-w-0 overflow-y-auto overflow-x-hidden bg-gray-50 p-4 md:p-6">
+          <main className="flex-1 min-w-0 overflow-y-auto overflow-x-hidden bg-gray-50 px-4 pb-6 pt-2 md:px-8 md:pb-10">
             {/* Alerta de expiración cuando faltan 3 días o menos (no para team members) */}
             {!loading &&
               !isSuperAdmin &&

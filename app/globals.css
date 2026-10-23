@@ -96,6 +96,16 @@
   --landing-glow: rgba(0, 124, 128, 0.15);
 }
 
+/* Color del sistema elegido por el tendero (lib/accent.ts escribe --accent-*).
+   Solo donde hay data-theme: la tienda pública conserva su propio color. */
+html[data-theme] {
+  --brand: var(--accent-brand, #007c80);
+  --brand-hover: var(--accent-brand-hover, #006467);
+  --brand-light: var(--accent-brand-light, #e6f4f4);
+  --primary: var(--brand);
+  --ring: var(--brand);
+}
+
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
@@ -140,23 +150,26 @@
 @media screen {
   html[data-theme="dark"] {
     color-scheme: dark;
-    --background: #1c1f26;
-    --foreground: #e6edf3;
-    --brand-light: rgba(0, 124, 128, 0.2);
+    --background: #181612;
+    --foreground: #ece6da;
+    --brand: var(--accent-dark-brand, #007c80);
+    --brand-hover: var(--accent-dark-brand-hover, #00696d);
+    --brand-light: var(--accent-dark-brand-light, rgba(0, 124, 128, 0.22));
+    --brand-text-dark: var(--accent-dark-text, #3cc4c9);
 
-    --secondary: #2d323c;
-    --secondary-foreground: #e6edf3;
-    --muted: #2d323c;
-    --muted-foreground: #a0abbb;
-    --accent: #25383d;
-    --accent-foreground: #e6edf3;
-    --card: #252932;
-    --card-foreground: #e6edf3;
-    --popover: #252932;
-    --popover-foreground: #e6edf3;
-    --border: #3b414d;
-    --input: #4a5261;
-    --ring: #2fb8bd;
+    --secondary: #2b2722;
+    --secondary-foreground: #ece6da;
+    --muted: #2b2722;
+    --muted-foreground: #a89f90;
+    --accent: #1f3634;
+    --accent-foreground: #ece6da;
+    --card: #221f1a;
+    --card-foreground: #ece6da;
+    --popover: #221f1a;
+    --popover-foreground: #ece6da;
+    --border: #3a352e;
+    --input: #4a443b;
+    --ring: var(--accent-dark-text, #3cc4c9);
   }
 
   /* Tailwind v4 deja los bordes sin color en currentColor: en oscuro serían
@@ -165,34 +178,211 @@
     html[data-theme="dark"] *,
     html[data-theme="dark"] ::before,
     html[data-theme="dark"] ::after {
-      border-color: #3b414d;
+      border-color: #3a352e;
     }
   }
 
   /* Terceros que traen su propio color claro */
   html[data-theme="dark"] .swal2-popup {
-    background: #252932;
-    color: #e6edf3;
+    background: #221f1a;
+    color: #ece6da;
   }
   html[data-theme="dark"] .swal2-title,
   html[data-theme="dark"] .swal2-html-container {
-    color: #e6edf3;
+    color: #ece6da;
   }
   html[data-theme="dark"] .recharts-cartesian-axis-tick-value,
   html[data-theme="dark"] .recharts-text {
-    fill: #a0abbb;
+    fill: #a89f90;
   }
   html[data-theme="dark"] .recharts-cartesian-grid line,
   html[data-theme="dark"] .recharts-polar-grid-concentric-polygon {
-    stroke: #3b414d;
+    stroke: #3a352e;
   }
   html[data-theme="dark"] .recharts-default-tooltip {
-    background-color: #252932 !important;
-    border-color: #3b414d !important;
+    background-color: #221f1a !important;
+    border-color: #3a352e !important;
   }
   html[data-theme="dark"] .recharts-tooltip-label,
   html[data-theme="dark"] .recharts-legend-item-text {
-    color: #e6edf3 !important;
+    color: #ece6da !important;
+  }
+}
+
+/* ════════════════════════════════════════════════════════════════════════════
+   SISTEMA "MOSTRADOR" (dashboard)
+   El sistema se piensa como el mostrador de una tienda de barrio: papel cálido,
+   tinta café oscuro, el teal de marca como único acento y cifras tabulares como
+   en una caja registradora. Se aplica solo dentro de .app-shell (dashboard); la
+   landing y la tienda pública conservan su propio estilo.
+
+   Tailwind v4 genera las utilidades con var(--color-*), así que redefinir la
+   escala de grises aquí re-pinta TODO el dashboard (bg-gray-50, text-gray-600,
+   border-gray-200, bg-white…) con grises cálidos sin tocar cada componente.
+   En modo oscuro manda app/dark-theme.css (generado con la misma paleta).
+   ════════════════════════════════════════════════════════════════════════════ */
+.app-shell {
+  --color-white: #fffdf8;
+  --color-black: #1f1b16;
+  --color-gray-50: #f6f3ec;
+  --color-gray-100: #efeae0;
+  --color-gray-200: #e3ddd0;
+  --color-gray-300: #cfc7b7;
+  --color-gray-400: #a59c8b;
+  --color-gray-500: #7d7464;
+  --color-gray-600: #5f574a;
+  --color-gray-700: #4a4339;
+  --color-gray-800: #2f2a23;
+  --color-gray-900: #1f1b16;
+  --color-gray-950: #14110d;
+  --color-slate-50: #f6f3ec;
+  --color-slate-100: #efeae0;
+  --color-slate-200: #e3ddd0;
+  --color-slate-300: #cfc7b7;
+  --color-slate-400: #a59c8b;
+  --color-slate-500: #7d7464;
+  --color-slate-600: #5f574a;
+  --color-slate-700: #4a4339;
+  --color-slate-800: #2f2a23;
+  --color-slate-900: #1f1b16;
+  --color-slate-950: #14110d;
+
+  --background: #f6f3ec;
+  --foreground: #1f1b16;
+  --card: #fffdf8;
+  --card-foreground: #1f1b16;
+  --popover: #fffdf8;
+  --popover-foreground: #1f1b16;
+  --secondary: #efeae0;
+  --secondary-foreground: #1f1b16;
+  --muted: #efeae0;
+  --muted-foreground: #7d7464;
+  --accent: #e3f1ef;
+  --accent-foreground: #1f1b16;
+  --border: #e3ddd0;
+  --input: #d9d2c4;
+
+  /* Superficies propias del sistema */
+  --shell-canvas: #f6f3ec; /* el "mostrador" (fondo general) */
+  --shell-rail: #efeae0; /* barra lateral */
+  --shell-line: #e3ddd0; /* filetes/divisiones */
+  --shell-ink: #1f1b16;
+  --shell-ink-soft: #7d7464;
+  --shell-shadow: 0 1px 0 rgba(79, 62, 37, 0.04), 0 8px 24px -12px rgba(79, 62, 37, 0.18);
+
+  --font-sans: var(--font-instrument-sans);
+  font-family: var(--font-instrument-sans), ui-sans-serif, system-ui, sans-serif;
+  font-variant-numeric: tabular-nums;
+  background: var(--shell-canvas);
+  color: var(--shell-ink);
+}
+
+@media screen {
+  html[data-theme="dark"] .app-shell {
+    --color-white: #fffdf8;
+    --color-black: #ece6da;
+    --background: #181612;
+    --foreground: #ece6da;
+    --card: #221f1a;
+    --card-foreground: #ece6da;
+    --popover: #221f1a;
+    --popover-foreground: #ece6da;
+    --secondary: #2b2722;
+    --secondary-foreground: #ece6da;
+    --muted: #2b2722;
+    --muted-foreground: #a89f90;
+    --accent: #1f3634;
+    --accent-foreground: #ece6da;
+    --border: #3a352e;
+    --input: #4a443b;
+
+    --shell-canvas: #181612;
+    --shell-rail: #1d1a16;
+    --shell-line: #2f2a24;
+    --shell-ink: #ece6da;
+    --shell-ink-soft: #a89f90;
+    --shell-shadow: 0 1px 0 rgba(0, 0, 0, 0.3), 0 10px 28px -14px rgba(0, 0, 0, 0.7);
+  }
+}
+
+/* Ficha base de components/ui/card.tsx. Como @utility de Tailwind v4: las
+   utilidades de una sola propiedad que pase cada página (border-brand,
+   shadow-none, shadow-md…) se emiten después y la sobrescriben. */
+@utility card-paper {
+  border-color: var(--shell-line, #e5e7eb);
+  box-shadow: var(--shell-shadow, 0 1px 2px rgba(0, 0, 0, 0.05));
+}
+
+/* Títulos con la grotesca de carácter, apretados y con peso. */
+.app-shell :where(h1, h2, h3, .font-display) {
+  font-family: var(--font-bricolage), var(--font-instrument-sans), sans-serif;
+  letter-spacing: -0.02em;
+  text-wrap: balance;
+}
+
+/* Botones y enlaces: respuesta física al presionar. */
+.app-shell :where(button, a[role="button"]):not(:disabled):active {
+  transform: translateY(1px);
+}
+
+/* Cifras de dinero grandes (tarjetas, totales): estilo caja registradora. */
+.app-shell .font-num {
+  font-family: var(--font-bricolage), var(--font-instrument-sans), sans-serif;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.03em;
+}
+
+/* Filete punteado tipo recibo (separadores del carrito y totales). */
+.app-shell .receipt-rule {
+  border: 0;
+  height: 1px;
+  background-image: linear-gradient(to right, var(--shell-line) 55%, transparent 0);
+  background-size: 8px 1px;
+  background-repeat: repeat-x;
+}
+
+/* Borde inferior dentado, como un tiquete arrancado de la impresora.
+   ::before dibuja los dientes con el color del filete (1px más abajo) y ::after
+   los rellena con el color de la ficha: queda un contorno dentado nítido. */
+.app-shell .receipt-edge {
+  position: relative;
+  --tooth: 14px;
+}
+.app-shell .receipt-edge::before,
+.app-shell .receipt-edge::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: 9px;
+  pointer-events: none;
+  background:
+    linear-gradient(-45deg, transparent 6px, var(--tooth-color) 0) 0 0 / var(--tooth) 9px repeat-x,
+    linear-gradient(45deg, transparent 6px, var(--tooth-color) 0) 0 0 / var(--tooth) 9px repeat-x;
+}
+.app-shell .receipt-edge::before {
+  bottom: -9px;
+  --tooth-color: var(--shell-line);
+}
+.app-shell .receipt-edge::after {
+  bottom: -8px;
+  --tooth-color: var(--card);
+}
+
+/* Scroll del sidebar a tono con el riel claro/oscuro. */
+.app-shell .custom-scrollbar {
+  scrollbar-color: var(--shell-line) transparent;
+}
+.app-shell .custom-scrollbar::-webkit-scrollbar-track {
+  background: transparent;
+}
+.app-shell .custom-scrollbar::-webkit-scrollbar-thumb {
+  background: var(--shell-line);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .app-shell :where(button, a[role="button"]):active {
+    transform: none;
   }
 }
 

@@ -523,15 +523,16 @@ export default function DashboardPage() {
       </Link>
 
       {/* Métricas principales: cada tarjeta lleva a su detalle */}
-      <div data-guide="dash-stats" className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 md:gap-4">
+      {/* Una sola hoja tipo "cuadre de caja": celdas separadas por filetes, no seis tarjetas sueltas. */}
+      <div data-guide="dash-stats" className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-px overflow-hidden rounded-2xl border border-[var(--shell-line)] bg-[var(--shell-line)] shadow-[var(--shell-shadow)]">
         <Link href="/dashboard/sales?filter=today" title="Ver las ventas de hoy" className="group block">
-          <Card className="h-full transition-all group-hover:border-brand group-hover:shadow-md">
+          <Card className="h-full rounded-none border-0 shadow-none transition-colors group-hover:bg-gray-50">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Ventas de Hoy</CardTitle>
-              <DollarSign className="h-4 w-4 text-green-600" />
+              <CardTitle className="text-sm font-medium text-gray-500">Ventas de Hoy</CardTitle>
+              <DollarSign className="h-4 w-4 text-gray-400 transition-colors group-hover:text-brand" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">
+              <div className="font-num text-3xl font-semibold">
                 {new Intl.NumberFormat("es-CO", {
                   style: "currency",
                   currency: "COP",
@@ -547,13 +548,13 @@ export default function DashboardPage() {
         </Link>
 
         <Link href="/dashboard/sales?filter=today" title="Ver las ventas de hoy" className="group block">
-          <Card className="h-full transition-all group-hover:border-brand group-hover:shadow-md">
+          <Card className="h-full rounded-none border-0 shadow-none transition-colors group-hover:bg-gray-50">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Órdenes Hoy</CardTitle>
-              <ShoppingCart className="h-4 w-4 text-brand" />
+              <CardTitle className="text-sm font-medium text-gray-500">Órdenes Hoy</CardTitle>
+              <ShoppingCart className="h-4 w-4 text-gray-400 transition-colors group-hover:text-brand" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">{metrics.todayOrders}</div>
+              <div className="font-num text-3xl font-semibold">{metrics.todayOrders}</div>
               <p className="text-xs text-gray-500 mt-1 flex items-center justify-between gap-2">
                 {metrics.todayOrders > 0
                   ? "Órdenes completadas"
@@ -565,15 +566,15 @@ export default function DashboardPage() {
         </Link>
 
         <Link href="/dashboard/inventory" title="Ver el inventario" className="group block">
-          <Card className="h-full transition-all group-hover:border-brand group-hover:shadow-md">
+          <Card className="h-full rounded-none border-0 shadow-none transition-colors group-hover:bg-gray-50">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">
+              <CardTitle className="text-sm font-medium text-gray-500">
                 Total Productos
               </CardTitle>
-              <Package className="h-4 w-4 text-purple-600" />
+              <Package className="h-4 w-4 text-gray-400 transition-colors group-hover:text-brand" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">{metrics.totalProducts}</div>
+              <div className="font-num text-3xl font-semibold">{metrics.totalProducts}</div>
               <p className="text-xs text-gray-500 mt-1 flex items-center justify-between gap-2">
                 {metrics.lowStockProducts > 0
                   ? `${metrics.lowStockProducts} con cantidad baja`
@@ -585,13 +586,13 @@ export default function DashboardPage() {
         </Link>
 
         <Link href="/dashboard/inventory?lowStock=true" title="Ver los productos con cantidad baja" className="group block">
-          <Card className="h-full transition-all group-hover:border-brand group-hover:shadow-md">
+          <Card className="h-full rounded-none border-0 shadow-none transition-colors group-hover:bg-gray-50">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Cantidad Baja</CardTitle>
-              <AlertTriangle className="h-4 w-4 text-orange-600" />
+              <CardTitle className="text-sm font-medium text-gray-500">Cantidad Baja</CardTitle>
+              <AlertTriangle className="h-4 w-4 text-gray-400 transition-colors group-hover:text-brand" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">{metrics.lowStockProducts}</div>
+              <div className="font-num text-3xl font-semibold">{metrics.lowStockProducts}</div>
               <p className="text-xs text-gray-500 mt-1 flex items-center justify-between gap-2">Requieren reposición  <ArrowRight className="h-3.5 w-3.5 shrink-0 text-gray-400 transition-transform group-hover:translate-x-0.5 group-hover:text-brand" />
               </p>
             </CardContent>
@@ -599,15 +600,15 @@ export default function DashboardPage() {
         </Link>
 
         <Link href="/dashboard/customers" title="Ver los clientes" className="group block">
-          <Card className="h-full transition-all group-hover:border-brand group-hover:shadow-md">
+          <Card className="h-full rounded-none border-0 shadow-none transition-colors group-hover:bg-gray-50">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">
+              <CardTitle className="text-sm font-medium text-gray-500">
                 Clientes Activos
               </CardTitle>
-              <Users className="h-4 w-4 text-indigo-600" />
+              <Users className="h-4 w-4 text-gray-400 transition-colors group-hover:text-brand" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">{metrics.activeCustomers}</div>
+              <div className="font-num text-3xl font-semibold">{metrics.activeCustomers}</div>
               <p className="text-xs text-gray-500 mt-1 flex items-center justify-between gap-2">Este mes  <ArrowRight className="h-3.5 w-3.5 shrink-0 text-gray-400 transition-transform group-hover:translate-x-0.5 group-hover:text-brand" />
               </p>
             </CardContent>
@@ -615,16 +616,16 @@ export default function DashboardPage() {
         </Link>
 
         <Link href="/dashboard/sales?filter=month" title="Ver las ventas de este mes" className="group block">
-          <Card className="h-full transition-all group-hover:border-brand group-hover:shadow-md">
+          <Card className="h-full rounded-none border-0 shadow-none transition-colors group-hover:bg-gray-50">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">
+              <CardTitle className="text-sm font-medium text-gray-500">
                 Crecimiento Mensual
               </CardTitle>
-              <TrendingUp className="h-4 w-4 text-green-600" />
+              <TrendingUp className="h-4 w-4 text-gray-400 transition-colors group-hover:text-brand" />
             </CardHeader>
             <CardContent>
               <div
-                className={`text-2xl font-bold ${metrics.monthlyGrowth >= 0 ? "text-green-600" : "text-red-600"}`}
+                className={`font-num text-3xl font-semibold ${metrics.monthlyGrowth >= 0 ? "text-green-600" : "text-red-600"}`}
               >
                 {metrics.monthlyGrowth >= 0 ? "+" : ""}
                 {metrics.monthlyGrowth}%

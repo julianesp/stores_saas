@@ -37,6 +37,7 @@ import { AutoReportsConfig } from "@/components/config/auto-reports-config";
 import { PaymentQrConfig } from "@/components/config/payment-qr-config";
 import { TelegramConfig } from "@/components/config/telegram-config";
 import { GoogleDriveBackupConfig } from "@/components/config/google-drive-backup-config";
+import { AccentConfig } from "@/components/config/accent-config";
 import PosReviewCard from "@/components/dashboard/PosReviewCard";
 import { landingConfig } from "@/lib/landing-config";
 import { useAuth } from "@clerk/nextjs";
@@ -242,6 +243,11 @@ export default function ConfigPage() {
           <Save className="h-4 w-4 mr-2" />
           {saving ? "Guardando..." : "Guardar Cambios"}
         </Button>
+      </div>
+
+      {/* Color del sistema elegido por el tendero */}
+      <div id="color-sistema">
+        <AccentConfig />
       </div>
 
       {/* Buzón de Sugerencias */}

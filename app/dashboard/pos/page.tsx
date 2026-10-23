@@ -2259,12 +2259,12 @@ export default function POSPage() {
                                 <p className="text-xs text-gray-400 line-through">
                                   {formatCurrency(originalPrice)}
                                 </p>
-                                <p className="text-sm md:text-lg font-bold text-brand">
+                                <p className="font-num text-sm md:text-lg font-bold text-brand">
                                   {formatCurrency(discountedPrice)}
                                 </p>
                               </>
                             ) : (
-                              <p className="text-sm md:text-lg font-bold text-brand">
+                              <p className="font-num text-sm md:text-lg font-bold text-brand">
                                 {formatCurrency(product.sale_price)}
                               </p>
                             )}
@@ -2346,7 +2346,7 @@ export default function POSPage() {
 
         {/* Panel derecho - Carrito */}
         <div className="space-y-4 order-1 lg:order-2">
-          <Card data-guide="pos-cart" className="relative lg:sticky lg:top-0">
+          <Card data-guide="pos-cart" className="receipt-edge relative lg:sticky lg:top-0 rounded-b-none border-b-0">
             {/* Nueva venta: en la esquina de la tarjeta para dejar la fila a las pestañas */}
             <button
               type="button"
@@ -2361,7 +2361,7 @@ export default function POSPage() {
             <CardHeader className="pb-3">
               {/* Ventas en espera: una pestaña por cliente */}
               {/* Las flechas van en el margen de la tarjeta para dejar todo el ancho a las pestañas */}
-              <div className="relative pb-3 mb-1 border-b">
+              <div className="relative pb-3 mb-1 border-b border-dashed border-gray-300">
                 {tabsScroll.overflow && (
                   <button
                     type="button"
@@ -2485,7 +2485,7 @@ export default function POSPage() {
             </CardHeader>
             <CardContent>
               {/* Selector de Cliente */}
-              <div data-guide="pos-customer" className="mb-4 pb-4 border-b">
+              <div data-guide="pos-customer" className="mb-4 pb-4 border-b border-dashed border-gray-300">
                 {selectedCustomer ? (
                   <div className="space-y-2">
                     <div className="bg-brand-light/50 border border-brand/40 rounded-lg p-3">
@@ -2921,7 +2921,7 @@ export default function POSPage() {
 
               {cart.length > 0 && (
                 <>
-                  <div className="border-t pt-3 md:pt-4 space-y-2 md:space-y-3">
+                  <div className="border-t border-dashed border-gray-300 pt-3 md:pt-4 space-y-2 md:space-y-3">
                     {discountAmount > 0 && (
                       <div className="space-y-1">
                         <div className="flex justify-between text-sm text-gray-600">
@@ -2945,9 +2945,9 @@ export default function POSPage() {
                         </div>
                       </div>
                     )}
-                    <div className="flex justify-between text-base md:text-lg font-bold">
-                      <span>Total:</span>
-                      <span className="text-brand">
+                    <div className="flex items-baseline justify-between text-base md:text-lg font-bold">
+                      <span>Total</span>
+                      <span className="font-num text-2xl md:text-3xl text-brand">
                         {formatCurrency(calculateTotal())}
                       </span>
                     </div>

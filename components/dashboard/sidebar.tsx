@@ -23,7 +23,6 @@ import {
   Brain,
   Receipt,
   Lock,
-  Sparkles,
   Store,
   Mail,
   TrendingUp,
@@ -571,8 +570,8 @@ export function Sidebar({ isMobile = false, onLinkClick }: SidebarProps) {
 
   // Mostrar sidebar en pantallas >= 768px (md breakpoint)
   const sidebarClasses = isMobile
-    ? "flex w-full md:w-64 flex-col bg-black/60 backdrop-blur-sm text-white h-full"
-    : "hidden md:flex flex-col bg-gray-900 text-white flex-shrink-0 relative";
+    ? "flex w-full md:w-64 flex-col bg-[var(--shell-rail)] text-gray-700 h-full shadow-2xl"
+    : "hidden md:flex flex-col bg-[var(--shell-rail)] text-gray-700 flex-shrink-0 relative border-r border-[var(--shell-line)]";
 
   return (
     <aside
@@ -587,7 +586,7 @@ export function Sidebar({ isMobile = false, onLinkClick }: SidebarProps) {
       }
     >
       {/* Header - Solo visible en desktop */}
-      <div className="hidden md:flex h-16 items-center px-6 border-b border-gray-800 justify-between">
+      <div className="hidden md:flex h-16 items-center px-6 border-b border-[var(--shell-line)] justify-between">
         {!isCollapsed && (
           <>
             {isSuperAdmin ? (
@@ -608,20 +607,20 @@ export function Sidebar({ isMobile = false, onLinkClick }: SidebarProps) {
         {/* Botón de colapsar/expandir - Mejorado para mayor visibilidad */}
         <button
           onClick={toggleCollapse}
-          className="ml-auto p-2 rounded-lg bg-gray-800/50 hover:bg-brand transition-all duration-200 border border-gray-700 hover:border-brand shadow-lg hover:shadow-blue-500/50 group"
+          className="ml-auto p-2 rounded-xl text-gray-500 ring-1 ring-transparent transition-colors duration-200 hover:bg-white hover:text-gray-900 hover:ring-[var(--shell-line)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/50"
           aria-label={isCollapsed ? "Expandir menú" : "Colapsar menú"}
           title={isCollapsed ? "Expandir menú" : "Colapsar menú"}
         >
           {isCollapsed ? (
-            <ChevronRight className="h-5 w-5 text-gray-300 group-hover:text-white transition-colors" />
+            <ChevronRight className="h-5 w-5" />
           ) : (
-            <ChevronLeft className="h-5 w-5 text-gray-300 group-hover:text-white transition-colors" />
+            <ChevronLeft className="h-5 w-5" />
           )}
         </button>
       </div>
 
       {/* Header móvil */}
-      <div className="flex md:hidden h-16 items-center justify-center border-b border-gray-800 relative">
+      <div className="flex md:hidden h-16 items-center justify-center border-b border-[var(--shell-line)] relative">
         {isSuperAdmin ? (
           <h1 className="text-xl font-bold">Admin Panel</h1>
         ) : (
@@ -640,7 +639,7 @@ export function Sidebar({ isMobile = false, onLinkClick }: SidebarProps) {
           type="button"
           aria-label="Cerrar menú"
           onClick={onLinkClick}
-          className="absolute -right-12 top-3 md:hidden w-11 h-11 rounded-full bg-black border-4 border-sky-400 text-white flex items-center justify-center focus:outline-none focus:ring-2 focus:ring-yellow-400"
+          className="absolute -right-12 top-3 md:hidden w-11 h-11 rounded-xl bg-white text-gray-800 shadow-lg ring-1 ring-[var(--shell-line)] flex items-center justify-center focus:outline-none focus-visible:ring-2 focus-visible:ring-brand"
         >
           <span className="sr-only">Cerrar menú</span>
           {/* X icon */}
@@ -665,7 +664,8 @@ export function Sidebar({ isMobile = false, onLinkClick }: SidebarProps) {
         {menuItems.map((item, index) => {
           const Icon = item.icon;
           const isActive =
-            pathname === item.href || pathname?.startsWith(item.href + "/");
+            pathname === item.href ||
+              (item.href !== "/dashboard" && pathname?.startsWith(item.href + "/"));
           const isAnalytics = item.href === "/dashboard/analytics";
           const isEmailMarketing = item.href === "/dashboard/email-settings";
           const isStoreConfig = item.href === "/dashboard/store-config";
@@ -688,18 +688,24 @@ export function Sidebar({ isMobile = false, onLinkClick }: SidebarProps) {
                 onClick={onLinkClick}
                 title={isCollapsed ? item.title : undefined}
                 className={cn(
-                  "flex items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium transition-colors relative",
+                  "flex items-center gap-2.5 rounded-xl px-3 py-2 text-sm font-medium transition-all duration-200 relative",
                   isActive
-                    ? "bg-brand text-white"
-                    : "text-gray-300 hover:bg-gray-800 hover:text-white",
+                    ? "bg-white text-gray-900 ring-1 ring-[var(--shell-line)] shadow-[var(--shell-shadow)] before:absolute before:-left-3 before:inset-y-2 before:w-1 before:rounded-r-full before:bg-brand"
+                    : "text-gray-600 hover:bg-white hover:text-gray-900",
                   isCollapsed && "justify-center",
                 )}
               >
                 {/* Drag handle - solo mostrar para usuarios normales */}
                 {!isSuperAdmin && !isCollapsed && (
-                  <GripVertical className="h-4 w-4 flex-shrink-0 cursor-move opacity-40 hover:opacity-100 transition-opacity" />
+                  <GripVertical className="h-4 w-4 -ml-1 flex-shrink-0 cursor-move opacity-0 group-hover:opacity-40 hover:!opacity-100 transition-opacity" />
                 )}
-                <Icon className={cn("h-5 w-5", isCollapsed && "shrink-0")} />
+                <Icon
+                  className={cn(
+                    "h-5 w-5 transition-colors",
+                    isActive ? "text-brand" : "text-gray-400 group-hover:text-gray-700",
+                    isCollapsed && "shrink-0",
+                  )}
+                />
               {!isCollapsed && (
                 <>
                   <span className="flex-1 whitespace-nowrap overflow-hidden text-ellipsis">
@@ -708,8 +714,7 @@ export function Sidebar({ isMobile = false, onLinkClick }: SidebarProps) {
                   {isAnalytics && userProfile && (
                     <>
                       {userProfile.subscription_status === "trial" && (
-                        <span className="text-xs bg-linear-to-r from-purple-500 to-pink-500 text-white px-2 py-0.5 rounded-full flex items-center gap-1">
-                          <Sparkles className="h-3 w-3" />
+                        <span className="rounded-md bg-brand/10 px-1.5 py-0.5 text-[11px] font-semibold text-brand">
                           Gratis
                         </span>
                       )}
@@ -722,8 +727,7 @@ export function Sidebar({ isMobile = false, onLinkClick }: SidebarProps) {
                   {isEmailMarketing && userProfile && (
                     <>
                       {userProfile.subscription_status === "trial" && (
-                        <span className="text-xs bg-gradient-to-r from-purple-500 to-pink-500 text-white px-2 py-0.5 rounded-full flex items-center gap-1">
-                          <Sparkles className="h-3 w-3" />
+                        <span className="rounded-md bg-brand/10 px-1.5 py-0.5 text-[11px] font-semibold text-brand">
                           Gratis
                         </span>
                       )}
@@ -736,8 +740,7 @@ export function Sidebar({ isMobile = false, onLinkClick }: SidebarProps) {
                   {(isStoreConfig || isWebOrders) && userProfile && (
                     <>
                       {userProfile.subscription_status === "trial" && (
-                        <span className="text-xs bg-gradient-to-r from-purple-500 to-pink-500 text-white px-2 py-0.5 rounded-full flex items-center gap-1">
-                          <Sparkles className="h-3 w-3" />
+                        <span className="rounded-md bg-brand/10 px-1.5 py-0.5 text-[11px] font-semibold text-brand">
                           Gratis
                         </span>
                       )}
@@ -768,7 +771,8 @@ export function Sidebar({ isMobile = false, onLinkClick }: SidebarProps) {
           {allMenuItemsForMobile.map((item) => {
             const Icon = item.icon;
             const isActive =
-              pathname === item.href || pathname?.startsWith(item.href + "/");
+              pathname === item.href ||
+              (item.href !== "/dashboard" && pathname?.startsWith(item.href + "/"));
             const isAnalytics = item.href === "/dashboard/analytics";
             const isEmailMarketing = item.href === "/dashboard/email-settings";
             const isStoreConfig = item.href === "/dashboard/store-config";
@@ -780,10 +784,10 @@ export function Sidebar({ isMobile = false, onLinkClick }: SidebarProps) {
                 href={item.href}
                 onClick={onLinkClick}
                 className={cn(
-                  "flex flex-col items-center justify-center gap-2 rounded-lg p-4 aspect-square text-sm font-medium transition-colors relative",
+                  "flex flex-col items-center justify-center gap-2 rounded-2xl p-4 aspect-square text-sm font-medium transition-colors relative",
                   isActive
-                    ? "bg-brand text-white"
-                    : "text-gray-300 hover:bg-gray-800 hover:text-white",
+                    ? "bg-white text-gray-900 ring-1 ring-[var(--shell-line)] shadow-[var(--shell-shadow)] [&>svg]:text-brand"
+                    : "text-gray-600 hover:bg-white hover:text-gray-900",
                 )}
               >
                 <Icon className="h-8 w-8" />
@@ -793,8 +797,7 @@ export function Sidebar({ isMobile = false, onLinkClick }: SidebarProps) {
                 {isAnalytics && userProfile && (
                   <>
                     {userProfile.subscription_status === "trial" && (
-                      <span className="absolute top-1 right-1 text-[10px] bg-gradient-to-r from-purple-500 to-pink-500 text-white px-1.5 py-0.5 rounded-full flex items-center gap-0.5">
-                        <Sparkles className="h-2 w-2" />
+                      <span className="absolute top-1.5 right-1.5 rounded-md bg-brand/10 px-1.5 py-0.5 text-[10px] font-semibold text-brand">
                         Gratis
                       </span>
                     )}
@@ -806,8 +809,7 @@ export function Sidebar({ isMobile = false, onLinkClick }: SidebarProps) {
                 {isEmailMarketing && userProfile && (
                   <>
                     {userProfile.subscription_status === "trial" && (
-                      <span className="absolute top-1 right-1 text-[10px] bg-gradient-to-r from-purple-500 to-pink-500 text-white px-1.5 py-0.5 rounded-full flex items-center gap-0.5">
-                        <Sparkles className="h-2 w-2" />
+                      <span className="absolute top-1.5 right-1.5 rounded-md bg-brand/10 px-1.5 py-0.5 text-[10px] font-semibold text-brand">
                         Gratis
                       </span>
                     )}
@@ -820,8 +822,7 @@ export function Sidebar({ isMobile = false, onLinkClick }: SidebarProps) {
                 {(isStoreConfig || isWebOrders) && userProfile && (
                   <>
                     {userProfile.subscription_status === "trial" && (
-                      <span className="absolute top-1 right-1 text-[10px] bg-gradient-to-r from-purple-500 to-pink-500 text-white px-1.5 py-0.5 rounded-full flex items-center gap-0.5">
-                        <Sparkles className="h-2 w-2" />
+                      <span className="absolute top-1.5 right-1.5 rounded-md bg-brand/10 px-1.5 py-0.5 text-[10px] font-semibold text-brand">
                         Gratis
                       </span>
                     )}
@@ -838,18 +839,18 @@ export function Sidebar({ isMobile = false, onLinkClick }: SidebarProps) {
       </nav>
 
       {/* Footer Desktop */}
-      <div className="hidden md:block p-4 border-t border-gray-800 space-y-1">
+      <div className="hidden md:block p-4 border-t border-[var(--shell-line)] space-y-1">
         {!isSuperAdmin && (
           <Link
             href="/dashboard/subscription"
             onClick={onLinkClick}
             title={isCollapsed ? "Suscripción" : undefined}
             className={cn(
-              "flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors relative group",
+              "flex items-center gap-3 rounded-xl px-3 py-2 text-sm font-medium transition-colors relative group",
               pathname === "/dashboard/subscription" ||
                 pathname?.startsWith("/dashboard/subscription/")
-                ? "bg-brand text-white"
-                : "text-gray-300 hover:bg-gray-800 hover:text-white",
+                ? "bg-white text-gray-900 ring-1 ring-[var(--shell-line)] shadow-[var(--shell-shadow)] [&>svg]:text-brand"
+                : "text-gray-600 hover:bg-white hover:text-gray-900",
               isCollapsed && "justify-center",
             )}
           >
@@ -867,11 +868,11 @@ export function Sidebar({ isMobile = false, onLinkClick }: SidebarProps) {
           onClick={onLinkClick}
           title={isCollapsed ? "Configuración" : undefined}
           className={cn(
-            "flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors relative group",
+            "flex items-center gap-3 rounded-xl px-3 py-2 text-sm font-medium transition-colors relative group",
             pathname === "/dashboard/config" ||
               pathname?.startsWith("/dashboard/config/")
-              ? "bg-brand text-white"
-              : "text-gray-300 hover:bg-gray-800 hover:text-white",
+              ? "bg-white text-gray-900 ring-1 ring-[var(--shell-line)] shadow-[var(--shell-shadow)] [&>svg]:text-brand"
+              : "text-gray-600 hover:bg-white hover:text-gray-900",
             isCollapsed && "justify-center",
           )}
         >
@@ -890,7 +891,7 @@ export function Sidebar({ isMobile = false, onLinkClick }: SidebarProps) {
         <div
           onMouseDown={handleMouseDown}
           className={cn(
-            "absolute top-0 right-0 w-2 h-full cursor-col-resize bg-gray-800/30 hover:bg-brand/50 transition-all duration-200 group border-r-2 border-gray-700/50 hover:border-brand shadow-lg",
+            "absolute top-0 -right-px w-1.5 h-full cursor-col-resize bg-transparent hover:bg-brand/40 transition-colors duration-200 group",
             isResizing && "bg-brand border-brand",
           )}
           title="Arrastrar para redimensionar"

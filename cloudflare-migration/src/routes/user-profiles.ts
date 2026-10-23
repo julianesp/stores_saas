@@ -191,6 +191,8 @@ app.put('/:id', async (c) => {
       'business_type',
       // QR de pagos del tendero (Nequi/Daviplata/Bre-B) para cobrar en el POS
       'payment_qr_url',
+      // Color del sistema elegido por el tendero (id de lib/accent.ts). Migración 029.
+      'ui_accent',
       // Addon subscriptions
       'has_ai_addon',
       'has_store_addon',

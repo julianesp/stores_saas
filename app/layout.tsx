@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
+import { Bricolage_Grotesque, Geist, Geist_Mono, Instrument_Sans } from "next/font/google";
 import { ClerkProvider } from '@clerk/nextjs';
 import { esMX } from '@clerk/localizations';
 import Script from 'next/script';
@@ -9,6 +9,7 @@ import HourTheme from '@/components/HourTheme';
 import AppToaster from '@/components/AppToaster';
 import SiteVisitTracker from '@/components/SiteVisitTracker';
 import { THEME_INIT_SCRIPT } from '@/lib/theme';
+import { ACCENT_INIT_SCRIPT } from '@/lib/accent';
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -17,6 +18,18 @@ const geistSans = Geist({
 
 const geistMono = Geist_Mono({
   variable: "--font-geist-mono",
+  subsets: ["latin"],
+});
+
+// Sistema (dashboard): Instrument Sans para el texto y Bricolage Grotesque para
+// títulos y cifras grandes. Ver .app-shell en globals.css.
+const instrumentSans = Instrument_Sans({
+  variable: "--font-instrument-sans",
+  subsets: ["latin"],
+});
+
+const bricolage = Bricolage_Grotesque({
+  variable: "--font-bricolage",
   subsets: ["latin"],
 });
 
@@ -164,9 +177,10 @@ export default function RootLayout({
       <html lang="es" suppressHydrationWarning>
         <head>
           <script dangerouslySetInnerHTML={{ __html: THEME_INIT_SCRIPT }} />
+          <script dangerouslySetInnerHTML={{ __html: ACCENT_INIT_SCRIPT }} />
         </head>
         <body
-          className={`${geistSans.variable} ${geistMono.variable} antialiased `}
+          className={`${geistSans.variable} ${geistMono.variable} ${instrumentSans.variable} ${bricolage.variable} antialiased`}
         >
           {/* JSON-LD para SEO: se sirve en el HTML del servidor y lo leen los
               bots del DOM; no necesita ejecutarse como JS, por eso es un

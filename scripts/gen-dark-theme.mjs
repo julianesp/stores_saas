@@ -13,13 +13,17 @@
 //  - Todo va en @media screen: la impresión siempre sale en claro.
 import { writeFileSync } from "node:fs";
 
-const SURFACE = "#252932";
-const NEUTRAL_BG = { 50: "#1c1f26", 100: "#2d323c", 200: "#383e4a", 300: "#454c5a" };
-const NEUTRAL_HOVER_BG = { 50: "#2d323c", 100: "#333945", 200: "#3e4553", 300: "#4b5362" };
-const NEUTRAL_BORDER = { 100: "#2e333d", 200: "#3b414d", 300: "#4a5261", 400: "#5c6575" };
-const NEUTRAL_HOVER_BORDER = { 300: "#5c6575", 400: "#6d7789" };
-const NEUTRAL_TEXT = { 500: "#a0abbb", 600: "#bcc5d1", 700: "#d3dae3", 800: "#e6edf3", 900: "#f0f3f7", 950: "#f0f3f7" };
-const BRAND_TEXT = "#2fb8bd";
+// Paleta "Mostrador" de noche: carbón cálido (grises con tinte café), igual que
+// los tokens de html[data-theme="dark"] en globals.css.
+const SURFACE = "#221f1a";
+const SURFACE_RGB = "34 31 26";
+const NEUTRAL_BG = { 50: "#181612", 100: "#2b2722", 200: "#36312b", 300: "#443e36" };
+const NEUTRAL_HOVER_BG = { 50: "#2b2722", 100: "#312d27", 200: "#3c3730", 300: "#4a433b" };
+const NEUTRAL_BORDER = { 100: "#2c2823", 200: "#3a352e", 300: "#4a443b", 400: "#5d564b" };
+const NEUTRAL_HOVER_BORDER = { 300: "#5d564b", 400: "#6f675b" };
+const NEUTRAL_TEXT = { 500: "#a89f90", 600: "#c2b9aa", 700: "#d8d0c3", 800: "#ece6da", 900: "#f5f0e6", 950: "#f5f0e6" };
+// Sigue el color del sistema elegido por el tendero (lib/accent.ts).
+const BRAND_TEXT = "var(--brand-text-dark, #3cc4c9)";
 
 const NEUTRALS = ["gray", "slate"];
 
@@ -72,7 +76,7 @@ function rule(selectors, declarations) {
 rule([sel("base", "bg-white")], `background-color: ${SURFACE};`);
 rule([sel("hover", "bg-white")], `background-color: ${NEUTRAL_BG[100]};`);
 for (const op of [50, 80, 90, 95]) {
-  rule([sel("base", `bg-white/${op}`)], `background-color: rgb(37 41 50 / ${op / 100});`);
+  rule([sel("base", `bg-white/${op}`)], `background-color: rgb(${SURFACE_RGB} / ${op / 100});`);
 }
 
 for (const n of NEUTRALS) {
