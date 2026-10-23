@@ -5,7 +5,6 @@ import { useUser } from '@clerk/nextjs';
 import dynamic from 'next/dynamic';
 import { Menu } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { RefreshProfileButton } from './refresh-profile-button';
 import { NotificationPanel } from './notification-panel';
 import { OpenWindowButton } from './open-window-button';
 import HelpButton from '@/components/help/HelpButton';
@@ -88,8 +87,6 @@ export function Header({ onMenuClick }: HeaderProps) {
         <OpenWindowButton />
 
         <HelpButton />
-
-        <RefreshProfileButton />
 
         <span className="mx-1 h-6 w-px bg-[var(--shell-line)]" aria-hidden="true" />
 
