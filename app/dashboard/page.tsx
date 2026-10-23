@@ -477,21 +477,21 @@ export default function DashboardPage() {
 
       {/* Ganancia de hoy — cuánto ganó realmente el tendero (venta − costo) */}
       <Link href="/dashboard/rentabilidad" data-guide="dash-profit" className="block group">
-        <Card className="border-2 border-emerald-200 bg-gradient-to-r from-emerald-50 to-green-50 hover:border-emerald-300 hover:shadow-md transition-all">
+        <Card className="border-2 border-brand/25 bg-brand-light hover:border-brand/50 hover:shadow-md transition-all">
           <CardContent className="pt-6">
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
               <div className="flex items-center gap-4">
-                <div className="p-3 bg-emerald-600 rounded-xl flex-shrink-0">
+                <div className="p-3 bg-brand rounded-xl flex-shrink-0">
                   <PiggyBank className="h-7 w-7 text-white" />
                 </div>
                 <div>
-                  <p className="text-sm font-medium text-emerald-800">
+                  <p className="text-sm font-medium text-brand">
                     Ganancia de hoy
                   </p>
                   <p
-                    className={`text-3xl md:text-4xl font-bold ${
+                    className={`font-num text-3xl md:text-4xl font-bold ${
                       (dailyProfit?.profit ?? 0) >= 0
-                        ? "text-emerald-700"
+                        ? "text-brand"
                         : "text-red-600"
                     }`}
                   >
@@ -503,7 +503,7 @@ export default function DashboardPage() {
                   </p>
                 </div>
               </div>
-              <div className="flex items-center gap-1 text-sm font-medium text-emerald-700 sm:self-center">
+              <div className="flex items-center gap-1 text-sm font-medium text-brand sm:self-center">
                 Ver detalle
                 <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-0.5" />
               </div>

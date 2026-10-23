@@ -214,7 +214,7 @@ export default function RentabilidadPage() {
     <div className="space-y-6">
       <div>
         <h1 className="text-3xl font-bold flex items-center gap-2">
-          <PiggyBank className="h-8 w-8 text-emerald-600" />
+          <PiggyBank className="h-8 w-8 text-brand" />
           Rentabilidad
         </h1>
         <p className="text-gray-500 mt-1">
@@ -312,16 +312,16 @@ export default function RentabilidadPage() {
             </p>
           </CardContent>
         </Card>
-        <Card className="border-emerald-200 bg-emerald-50/50">
+        <Card className="border-brand/25 bg-brand-light">
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-emerald-700 flex items-center gap-1">
+            <CardTitle className="text-sm font-medium text-brand flex items-center gap-1">
               <PiggyBank className="h-4 w-4" /> Ganancia
             </CardTitle>
           </CardHeader>
           <CardContent>
             <p
-              className={`text-2xl font-bold ${
-                analysis.totalProfit >= 0 ? 'text-emerald-700' : 'text-red-600'
+              className={`font-num text-2xl font-bold ${
+                analysis.totalProfit >= 0 ? 'text-brand' : 'text-red-600'
               }`}
             >
               {formatCurrency(analysis.totalProfit)}
