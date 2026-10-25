@@ -19,6 +19,7 @@ import { DuplicatesReviewModal } from '@/components/products/duplicates-review-m
 import { RepeatedNamesModal } from '@/components/products/repeated-names-modal';
 import { findDuplicateGroups, findRepeatedNameGroups } from '@/lib/duplicate-helpers';
 import { exportProductsToExcel, exportProductsToCSV } from '@/lib/excel-export';
+import { MoreActions } from '@/components/products/more-actions';
 import { useBusinessType } from '@/hooks/useBusinessType';
 
 // La API devuelve `images` como un string JSON (ej: '["https://..."]').
@@ -294,55 +295,9 @@ export default function ProductsPage() {
       />
 
       <div className="space-y-6">
-        {/* Sin título: el menú lateral ya indica en qué sección se está */}
-        <div className="flex flex-col sm:flex-row sm:justify-end sm:items-center gap-4">
-        <div className="flex flex-wrap gap-2">
-          <Button data-guide="products-export" variant="outline" onClick={handleExportExcel} className="flex-1 sm:flex-none" title="Exportar productos a Excel">
-            <Download className="mr-2 h-4 w-4" />
-            <span className="hidden sm:inline">Excel</span>
-            <span className="sm:hidden">Excel</span>
-          </Button>
-          <Button variant="outline" onClick={handleExportCSV} className="flex-1 sm:flex-none" title="Exportar productos a CSV">
-            <Download className="mr-2 h-4 w-4" />
-            <span className="hidden sm:inline">CSV</span>
-            <span className="sm:hidden">CSV</span>
-          </Button>
-          <Button data-guide="products-categories" variant="outline" onClick={() => setShowCategoryModal(true)} className="flex-1 sm:flex-none">
-            <Tag className="mr-2 h-4 w-4" />
-            <span className="hidden sm:inline">Categorías</span>
-            <span className="sm:hidden">Cat.</span>
-          </Button>
-          <Button
-            data-guide="products-duplicates"
-            variant={duplicateGroups.length > 0 ? "default" : "outline"}
-            onClick={() => setShowDuplicatesModal(true)}
-            className="flex-1 sm:flex-none"
-            title="Revisar y agrupar productos repetidos"
-          >
-            <Layers className="mr-2 h-4 w-4" />
-            <span className="hidden sm:inline">Repetidos</span>
-            <span className="sm:hidden">Rep.</span>
-            {duplicateGroups.length > 0 && (
-              <span className="ml-1.5 bg-amber-500 text-white text-xs rounded-full px-2 py-0.5">
-                {duplicateGroups.length}
-              </span>
-            )}
-          </Button>
-          <Button
-            variant={repeatedNameGroups.length > 0 ? "default" : "outline"}
-            onClick={() => setShowRepeatedNamesModal(true)}
-            className="flex-1 sm:flex-none"
-            title="Renombrar productos que tienen el mismo nombre"
-          >
-            <Tags className="mr-2 h-4 w-4" />
-            <span className="hidden sm:inline">Nombres repetidos</span>
-            <span className="sm:hidden">Nombres</span>
-            {repeatedNameGroups.length > 0 && (
-              <span className="ml-1.5 bg-amber-500 text-white text-xs rounded-full px-2 py-0.5">
-                {repeatedNameGroups.length}
-              </span>
-            )}
-          </Button>
+        {/* Sin título: el menú lateral ya indica en qué sección se está.
+            Arriba solo lo de todos los días; el resto va en el botón lateral "Más". */}
+        <div className="flex flex-wrap gap-2 sm:justify-end">
           <Button
             data-guide="products-outofstock"
             variant={showOutOfStock ? "default" : "outline"}
@@ -355,60 +310,96 @@ export default function ProductsPage() {
             className="flex-1 sm:flex-none"
           >
             <AlertTriangle className="mr-2 h-4 w-4" />
-            <span className="hidden sm:inline">Agotados</span>
-            <span className="sm:hidden">Agot.</span>
+            Agotados
             {outOfStockCount > 0 && (
               <span className="ml-1.5 bg-red-500 text-white text-xs rounded-full px-2 py-0.5">
                 {outOfStockCount}
               </span>
             )}
           </Button>
-          {(priceReviewCount > 0 || showPriceReview) && (
-            <Button
-              variant={showPriceReview ? "default" : "outline"}
-              onClick={() => setShowPriceReview(!showPriceReview)}
-              className="flex-1 sm:flex-none"
-              title={`Productos con precio menor a ${formatCurrency(SUSPICIOUS_PRICE)}`}
-            >
-              <Tag className="mr-2 h-4 w-4" />
-              <span className="hidden sm:inline">Precios por revisar</span>
-              <span className="sm:hidden">Precios</span>
-              {priceReviewCount > 0 && (
-                <span className="ml-1.5 bg-amber-500 text-white text-xs rounded-full px-2 py-0.5">
-                  {priceReviewCount}
-                </span>
-              )}
-            </Button>
-          )}
-          <Link href="/dashboard/products/review" className="flex-1 sm:flex-none">
-            <Button variant="outline" className="w-full">
-              <ClipboardCheck className="mr-2 h-4 w-4" />
-              <span className="hidden sm:inline">Revisar catálogo</span>
-              <span className="sm:hidden">Revisar</span>
-            </Button>
-          </Link>
-          <Link href="/dashboard/products/import" data-guide="products-import" className="flex-1 sm:flex-none">
-            <Button variant="outline" className="w-full">
-              <FileSpreadsheet className="mr-2 h-4 w-4" />
-              <span className="hidden sm:inline">Importar productos</span>
-              <span className="sm:hidden">Importar</span>
-            </Button>
-          </Link>
           <Link href="/dashboard/products/quick-add" data-guide="products-quick" className="flex-1 sm:flex-none">
             <Button variant="outline" className="w-full">
               <Camera className="mr-2 h-4 w-4" />
-              <span className="hidden sm:inline">Agregar Rápido</span>
-              <span className="sm:hidden">Rápido</span>
+              Agregar rápido
             </Button>
           </Link>
-          <Link href="/dashboard/products/new" data-guide="products-new" className="flex-1 sm:flex-none">
+          <Link href="/dashboard/products/new" data-guide="products-new" className="basis-full sm:basis-auto">
             <Button className="w-full">
               <Plus className="mr-2 h-4 w-4" />
               {bt.vocabulary.itemSingular} nuevo
             </Button>
           </Link>
         </div>
-      </div>
+
+        <MoreActions
+          guideTarget="products-more"
+          actions={[
+            {
+              id: 'categories',
+              label: 'Categorías',
+              description: 'Crea y ordena grupos como bebidas, aseo o granos.',
+              icon: Tag,
+              onSelect: () => setShowCategoryModal(true),
+            },
+            {
+              id: 'duplicates',
+              label: 'Productos repetidos',
+              description: 'Une los productos que quedaron registrados dos veces.',
+              icon: Layers,
+              badge: duplicateGroups.length,
+              onSelect: () => setShowDuplicatesModal(true),
+            },
+            {
+              id: 'repeated-names',
+              label: 'Nombres repetidos',
+              description: 'Renombra productos distintos que se llaman igual.',
+              icon: Tags,
+              badge: repeatedNameGroups.length,
+              onSelect: () => setShowRepeatedNamesModal(true),
+            },
+            ...(priceReviewCount > 0 || showPriceReview
+              ? [
+                  {
+                    id: 'price-review',
+                    label: 'Precios por revisar',
+                    description: `Productos con precio menor a ${formatCurrency(SUSPICIOUS_PRICE)}.`,
+                    icon: Tag,
+                    badge: priceReviewCount,
+                    active: showPriceReview,
+                    onSelect: () => setShowPriceReview(!showPriceReview),
+                  },
+                ]
+              : []),
+            {
+              id: 'review',
+              label: 'Revisar catálogo',
+              description: 'Corrige categorías y datos de todo el catálogo.',
+              icon: ClipboardCheck,
+              href: '/dashboard/products/review',
+            },
+            {
+              id: 'import',
+              label: 'Importar productos',
+              description: 'Trae tu catálogo desde el Excel de Siigo u otro sistema.',
+              icon: FileSpreadsheet,
+              href: '/dashboard/products/import',
+            },
+            {
+              id: 'excel',
+              label: 'Exportar a Excel',
+              description: 'Descarga la lista de productos en un archivo .xlsx.',
+              icon: Download,
+              onSelect: handleExportExcel,
+            },
+            {
+              id: 'csv',
+              label: 'Exportar a CSV',
+              description: 'Descarga la lista en formato CSV.',
+              icon: Download,
+              onSelect: handleExportCSV,
+            },
+          ]}
+        />
 
       <Card>
         <CardHeader>

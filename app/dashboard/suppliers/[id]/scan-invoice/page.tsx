@@ -21,8 +21,9 @@ import {
   getProducts,
   createProduct,
   updateProduct,
+  createPurchaseOrder,
 } from "@/lib/cloudflare-api";
-import type { Supplier, Product } from "@/lib/cloudflare-api";
+import type { Supplier, Product, PurchaseOrderItem } from "@/lib/cloudflare-api";
 import { toast } from "sonner";
 
 // Margen por defecto (%) para sugerir el precio de venta a partir del costo.
@@ -185,9 +186,12 @@ export default function ScanInvoicePage() {
     let creados = 0;
     let actualizados = 0;
     let errores = 0;
+    // Renglones guardados, para registrar la factura como compra al proveedor
+    const purchaseItems: PurchaseOrderItem[] = [];
 
     for (const row of valid) {
       try {
+        let productId: string;
         if (row.existingProduct) {
           // Sumar stock y actualizar costo del producto existente.
           await updateProduct(
@@ -198,10 +202,11 @@ export default function ScanInvoicePage() {
             },
             getToken,
           );
+          productId = row.existingProduct.id;
           actualizados++;
         } else {
           // Crear el producto nuevo.
-          await createProduct(
+          const created = await createProduct(
             {
               name: row.name.trim(),
               barcode: row.barcode || undefined,
@@ -213,11 +218,40 @@ export default function ScanInvoicePage() {
             },
             getToken,
           );
+          productId = created.id;
           creados++;
         }
+        purchaseItems.push({
+          product_id: productId,
+          product_name: row.name.trim(),
+          quantity: row.quantity,
+          unit_cost: row.cost_price,
+        });
       } catch (error) {
         console.error("Error guardando producto:", row.name, error);
         errores++;
+      }
+    }
+
+    // Guardar la factura como compra ya recibida: el stock ya se sumó arriba,
+    // y con status 'recibida' el Worker no lo vuelve a sumar. Así la compra
+    // aparece en Rentabilidad → Compras a proveedores.
+    if (purchaseItems.length > 0) {
+      try {
+        await createPurchaseOrder(
+          {
+            supplier_id: supplierId,
+            status: "recibida",
+            items: purchaseItems,
+            notes: "Factura subida por foto",
+          },
+          getToken,
+        );
+      } catch (error) {
+        console.error("Error registrando la compra:", error);
+        toast.warning(
+          "Los productos se guardaron, pero no se pudo registrar la factura en las compras.",
+        );
       }
     }
 

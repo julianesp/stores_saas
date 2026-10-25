@@ -15,11 +15,12 @@ import {
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
-import { getSales, getProducts, Product } from '@/lib/cloudflare-api';
-import { SaleWithRelations } from '@/lib/types';
+import { getSales, getProducts, getPurchaseOrders, Product } from '@/lib/cloudflare-api';
+import { PurchaseOrderWithItems, SaleWithRelations } from '@/lib/types';
 import { formatCurrency } from '@/lib/utils';
 import { getItemCost, getItemRevenue, startOfDay } from '@/lib/profit-helpers';
 import { PageGlossary } from '@/components/dashboard/page-glossary';
+import { InvestmentSection } from '@/components/dashboard/investment-section';
 
 type Period = 'today' | 'week' | 'month' | '3months' | 'all';
 
@@ -44,6 +45,7 @@ export default function RentabilidadPage() {
   const { getToken } = useAuth();
   const [sales, setSales] = useState<SaleWithRelations[]>([]);
   const [products, setProducts] = useState<Product[]>([]);
+  const [purchaseOrders, setPurchaseOrders] = useState<PurchaseOrderWithItems[]>([]);
   const [loading, setLoading] = useState(true);
   const [period, setPeriod] = useState<Period>('month');
   const [productSearch, setProductSearch] = useState('');
@@ -52,12 +54,18 @@ export default function RentabilidadPage() {
     const fetchData = async () => {
       try {
         setLoading(true);
-        const [salesData, productsData] = await Promise.all([
+        const [salesData, productsData, ordersData] = await Promise.all([
           getSales(getToken) as Promise<SaleWithRelations[]>,
           getProducts(getToken),
+          // Si fallan las compras, el resto de la página igual debe mostrarse
+          getPurchaseOrders(getToken).catch((error) => {
+            console.error('Error cargando compras a proveedores:', error);
+            return [] as PurchaseOrderWithItems[];
+          }),
         ]);
         setSales(salesData || []);
         setProducts(productsData || []);
+        setPurchaseOrders(ordersData || []);
       } catch (error) {
         console.error('Error cargando datos de rentabilidad:', error);
       } finally {
@@ -271,6 +279,9 @@ export default function RentabilidadPage() {
           </div>
         </CardContent>
       </Card>
+
+      {/* Inversión en mercancía y calculadora de compra (no depende del período) */}
+      <InvestmentSection products={products} purchaseOrders={purchaseOrders} />
 
       {/* Selector de período */}
       <div data-guide="profit-period" className="flex flex-wrap gap-2">
@@ -535,6 +546,14 @@ export default function RentabilidadPage() {
           { term: 'Costo', meaning: 'Lo que te costó lo vendido.' },
           { term: 'Ganancia', meaning: 'Ingresos menos costo.' },
           { term: 'Margen', meaning: 'De cada $100 vendidos, cuánto es ganancia.' },
+          {
+            term: 'Inversión',
+            meaning: 'Plata metida en la mercancía que tienes: unidades × costo.',
+          },
+          {
+            term: '% sobre lo invertido',
+            meaning: 'De cada $100 que le pagas al proveedor, cuánto ganas al venderlo.',
+          },
           {
             term: 'Por debajo del costo',
             meaning: 'Lo vendes más barato de lo que te cuesta: pierdes plata.',

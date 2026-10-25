@@ -1,9 +1,13 @@
 export const THEME_KEY = "posib-theme";
+export const THEME_MODE_KEY = "posib-theme-mode";
 export const THEME_EVENT = "posib-theme-change";
 
-// Oscuro de 18:00 a 06:59, claro de 07:00 a 17:59.
-const NIGHT_START = 18;
-const NIGHT_END = 7;
+// Preferencia del tendero: siempre claro, siempre oscuro o según la hora.
+export type ThemeMode = "auto" | "light" | "dark";
+
+// En modo "auto": claro de 07:00 a 18:59, oscuro de 19:00 a 06:59.
+export const NIGHT_START = 19;
+export const NIGHT_END = 7;
 
 // La tienda pública es de cada comerciante y va siempre en claro.
 const EXCLUDED_PATHS = /^\/(store|tienda)(\/|$)/;
@@ -25,10 +29,34 @@ function periodKey(date: Date): string {
   return `${ref.getFullYear()}-${ref.getMonth() + 1}-${ref.getDate()}${isNightHour(hour) ? "n" : "d"}`;
 }
 
-// La elección manual solo vale hasta el siguiente cambio automático (7am/6pm);
-// pasado eso vuelve a mandar la hora. Así una elección vieja no deja el POS
-// oscuro por la mañana.
+export function getThemeMode(): ThemeMode {
+  try {
+    const mode = localStorage.getItem(THEME_MODE_KEY);
+    if (mode === "light" || mode === "dark") return mode;
+  } catch {
+    // localStorage no disponible: modo automático.
+  }
+  return "auto";
+}
+
+/** Fija la preferencia. Borra el cambio puntual del botón para que mande el modo. */
+export function setThemeMode(mode: ThemeMode): void {
+  try {
+    if (mode === "auto") localStorage.removeItem(THEME_MODE_KEY);
+    else localStorage.setItem(THEME_MODE_KEY, mode);
+    localStorage.removeItem(THEME_KEY);
+  } catch {
+    // Sin localStorage la preferencia no se puede guardar.
+  }
+  window.dispatchEvent(new Event(THEME_EVENT));
+}
+
+// Con un modo fijo manda ese modo. En "auto", la elección manual del botón solo
+// vale hasta el siguiente cambio automático (7am/7pm); pasado eso vuelve a
+// mandar la hora. Así una elección vieja no deja el POS oscuro por la mañana.
 export function resolveDark(now: Date = new Date()): boolean {
+  const mode = getThemeMode();
+  if (mode !== "auto") return mode === "dark";
   let dark = isNightHour(now.getHours());
   try {
     const raw = localStorage.getItem(THEME_KEY);
@@ -54,6 +82,11 @@ export function applyTheme(dark: boolean, pathname?: string | null): void {
 }
 
 export function setManualTheme(dark: boolean): void {
+  // Con un modo fijo, el botón cambia el modo fijo (sigue siendo "para siempre").
+  if (getThemeMode() !== "auto") {
+    setThemeMode(dark ? "dark" : "light");
+    return;
+  }
   try {
     localStorage.setItem(
       THEME_KEY,
@@ -68,7 +101,7 @@ export function setManualTheme(dark: boolean): void {
 export function subscribeTheme(onChange: () => void): () => void {
   window.addEventListener(THEME_EVENT, onChange);
   window.addEventListener("storage", onChange);
-  // Revisar cada minuto por si se cruza 7am/6pm con la página abierta.
+  // Revisar cada minuto por si se cruza 7am/7pm con la página abierta.
   const interval = setInterval(onChange, 60_000);
   return () => {
     window.removeEventListener(THEME_EVENT, onChange);
@@ -81,6 +114,8 @@ export function subscribeTheme(onChange: () => void): () => void {
 // Debe mantener la misma lógica que resolveDark/periodKey/isThemeEnabledForPath.
 export const THEME_INIT_SCRIPT = `(function(){try{
 if(/^\\/(store|tienda)(\\/|$)/.test(location.pathname))return;
+var m=localStorage.getItem("${THEME_MODE_KEY}");
+if(m==="light"||m==="dark"){document.documentElement.setAttribute("data-theme",m);return;}
 var d=new Date(),h=d.getHours(),n=h>=${NIGHT_START}||h<${NIGHT_END};
 var x=new Date(d);if(h<${NIGHT_END})x.setDate(x.getDate()-1);
 var p=x.getFullYear()+"-"+(x.getMonth()+1)+"-"+x.getDate()+(n?"n":"d");

@@ -1302,3 +1302,20 @@ export async function updateBusinessTypePrice(
     true,
   );
 }
+
+// ============================================
+// RECORDATORIOS DE FIADO
+// ============================================
+
+/** ¿La tienda envía recordatorios de fiado por correo a sus clientes? */
+export async function getDebtRemindersEnabled(getToken: GetTokenFn): Promise<boolean> {
+  const data = await fetchAPI<{ enabled: boolean }>('/api/email/preferences/debt-reminders', getToken);
+  return data?.enabled !== false;
+}
+
+export async function setDebtRemindersEnabled(enabled: boolean, getToken: GetTokenFn): Promise<void> {
+  await fetchAPI('/api/email/preferences/debt-reminders', getToken, {
+    method: 'PUT',
+    body: JSON.stringify({ enabled }),
+  });
+}

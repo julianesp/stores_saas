@@ -6,6 +6,8 @@
 // cada producto (no se guarda un costo histórico por venta).
 
 import type { Product } from './cloudflare-api';
+import { isProductActive, tracksInventory } from './types';
+import type { PurchaseOrderWithItems } from './types';
 
 // Campos mínimos de un item de venta que necesita el cálculo de ganancia.
 // Se define estructuralmente para aceptar tanto el SaleItem de cloudflare-api
@@ -79,4 +81,173 @@ export function computeProfit(
   const profit = revenue - cost;
   const margin = revenue > 0 ? (profit / revenue) * 100 : 0;
   return { revenue, cost, profit, margin };
+}
+
+// ── Inversión en mercancía ──
+// Cuánta plata tiene el tendero metida en lo que hay en bodega (stock × costo)
+// y cuánto le quedaría si lo vende todo al precio de venta actual.
+
+export interface InventoryInvestmentRow {
+  product: Product;
+  units: number; // Stock disponible (en paquetes si se vende por unidad suelta)
+  invested: number; // units × costo
+  expectedRevenue: number; // units × precio de venta
+  expectedProfit: number; // expectedRevenue − invested
+}
+
+export interface InventoryInvestment {
+  rows: InventoryInvestmentRow[]; // Productos con stock y costo, de mayor a menor inversión
+  invested: number;
+  expectedRevenue: number;
+  expectedProfit: number;
+  markup: number; // % de ganancia sobre lo invertido
+  withoutCost: { count: number; saleValue: number }; // Con stock pero sin costo registrado
+}
+
+/**
+ * Inversión actual en inventario y la ganancia esperada al venderlo todo.
+ * Solo cuenta productos activos que controlan inventario y tienen stock.
+ * Los que no tienen costo registrado se reportan aparte: sumarlos inflaría la
+ * ganancia (parecería que no costaron nada).
+ */
+export function computeInventoryInvestment(products: Product[]): InventoryInvestment {
+  const rows: InventoryInvestmentRow[] = [];
+  const withoutCost = { count: 0, saleValue: 0 };
+
+  for (const product of products) {
+    if (!isProductActive(product) || !tracksInventory(product)) continue;
+    const units = product.stock || 0;
+    if (units <= 0) continue;
+
+    const expectedRevenue = units * (product.sale_price || 0);
+    const cost = product.cost_price || 0;
+    if (cost <= 0) {
+      withoutCost.count += 1;
+      withoutCost.saleValue += expectedRevenue;
+      continue;
+    }
+
+    const invested = units * cost;
+    rows.push({
+      product,
+      units,
+      invested,
+      expectedRevenue,
+      expectedProfit: expectedRevenue - invested,
+    });
+  }
+
+  rows.sort((a, b) => b.invested - a.invested);
+  const invested = rows.reduce((sum, r) => sum + r.invested, 0);
+  const expectedRevenue = rows.reduce((sum, r) => sum + r.expectedRevenue, 0);
+  const expectedProfit = expectedRevenue - invested;
+  const markup = invested > 0 ? (expectedProfit / invested) * 100 : 0;
+
+  return { rows, invested, expectedRevenue, expectedProfit, markup, withoutCost };
+}
+
+export interface PurchasePlan {
+  invested: number; // Lo que se paga al proveedor
+  revenue: number; // Lo que entra si se vende todo
+  profit: number; // revenue − invested
+  markup: number; // % de ganancia sobre lo invertido
+  margin: number; // % de ganancia sobre lo vendido
+}
+
+/** Simula una compra: cuánto se invierte y cuánto se gana al venderla toda. */
+export function computePurchasePlan(
+  unitCost: number,
+  units: number,
+  unitSalePrice: number
+): PurchasePlan {
+  const invested = Math.max(0, unitCost) * Math.max(0, units);
+  const revenue = Math.max(0, unitSalePrice) * Math.max(0, units);
+  const profit = revenue - invested;
+  return {
+    invested,
+    revenue,
+    profit,
+    markup: invested > 0 ? (profit / invested) * 100 : 0,
+    margin: revenue > 0 ? (profit / revenue) * 100 : 0,
+  };
+}
+
+/** Precio de venta que deja un % de ganancia sobre el costo (redondeado a $50). */
+export function salePriceForMarkup(unitCost: number, markupPct: number): number {
+  const price = unitCost * (1 + markupPct / 100);
+  return Math.ceil(price / 50) * 50;
+}
+
+// ── Facturas de compra a proveedores ──
+// Por cada compra: lo que se pagó y lo que entraría al vender esa mercancía a
+// los precios de venta ACTUALES de cada producto.
+
+export interface PurchaseInvoiceLine {
+  productId: string;
+  name: string;
+  quantity: number;
+  unitCost: number;
+  invested: number; // quantity × unitCost
+  unitSalePrice: number | null; // null si el producto ya no existe o no tiene precio
+  expectedRevenue: number;
+  expectedProfit: number | null;
+}
+
+export interface PurchaseInvoice {
+  order: PurchaseOrderWithItems;
+  supplierName: string;
+  lines: PurchaseInvoiceLine[];
+  invested: number; // Total pagado (incluye impuestos de la factura)
+  expectedRevenue: number;
+  expectedProfit: number;
+  markup: number; // % de ganancia sobre lo invertido
+  linesWithoutPrice: number; // Productos sin precio de venta: no suman a lo que entra
+}
+
+export function computePurchaseInvoices(
+  orders: PurchaseOrderWithItems[],
+  productsById: Map<string, Product>
+): PurchaseInvoice[] {
+  return orders
+    .filter((o) => o.status !== 'cancelada')
+    .map((order) => {
+      let linesWithoutPrice = 0;
+      const lines: PurchaseInvoiceLine[] = (order.items || []).map((item) => {
+        const product = productsById.get(item.product_id);
+        const invested = item.subtotal ?? item.quantity * item.unit_cost;
+        const unitSalePrice =
+          product && product.sale_price > 0 ? product.sale_price : null;
+        if (unitSalePrice === null) linesWithoutPrice += 1;
+        const expectedRevenue = unitSalePrice === null ? 0 : unitSalePrice * item.quantity;
+        return {
+          productId: item.product_id,
+          name: product?.name || item.product_name || 'Producto eliminado',
+          quantity: item.quantity,
+          unitCost: item.unit_cost,
+          invested,
+          unitSalePrice,
+          expectedRevenue,
+          expectedProfit: unitSalePrice === null ? null : expectedRevenue - invested,
+        };
+      });
+
+      const itemsTotal = lines.reduce((sum, l) => sum + l.invested, 0);
+      const invested = order.total || itemsTotal;
+      const expectedRevenue = lines.reduce((sum, l) => sum + l.expectedRevenue, 0);
+      const expectedProfit = expectedRevenue - invested;
+
+      return {
+        order,
+        supplierName: order.supplier?.name || 'Proveedor',
+        lines,
+        invested,
+        expectedRevenue,
+        expectedProfit,
+        markup: invested > 0 ? (expectedProfit / invested) * 100 : 0,
+        linesWithoutPrice,
+      };
+    })
+    .sort(
+      (a, b) => new Date(b.order.order_date).getTime() - new Date(a.order.order_date).getTime()
+    );
 }

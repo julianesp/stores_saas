@@ -5,6 +5,14 @@
 import { Hono } from 'hono';
 import type { Env, AppEnv } from '../types';
 import { sendEmail, logEmail } from '../utils/email';
+import { getTenantChatIds, sendToChats } from '../utils/telegram';
+import {
+  buildOwnerEmail,
+  buildOwnerTelegramMessage,
+  daysUntilDue,
+  shouldRemindCustomer,
+  type DueDebtor,
+} from '../utils/debt-reminders';
 import {
   subscriptionReminderTemplate,
   dailyReportTemplate,
@@ -975,185 +983,166 @@ app.post('/campaign', async (c) => {
 });
 
 /**
- * CRON: Send debt reminder emails
- * Trigger: Diariamente a las 8 AM
- * Envía recordatorios automáticos a clientes con deudas vencidas
+ * CRON: Recordatorios de fiado
+ * Trigger: una vez al día, 8 AM hora Colombia (13h UTC, ver scheduled en index.ts)
+ *
+ * - Al CLIENTE (si tiene correo y la tienda no lo desactivó): faltando 3 días,
+ *   el día que vence y, ya vencido, una vez por semana.
+ * - Al TENDERO, por correo y por Telegram: los clientes a los que se les vence
+ *   el fiado en 3 días o hoy (incluye clientes sin correo).
  */
 app.post('/debt-reminders', async (c) => {
   const db = c.env.DB;
 
-  try {
-    console.log('🔔 Iniciando envío de recordatorios de deudas...');
+  // Ruta sin auth de Clerk (la llama el cron): sin el secret, cualquiera podría
+  // disparar correos a los clientes de todas las tiendas. Sin secret, se niega.
+  if (!c.env.CRON_SECRET || c.req.header('X-Cron-Secret') !== c.env.CRON_SECRET) {
+    return c.json({ success: false, error: 'Unauthorized' }, 401);
+  }
 
-    // Obtener todas las tiendas activas
+  try {
     const stores = await db
       .prepare(
-        `SELECT id, email, full_name, store_name, phone
-         FROM user_profiles
-         WHERE subscription_status IN ('active', 'trial')
-           AND deleted_at IS NULL`
+        `SELECT up.id, up.email, up.store_name, up.phone, up.telegram_chat_id, up.telegram_enabled,
+                ep.debt_reminders_enabled
+         FROM user_profiles up
+         LEFT JOIN email_preferences ep ON ep.user_profile_id = up.id
+         WHERE up.subscription_status IN ('active', 'trial')
+           AND up.deleted_at IS NULL`
       )
       .all();
 
-    let totalEmailsSent = 0;
-    let totalEmailsFailed = 0;
-    let totalStoresProcessed = 0;
+    const now = new Date();
+    let customerEmailsSent = 0;
+    let customerEmailsFailed = 0;
+    let ownerEmailsSent = 0;
+    let telegramSent = 0;
 
-    for (const store of stores.results as any[]) {
+    for (const store of (stores.results as any[]) || []) {
       try {
-        // TODO: Verificar preferencias de email cuando la tabla email_preferences esté implementada
-        // Por ahora, enviaremos a todos los clientes con deuda
-
-        // Obtener todos los clientes con deuda de esta tienda
-        const debtors = await db
+        // Vencimiento más cercano entre los fiados pendientes de cada cliente
+        const rows = await db
           .prepare(
-            `SELECT c.id, c.name, c.email, c.phone, c.current_debt, c.credit_limit
+            `SELECT c.id, c.name, c.email, c.phone, c.current_debt,
+                    (SELECT MIN(s.due_date) FROM sales s
+                     WHERE s.tenant_id = c.tenant_id
+                       AND s.customer_id = c.id
+                       AND s.payment_method = 'credito'
+                       AND s.payment_status IN ('pendiente', 'parcial')
+                       AND s.due_date IS NOT NULL) AS due_date
              FROM customers c
-             WHERE c.tenant_id = ?
-               AND c.current_debt > 0
-               AND c.email IS NOT NULL
-               AND c.email != ''`
+             WHERE c.tenant_id = ? AND c.current_debt > 0`
           )
           .bind(store.id)
           .all();
 
-        if (!debtors.results || debtors.results.length === 0) {
-          continue;
+        const debtors: Array<DueDebtor & { id: string; email: string | null }> = [];
+        for (const row of (rows.results as any[]) || []) {
+          if (!row.due_date) continue;
+          const days = daysUntilDue(row.due_date, now);
+          if (days === null) continue;
+          debtors.push({
+            id: row.id,
+            name: row.name,
+            email: row.email,
+            phone: row.phone,
+            debt: row.current_debt,
+            days,
+          });
         }
+        if (debtors.length === 0) continue;
 
-        totalStoresProcessed++;
-        let storeEmailsSent = 0;
+        const storeName = store.store_name || 'Tu tienda';
 
-        // Para cada deudor, obtener su venta más antigua pendiente para calcular días vencidos
-        for (const debtor of debtors.results as any[]) {
-          try {
-            // Obtener la venta a crédito más antigua pendiente
-            const oldestSale = await db
-              .prepare(
-                `SELECT due_date
-                 FROM sales
-                 WHERE tenant_id = ?
-                   AND customer_id = ?
-                   AND payment_method = 'credito'
-                   AND payment_status IN ('pendiente', 'parcial')
-                 ORDER BY created_at ASC
-                 LIMIT 1`
-              )
-              .bind(store.id, debtor.id)
-              .first<{ due_date: string | null }>();
+        // 1) Correo a cada cliente (activo salvo que la tienda lo apague)
+        if (store.debt_reminders_enabled !== 0) {
+          const { debtReminderTemplate } = await import('../utils/email-templates');
+          for (const debtor of debtors) {
+            if (!debtor.email || !shouldRemindCustomer(debtor.days)) continue;
+            const isOverdue = debtor.days < 0;
+            const amount = `$${Math.round(debtor.debt).toLocaleString('es-CO')}`;
+            const subject = isOverdue
+              ? `Recordatorio: Pago vencido - ${amount}`
+              : debtor.days === 0
+                ? `Recordatorio: Tu pago vence HOY - ${amount}`
+                : `Recordatorio: Tu pago vence en ${debtor.days} días - ${amount}`;
 
-            // Calcular días hasta el vencimiento
-            let daysUntilDue = 999; // Valor alto por defecto
-            let isOverdue = false;
-
-            if (oldestSale?.due_date) {
-              const dueDate = new Date(oldestSale.due_date);
-              const today = new Date();
-              // Resetear horas para comparar solo fechas
-              dueDate.setHours(0, 0, 0, 0);
-              today.setHours(0, 0, 0, 0);
-
-              const diffTime = dueDate.getTime() - today.getTime();
-              daysUntilDue = Math.floor(diffTime / (1000 * 60 * 60 * 24));
-              isOverdue = daysUntilDue < 0;
-            }
-
-            // Solo enviar si faltan 3 días o menos (incluye vencidos)
-            // Esto evita enviar recordatorios justo después de fiar
-            if (daysUntilDue <= 3) {
-              // Importar el template
-              const { debtReminderTemplate } = await import('../utils/email-templates');
-
-              const emailData = {
-                customer_name: debtor.name,
-                debt_amount: debtor.current_debt,
-                store_name: store.store_name || 'Tu tienda',
-                store_phone: store.phone,
-                overdue_days: isOverdue ? Math.abs(daysUntilDue) : undefined,
-                days_until_due: !isOverdue ? daysUntilDue : undefined,
-                payment_methods: 'Efectivo, Transferencia, Tarjeta',
-              };
-
-              const html = debtReminderTemplate(emailData);
-
-              const result = await sendEmail(
-                {
-                  to: debtor.email,
-                  toName: debtor.name,
-                  from: 'noreply@posib.dev',
-                  fromName: store.store_name || 'Tienda POS',
-                  subject: isOverdue
-                    ? `Recordatorio: Pago vencido - $${debtor.current_debt.toLocaleString('es-CO')}`
-                    : daysUntilDue === 0
-                    ? `Recordatorio: Tu pago vence HOY - $${debtor.current_debt.toLocaleString('es-CO')}`
-                    : `Recordatorio: Tu pago vence en ${daysUntilDue} ${daysUntilDue === 1 ? 'día' : 'días'} - $${debtor.current_debt.toLocaleString('es-CO')}`,
-                  html,
-                  replyTo: store.email,
-                },
-                c.env.RESEND_API_KEY
-              );
-
-              if (result.success) {
-                storeEmailsSent++;
-                totalEmailsSent++;
-                await logEmail(
-                  db,
-                  store.id,
-                  'debt_reminder',
-                  debtor.email,
-                  `Recordatorio de deuda - $${debtor.current_debt}`,
-                  'sent',
-                  undefined,
-                  {
-                    customer_id: debtor.id,
-                    debt_amount: debtor.current_debt,
-                    days_until_due: daysUntilDue,
-                    is_overdue: isOverdue,
-                  }
-                );
-              } else {
-                totalEmailsFailed++;
-                await logEmail(
-                  db,
-                  store.id,
-                  'debt_reminder',
-                  debtor.email,
-                  `Recordatorio de deuda - $${debtor.current_debt}`,
-                  'failed',
-                  result.error,
-                  {
-                    customer_id: debtor.id,
-                    debt_amount: debtor.current_debt,
-                    days_until_due: daysUntilDue,
-                    is_overdue: isOverdue,
-                  }
-                );
-              }
-            }
-          } catch (debtorError) {
-            console.error(`Error procesando deudor ${debtor.id}:`, debtorError);
-            totalEmailsFailed++;
+            const result = await sendEmail(
+              {
+                to: debtor.email,
+                toName: debtor.name,
+                from: 'noreply@posib.dev',
+                fromName: storeName,
+                subject,
+                html: debtReminderTemplate({
+                  customer_name: debtor.name,
+                  debt_amount: debtor.debt,
+                  store_name: storeName,
+                  store_phone: store.phone,
+                  overdue_days: isOverdue ? Math.abs(debtor.days) : undefined,
+                  days_until_due: !isOverdue ? debtor.days : undefined,
+                  payment_methods: 'Efectivo, Transferencia, Tarjeta',
+                }),
+                replyTo: store.email,
+              },
+              c.env.RESEND_API_KEY
+            );
+            if (result.success) customerEmailsSent++;
+            else customerEmailsFailed++;
+            await safeLogEmail(db, store.id, debtor.email, subject, result, {
+              kind: 'debt_reminder',
+              customer_id: debtor.id,
+              debt_amount: debtor.debt,
+              days_until_due: debtor.days,
+            });
           }
         }
 
-        console.log(
-          `✅ Tienda ${store.store_name}: ${storeEmailsSent} recordatorios enviados`
-        );
+        // 2) Aviso al tendero por correo
+        const ownerEmail = buildOwnerEmail(debtors, storeName);
+        if (ownerEmail && store.email) {
+          const result = await sendEmail(
+            {
+              to: store.email,
+              from: 'noreply@posib.dev',
+              fromName: 'posib.dev',
+              subject: ownerEmail.subject,
+              html: ownerEmail.html,
+            },
+            c.env.RESEND_API_KEY
+          );
+          if (result.success) ownerEmailsSent++;
+          await safeLogEmail(db, store.id, store.email, ownerEmail.subject, result, {
+            kind: 'debt_due_owner_alert',
+          });
+        }
+
+        // 3) Aviso al tendero por Telegram (dueño + destinatarios adicionales)
+        const telegramMessage = buildOwnerTelegramMessage(debtors);
+        if (
+          telegramMessage &&
+          c.env.TELEGRAM_BOT_TOKEN &&
+          store.telegram_chat_id &&
+          store.telegram_enabled === 1
+        ) {
+          const chatIds = await getTenantChatIds(db, store.id, store.telegram_chat_id);
+          telegramSent += await sendToChats(chatIds, telegramMessage, c.env.TELEGRAM_BOT_TOKEN);
+        }
       } catch (storeError) {
-        console.error(`Error procesando tienda ${store.id}:`, storeError);
+        console.error(`Error procesando recordatorios de fiado de la tienda ${store.id}:`, storeError);
       }
     }
 
     console.log(
-      `🎉 Recordatorios de deudas completados: ${totalEmailsSent} enviados, ${totalEmailsFailed} fallidos en ${totalStoresProcessed} tiendas`
+      `Recordatorios de fiado: ${customerEmailsSent} a clientes (${customerEmailsFailed} fallidos), ${ownerEmailsSent} a tenderos, ${telegramSent} por Telegram`
     );
 
     return c.json({
       success: true,
-      emailsSent: totalEmailsSent,
-      emailsFailed: totalEmailsFailed,
-      storesProcessed: totalStoresProcessed,
-      message: `Debt reminder emails processed: ${totalEmailsSent} sent, ${totalEmailsFailed} failed`,
+      customerEmailsSent,
+      customerEmailsFailed,
+      ownerEmailsSent,
+      telegramSent,
     });
   } catch (error) {
     console.error('Error en cron de recordatorios de deudas:', error);
@@ -1162,6 +1151,89 @@ app.post('/debt-reminders', async (c) => {
         success: false,
         error: error instanceof Error ? error.message : 'Unknown error',
       },
+      500
+    );
+  }
+});
+
+/**
+ * email_logs.email_type tiene un CHECK sin 'debt_reminder' (migración 005), así
+ * que estos correos se registran como 'general' con el tipo real en metadata.
+ * Un fallo al registrar no debe cortar el envío de los demás.
+ */
+async function safeLogEmail(
+  db: D1Database,
+  storeId: string,
+  recipient: string,
+  subject: string,
+  result: { success: boolean; error?: string },
+  metadata: Record<string, unknown>
+) {
+  try {
+    await logEmail(
+      db,
+      storeId,
+      'general',
+      recipient,
+      subject,
+      result.success ? 'sent' : 'failed',
+      result.success ? undefined : result.error,
+      metadata
+    );
+  } catch (error) {
+    console.error('No se pudo registrar el correo en email_logs:', error);
+  }
+}
+
+/**
+ * Preferencia de la tienda: enviar o no los recordatorios de fiado a los
+ * clientes. Ruta propia para no pisar las demás preferencias de correo.
+ */
+app.put('/preferences/debt-reminders', async (c) => {
+  const db = c.env.DB;
+  const tenant = c.get('tenant');
+  const body = await c.req.json<{ enabled?: boolean }>();
+  const enabled = body.enabled ? 1 : 0;
+
+  try {
+    const updated = await db
+      .prepare('UPDATE email_preferences SET debt_reminders_enabled = ? WHERE user_profile_id = ?')
+      .bind(enabled, tenant.id)
+      .run();
+    if (!updated.meta.changes) {
+      await db
+        .prepare(
+          // Mismos valores por defecto que GET /preferences al crear la fila
+          `INSERT INTO email_preferences (
+            id, user_profile_id, daily_reports_enabled, daily_reports_time,
+            subscription_reminders_enabled, stock_alerts_enabled, abandoned_cart_emails_enabled,
+            debt_reminders_enabled
+          ) VALUES (?, ?, 1, '20:00', 1, 1, 1, ?)`
+        )
+        .bind(crypto.randomUUID(), tenant.id, enabled)
+        .run();
+    }
+    return c.json({ success: true, data: { enabled: enabled === 1 } });
+  } catch (error) {
+    return c.json(
+      { success: false, error: error instanceof Error ? error.message : 'Unknown error' },
+      500
+    );
+  }
+});
+
+app.get('/preferences/debt-reminders', async (c) => {
+  const db = c.env.DB;
+  const tenant = c.get('tenant');
+  try {
+    const row = await db
+      .prepare('SELECT debt_reminders_enabled FROM email_preferences WHERE user_profile_id = ?')
+      .bind(tenant.id)
+      .first<{ debt_reminders_enabled: number | null }>();
+    return c.json({ success: true, data: { enabled: row?.debt_reminders_enabled !== 0 } });
+  } catch (error) {
+    return c.json(
+      { success: false, error: error instanceof Error ? error.message : 'Unknown error' },
       500
     );
   }

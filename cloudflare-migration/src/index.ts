@@ -239,6 +239,9 @@ app.post('/api/email/daily-reports', emailCronHandler);
 app.post('/api/email/subscription-reminders', emailCronHandler);
 app.post('/api/email/stock-alerts', emailCronHandler);
 app.post('/api/email/abandoned-carts', emailCronHandler);
+// Valida X-Cron-Secret dentro de la ruta. Antes faltaba aquí y el cron recibía
+// 401 del authMiddleware: los recordatorios de fiado nunca se enviaban.
+app.post('/api/email/debt-reminders', emailCronHandler);
 
 // Rutas internas de respaldo a Drive (NO auth de Clerk; validan X-Cron-Secret).
 // Las llaman el flujo OAuth de Next.js y el cron del Worker.
@@ -427,8 +430,9 @@ async function scheduled(event: ScheduledEvent, env: Env, ctx: ExecutionContext)
   const cartsResult = await makeRequest('api/email/abandoned-carts');
   console.log('Abandoned carts result:', cartsResult);
 
-  // A las 8 AM - Recordatorios de deudas
-  if (hour === 8) {
+  // 13h UTC = 8 AM Colombia - Recordatorios de fiado (clientes + aviso al tendero
+  // por correo y Telegram). Antes corría a las 8h UTC, es decir 3 AM en Colombia.
+  if (hour === 13) {
     console.log('Running debt reminders...');
     const debtResult = await makeRequest('api/email/debt-reminders');
     console.log('Debt reminders result:', debtResult);

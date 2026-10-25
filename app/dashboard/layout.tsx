@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useSyncExternalStore } from "react";
 import { useUser, useAuth } from "@clerk/nextjs";
 import { usePathname } from "next/navigation";
 import { Sidebar } from "@/components/dashboard/sidebar";
@@ -27,6 +27,15 @@ import { readStoredAccent, setAccent } from "@/lib/accent";
 import { TenantProvider, useTenant } from "@/lib/tenant-context";
 import { GuideProvider } from "@/components/guide/GuideProvider";
 import styles from "./styles/Layout.module.scss";
+import { cn } from "@/lib/utils";
+
+// Escritorio = breakpoint md de Tailwind (donde se ve el sidebar fijo).
+const DESKTOP_QUERY = "(min-width: 768px)";
+function subscribeDesktop(onChange: () => void) {
+  const mql = window.matchMedia(DESKTOP_QUERY);
+  mql.addEventListener("change", onChange);
+  return () => mql.removeEventListener("change", onChange);
+}
 
 interface UserStore {
   id: string;
@@ -335,6 +344,14 @@ function DashboardLayoutInner({
 
   // Permitir acceso a la página de suscripción incluso si está expirado
   const isSubscriptionPage = pathname?.startsWith("/dashboard/subscription");
+  const isDesktop = useSyncExternalStore(
+    subscribeDesktop,
+    () => window.matchMedia(DESKTOP_QUERY).matches,
+    () => false,
+  );
+  const floatingHeader = isDesktop && pathname !== "/dashboard";
+  // En el Punto de Venta la bandeja va fija y el carrito empieza debajo de ella.
+  const pinnedHeader = floatingHeader && pathname === "/dashboard/pos";
 
   // Caso "unknown": no pudimos verificar la cuenta por un fallo de red/auth con
   // la API (p. ej. Unauthorized del Worker). NO es una suscripción expirada, así
@@ -430,17 +447,30 @@ function DashboardLayoutInner({
             <AddonExpiryBanner addons={expiringAddons} />
           )}
 
-          <Header
-            onMenuClick={() => {
-              if (sidebarOpen) {
-                closeSidebar();
-              } else {
-                openSidebar();
-              }
-            }}
-          />
+          {/* Barra superior: en móvil siempre; en escritorio solo en el Panel de
+              control (lleva el saludo). En las demás páginas los botones flotan
+              dentro del contenido para no dejar una franja vacía. */}
+          {!floatingHeader && (
+            <Header
+              onMenuClick={() => {
+                if (sidebarOpen) {
+                  closeSidebar();
+                } else {
+                  openSidebar();
+                }
+              }}
+            />
+          )}
 
-          <main className="flex-1 min-w-0 overflow-y-auto overflow-x-hidden bg-gray-50 px-4 pb-6 pt-2 md:px-8 md:pb-10">
+          <main
+            className={cn(
+              "flex-1 min-w-0 overflow-y-auto overflow-x-hidden bg-gray-50 px-4 pb-6 pt-2 md:px-8 md:pb-10",
+              floatingHeader && "md:pt-4",
+              pinnedHeader && "relative",
+            )}
+          >
+            {floatingHeader && <Header floating pinned={pinnedHeader} />}
+
             {/* Alerta de expiración cuando faltan 3 días o menos (no para team members) */}
             {!loading &&
               !isSuperAdmin &&

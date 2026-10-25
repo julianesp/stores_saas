@@ -113,19 +113,9 @@ export const GUIDES: Guide[] = [
         target: "products-outofstock",
       },
       {
-        title: "Ordena por categorías",
-        text: "Agrupa tus productos (bebidas, aseo, granos) para encontrarlos más rápido al vender.",
-        target: "products-categories",
-      },
-      {
-        title: "Limpia los repetidos",
-        text: "Si un producto quedó dos veces, aquí lo detectamos y te ayudamos a unirlo o renombrarlo.",
-        target: "products-duplicates",
-      },
-      {
-        title: "¿Venías de Siigo u otro sistema?",
-        text: "Con Importar productos traes todo tu catálogo de una vez desde el Excel de tu sistema anterior.",
-        target: "products-import",
+        title: "Más funciones",
+        text: "Este botón del borde derecho guarda el resto: categorías, unir repetidos, importar tu catálogo desde Siigo u otro sistema y exportar a Excel.",
+        target: "products-more",
       },
     ],
     tip: "Si al vender escaneas algo que no está registrado, puedes crearlo ahí mismo sin salir de la venta.",
@@ -372,6 +362,11 @@ export const GUIDES: Guide[] = [
         title: "Hoy contra ayer",
         text: "Compara la ganancia de hoy con la de ayer para saber si vas mejor o peor.",
         target: "profit-today",
+      },
+      {
+        title: "Lo que inviertes y lo que ganarás",
+        text: "Mira cuánta plata tienes en mercancía y cuánto te queda al venderla. Con la calculadora planeas un pedido antes de hacerlo.",
+        target: "profit-investment",
       },
       {
         title: "Elige el período",

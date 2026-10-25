@@ -47,7 +47,8 @@ import {
   tracksInventory,
   isProductActive,
 } from "@/lib/types";
-import { formatCurrency } from "@/lib/utils";
+import { cn, formatCurrency } from "@/lib/utils";
+import { HEADER_TRAY_SPACE } from "@/components/dashboard/header";
 import {
   calculatePointsForPurchase,
   addPointsToCustomer,
@@ -124,6 +125,8 @@ export default function POSPage() {
   const [products, setProducts] = useState<Product[]>([]);
   const [hasAnyProducts, setHasAnyProducts] = useState(true); // Track if user has ANY products
   const [cart, setCart] = useState<CartItem[]>([]);
+  // En el celular el carrito es un panel lateral que se abre con un botón
+  const [cartOpen, setCartOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
   const [barcodeInput, setBarcodeInput] = useState("");
   const [activeOffers, setActiveOffers] = useState<Offer[]>([]);
@@ -1138,6 +1141,18 @@ export default function POSPage() {
       ),
     );
   };
+
+  // Productos distintos (no unidades: los que se venden por peso llevan decimales)
+  const cartItemCount = cart.length;
+
+  useEffect(() => {
+    if (!cartOpen) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setCartOpen(false);
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [cartOpen]);
 
   const calculateTotal = () => {
     const subtotal = cart.reduce((sum, item) => {
@@ -2344,8 +2359,30 @@ export default function POSPage() {
           </Card>
         </div>
 
-        {/* Panel derecho - Carrito */}
-        <div className="space-y-4 order-1 lg:order-2">
+        {/* Panel derecho - Carrito. En escritorio empieza debajo de la bandeja
+            de campana/tema/perfil, que queda fija arriba a la derecha. En el
+            celular es un panel que entra desde la derecha (botón lateral). */}
+        <div
+          id="pos-cart-panel"
+          className={cn(
+            "space-y-4 order-1 lg:order-2",
+            HEADER_TRAY_SPACE,
+            "max-md:fixed max-md:inset-y-0 max-md:right-0 max-md:z-50 max-md:m-0 max-md:w-[92vw] max-md:max-w-md max-md:overflow-y-auto max-md:bg-[var(--shell-canvas)] max-md:px-3 max-md:pb-8 max-md:pt-16 max-md:shadow-2xl max-md:transition-[transform,visibility] max-md:duration-300 max-md:ease-[cubic-bezier(0.22,1,0.36,1)] motion-reduce:transition-none",
+            !cartOpen && "max-md:invisible max-md:translate-x-full",
+          )}
+        >
+          {/* Encabezado del panel en el celular */}
+          <div className="md:hidden absolute inset-x-3 top-3 flex items-center justify-between">
+            <p className="text-base font-semibold text-gray-900">Tu venta</p>
+            <button
+              type="button"
+              onClick={() => setCartOpen(false)}
+              className="flex h-10 items-center gap-1 rounded-xl px-3 text-sm font-medium text-gray-600 ring-1 ring-[var(--shell-line)] hover:bg-white"
+            >
+              Seguir agregando
+              <ChevronRight className="h-4 w-4" />
+            </button>
+          </div>
           <Card data-guide="pos-cart" className="receipt-edge relative lg:sticky lg:top-0 rounded-b-none border-b-0">
             {/* Nueva venta: en la esquina de la tarjeta para dejar la fila a las pestañas */}
             <button
@@ -3031,6 +3068,41 @@ export default function POSPage() {
           </Card>
         </div>
       </div>
+
+      {/* Celular: fondo oscuro detrás del carrito abierto */}
+      {cartOpen && (
+        <div
+          className="cart-overlay-in fixed inset-0 z-40 bg-black/40 md:hidden"
+          onClick={() => setCartOpen(false)}
+          aria-hidden="true"
+        />
+      )}
+
+      {/* Celular: botón lateral que abre el carrito, con cantidad y total */}
+      {!cartOpen && (
+        <button
+          type="button"
+          data-guide="pos-cart"
+          onClick={() => setCartOpen(true)}
+          aria-controls="pos-cart-panel"
+          aria-expanded={cartOpen}
+          aria-label={`Ver carrito: ${cartItemCount} ${cartItemCount === 1 ? "producto" : "productos"}, ${formatCurrency(calculateTotal())}`}
+          className="cart-side-tab fixed right-0 top-1/2 z-40 flex flex-col items-center gap-1.5 rounded-l-2xl bg-brand py-3 pl-2.5 pr-2 text-white shadow-lg md:hidden"
+        >
+          {/* La key reinicia la animación de "salto" cada vez que cambia la cantidad */}
+          <span key={cartItemCount} className={cartItemCount > 0 ? "cart-tab-bump flex flex-col items-center gap-1.5" : "flex flex-col items-center gap-1.5"}>
+            <ShoppingCart className="h-5 w-5" />
+            {cartItemCount > 0 && (
+              <span className="min-w-5 rounded-full bg-white px-1.5 py-0.5 text-center text-[11px] font-bold leading-none text-brand">
+                {cartItemCount}
+              </span>
+            )}
+          </span>
+          <span className="font-num text-[11px] font-semibold leading-none [writing-mode:vertical-rl] rotate-180">
+            {cartItemCount > 0 ? formatCurrency(calculateTotal()) : "Carrito"}
+          </span>
+        </button>
+      )}
 
       {/* Modal de cobro con QR (Nequi/Daviplata/transferencia) */}
       {showQrModal && (

@@ -36,6 +36,7 @@ import { toast } from "sonner";
 import { AutoReportsConfig } from "@/components/config/auto-reports-config";
 import { PaymentQrConfig } from "@/components/config/payment-qr-config";
 import { TelegramConfig } from "@/components/config/telegram-config";
+import { DebtRemindersConfig } from "@/components/config/debt-reminders-config";
 import { GoogleDriveBackupConfig } from "@/components/config/google-drive-backup-config";
 import { AccentConfig } from "@/components/config/accent-config";
 import PosReviewCard from "@/components/dashboard/PosReviewCard";
@@ -298,6 +299,9 @@ export default function ConfigPage() {
       <div data-guide="config-telegram">
         <TelegramConfig />
       </div>
+
+      {/* Recordatorios de fiado (clientes por correo; aviso al tendero siempre) */}
+      <DebtRemindersConfig />
 
       {/* Copia de seguridad de ventas a Google Drive */}
       <div id="google-drive" data-guide="config-backup">

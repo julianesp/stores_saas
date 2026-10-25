@@ -30,7 +30,6 @@ import {
   GripVertical,
   UserCog,
   ChevronLeft,
-  ChevronRight,
   Calendar,
   CheckCircle,
   MonitorSmartphone,
@@ -249,6 +248,7 @@ const MIN_WIDTH = 200;
 const MAX_WIDTH = 400;
 const DEFAULT_WIDTH = 256; // 16rem = 256px
 const COLLAPSED_WIDTH = 64; // Ancho cuando está colapsado
+const SIDEBAR_ANIMATION_MS = 300; // = duration-300 de la transición del ancho
 const STORAGE_KEY = "sidebar-width";
 const COLLAPSED_STORAGE_KEY = "sidebar-collapsed";
 const MENU_ORDER_STORAGE_KEY = "sidebar-menu-order";
@@ -270,6 +270,12 @@ export function Sidebar({ isMobile = false, onLinkClick }: SidebarProps) {
   const [sidebarWidth, setSidebarWidth] = useState(DEFAULT_WIDTH);
   const [isResizing, setIsResizing] = useState(false);
   const [isCollapsed, setIsCollapsed] = useState(false);
+  // El ancho cambia de inmediato (y se anima); el contenido pasa a la vista
+  // compacta al terminar de cerrarse, para que los íconos no salten a mitad.
+  const [collapsedView, setCollapsedView] = useState(false);
+  // Solo se anima tras un clic: al cargar con el estado guardado no hay transición.
+  const [animateWidth, setAnimateWidth] = useState(false);
+  const collapseTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const sidebarRef = useRef<HTMLDivElement>(null);
 
   // Estado para el orden del menú (drag and drop)
@@ -290,6 +296,7 @@ export function Sidebar({ isMobile = false, onLinkClick }: SidebarProps) {
       const savedCollapsed = localStorage.getItem(COLLAPSED_STORAGE_KEY);
       if (savedCollapsed === "true") {
         setIsCollapsed(true);
+        setCollapsedView(true);
       }
 
       // Cargar orden del menú guardado
@@ -324,8 +331,28 @@ export function Sidebar({ isMobile = false, onLinkClick }: SidebarProps) {
 
   // Función para alternar el estado de colapsado
   const toggleCollapse = () => {
-    setIsCollapsed(!isCollapsed);
+    const next = !isCollapsed;
+    setAnimateWidth(true);
+    setIsCollapsed(next);
+    if (collapseTimer.current) clearTimeout(collapseTimer.current);
+    if (next) {
+      const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+      collapseTimer.current = setTimeout(
+        () => setCollapsedView(true),
+        reduceMotion ? 0 : SIDEBAR_ANIMATION_MS,
+      );
+    } else {
+      // Al abrir, los textos aparecen ya y la barra los va descubriendo
+      setCollapsedView(false);
+    }
   };
+
+  useEffect(
+    () => () => {
+      if (collapseTimer.current) clearTimeout(collapseTimer.current);
+    },
+    [],
+  );
 
   // Manejar el redimensionamiento
   const handleMouseDown = useCallback((e: React.MouseEvent) => {
@@ -576,7 +603,12 @@ export function Sidebar({ isMobile = false, onLinkClick }: SidebarProps) {
   return (
     <aside
       ref={sidebarRef}
-      className={sidebarClasses}
+      className={cn(
+        sidebarClasses,
+        animateWidth &&
+          !isResizing &&
+          "transition-[width] duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] motion-reduce:transition-none",
+      )}
       style={
         isMobile
           ? undefined
@@ -586,9 +618,14 @@ export function Sidebar({ isMobile = false, onLinkClick }: SidebarProps) {
       }
     >
       {/* Header - Solo visible en desktop */}
-      <div className="hidden md:flex h-16 items-center px-6 border-b border-[var(--shell-line)] justify-between">
-        {!isCollapsed && (
-          <>
+      <div
+        className={cn(
+          "hidden md:flex h-16 items-center gap-2 overflow-hidden border-b border-[var(--shell-line)] transition-[padding] duration-300 motion-reduce:transition-none",
+          isCollapsed ? "justify-center px-3" : "justify-between px-6",
+        )}
+      >
+        {!collapsedView && (
+          <div className="sidebar-label-in min-w-0 overflow-hidden">
             {isSuperAdmin ? (
               <h1 className="text-xl font-bold">Admin Panel</h1>
             ) : (
@@ -597,25 +634,31 @@ export function Sidebar({ isMobile = false, onLinkClick }: SidebarProps) {
                 alt="posib.dev"
                 width={120}
                 height={40}
-                className="h-10 w-auto"
+                className="h-10 w-auto max-w-none"
                 priority
               />
             )}
-          </>
+          </div>
         )}
 
-        {/* Botón de colapsar/expandir - Mejorado para mayor visibilidad */}
+        {/* Botón de colapsar/expandir: borde y fondo con el color de la tienda */}
         <button
+          type="button"
           onClick={toggleCollapse}
-          className="ml-auto p-2 rounded-xl text-gray-500 ring-1 ring-transparent transition-colors duration-200 hover:bg-white hover:text-gray-900 hover:ring-[var(--shell-line)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/50"
+          className={cn(
+            "sidebar-collapse-btn shrink-0 p-2 rounded-xl active:scale-90",
+            !collapsedView && "ml-auto",
+          )}
           aria-label={isCollapsed ? "Expandir menú" : "Colapsar menú"}
+          aria-expanded={!isCollapsed}
           title={isCollapsed ? "Expandir menú" : "Colapsar menú"}
         >
-          {isCollapsed ? (
-            <ChevronRight className="h-5 w-5" />
-          ) : (
-            <ChevronLeft className="h-5 w-5" />
-          )}
+          <ChevronLeft
+            className={cn(
+              "h-5 w-5 transition-transform duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] motion-reduce:transition-none",
+              isCollapsed && "rotate-180",
+            )}
+          />
         </button>
       </div>
 
@@ -686,29 +729,29 @@ export function Sidebar({ isMobile = false, onLinkClick }: SidebarProps) {
               <Link
                 href={item.href}
                 onClick={onLinkClick}
-                title={isCollapsed ? item.title : undefined}
+                title={collapsedView ? item.title : undefined}
                 className={cn(
                   "flex items-center gap-2.5 rounded-xl px-3 py-2 text-sm font-medium transition-all duration-200 relative",
                   isActive
                     ? "bg-white text-gray-900 ring-1 ring-[var(--shell-line)] shadow-[var(--shell-shadow)] before:absolute before:-left-3 before:inset-y-2 before:w-1 before:rounded-r-full before:bg-brand"
                     : "text-gray-600 hover:bg-white hover:text-gray-900",
-                  isCollapsed && "justify-center",
+                  collapsedView && "justify-center",
                 )}
               >
                 {/* Drag handle - solo mostrar para usuarios normales */}
-                {!isSuperAdmin && !isCollapsed && (
+                {!isSuperAdmin && !collapsedView && (
                   <GripVertical className="h-4 w-4 -ml-1 flex-shrink-0 cursor-move opacity-0 group-hover:opacity-40 hover:!opacity-100 transition-opacity" />
                 )}
                 <Icon
                   className={cn(
                     "h-5 w-5 transition-colors",
                     isActive ? "text-brand" : "text-gray-400 group-hover:text-gray-700",
-                    isCollapsed && "shrink-0",
+                    collapsedView && "shrink-0",
                   )}
                 />
-              {!isCollapsed && (
+              {!collapsedView && (
                 <>
-                  <span className="flex-1 whitespace-nowrap overflow-hidden text-ellipsis">
+                  <span className="sidebar-label-in flex-1 whitespace-nowrap overflow-hidden text-ellipsis">
                     {item.title}
                   </span>
                   {isAnalytics && userProfile && (
@@ -754,7 +797,7 @@ export function Sidebar({ isMobile = false, onLinkClick }: SidebarProps) {
               )}
 
                 {/* Tooltip cuando está colapsado */}
-                {isCollapsed && (
+                {collapsedView && (
                   <div className="absolute left-full ml-2 px-2 py-1 bg-gray-800 text-white text-xs rounded opacity-0 group-hover:opacity-100 pointer-events-none whitespace-nowrap z-50 transition-opacity">
                     {item.title}
                   </div>
@@ -839,24 +882,24 @@ export function Sidebar({ isMobile = false, onLinkClick }: SidebarProps) {
       </nav>
 
       {/* Footer Desktop */}
-      <div className="hidden md:block p-4 border-t border-[var(--shell-line)] space-y-1">
+      <div className={cn("hidden md:block p-4 border-t border-[var(--shell-line)] space-y-1", !collapsedView && "overflow-hidden")}>
         {!isSuperAdmin && (
           <Link
             href="/dashboard/subscription"
             onClick={onLinkClick}
-            title={isCollapsed ? "Suscripción" : undefined}
+            title={collapsedView ? "Suscripción" : undefined}
             className={cn(
               "flex items-center gap-3 rounded-xl px-3 py-2 text-sm font-medium transition-colors relative group",
               pathname === "/dashboard/subscription" ||
                 pathname?.startsWith("/dashboard/subscription/")
                 ? "bg-white text-gray-900 ring-1 ring-[var(--shell-line)] shadow-[var(--shell-shadow)] [&>svg]:text-brand"
                 : "text-gray-600 hover:bg-white hover:text-gray-900",
-              isCollapsed && "justify-center",
+              collapsedView && "justify-center",
             )}
           >
             <CreditCard className="h-5 w-5" />
-            {!isCollapsed && <span>Suscripción</span>}
-            {isCollapsed && (
+            {!collapsedView && <span className="sidebar-label-in whitespace-nowrap">Suscripción</span>}
+            {collapsedView && (
               <div className="absolute left-full ml-2 px-2 py-1 bg-gray-800 text-white text-xs rounded opacity-0 group-hover:opacity-100 pointer-events-none whitespace-nowrap z-50 transition-opacity">
                 Suscripción
               </div>
@@ -866,19 +909,19 @@ export function Sidebar({ isMobile = false, onLinkClick }: SidebarProps) {
         <Link
           href="/dashboard/config"
           onClick={onLinkClick}
-          title={isCollapsed ? "Configuración" : undefined}
+          title={collapsedView ? "Configuración" : undefined}
           className={cn(
             "flex items-center gap-3 rounded-xl px-3 py-2 text-sm font-medium transition-colors relative group",
             pathname === "/dashboard/config" ||
               pathname?.startsWith("/dashboard/config/")
               ? "bg-white text-gray-900 ring-1 ring-[var(--shell-line)] shadow-[var(--shell-shadow)] [&>svg]:text-brand"
               : "text-gray-600 hover:bg-white hover:text-gray-900",
-            isCollapsed && "justify-center",
+            collapsedView && "justify-center",
           )}
         >
           <Settings className="h-5 w-5" />
-          {!isCollapsed && <span>Configuración</span>}
-          {isCollapsed && (
+          {!collapsedView && <span className="sidebar-label-in whitespace-nowrap">Configuración</span>}
+          {collapsedView && (
             <div className="absolute left-full ml-2 px-2 py-1 bg-gray-800 text-white text-xs rounded opacity-0 group-hover:opacity-100 pointer-events-none whitespace-nowrap z-50 transition-opacity">
               Configuración
             </div>
