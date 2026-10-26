@@ -59,6 +59,11 @@ class D1PreparedStatementFake {
   }
 
   runSync() {
+    // En un batch, D1 devuelve las filas de las consultas de lectura.
+    if (/^\s*(SELECT|WITH)\b/i.test(this.sql)) {
+      const rows = this.db.prepare(this.sql).all(...this.params);
+      return { success: true, results: rows.map((r) => plain(r)), meta: { changes: 0, last_row_id: 0 } };
+    }
     const info = this.db.prepare(this.sql).run(...this.params);
     return {
       success: true,

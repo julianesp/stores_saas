@@ -972,6 +972,42 @@ export async function getSiteVisitStats(days: number, getToken: GetTokenFn): Pro
   return fetchAPI<SiteVisitStats>(`/api/admin/visits?days=${days}`, getToken, {}, true);
 }
 
+export type StoreHealthLevel = 'bien' | 'atencion' | 'riesgo';
+export type StoreHealthSeverity = 'critical' | 'warning' | 'info';
+
+export interface StoreHealthIssue {
+  code: string;
+  severity: StoreHealthSeverity;
+  title: string;
+  advice: string;
+}
+
+export interface StoreHealth {
+  storeId: string;
+  storeName: string;
+  email: string;
+  phone: string | null;
+  businessType: string | null;
+  subscriptionStatus: string;
+  createdAt: string | null;
+  lastSaleAt: string | null;
+  sales7d: number;
+  sales30d: number;
+  revenue30d: number;
+  activeProducts: number;
+  score: number;
+  level: StoreHealthLevel;
+  daysSinceLastSale: number | null;
+  trialDaysLeft: number | null;
+  issues: StoreHealthIssue[];
+}
+
+export async function getStoresHealth(
+  getToken: GetTokenFn
+): Promise<{ generatedAt: string; stores: StoreHealth[] }> {
+  return fetchAPI(`/api/admin/health`, getToken, {}, true);
+}
+
 export async function createUserProfile(data: Partial<UserProfile>, getToken: GetTokenFn): Promise<UserProfile> {
   // Note: User profiles are usually auto-created by the auth middleware
   // This function exists for manual profile creation if needed

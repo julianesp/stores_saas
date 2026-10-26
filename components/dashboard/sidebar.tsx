@@ -33,6 +33,7 @@ import {
   Calendar,
   CheckCircle,
   MonitorSmartphone,
+  HeartPulse,
 } from "lucide-react";
 import {
   getUserProfileByClerkId,
@@ -90,6 +91,11 @@ const superAdminMenuItems = [
     title: "Analytics del Sistema",
     href: "/dashboard/admin/analytics",
     icon: TrendingUp,
+  },
+  {
+    title: "Salud de las tiendas",
+    href: "/dashboard/admin/salud",
+    icon: HeartPulse,
   },
   {
     title: "Visitas al sitio",
