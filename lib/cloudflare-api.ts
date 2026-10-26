@@ -1002,6 +1002,38 @@ export interface StoreHealth {
   issues: StoreHealthIssue[];
 }
 
+export type DianLevel = 'ok' | 'aviso' | 'importante' | 'obligado';
+
+/** Topes DIAN de la tienda según sus ventas del año (ver Worker routes/dian-thresholds.ts). */
+export interface DianThresholds {
+  year: number;
+  uvt: number;
+  uvtEstimated: boolean;
+  eInvoiceCap: number;
+  incomeTaxCap: number;
+  yearSales: number;
+  remaining: number;
+  percent: number;
+  previousYear: { year: number; sales: number; cap: number; exceeded: boolean };
+  projectedYearSales: number | null;
+  projectedCapDate: string | null;
+  incomeTaxExceeded: boolean;
+  level: DianLevel;
+  alreadyInvoicing: boolean;
+}
+
+/** 403 si el usuario es del equipo y no tiene permiso para ver reportes. */
+export async function getDianThresholds(getToken: GetTokenFn): Promise<DianThresholds> {
+  return fetchAPI<DianThresholds>('/api/dian-thresholds', getToken);
+}
+
+export async function setDianAlreadyInvoicing(alreadyInvoicing: boolean, getToken: GetTokenFn): Promise<void> {
+  await fetchAPI('/api/dian-thresholds/ack', getToken, {
+    method: 'PUT',
+    body: JSON.stringify({ already_invoicing: alreadyInvoicing }),
+  });
+}
+
 export async function getStoresHealth(
   getToken: GetTokenFn
 ): Promise<{ generatedAt: string; stores: StoreHealth[] }> {

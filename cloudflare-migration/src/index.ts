@@ -25,6 +25,7 @@ import paymentTransactionsRoutes from './routes/payment-transactions';
 import webhooksRoutes from './routes/webhooks';
 import adminStatsRoutes from './routes/admin-stats';
 import storeHealthRoutes from './routes/store-health';
+import dianThresholdsRoutes, { runDianThresholdAlerts } from './routes/dian-thresholds';
 import storefrontRoutes from './routes/storefront';
 import shippingZonesRoutes from './routes/shipping-zones';
 import wompiRoutes from './routes/wompi';
@@ -326,6 +327,7 @@ app.route('/api/subscriptions', subscriptionsRoutes);
 app.route('/api/products', productsRoutes);
 app.route('/api/customers', customersRoutes);
 app.route('/api/sales', salesRoutes);
+app.route('/api/dian-thresholds', dianThresholdsRoutes);
 app.route('/api/categories', categoriesRoutes);
 app.route('/api/suppliers', suppliersRoutes);
 app.route('/api/purchase-orders', purchaseOrdersRoutes);
@@ -458,6 +460,17 @@ async function scheduled(event: ScheduledEvent, env: Env, ctx: ExecutionContext)
     console.log('Running Telegram daily summary...');
     const summaryResult = await makeRequest('api/telegram/daily-summary');
     console.log('Telegram daily summary result:', summaryResult);
+  }
+
+  // 14h UTC = 9 AM Colombia - Topes DIAN (facturación electrónica): avisa al
+  // dueño por Telegram y correo solo cuando sube de nivel en el año.
+  if (hour === 14) {
+    try {
+      const dianResult = await runDianThresholdAlerts(env);
+      console.log('DIAN threshold alerts result:', dianResult);
+    } catch (error) {
+      console.error('Error in DIAN threshold alerts:', error);
+    }
   }
 
   console.log('Cron jobs completed');

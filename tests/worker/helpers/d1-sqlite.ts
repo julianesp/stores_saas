@@ -12,13 +12,15 @@ import { DatabaseSync, type SQLInputValue } from 'node:sqlite';
 
 const MIGRATIONS_DIR = path.join(__dirname, '../../../cloudflare-migration');
 
-// Migraciones que tocan las tablas de ventas, productos y clientes, en el orden
-// en que se aplicaron en producción.
+// Migraciones que tocan las tablas de ventas, productos, clientes, equipo y
+// perfil, en el orden en que se aplicaron en producción.
 const MIGRATIONS = [
+  'migrations/008_create_team_management_tables.sql',
   'migrations/add-unit-selling-fields.sql',
   'migrations/fix-payment-method-nequi.sql',
   'migrations/025_web_order_payment_reference.sql',
   'migrations/027_product_siigo_fields.sql',
+  'migrations/031_dian_e_invoicing.sql',
 ];
 
 function toSqlValue(value: unknown): SQLInputValue {

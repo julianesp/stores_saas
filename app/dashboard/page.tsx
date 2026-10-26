@@ -42,6 +42,7 @@ import { Product } from "@/lib/cloudflare-api";
 import { differenceInDays } from "date-fns";
 import Link from "next/link";
 import { PageGlossary } from "@/components/dashboard/page-glossary";
+import { DianThresholdsCard } from "@/components/dashboard/dian-thresholds-card";
 
 export default function DashboardPage() {
   const { user } = useUser();
@@ -474,6 +475,9 @@ export default function DashboardPage() {
           </div>
         </Link>
       </div>
+
+      {/* Ventas del año frente al tope de facturación electrónica de la DIAN */}
+      <DianThresholdsCard />
 
       {/* Ganancia de hoy — cuánto ganó realmente el tendero (venta − costo) */}
       <Link href="/dashboard/rentabilidad" data-guide="dash-profit" className="block group">

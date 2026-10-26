@@ -1,6 +1,6 @@
 import { Notification } from './types';
 import type { GetTokenFn } from './cloudflare-api';
-import { getProducts, getCustomers, getSales } from './cloudflare-api';
+import { getProducts, getCustomers, getSales, getDianThresholds, getSelectedTenantId, type DianThresholds } from './cloudflare-api';
 import { getExpiringProductsList } from './dashboard-helpers';
 import { getDebtorCustomers } from './cloudflare-credit-helpers';
 import { REWARD_CONSTANTS } from './loyalty-helpers';
@@ -193,11 +193,64 @@ async function getSubscriptionNotifications(getToken: GetTokenFn): Promise<Notif
 }
 
 /**
+ * Tope de facturación electrónica de la DIAN (3.500 UVT de ventas en el año).
+ * El id incluye año y nivel: al subir de nivel (aviso → importante → obligado)
+ * o al cambiar de año vuelve a quedar "sin ver" y la campana pulsa de nuevo.
+ * El Worker responde 403 a quien no puede ver reportes: entonces no hay aviso.
+ */
+// La campana consulta cada 5 minutos y las ventas del año cambian despacio:
+// basta con recalcular una vez por hora (por tienda).
+const DIAN_CACHE_MS = 60 * 60 * 1000;
+let dianCache: { tenantId: string | null; at: number; data: DianThresholds } | null = null;
+
+/** Tras marcar "ya facturo electrónicamente", para que la campana lo refleje en la próxima consulta. */
+export function clearDianNotificationCache() {
+  dianCache = null;
+}
+
+async function getDianNotifications(getToken: GetTokenFn): Promise<Notification[]> {
+  try {
+    const tenantId = getSelectedTenantId();
+    if (!dianCache || dianCache.tenantId !== tenantId || Date.now() - dianCache.at > DIAN_CACHE_MS) {
+      dianCache = { tenantId, at: Date.now(), data: await getDianThresholds(getToken) };
+    }
+    const d = dianCache.data;
+    if (d.alreadyInvoicing || d.level === 'ok') return [];
+
+    const cop = (n: number) => `$${Math.round(n).toLocaleString('es-CO')}`;
+    const title =
+      d.level === 'obligado'
+        ? 'Debes facturar electrónicamente'
+        : d.level === 'importante'
+          ? 'Importante: estás cerca del tope de la DIAN'
+          : 'Te acercas al tope de la DIAN';
+    const message =
+      d.level === 'obligado'
+        ? d.previousYear.exceeded
+          ? `En ${d.previousYear.year} superaste el tope de ventas: la DIAN te exige factura electrónica.`
+          : `Superaste ${cop(d.eInvoiceCap)} en ventas de ${d.year}: la DIAN te exige factura electrónica.`
+        : `Llevas ${cop(d.yearSales)} vendidos en ${d.year}; te quedan ${cop(d.remaining)} para el tope de facturación electrónica.`;
+
+    return [{
+      id: `dian-${d.year}-${d.level}`,
+      type: 'system',
+      title,
+      message,
+      link: '/dashboard',
+      timestamp: new Date(),
+    }];
+  } catch {
+    return [];
+  }
+}
+
+/**
  * Obtiene todas las notificaciones del sistema
  */
 export async function getAllNotifications(getToken: GetTokenFn): Promise<Notification[]> {
   try {
-    const [webOrderNotifs, stockNotifs, expirationNotifs, debtNotifs, loyaltyNotifs, subNotifs] = await Promise.all([
+    const [dianNotifs, webOrderNotifs, stockNotifs, expirationNotifs, debtNotifs, loyaltyNotifs, subNotifs] = await Promise.all([
+      getDianNotifications(getToken),
       getWebOrderNotifications(getToken),
       getLowStockNotifications(getToken),
       getExpirationNotifications(getToken),
@@ -206,8 +259,9 @@ export async function getAllNotifications(getToken: GetTokenFn): Promise<Notific
       getSubscriptionNotifications(getToken),
     ]);
 
-    // Pedidos web primero: requieren acción rápida (despachar al cliente).
-    return [...webOrderNotifs, ...stockNotifs, ...expirationNotifs, ...debtNotifs, ...loyaltyNotifs, ...subNotifs];
+    // Topes DIAN y pedidos web primero: el uno tiene consecuencias legales y el
+    // otro requiere acción rápida (despachar al cliente).
+    return [...dianNotifs, ...webOrderNotifs, ...stockNotifs, ...expirationNotifs, ...debtNotifs, ...loyaltyNotifs, ...subNotifs];
   } catch (error) {
     console.error('Error getting notifications:', error);
     return [];
